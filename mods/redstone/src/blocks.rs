@@ -36,8 +36,9 @@ const SIDE_VALUES: [&str; 3] = ["none", "side", "up"];
 /// A piston's `phase` values; moving phases don't show how far along they are.
 const PHASES: [&str; 4] = ["retracted", "extending", "extended", "retracting"];
 
-/// How high dust lies, in pixels.
-const DUST_H: f32 = 0.25;
+/// How high dust lies, in pixels. Weft puts model corners on whole pixels (`quad_pos` in its
+/// `gpu_layout.rs`), so anything thinner lies in the face below it and flickers with it.
+const DUST_H: f32 = 1.0;
 
 pub fn register(r: &mut Registry) {
     r.creative_tab(&TAB, &DUST_ITEM);
@@ -136,7 +137,10 @@ pub fn register(r: &mut Registry) {
                 redstone_core::Dir::West => ([0.0, 3.0, 7.0], [2.0, 13.0, 9.0]),
                 _ => ([7.0, 0.0, 7.0], [9.0, 10.0, 9.0]),
             };
-            let s = if lit { s.texture("torch_on").light(7) } else { s.texture("torch_off") };
+            let state = if lit { "on" } else { "off" };
+            let side = if attached == redstone_core::Dir::Down { "torch_standing" } else { "torch" };
+            let s = s.textures(&format!("torch_top_{state}"), &format!("{side}_{state}"), &format!("torch_{state}"));
+            let s = if lit { s.light(7) } else { s };
             device_components(s.needs(attached.index() as u32, "").model_box(lo, hi), k)
         });
 
@@ -238,7 +242,8 @@ pub fn register(r: &mut Registry) {
         .on_neighbor(driver::neighbor)
         .states(|p, s| {
             let on = p.is("on", "true");
-            device_components(s.model_box([1.0, 0.0, 1.0], [15.0, if on { 0.5 } else { 1.0 }, 15.0]), Kind::Plate { on })
+            // Whole pixels, like dust: pressed is the thinnest a model can be.
+            device_components(s.model_box([1.0, 0.0, 1.0], [15.0, if on { 1.0 } else { 2.0 }, 15.0]), Kind::Plate { on })
         });
 
     // Pistons face whoever placed them and push that way. While the head is out the base is drawn
