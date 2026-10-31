@@ -1,0 +1,8 @@
+[package]
+name = "redstone_core"
+version.workspace = true
+edition.workspace = true
+
+[features]
+# The in-memory grid the tests use, for other crates' tests.
+testgrid = []

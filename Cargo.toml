@@ -1,0 +1,13 @@
+[workspace]
+resolver = "3"
+members = ["mods/redstone/core"]
+exclude = ["Weft"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+# Enough for crash reports to name the line. Never `panic = "abort"`: the SDK turns a panicking
+# callback off instead of taking the game down, which needs unwinding.
+debug = "line-tables-only"
