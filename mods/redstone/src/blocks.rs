@@ -9,12 +9,13 @@ use redstone_api::{CONNECTS, EMITS, Emits, SidePowerV, WIRE, WireType};
 use redstone_core::{Kind, Link, Range, Shape};
 use weft_sdk::*;
 
-use crate::driver;
+use crate::{driver, persist};
 
 pub static DUST: Block = Block::named("dust");
 pub static LEVER: Block = Block::named("lever");
 pub static LAMP: Block = Block::named("lamp");
 pub static POWER_BLOCK: Block = Block::named("power_block");
+pub static TORCH: Block = Block::named("torch");
 
 pub static TAB: CreativeTab = CreativeTab::named("redstone");
 static DUST_ITEM: Item = Item::named("dust");
@@ -104,6 +105,33 @@ pub fn register(r: &mut Registry) {
         .tab(&TAB)
         .on_neighbor(driver::neighbor)
         .states(|_, s| device_components(s, Kind::PowerBlock));
+
+    // Standing (`facing=up`) or on a wall, facing away from it. Placed lit.
+    r.block(&TORCH)
+        .facing(Facings::only(&[Dir::Up, Dir::North, Dir::East, Dir::South, Dir::West]), Toward::Face)
+        .prop("lit", ["true", "false"])
+        .hardness(0.0)
+        .not_solid()
+        .item_texture("torch")
+        .tab(&TAB)
+        .on_neighbor(driver::neighbor)
+        .states(|p, s| {
+            let k = torch_kind(p);
+            let Kind::Torch { lit, attached } = k else { unreachable!() };
+            // Wall torches stand straight against the wall, like base's.
+            let (lo, hi) = match attached {
+                redstone_core::Dir::North => ([7.0, 3.0, 0.0], [9.0, 13.0, 2.0]),
+                redstone_core::Dir::East => ([14.0, 3.0, 7.0], [16.0, 13.0, 9.0]),
+                redstone_core::Dir::South => ([7.0, 3.0, 14.0], [9.0, 13.0, 16.0]),
+                redstone_core::Dir::West => ([0.0, 3.0, 7.0], [2.0, 13.0, 9.0]),
+                _ => ([7.0, 0.0, 7.0], [9.0, 10.0, 9.0]),
+            };
+            let s = if lit { s.texture("torch_on").light(7) } else { s.texture("torch_off") };
+            device_components(s.needs(attached.index() as u32, "").model_box(lo, hi), k)
+        });
+
+    // Devices that can have a change pending keep it in their block entity.
+    persist::register(r, &[&TORCH, &LAMP]);
 }
 
 /// The flat arm of dust toward side `i` (`Dir::HORIZONTAL` order), in pixels.
@@ -146,6 +174,10 @@ fn lever_kind(p: &Props) -> Kind {
     Kind::Lever { on: p.is("powered", "true"), attached: core_dir(p.facing()).opposite() }
 }
 
+fn torch_kind(p: &Props) -> Kind {
+    Kind::Torch { lit: p.is("lit", "true"), attached: core_dir(p.facing()).opposite() }
+}
+
 pub fn core_dir(d: Dir) -> redstone_core::Dir {
     redstone_core::Dir::from_index(d.face() as usize)
 }
@@ -169,7 +201,7 @@ fn tables() -> &'static Tables {
     static T: OnceLock<Tables> = OnceLock::new();
     T.get_or_init(|| {
         let mut kinds = HashMap::new();
-        for block in [&LEVER, &LAMP, &POWER_BLOCK] {
+        for block in [&LEVER, &LAMP, &POWER_BLOCK, &TORCH] {
             let mut s = block.id();
             while s != u32::MAX && block.is(s) {
                 if let Some(k) = kind_from_state(block, s) {
@@ -191,6 +223,9 @@ fn kind_from_state(block: &Block, s: u32) -> Option<Kind> {
         Kind::Lever { on: prop("powered") == "true", attached: core_dir(facing).opposite() }
     } else if std::ptr::eq(block, &LAMP) {
         Kind::Lamp { lit: prop("lit") == "true" }
+    } else if std::ptr::eq(block, &TORCH) {
+        let facing = Dir::from_name(prop("facing"))?;
+        Kind::Torch { lit: prop("lit") == "true", attached: core_dir(facing).opposite() }
     } else {
         Kind::PowerBlock
     };

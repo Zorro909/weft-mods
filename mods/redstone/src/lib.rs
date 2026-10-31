@@ -4,6 +4,7 @@
 mod adapter;
 mod blocks;
 mod driver;
+mod persist;
 
 use weft_sdk::*;
 

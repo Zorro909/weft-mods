@@ -18,6 +18,7 @@ use redstone_core::{Cell, Pos, Sim, View};
 use weft_sdk::*;
 
 use crate::adapter::{self, WeftWorld};
+use crate::persist;
 
 static SIM: LazyLock<Mutex<Sim>> = LazyLock::new(|| Mutex::new(Sim::default()));
 /// Positions something changed at, with when they were queued.
@@ -64,6 +65,15 @@ fn tick(w: &World) {
     let now = w.time();
     lock(&OWN).retain(|_, (_, at)| *at + 2 >= now);
     let mut v = WeftWorld::new(w);
+
+    // Changes restored from saves after a restart (`persist`); the region that has the device
+    // claims the position below.
+    for (p, pending) in persist::take_restored() {
+        if !sim.has_pending(p) {
+            sim.schedule(p, pending);
+        }
+        queue(p);
+    }
 
     // Claim what this world has redstone at or next to; leave the rest for other regions.
     let pending = std::mem::take(&mut *lock(&DIRTY));

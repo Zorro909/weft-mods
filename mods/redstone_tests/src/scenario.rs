@@ -1,7 +1,8 @@
 //! Scenarios run on the server, one at a time, in the region of the player who asked for them.
 //! A scenario is a list of steps: `Do` runs code against the world, `Wait(n)` lets exactly n world
 //! ticks pass (redstone's own tick runs before ours, so a change made by a `Do` is solved by the
-//! tick after it).
+//! tick after it), `Until(f, max)` runs `f` once a tick until it returns true, failing after `max`
+//! ticks.
 
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -15,6 +16,18 @@ use weft_sdk::*;
 pub enum Step {
     Do(fn(&mut Ctx)),
     Wait(u32),
+    Until(fn(&mut Ctx) -> bool, u32),
+}
+
+/// What a scenario has to do with the world across a restart (`scripts/test.sh` runs the pair in
+/// two launches on one world). Neither runs with `all`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Restart {
+    No,
+    /// Leaves its build in place and writes its origin for the `After` one.
+    Before,
+    /// Runs at the origin the `Before` one wrote.
+    After,
 }
 
 pub struct Scenario {
@@ -24,11 +37,17 @@ pub struct Scenario {
     /// there, and the origin is that position (+4, 0, +4). Afterwards they go back to the
     /// overworld where they were.
     pub place: Option<(&'static Dimension, [f64; 3])>,
+    pub restart: Restart,
 }
 
 impl Scenario {
     pub fn new(name: &'static str, steps: Vec<Step>) -> Scenario {
-        Scenario { name, steps, place: None }
+        Scenario { name, steps, place: None, restart: Restart::No }
+    }
+
+    pub fn restart(mut self, r: Restart) -> Scenario {
+        self.restart = r;
+        self
     }
 
     pub fn in_dimension(mut self, dim: &'static Dimension, pos: [f64; 3]) -> Scenario {
@@ -50,8 +69,11 @@ pub struct Ctx<'a> {
     pub w: &'a World,
     pub origin: Pos,
     pub player: u64,
+    player_pos: [f64; 3],
     failures: &'a mut Vec<String>,
     touched: &'a mut Vec<Pos>,
+    hover: &'a mut Option<[f64; 3]>,
+    start: &'a mut Option<[f64; 3]>,
 }
 
 impl Ctx<'_> {
@@ -88,6 +110,30 @@ impl Ctx<'_> {
     /// One property of the block at `rel`, empty if it has none.
     pub fn prop(&self, rel: Pos, name: &str) -> String {
         self.w.prop(self.at(rel), name).unwrap_or("").to_string()
+    }
+
+    /// Whether the block at `rel` is loaded (writing what is there changes nothing).
+    pub fn loaded(&self, rel: Pos) -> bool {
+        let p = self.at(rel);
+        self.w.set(p, self.w.get(p))
+    }
+
+    /// Moves the player by `by` and keeps them hovering there; they go back where they were
+    /// before the first move when the scenario ends. Not for scenarios with a `place`.
+    pub fn go(&mut self, by: [f64; 3]) {
+        let from = self.hover.unwrap_or(self.player_pos);
+        self.start.get_or_insert(self.player_pos);
+        let to = [from[0] + by[0], from[1] + by[1], from[2] + by[2]];
+        *self.hover = Some(to);
+        self.w.teleport(self.player, None, to);
+    }
+
+    /// Back where the player was before the first `go`.
+    pub fn go_back(&mut self) {
+        if let Some(s) = *self.start {
+            *self.hover = Some(s);
+            self.w.teleport(self.player, None, s);
+        }
     }
 
     pub fn fail(&mut self, msg: impl Into<String>) {
@@ -129,6 +175,13 @@ struct Current {
     settle: u32,
     /// Where the player was before `Scenario::place` moved them.
     home: Option<[f64; 3]>,
+    /// Where `Ctx::go` keeps the player, and where they were before it.
+    hover: Option<[f64; 3]>,
+    start: Option<[f64; 3]>,
+    /// Ticks the current `Until` has waited.
+    until: u32,
+    /// Going back to the overworld after a scenario somewhere else.
+    leaving: bool,
     origin: Option<Pos>,
     failures: Vec<String>,
     touched: Vec<Pos>,
@@ -159,7 +212,7 @@ pub fn register(r: &mut Registry, all: Vec<Scenario>) {
         let mut guard = RUNNER.lock().unwrap();
         let Some(run) = guard.as_mut() else { return };
         let picked: Vec<usize> = if names == "all" {
-            (0..run.all.len()).collect()
+            (0..run.all.len()).filter(|&i| run.all[i].restart == Restart::No).collect()
         } else {
             let mut v = Vec::new();
             for n in names.split(',').map(str::trim) {
@@ -192,7 +245,10 @@ fn tick(run: &mut Runner, w: &World) {
     }
     if run.cur.is_none() {
         match run.queue.pop_front() {
-            Some(idx) => run.cur = Some(Current { idx, step: 0, wait: 0, settle: 0, home: None, origin: None, failures: Vec::new(), touched: Vec::new(), clearing: None }),
+            Some(idx) => {
+                let origin = if run.all[idx].restart == Restart::After { saved_origin() } else { None };
+                run.cur = Some(Current { idx, step: 0, wait: 0, settle: 0, home: None, hover: None, start: None, until: 0, leaving: false, origin, failures: Vec::new(), touched: Vec::new(), clearing: None });
+            }
             None => return finish(run),
         }
     }
@@ -201,8 +257,7 @@ fn tick(run: &mut Runner, w: &World) {
     let place = run.all[cur.idx].place;
     if cur.settle > 0 {
         cur.settle -= 1;
-        if cur.settle == 0 && cur.clearing.is_some() {
-            // Back home after a scenario somewhere else.
+        if cur.settle == 0 && cur.leaving {
             run.cur = None;
         }
         return;
@@ -217,6 +272,7 @@ fn tick(run: &mut Runner, w: &World) {
                 Some(home) => {
                     w.teleport(player, Some(&OVERWORLD), home);
                     cur.settle = SETTLE;
+                    cur.leaving = true;
                 }
                 None => run.cur = None,
             }
@@ -231,7 +287,9 @@ fn tick(run: &mut Runner, w: &World) {
             cur.settle = SETTLE;
             return;
         }
-        // Keep them hovering there, so the area stays loaded around the scenario.
+    }
+    // Keep them hovering there, so the area stays loaded around the scenario.
+    if let Some(at) = cur.hover.or(place.map(|(_, at)| at)) {
         if (0..3).any(|i| (st.pos[i] - at[i]).abs() > 0.5) {
             w.teleport(player, None, at);
         }
@@ -270,11 +328,21 @@ fn tick(run: &mut Runner, w: &World) {
                 }
             }
             Step::Do(f) => {
-                let mut ctx = Ctx { w, origin, player, failures: &mut cur.failures, touched: &mut cur.touched };
-                if let Err(e) = catch_unwind(AssertUnwindSafe(|| f(&mut ctx))) {
-                    let msg = e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default();
-                    cur.failures.push(format!("panicked: {msg}"));
+                let mut ctx = Ctx { w, origin, player, player_pos: st.pos, failures: &mut cur.failures, touched: &mut cur.touched, hover: &mut cur.hover, start: &mut cur.start };
+                run_step(&mut ctx, |c| f(c));
+            }
+            Step::Until(f, max) => {
+                let mut ctx = Ctx { w, origin, player, player_pos: st.pos, failures: &mut cur.failures, touched: &mut cur.touched, hover: &mut cur.hover, start: &mut cur.start };
+                if !run_step(&mut ctx, |c| f(c)).unwrap_or(true) {
+                    if cur.until < *max {
+                        cur.until += 1;
+                        cur.step -= 1;
+                        return;
+                    }
+                    // Go on: the steps after it still clean up (settings, the player's place).
+                    cur.failures.push(format!("step {} still false after {max} ticks", cur.step));
                 }
+                cur.until = 0;
             }
         }
     }
@@ -284,7 +352,49 @@ fn tick(run: &mut Runner, w: &World) {
         run.failed += 1;
     }
     run.lines.push(line);
-    cur.clearing = Some(clear_area(&cur.touched));
+    if scenario.restart == Restart::Before {
+        save_origin(origin);
+        cur.clearing = Some(Vec::new());
+    } else {
+        cur.clearing = Some(clear_area(&cur.touched));
+    }
+    // Back where `Ctx::go` took them from first, so the area loads again before it is cleared.
+    cur.hover = None;
+    if let Some(s) = cur.start.take() {
+        w.teleport(player, None, s);
+        cur.settle = SETTLE;
+    }
+}
+
+/// Runs a step, a panic counting as a failure (and `None`).
+fn run_step<T>(ctx: &mut Ctx, f: impl FnOnce(&mut Ctx) -> T) -> Option<T> {
+    match catch_unwind(AssertUnwindSafe(|| f(ctx))) {
+        Ok(v) => Some(v),
+        Err(e) => {
+            let msg = e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default();
+            ctx.fail(format!("panicked: {msg}"));
+            None
+        }
+    }
+}
+
+/// Where a `Restart::Before` scenario leaves its origin: next to the report.
+fn origin_file() -> std::path::PathBuf {
+    let report = launch_option("redstone-report").unwrap_or_else(|| "redstone.txt".to_string());
+    std::path::Path::new(&report).with_file_name("restart-origin.txt")
+}
+
+fn save_origin(o: Pos) {
+    let path = origin_file();
+    if let Err(e) = std::fs::write(&path, format!("{} {} {}\n", o[0], o[1], o[2])) {
+        error!("cannot write {}: {e}", path.display());
+    }
+}
+
+fn saved_origin() -> Option<Pos> {
+    let text = std::fs::read_to_string(origin_file()).ok()?;
+    let v: Vec<i32> = text.split_whitespace().filter_map(|t| t.parse().ok()).collect();
+    (v.len() == 3).then(|| [v[0], v[1], v[2]])
 }
 
 /// The box around everything a scenario set, one block wider (pistons and wire reach out),

@@ -17,7 +17,7 @@ use redstone_core::{Cell, Device, Kind, Pending, Pos, Power, Range, Shape, SideP
 use weft_sdk::abi::block_flags;
 use weft_sdk::{World, query, state_flags, state_with, block_of};
 
-use crate::blocks;
+use crate::{blocks, persist};
 
 pub struct WeftWorld<'a> {
     w: &'a World,
@@ -164,8 +164,8 @@ impl redstone_core::World for WeftWorld<'_> {
         self.w.emit(&INPUT_CHANGED, Inputs { pos: p, sides });
     }
 
-    fn save_pending(&mut self, _: Pos, _: Option<(Pending, bool)>) {
-        // Task 9 (persistence).
+    fn save_pending(&mut self, p: Pos, pending: Option<(Pending, bool)>) {
+        persist::save(self.w, p, pending);
     }
 }
 

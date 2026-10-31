@@ -32,7 +32,8 @@ pub trait World: View {
     /// What reaches an extension receiver changed.
     fn notify(&mut self, p: Pos, inputs: [SidePower; 6]);
     /// Stores (or clears) a device's pending change so it survives unload and restart; `true` when
-    /// it is frozen and not counting down.
+    /// it is frozen and not counting down. Unless frozen it applies `remaining` ticks after the
+    /// tick it was saved in.
     fn save_pending(&mut self, p: Pos, pending: Option<(Pending, bool)>);
 }
 
@@ -92,16 +93,16 @@ impl Sim {
             let fresh = e.cubes.is_none();
             let cubes = e.cubes.get_or_insert_with(|| reach(&*w, *p));
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
-            if fresh || frozen != e.frozen {
+            if !frozen {
+                e.pending.remaining = e.pending.remaining.saturating_sub(1);
+            }
+            if e.pending.remaining == 0 {
+                due.push(*p);
+            } else if fresh || frozen != e.frozen {
+                // Saved as counted down, like a fresh change: `remaining` ticks after this one.
                 w.save_pending(*p, Some((e.pending, frozen)));
             }
             e.frozen = frozen;
-            if !frozen {
-                e.pending.remaining = e.pending.remaining.saturating_sub(1);
-                if e.pending.remaining == 0 {
-                    due.push(*p);
-                }
-            }
         }
 
         // 2. Apply every change due now, all at once.
@@ -645,6 +646,45 @@ mod tests {
         sim.tick(&mut w);
         assert_eq!(w.device_writes([0, 0, 0]), 0);
         sim.tick(&mut w);
+        assert!(powered(w.kind([0, 0, 0])));
+    }
+
+    #[test]
+    fn saved_remaining_counts_from_the_next_tick() {
+        // However a change was last saved (on reacting, on freezing, on thawing, after
+        // `schedule`), it applies `remaining` ticks after that save: what a restored save relies on.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([-1, 0, 0], lever(true)).put([0, 0, 0], repeater(Dir::East, 4));
+        let mut sim = Sim::default();
+        sim.touch([-1, 0, 0]);
+        let (mut last, mut checked) = (None, 0);
+        for t in 0..30u32 {
+            match t {
+                2 => drop(w.unloaded.insert([-1, 0, 0])),
+                5 => drop(w.unloaded.remove(&[-1, 0, 0])),
+                _ => {}
+            }
+            w.log.clear();
+            sim.tick(&mut w);
+            for e in &w.log {
+                match e {
+                    Ev::Save(_, Some((p, false))) => last = Some((t, t + p.remaining)),
+                    Ev::Save(_, _) => last = None,
+                    Ev::Device(..) => {
+                        let (at, due) = last.take().expect("applied without a save");
+                        assert_eq!(due, t, "saved in tick {at}");
+                        checked += 1;
+                    }
+                    _ => {}
+                }
+            }
+            if t == 12 {
+                // As restored after a restart: scheduled fresh, saved by the next tick.
+                w.put([0, 0, 0], repeater(Dir::East, 4));
+                sim.schedule([0, 0, 0], Pending { next: Kind::Repeater { facing: Dir::East, delay: 4, powered: true, locked: false }, remaining: 3 });
+            }
+        }
+        assert_eq!(checked, 2);
         assert!(powered(w.kind([0, 0, 0])));
     }
 

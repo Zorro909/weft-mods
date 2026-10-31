@@ -70,6 +70,19 @@ def main():
             if (i + j) % 5 == 0 or (i - j) % 5 == 0:
                 pb[j][i] = (225, 70, 55, 255)
     png(block / "power_block.png", pb)
+    # Torch: a stick with a red head, glowing when lit. The box shows the middle of the texture.
+    for name, head in (("torch_on", (255, 60, 30)), ("torch_off", (110, 25, 20))):
+        t = noisy((105, 75, 45), 0.12, 700)
+        for y in range(0, 5):
+            for x in range(16):
+                t[y][x] = tuple(max(0, min(255, int(c * (0.85 + 0.03 * ((x * 7 + y * 3) % 5))))) for c in head) + (255,)
+        png(block / f"{name}.png", t)
+    png(block / "torch_on_e.png", [[(230 if y < 5 else 0, 0, 0, 255) for _ in range(16)] for y in range(16)])
+    item = [[(0, 0, 0, 0)] * 16 for _ in range(16)]
+    for y in range(3, 15):
+        for x in (7, 8):
+            item[y][x] = (255, 60, 30, 255) if y < 6 else (105, 75, 45, 255)
+    png(OUT / "item" / "torch.png", item)
     # Dust's item: a few specks on transparent.
     rng = random.Random(600)
     item = [[(0, 0, 0, 0)] * 16 for _ in range(16)]

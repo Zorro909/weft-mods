@@ -7,3 +7,4 @@ block.redstone.dust = Redstone Dust
 block.redstone.lever = Lever
 block.redstone.lamp = Redstone Lamp
 block.redstone.power_block = Power Block
+block.redstone.torch = Redstone Torch

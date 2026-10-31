@@ -227,6 +227,11 @@ pending work.
   A full restart is fine, because world time is saved. Therefore:
   - pending devices store their **remaining delay** (plus the tick it was last counted from), not
     only a due tick; an overdue timer is a wake-up, never permission to apply the change
+  - a saved remaining delay always counts from the tick after the one it was saved in, whether
+    it was saved on reacting, on freezing, on thawing or after a restore. A change restored after
+    a restart then applies in the tick it would have, or one tick after the restore if that has
+    passed. Only devices that can have a pending change get the block entity (not levers or the
+    power block).
   - every circuit with pending work checks once per tick that the cubes it spans are still loaded
     (one probe per cube, §7.1). The freeze is then caught in the tick it happens, and the remaining
     delays are frozen at that tick. This cost is per active circuit per tick, which is the price of
