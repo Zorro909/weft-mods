@@ -1,4 +1,4 @@
-use crate::{Device, Dir, FULL, Power, Range, SidePower};
+use crate::{Device, Dir, FULL, PistonPhase, Power, Range, SidePower};
 
 /// The built-in devices and their state.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -14,6 +14,8 @@ pub enum Kind {
     Repeater { facing: Dir, delay: u8, powered: bool, locked: bool },
     Comparator { facing: Dir, subtract: bool, output: u8 },
     Lamp { lit: bool },
+    /// `facing`: the side it pushes to; it reads power from the other five.
+    Piston { facing: Dir, sticky: bool, phase: PistonPhase },
 }
 
 impl Kind {
@@ -25,6 +27,7 @@ impl Kind {
             Kind::Torch { lit, attached } => Kind::Torch { lit, attached: attached.rotate_y() },
             Kind::Repeater { facing, delay, powered, locked } => Kind::Repeater { facing: facing.rotate_y(), delay, powered, locked },
             Kind::Comparator { facing, subtract, output } => Kind::Comparator { facing: facing.rotate_y(), subtract, output },
+            Kind::Piston { facing, sticky, phase } => Kind::Piston { facing: facing.rotate_y(), sticky, phase },
             k => k,
         }
     }
@@ -70,7 +73,7 @@ pub fn connects(k: Kind) -> u8 {
         Kind::Lever { .. } | Kind::Button { .. } | Kind::Plate { .. } | Kind::PowerBlock | Kind::Torch { .. } => 0b111111,
         Kind::Repeater { facing, .. } => bit(facing) | bit(facing.opposite()),
         Kind::Comparator { facing, .. } => bit(facing) | bit(facing.opposite()) | sides_of(facing).iter().fold(0, |m, d| m | bit(*d)),
-        Kind::Lamp { .. } => 0,
+        Kind::Lamp { .. } | Kind::Piston { .. } => 0,
     }
 }
 
@@ -79,8 +82,8 @@ pub fn device(k: Kind, range: Range) -> Device {
     Device {
         output: outputs(k, range),
         connects: connects(k),
-        receives: matches!(k, Kind::Torch { .. } | Kind::Repeater { .. } | Kind::Comparator { .. } | Kind::Lamp { .. }),
-        solid: matches!(k, Kind::PowerBlock | Kind::Lamp { .. }),
+        receives: matches!(k, Kind::Torch { .. } | Kind::Repeater { .. } | Kind::Comparator { .. } | Kind::Lamp { .. } | Kind::Piston { .. }),
+        solid: matches!(k, Kind::PowerBlock | Kind::Lamp { .. } | Kind::Piston { phase: PistonPhase::Retracted, .. }),
         kind: Some(k),
     }
 }
@@ -122,7 +125,8 @@ pub fn react(k: Kind, i: [SidePower; 6], range: Range, container: Option<u8>, si
             let on = i.iter().any(|s| s.strength > 0);
             (on != lit).then_some((1, Kind::Lamp { lit: on }))
         }
-        Kind::Lever { .. } | Kind::Button { .. } | Kind::Plate { .. } | Kind::PowerBlock => None,
+        // Pistons step through their phases every tick instead (`piston_step`).
+        Kind::Lever { .. } | Kind::Button { .. } | Kind::Plate { .. } | Kind::PowerBlock | Kind::Piston { .. } => None,
     }
 }
 
@@ -160,6 +164,15 @@ pub fn encode(k: Kind) -> u32 {
         Kind::Repeater { facing, delay, powered, locked } => (5, d(facing) | (delay as u32 - 1) << 3 | b(powered) << 5 | b(locked) << 6),
         Kind::Comparator { facing, subtract, output } => (6, d(facing) | b(subtract) << 3 | (output as u32) << 4),
         Kind::Lamp { lit } => (7, b(lit)),
+        Kind::Piston { facing, sticky, phase } => {
+            let phase = match phase {
+                PistonPhase::Retracted => 0,
+                PistonPhase::Extending { since } => 1 | (since as u32 & 3) << 2,
+                PistonPhase::Extended => 2,
+                PistonPhase::Retracting { since, pull } => 3 | (since as u32 & 3) << 2 | b(pull) << 4,
+            };
+            (8, d(facing) | b(sticky) << 3 | phase << 4)
+        }
     };
     tag | fields << 4
 }
@@ -180,6 +193,17 @@ pub fn decode(v: u32) -> Option<Kind> {
         5 if f < 1 << 7 => Kind::Repeater { facing: dir(0)?, delay: (f >> 3 & 3) as u8 + 1, powered: bit(5), locked: bit(6) },
         6 if f < 1 << 10 => Kind::Comparator { facing: dir(0)?, subtract: bit(3), output: (f >> 4) as u8 },
         7 if f < 2 => Kind::Lamp { lit: bit(0) },
+        8 if f < 1 << 9 => {
+            let since = (f >> 6 & 3) as u8;
+            let phase = match f >> 4 & 3 {
+                0 if f >> 6 == 0 => PistonPhase::Retracted,
+                1 if f >> 8 == 0 => PistonPhase::Extending { since },
+                2 if f >> 6 == 0 => PistonPhase::Extended,
+                3 => PistonPhase::Retracting { since, pull: bit(8) },
+                _ => return None,
+            };
+            Kind::Piston { facing: dir(0)?, sticky: bit(3), phase }
+        }
         _ => return None,
     };
     Some(k)
@@ -338,6 +362,13 @@ mod tests {
                 }
                 for output in [0, 1, 31, 63] {
                     all.push(Kind::Comparator { facing: d, subtract: b, output });
+                }
+                let mut phases = vec![PistonPhase::Retracted, PistonPhase::Extended];
+                for since in 0..=1 {
+                    phases.extend([PistonPhase::Extending { since }, PistonPhase::Retracting { since, pull: false }, PistonPhase::Retracting { since, pull: true }]);
+                }
+                for phase in phases {
+                    all.push(Kind::Piston { facing: d, sticky: b, phase });
                 }
             }
         }
