@@ -52,7 +52,8 @@ pub fn source_into_wire(v: &impl View, p: Pos) -> u8 {
     best
 }
 
-/// What reaches each side of a receiver at `p`.
+/// What reaches each side of a receiver at `p`. A side nothing reaches (strength 0) is always
+/// `SidePower::default()`, so unpowered wire next to a receiver isn't a change.
 pub fn inputs(v: &impl View, p: Pos) -> [SidePower; 6] {
     let mut i = [SidePower::default(); 6];
     for d in Dir::ALL {
@@ -73,6 +74,9 @@ pub fn inputs(v: &impl View, p: Pos) -> [SidePower; 6] {
             }
             _ => SidePower::default(),
         };
+        if i[d.index()].strength == 0 {
+            i[d.index()] = SidePower::default();
+        }
     }
     i
 }
@@ -121,6 +125,16 @@ mod tests {
         g.put([0, 1, 0], lever(15)).solid([0, 0, 0]);
         let i = inputs(&g, [1, 0, 0]);
         assert_eq!(i[Dir::West.index()], SidePower { strength: 15, strong: true, direct: false });
+    }
+
+    #[test]
+    fn unpowered_side_is_default() {
+        let mut g = MapGrid::default();
+        g.dust([0, 0, 0]).put([2, 0, 0], lever(0));
+        let i = inputs(&g, [1, 0, 0]);
+        assert_eq!(i[Dir::West.index()], SidePower::default());
+        assert_eq!(i[Dir::Down.index()], SidePower::default());
+        assert_eq!(i[Dir::East.index()], SidePower { strength: 15, strong: false, direct: true });
     }
 
     #[test]

@@ -17,7 +17,7 @@ pub struct Network {
 
 /// The network of the wire at `start`.
 pub fn network(v: &impl View, start: Pos) -> Network {
-    let r = Recorder { v, cubes: RefCell::new(BTreeSet::new()), unloaded: StdCell::new(false) };
+    let r = Recorder::new(v);
     let mut wires = BTreeSet::new();
     let mut edges = BTreeMap::new();
     let mut queue = std::collections::VecDeque::from([start]);
@@ -51,21 +51,32 @@ pub fn network(v: &impl View, start: Pos) -> Network {
 }
 
 /// A view that notes which cubes were read and whether any position was unloaded.
-struct Recorder<'a, V> {
+pub(crate) struct Recorder<'a, V> {
     v: &'a V,
-    cubes: RefCell<BTreeSet<[i32; 3]>>,
-    unloaded: StdCell<bool>,
+    pub(crate) cubes: RefCell<BTreeSet<[i32; 3]>>,
+    pub(crate) unloaded: StdCell<bool>,
+}
+
+impl<'a, V> Recorder<'a, V> {
+    pub(crate) fn new(v: &'a V) -> Self {
+        Recorder { v, cubes: RefCell::new(BTreeSet::new()), unloaded: StdCell::new(false) }
+    }
 }
 
 impl<V: View> View for Recorder<'_, V> {
     fn cell(&self, p: Pos) -> Cell {
-        self.cubes.borrow_mut().insert(p.map(|c| c.div_euclid(16)));
+        self.cubes.borrow_mut().insert(cube_of(p));
         let c = self.v.cell(p);
         if c == Cell::Unloaded {
             self.unloaded.set(true);
         }
         c
     }
+}
+
+/// The cube (16³) a position is in.
+pub fn cube_of(p: Pos) -> [i32; 3] {
+    p.map(|c| c.div_euclid(16))
 }
 
 /// The strength of every wire in `net`: the best of its sources minus the distance, never below 0.

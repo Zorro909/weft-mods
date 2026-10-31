@@ -7,6 +7,7 @@ mod dir;
 mod network;
 mod power;
 mod power_rules;
+mod sim;
 #[cfg(any(test, feature = "testgrid"))]
 pub mod testgrid;
 mod wire;
@@ -17,4 +18,5 @@ pub use dir::*;
 pub use network::*;
 pub use power::*;
 pub use power_rules::*;
+pub use sim::*;
 pub use wire::*;

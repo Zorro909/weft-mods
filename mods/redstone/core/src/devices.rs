@@ -1,4 +1,4 @@
-use crate::{Dir, FULL, Power, Range, SidePower};
+use crate::{Device, Dir, FULL, Power, Range, SidePower};
 
 /// The built-in devices and their state.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -74,8 +74,19 @@ pub fn connects(k: Kind) -> u8 {
     }
 }
 
+/// The device cell of a built-in device.
+pub fn device(k: Kind, range: Range) -> Device {
+    Device {
+        output: outputs(k, range),
+        connects: connects(k),
+        receives: matches!(k, Kind::Torch { .. } | Kind::Repeater { .. } | Kind::Comparator { .. } | Kind::Lamp { .. }),
+        solid: matches!(k, Kind::PowerBlock | Kind::Lamp { .. }),
+        kind: Some(k),
+    }
+}
+
 /// The two horizontal sides of something facing `facing`.
-fn sides_of(facing: Dir) -> [Dir; 2] {
+pub(crate) fn sides_of(facing: Dir) -> [Dir; 2] {
     match facing {
         Dir::East | Dir::West => [Dir::North, Dir::South],
         _ => [Dir::West, Dir::East],
