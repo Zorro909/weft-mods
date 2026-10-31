@@ -9,13 +9,18 @@ use redstone_api::{CONNECTS, EMITS, Emits, SidePowerV, WIRE, WireType};
 use redstone_core::{Kind, Link, Range, Shape};
 use weft_sdk::*;
 
-use crate::{driver, persist};
+use crate::{driver, persist, plates};
 
 pub static DUST: Block = Block::named("dust");
 pub static LEVER: Block = Block::named("lever");
 pub static LAMP: Block = Block::named("lamp");
 pub static POWER_BLOCK: Block = Block::named("power_block");
 pub static TORCH: Block = Block::named("torch");
+pub static REPEATER: Block = Block::named("repeater");
+pub static COMPARATOR: Block = Block::named("comparator");
+pub static STONE_BUTTON: Block = Block::named("stone_button");
+pub static WOOD_BUTTON: Block = Block::named("wood_button");
+pub static PLATE: Block = Block::named("pressure_plate");
 
 pub static TAB: CreativeTab = CreativeTab::named("redstone");
 static DUST_ITEM: Item = Item::named("dust");
@@ -130,8 +135,124 @@ pub fn register(r: &mut Registry) {
             device_components(s.needs(attached.index() as u32, "").model_box(lo, hi), k)
         });
 
-    // Devices that can have a change pending keep it in their block entity.
-    persist::register(r, &[&TORCH, &LAMP]);
+    // Repeaters and comparators face whoever placed them and put out the other way.
+    r.block(&REPEATER)
+        .facing(Facings::HORIZONTAL, Toward::Player)
+        .prop("delay", 1..=4)
+        .prop("powered", ["false", "true"])
+        .prop("locked", ["false", "true"])
+        .hardness(0.0)
+        .not_solid()
+        .needs(Dir::Down.face(), "")
+        .item_texture("repeater")
+        .tab(&TAB)
+        .on_neighbor(driver::neighbor)
+        .on_use(|u| {
+            let (w, p) = (u.world(), u.pos());
+            let d = w.prop(p, "delay").and_then(|d| d.parse::<u32>().ok()).unwrap_or(1);
+            w.set_prop(p, "delay", &(d % 4 + 1).to_string());
+            driver::queue(p);
+            true
+        })
+        .states(|p, s| {
+            let k = repeater_kind(p);
+            let Kind::Repeater { facing, delay, powered, locked } = k else { unreachable!() };
+            let mut s = s.texture(if powered { "repeater_on" } else { "repeater_off" }).model_box([0.0, 0.0, 0.0], [16.0, 2.0, 16.0]);
+            // Drawn putting out to the east: the output post, and the delay post further back the
+            // shorter the delay.
+            let back = 9.0 - 2.0 * (delay as f32 - 1.0);
+            let mut boxes = vec![([11.0, 2.0, 7.0], [13.0, 7.0, 9.0]), ([back - 2.0, 2.0, 7.0], [back, 7.0, 9.0])];
+            if locked {
+                boxes.push(([back - 2.0, 2.0, 2.0], [back, 4.0, 14.0]));
+            }
+            for (lo, hi) in boxes {
+                let (lo, hi) = turn(facing, lo, hi);
+                s = s.model_box(lo, hi);
+            }
+            device_components(s, k)
+        });
+
+    r.block(&COMPARATOR)
+        .facing(Facings::HORIZONTAL, Toward::Player)
+        .prop("mode", ["compare", "subtract"])
+        .prop("output", 0..=63)
+        .hardness(0.0)
+        .not_solid()
+        .needs(Dir::Down.face(), "")
+        .item_texture("comparator")
+        .tab(&TAB)
+        .on_neighbor(driver::neighbor)
+        .on_use(|u| {
+            let (w, p) = (u.world(), u.pos());
+            let subtract = w.prop(p, "mode") == Some("subtract");
+            w.set_prop(p, "mode", if subtract { "compare" } else { "subtract" });
+            driver::queue(p);
+            true
+        })
+        .states(|p, s| {
+            let k = comparator_kind(p);
+            let Kind::Comparator { facing, subtract, output } = k else { unreachable!() };
+            let mut s = s.texture(if output > 0 { "comparator_on" } else { "comparator_off" }).model_box([0.0, 0.0, 0.0], [16.0, 2.0, 16.0]);
+            // Two back posts, and the front one taller in subtract mode.
+            let front = if subtract { 7.0 } else { 5.0 };
+            for (lo, hi) in [([3.0, 2.0, 3.0], [5.0, 7.0, 5.0]), ([3.0, 2.0, 11.0], [5.0, 7.0, 13.0]), ([11.0, 2.0, 7.0], [13.0, front, 9.0])] {
+                let (lo, hi) = turn(facing, lo, hi);
+                s = s.model_box(lo, hi);
+            }
+            device_components(s, k)
+        });
+
+    for (block, wood) in [(&STONE_BUTTON, false), (&WOOD_BUTTON, true)] {
+        r.block(block)
+            .facing(Facings::ALL, Toward::Face)
+            .prop("on", ["false", "true"])
+            .hardness(0.5)
+            .not_solid()
+            .texture(if wood { "button_wood" } else { "button_stone" })
+            .tab(&TAB)
+            .on_neighbor(driver::neighbor)
+            .on_use(|u| {
+                driver::press(&u.world(), u.pos());
+                true
+            })
+            .states(move |p, s| {
+                let k = Kind::Button { on: p.is("on", "true"), attached: core_dir(p.facing()).opposite(), wood };
+                let Kind::Button { on, attached, .. } = k else { unreachable!() };
+                let (lo, hi) = onto(attached, [5.0, 0.0, 6.0], [11.0, if on { 1.0 } else { 2.0 }, 10.0]);
+                device_components(s.needs(attached.index() as u32, "").model_box(lo, hi), k)
+            });
+    }
+
+    r.block(&PLATE)
+        .prop("on", ["false", "true"])
+        .hardness(0.5)
+        .not_solid()
+        .needs(Dir::Down.face(), "")
+        .texture("pressure_plate")
+        .tab(&TAB)
+        .on_neighbor(driver::neighbor)
+        .states(|p, s| {
+            let on = p.is("on", "true");
+            device_components(s.model_box([1.0, 0.0, 1.0], [15.0, if on { 0.5 } else { 1.0 }, 15.0]), Kind::Plate { on })
+        });
+
+    // Devices that can have a change pending keep it in their block entity; plates keep when
+    // they last saw someone in theirs.
+    persist::register(r, &[&TORCH, &LAMP, &REPEATER, &COMPARATOR, &STONE_BUTTON, &WOOD_BUTTON]);
+    plates::register(r);
+}
+
+/// A box drawn for a device putting out to the east, turned to put out to `out`.
+fn turn(out: redstone_core::Dir, lo: [f32; 3], hi: [f32; 3]) -> ([f32; 3], [f32; 3]) {
+    use redstone_core::Dir as D;
+    let map = |[x, y, z]: [f32; 3]| match out {
+        D::West => [16.0 - x, y, 16.0 - z],
+        D::South => [16.0 - z, y, x],
+        D::North => [z, y, 16.0 - x],
+        _ => [x, y, z],
+    };
+    let (p, q) = (map(lo), map(hi));
+    (std::array::from_fn(|i| p[i].min(q[i])), std::array::from_fn(|i| p[i].max(q[i])))
 }
 
 /// The flat arm of dust toward side `i` (`Dir::HORIZONTAL` order), in pixels.
@@ -174,6 +295,15 @@ fn lever_kind(p: &Props) -> Kind {
     Kind::Lever { on: p.is("powered", "true"), attached: core_dir(p.facing()).opposite() }
 }
 
+fn repeater_kind(p: &Props) -> Kind {
+    let delay = p.int("delay") as u8;
+    Kind::Repeater { facing: core_dir(p.facing()).opposite(), delay, powered: p.is("powered", "true"), locked: p.is("locked", "true") }
+}
+
+fn comparator_kind(p: &Props) -> Kind {
+    Kind::Comparator { facing: core_dir(p.facing()).opposite(), subtract: p.is("mode", "subtract"), output: p.int("output") as u8 }
+}
+
 fn torch_kind(p: &Props) -> Kind {
     Kind::Torch { lit: p.is("lit", "true"), attached: core_dir(p.facing()).opposite() }
 }
@@ -201,7 +331,7 @@ fn tables() -> &'static Tables {
     static T: OnceLock<Tables> = OnceLock::new();
     T.get_or_init(|| {
         let mut kinds = HashMap::new();
-        for block in [&LEVER, &LAMP, &POWER_BLOCK, &TORCH] {
+        for block in [&LEVER, &LAMP, &POWER_BLOCK, &TORCH, &REPEATER, &COMPARATOR, &STONE_BUTTON, &WOOD_BUTTON, &PLATE] {
             let mut s = block.id();
             while s != u32::MAX && block.is(s) {
                 if let Some(k) = kind_from_state(block, s) {
@@ -226,6 +356,17 @@ fn kind_from_state(block: &Block, s: u32) -> Option<Kind> {
     } else if std::ptr::eq(block, &TORCH) {
         let facing = Dir::from_name(prop("facing"))?;
         Kind::Torch { lit: prop("lit") == "true", attached: core_dir(facing).opposite() }
+    } else if std::ptr::eq(block, &REPEATER) {
+        let facing = core_dir(Dir::from_name(prop("facing"))?).opposite();
+        Kind::Repeater { facing, delay: prop("delay").parse().ok()?, powered: prop("powered") == "true", locked: prop("locked") == "true" }
+    } else if std::ptr::eq(block, &COMPARATOR) {
+        let facing = core_dir(Dir::from_name(prop("facing"))?).opposite();
+        Kind::Comparator { facing, subtract: prop("mode") == "subtract", output: prop("output").parse().ok()? }
+    } else if std::ptr::eq(block, &STONE_BUTTON) || std::ptr::eq(block, &WOOD_BUTTON) {
+        let facing = Dir::from_name(prop("facing"))?;
+        Kind::Button { on: prop("on") == "true", attached: core_dir(facing).opposite(), wood: std::ptr::eq(block, &WOOD_BUTTON) }
+    } else if std::ptr::eq(block, &PLATE) {
+        Kind::Plate { on: prop("on") == "true" }
     } else {
         Kind::PowerBlock
     };

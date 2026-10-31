@@ -126,6 +126,17 @@ pub fn react(k: Kind, i: [SidePower; 6], range: Range, container: Option<u8>, si
     }
 }
 
+/// What a device that is `current` now becomes when its pending change to `next` applies: the
+/// change's own fields, keeping what players set since it started (a repeater's delay, a
+/// comparator's mode).
+pub fn apply(current: Kind, next: Kind) -> Kind {
+    match (current, next) {
+        (Kind::Repeater { delay, .. }, Kind::Repeater { facing, powered, locked, .. }) => Kind::Repeater { facing, delay, powered, locked },
+        (Kind::Comparator { subtract, .. }, Kind::Comparator { facing, output, .. }) => Kind::Comparator { facing, subtract, output },
+        _ => next,
+    }
+}
+
 /// A comparator's reading of a container filled to `filled` (0..=1): 0 when empty, 1 to the
 /// world's maximum otherwise.
 pub fn container_level(filled: f64, range: Range) -> u8 {

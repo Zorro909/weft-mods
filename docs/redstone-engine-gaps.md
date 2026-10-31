@@ -226,3 +226,13 @@ Paths are relative to `Weft/`.
 - **Upstream fix:** a small per-block value outside the state (a byte would do) that block shaders
   can read, set by mods without a state change and synced to clients. Dust would then need 81
   states (shapes only) and could show every strength.
+
+## G17. Nothing says when an inventory changes
+
+- **Verified.** Setting a slot writes it and tells nobody (`crates/engine/src/host.rs:623-625`), and
+  the built-in events have nothing for inventories (`crates/sdk/src/extend.rs:116-124`).
+- **Needed for:** comparators reading a container behind them, which should follow the fill level.
+- **Workaround:** a comparator that found a container (or a mod's reading) behind it re-reads it
+  every tick. That costs one inventory scan per such comparator and tick, idle or not.
+- **Upstream fix:** an event (or a per-block-entity callback) when a slot of a block entity's
+  inventory changes.

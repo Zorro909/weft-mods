@@ -76,7 +76,8 @@ fn restore(w: &World, p: Pos) -> Option<Pending> {
         return None;
     }
     let next = decode(v.next)?;
-    let passed = if v.frozen != 0 { 0 } else { w.time().saturating_sub(v.from_tick) };
+    // The driver schedules it next tick, from which `remaining` counts (`Sim::schedule`).
+    let passed = if v.frozen != 0 { 0 } else { (w.time() + 1).saturating_sub(v.from_tick) };
     Some(Pending { next, remaining: (v.remaining as u64).saturating_sub(passed).max(1) as u32 })
 }
 

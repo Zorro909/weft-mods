@@ -83,6 +83,31 @@ def main():
         for x in (7, 8):
             item[y][x] = (255, 60, 30, 255) if y < 6 else (105, 75, 45, 255)
     png(OUT / "item" / "torch.png", item)
+    # Repeater and comparator: a stone slab, the posts red (bright when on). Boxes show the part
+    # of the texture under them, so the posts take the texture's red middle band.
+    for name, seed in (("repeater", 800), ("comparator", 810)):
+        for state, red in (("on", (255, 50, 25)), ("off", (110, 25, 20))):
+            t = noisy((150, 150, 150), 0.08, seed)
+            for y in range(16):
+                for x in range(16):
+                    if 5 <= x <= 12 and 5 <= y <= 12:
+                        t[y][x] = tuple(max(0, min(255, int(c * (0.9 + 0.05 * ((x + y) % 3))))) for c in red) + (255,)
+            png(block / f"{name}_{state}.png", t)
+            if state == "on":
+                png(block / f"{name}_on_e.png", [[(220 if 5 <= x <= 12 and 5 <= y <= 12 else 0, 0, 0, 255) for x in range(16)] for y in range(16)])
+        item = [[(0, 0, 0, 0)] * 16 for _ in range(16)]
+        for y in range(10, 14):
+            for x in range(1, 15):
+                item[y][x] = (150, 150, 150, 255)
+        posts = (4, 11) if name == "repeater" else (3, 8, 12)
+        for px in posts:
+            for y in range(5, 10):
+                for x in (px, px + 1):
+                    item[y][x] = (230, 45, 25, 255)
+        png(OUT / "item" / f"{name}.png", item)
+    png(block / "button_stone.png", noisy((140, 140, 140), 0.10, 900))
+    png(block / "button_wood.png", noisy((160, 120, 70), 0.12, 901))
+    png(block / "pressure_plate.png", noisy((135, 135, 135), 0.06, 902))
     # Dust's item: a few specks on transparent.
     rng = random.Random(600)
     item = [[(0, 0, 0, 0)] * 16 for _ in range(16)]

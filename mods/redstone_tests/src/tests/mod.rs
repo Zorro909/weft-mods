@@ -1,6 +1,7 @@
 //! The scenario list.
 
 mod basics;
+mod devices;
 mod freeze;
 mod smoke;
 
@@ -18,6 +19,14 @@ pub fn all() -> Vec<Scenario> {
         freeze::freeze_across_border(),
         freeze::pending_survives_unload(),
         freeze::break_pending_torch(),
+        devices::repeater_delay_and_restore(),
+        devices::repeater_lock(),
+        devices::repeater_pulse_stretch(),
+        devices::comparator_modes(),
+        devices::comparator_reads_chest(),
+        devices::comparator_reads_through_block(),
+        devices::buttons_lengths(),
+        devices::plate_on_off(),
         freeze::restart_before(),
         freeze::restart_after(),
     ]

@@ -12,10 +12,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use redstone_api::{EMITS, CONNECTS, INPUT_CHANGED, Inputs, OUTPUT, RECEIVER, SidePowerV, WIRE};
-use redstone_core::{Cell, Device, Kind, Pending, Pos, Power, Range, Shape, SidePower, View, Wire, cube_of, network, solve};
+use redstone_api::{COMPARATOR_READING, CONNECTS, EMITS, INPUT_CHANGED, Inputs, OUTPUT, RECEIVER, SidePowerV, WIRE};
+use redstone_core::{Cell, Device, Kind, Pending, Pos, Power, Range, Shape, SidePower, View, Wire, container_level, cube_of, network, solve, step};
 use weft_sdk::abi::block_flags;
-use weft_sdk::{World, query, state_flags, state_with, block_of};
+use weft_sdk::{World, block_of, max_stack, query, state_flags, state_with};
 
 use crate::{blocks, persist};
 
@@ -143,8 +143,24 @@ impl redstone_core::World for WeftWorld<'_> {
         self.probe(p) || self.probe([p[0], p[1] - 16, p[2]]) || self.probe([p[0], p[1] + 16, p[2]])
     }
 
-    fn container(&self, _: Pos) -> Option<u8> {
-        None
+    fn container(&self, p: Pos) -> Option<u8> {
+        let Some(Kind::Comparator { facing, .. }) = blocks::kind_of(self.w.get(p)) else { return None };
+        // The block behind, or the one behind that through a solid block without an entity.
+        let mut at = step(p, facing.opposite());
+        let mut be = self.w.block_entity(at);
+        if be == 0 && Self::solid(self.w.get(at)) {
+            at = step(at, facing.opposite());
+            be = self.w.block_entity(at);
+        }
+        let inv = (be != 0).then(|| self.w.inventory(be)).filter(|i| i.size() > 0);
+        let base = inv.as_ref().map_or(0, |inv| {
+            let full: f64 = (0..inv.size()).map(|i| inv.get(i)).filter(|s| s.count > 0).map(|s| s.count as f64 / max_stack(s.item).max(1) as f64).sum();
+            container_level(full / inv.size() as f64, self.range)
+        });
+        let v = self.w.compute(&COMPARATOR_READING, base as f64, &weft_sdk::abi::Query { pos: at, state: self.w.get(at), ..query() });
+        let v = if v.is_finite() { v.clamp(0.0, self.range.max() as f64) as u8 } else { 0 };
+        // A container, or a block some mod gives a reading.
+        (inv.is_some() || v > 0).then_some(v)
     }
 
     fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape) {

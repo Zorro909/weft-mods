@@ -9,7 +9,7 @@ use std::mem::discriminant;
 
 use crate::devices::sides_of;
 use crate::network::Recorder;
-use crate::{Cell, Device, Dir, Kind, Pos, Range, Shape, SidePower, View, cube_of, inputs, links, network, react, shape, solve, step};
+use crate::{Cell, Device, Dir, Kind, Pos, Range, Shape, SidePower, View, apply, cube_of, inputs, links, network, react, shape, solve, step};
 
 /// A device change counting down.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -45,6 +45,9 @@ pub struct Sim {
     frozen_dirty: BTreeMap<Pos, u32>,
     /// What extension receivers were last told, only non-zero ones.
     last_inputs: BTreeMap<Pos, [SidePower; 6]>,
+    /// Comparators reading a container, which react every tick: nothing says when a container
+    /// changes.
+    readers: BTreeSet<Pos>,
 }
 
 struct Entry {
@@ -60,8 +63,8 @@ impl Sim {
         self.dirty.insert(p);
     }
 
-    /// Starts (or replaces) the pending change of the device at `p`. It is saved at the start of
-    /// the next tick.
+    /// Starts (or replaces) the pending change of the device at `p`. The next tick saves it, and
+    /// it applies `remaining` ticks after that one.
     pub fn schedule(&mut self, p: Pos, pending: Pending) {
         self.pending.insert(p, Entry { pending, cubes: None, frozen: false });
     }
@@ -71,6 +74,7 @@ impl Sim {
         self.pending.remove(&p);
         self.frozen_dirty.remove(&p);
         self.last_inputs.remove(&p);
+        self.readers.remove(&p);
     }
 
     pub fn has_pending(&self, p: Pos) -> bool {
@@ -93,7 +97,8 @@ impl Sim {
             let fresh = e.cubes.is_none();
             let cubes = e.cubes.get_or_insert_with(|| reach(&*w, *p));
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
-            if !frozen {
+            // A scheduled change starts counting in the tick after the first one that sees it.
+            if !frozen && !fresh {
                 e.pending.remaining = e.pending.remaining.saturating_sub(1);
             }
             if e.pending.remaining == 0 {
@@ -108,7 +113,11 @@ impl Sim {
         // 2. Apply every change due now, all at once.
         for p in due {
             let e = self.pending.remove(&p).expect("due entry");
-            w.write_device(p, e.pending.next);
+            let next = match w.cell(p) {
+                Cell::Device(Device { kind: Some(k), .. }) => apply(k, e.pending.next),
+                _ => e.pending.next,
+            };
+            w.write_device(p, next);
             w.save_pending(p, None);
             self.dirty.insert(p);
         }
@@ -156,6 +165,7 @@ impl Sim {
         for p in &self.dirty {
             around(&*w, *p, &mut candidates);
         }
+        candidates.extend(self.readers.iter().copied());
         let solved = RefCell::new(solved);
         for p in candidates {
             let Cell::Device(dev) = w.cell(p) else { continue };
@@ -194,6 +204,11 @@ impl Sim {
 
     fn react(&mut self, w: &mut impl World, p: Pos, k: Kind, i: [SidePower; 6], range: Range) {
         let container = if matches!(k, Kind::Comparator { .. }) { w.container(p) } else { None };
+        if container.is_some() {
+            self.readers.insert(p);
+        } else {
+            self.readers.remove(&p);
+        }
         let lockers = match k {
             Kind::Repeater { facing, .. } => side_lockers(&*w, p, facing),
             _ => false,
@@ -337,11 +352,13 @@ mod tests {
         unloaded: BTreeSet<[i32; 3]>,
         written: BTreeMap<Pos, (u8, Shape)>,
         log: Vec<Ev>,
+        /// Comparator readings by the comparator's position.
+        containers: BTreeMap<Pos, u8>,
     }
 
     impl TestWorld {
         fn new(g: MapGrid) -> TestWorld {
-            TestWorld { g, range: R15, unloaded: BTreeSet::new(), written: BTreeMap::new(), log: Vec::new() }
+            TestWorld { g, range: R15, unloaded: BTreeSet::new(), written: BTreeMap::new(), log: Vec::new(), containers: BTreeMap::new() }
         }
         fn put(&mut self, p: Pos, k: Kind) -> &mut Self {
             self.g.put(p, Cell::Device(device(k, self.range)));
@@ -392,8 +409,8 @@ mod tests {
         fn cube_loaded(&self, cube: [i32; 3]) -> bool {
             !self.unloaded.contains(&cube)
         }
-        fn container(&self, _: Pos) -> Option<u8> {
-            None
+        fn container(&self, p: Pos) -> Option<u8> {
+            self.containers.get(&p).copied()
         }
         fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape) {
             assert!(matches!(self.g.cell(p), Cell::Wire(_)), "write_wire on non-wire {p:?}");
@@ -686,6 +703,62 @@ mod tests {
         }
         assert_eq!(checked, 2);
         assert!(powered(w.kind([0, 0, 0])));
+    }
+
+    #[test]
+    fn scheduled_change_counts_from_the_first_tick_that_sees_it() {
+        // A button pressed between ticks stays on for exactly its length.
+        let mut w = TestWorld::new(MapGrid::default());
+        let on = Kind::Button { on: true, attached: Dir::Down, wood: false };
+        w.put([0, 0, 0], on);
+        let mut sim = Sim::default();
+        sim.schedule([0, 0, 0], Pending { next: Kind::Button { on: false, attached: Dir::Down, wood: false }, remaining: 3 });
+        for n in 1..=3 {
+            sim.tick(&mut w);
+            assert_eq!(w.kind([0, 0, 0]), on, "after tick {n}");
+        }
+        sim.tick(&mut w);
+        assert_eq!(w.kind([0, 0, 0]), Kind::Button { on: false, attached: Dir::Down, wood: false });
+    }
+
+    #[test]
+    fn applied_change_keeps_what_players_set() {
+        // A repeater's delay and a comparator's mode changed while a change counts down.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([-1, 0, 0], lever(true)).put([0, 0, 0], repeater(Dir::East, 3));
+        w.put([-1, 0, 2], lever(true)).put([0, 0, 2], Kind::Comparator { facing: Dir::East, subtract: false, output: 0 });
+        let mut sim = Sim::default();
+        sim.touch([-1, 0, 0]);
+        sim.touch([-1, 0, 2]);
+        sim.tick(&mut w);
+        w.put([0, 0, 0], repeater(Dir::East, 4));
+        w.put([0, 0, 2], Kind::Comparator { facing: Dir::East, subtract: true, output: 0 });
+        ticks(&mut sim, &mut w, 3);
+        assert_eq!(w.kind([0, 0, 0]), Kind::Repeater { facing: Dir::East, delay: 4, powered: true, locked: false });
+        assert!(matches!(w.kind([0, 0, 2]), Kind::Comparator { subtract: true, output: 15, .. }));
+    }
+
+    #[test]
+    fn comparator_follows_its_container() {
+        // Nothing tells redstone a container changed: a comparator reading one checks every tick.
+        let mut w = TestWorld::new(MapGrid::default());
+        let c = [0, 0, 0];
+        w.put(c, Kind::Comparator { facing: Dir::East, subtract: false, output: 0 });
+        w.containers.insert(c, 0);
+        let mut sim = Sim::default();
+        sim.touch(c);
+        ticks(&mut sim, &mut w, 2);
+        w.containers.insert(c, 7);
+        ticks(&mut sim, &mut w, 2);
+        assert!(matches!(w.kind(c), Kind::Comparator { output: 7, .. }));
+        w.containers.insert(c, 3);
+        ticks(&mut sim, &mut w, 2);
+        assert!(matches!(w.kind(c), Kind::Comparator { output: 3, .. }));
+        // Gone: not read again.
+        w.g.air(c);
+        sim.forget(c);
+        sim.tick(&mut w);
+        assert!(sim.readers.is_empty());
     }
 
     #[test]

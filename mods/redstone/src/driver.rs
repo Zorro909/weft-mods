@@ -13,18 +13,20 @@ use std::collections::BTreeMap;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
-use redstone_api::{CHANGED, STRENGTH};
-use redstone_core::{Cell, Pos, Sim, View};
+use redstone_api::{CHANGED, PRESS, STRENGTH};
+use redstone_core::{BUTTON_STONE, BUTTON_WOOD, Cell, Kind, Pending, Pos, Sim, View};
 use weft_sdk::*;
 
 use crate::adapter::{self, WeftWorld};
-use crate::persist;
+use crate::{blocks, persist};
 
 static SIM: LazyLock<Mutex<Sim>> = LazyLock::new(|| Mutex::new(Sim::default()));
 /// Positions something changed at, with when they were queued.
 static DIRTY: Mutex<BTreeMap<Pos, Instant>> = Mutex::new(BTreeMap::new());
 /// What the tick wrote where, and in which world tick, so `on_neighbor` can ignore it.
 static OWN: Mutex<BTreeMap<Pos, (u32, u64)>> = Mutex::new(BTreeMap::new());
+/// Changes started outside the tick (a button's release), for the next one.
+static SCHEDULED: Mutex<Vec<(Pos, Pending)>> = Mutex::new(Vec::new());
 
 const UNCLAIMED: Duration = Duration::from_secs(5);
 
@@ -36,6 +38,17 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 /// Something changed at `p`.
 pub fn queue(p: Pos) {
     lock(&DIRTY).insert(p, Instant::now());
+}
+
+/// Presses the button at `p`: on now, off after its length. One already on stays as it is.
+pub fn press(w: &World, p: Pos) {
+    let Some(Kind::Button { on: false, attached, wood }) = blocks::kind_of(w.get(p)) else { return };
+    let Some(s) = blocks::state_of(Kind::Button { on: true, attached, wood }) else { return };
+    if w.set(p, s) {
+        queue(p);
+        let remaining = if wood { BUTTON_WOOD } else { BUTTON_STONE };
+        lock(&SCHEDULED).push((p, Pending { next: Kind::Button { on: false, attached, wood }, remaining }));
+    }
 }
 
 /// `on_neighbor` of every redstone block: the neighbor changed, unless that was our own write.
@@ -53,6 +66,10 @@ pub fn register(r: &mut Registry) {
     r.on(&CHANGED, |b| b.iter().for_each(|c| queue(c.pos)));
     r.on(&BLOCK_PLACED, |b| b.iter().for_each(|c| queue(c.pos)));
     r.on(&BLOCK_BROKEN, |b| b.iter().for_each(|c| queue(c.pos)));
+    r.on(&PRESS, |b| {
+        let w = b.world();
+        b.iter().for_each(|c| press(&w, c.pos));
+    });
     r.modify(&STRENGTH, stage::ADD, |m| {
         let p = m.query().pos;
         m.value += adapter::strength_at(&m.world(), p) as f64;
@@ -73,6 +90,9 @@ fn tick(w: &World) {
             sim.schedule(p, pending);
         }
         queue(p);
+    }
+    for (p, pending) in std::mem::take(&mut *lock(&SCHEDULED)) {
+        sim.schedule(p, pending);
     }
 
     // Claim what this world has redstone at or next to; leave the rest for other regions.

@@ -73,6 +73,15 @@ pub static OUTPUT: Chain = Chain::named("redstone:output");
 /// one or one whose circuit is frozen. Use `strength(..)`.
 pub static STRENGTH: Chain = Chain::named("redstone:strength");
 
+/// A comparator's reading of the block at the query's `pos` (the one behind it, or behind the solid
+/// block behind it): the value starts at the fill level of the block entity's inventory, 0 to the
+/// range's maximum (`range()`). Machines answer with their progress, tanks with their level.
+/// Comparators re-read every tick, as Weft doesn't say when an inventory changes (G17).
+pub static COMPARATOR_READING: Chain = Chain::named("redstone:comparator_reading");
+
+/// Presses the button at `pos`, like a player using it (`press`).
+pub static PRESS: Event<Changed> = Event::named("redstone:press");
+
 /// Pistons never move these.
 pub static UNPUSHABLE: Tag = Tag::named("redstone:unpushable");
 
@@ -88,4 +97,10 @@ pub fn set_and_announce(w: &World, pos: [i32; 3], state: u32) -> bool {
 /// The strength of the wire at `pos` (see `STRENGTH`).
 pub fn strength(w: &World, pos: [i32; 3]) -> u8 {
     w.compute(&STRENGTH, 0.0, &abi::Query { pos, ..query() }) as u8
+}
+
+/// Presses the button at `pos` at the end of the tick, like a player using it: on for its length
+/// (stone 20 ticks, wood 30). A button already on stays as it is.
+pub fn press(w: &World, pos: [i32; 3]) {
+    w.emit(&PRESS, Changed { pos });
 }

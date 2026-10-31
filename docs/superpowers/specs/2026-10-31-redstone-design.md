@@ -292,7 +292,8 @@ with drops when its support goes (verified).
   - wood-style: **30 ticks** (1.5 s)
 
   Proposed: the tooltip shows the length. Pressing a button that's on does nothing (no timer
-  restart). Arrows don't press buttons. The pulse end is a pending change (§7.2).
+  restart). Arrows don't press buttons. The pulse end is a pending change (§7.2). Other mods (and
+  the tests) press a button with `redstone_api::press`, which does what a player's use does.
 - **Pressure plate** (user: simply turns on): full strength while anything stands on it.
   Proposed: one kind, reacts to any entity (players, mobs, dropped items), strong-powers the block
   underneath, powers adjacent dust. It turns on the tick after something steps on it and turns off
@@ -333,6 +334,10 @@ with drops when its support goes (verified).
     It can read a container behind one solid block (proposed, Minecraft rule). Generic reading
     works for any engine inventory via `block_entity(pos)` + `inventory(id)`
     (`crates/sdk/src/game.rs:180-183,227-235`). Mods can supply their own reading (§10.5).
+    Nothing reports inventory changes (G17), so a comparator with a container behind it re-reads
+    it every tick.
+  - A player's settings survive a change already counting down: a repeater's delay and a
+    comparator's mode come from the device as it is when the change applies.
   - Delay **1 tick** (proposed; equals one torch delay, the Minecraft ratio).
 - **No inverter block** (user). Torches cover that.
 
