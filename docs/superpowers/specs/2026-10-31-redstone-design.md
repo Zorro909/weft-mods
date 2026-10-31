@@ -132,6 +132,7 @@ break this: wire is never allowed to produce strong power (§10.3).
      block, strength = max over sources of (source strength − distance), via a multi-source search
      over that network.
   3. Write changed wire states, **once each, at the end, with the final value**. Never mid-solve.
+     Only a changed brightness level or shape is a write; strength isn't stored (§8).
   4. Notify only receivers whose input actually changed. They schedule their own change for a
      later tick.
 - Networks are cached and rebuilt only when wire or a block next to wire is placed or broken
@@ -236,10 +237,16 @@ pending work.
 
 Dust is the built-in wire. All wire follows these rules; §10.3 says what other mods may vary.
 
-- **Brightness follows strength** (user). Strength is a block-state property, written once per tick
-  at the end (§6).
-- **No real light** (proposed): a fast clock would otherwise relight the area every tick.
-  Brightness is visual only (texture or emission mask).
+- **Strength is not stored** (user, 2026-10-31). It follows from the sources (wire is instant), so
+  the tick computes it whenever it is needed: for every network it solves, and on demand for any
+  other network a receiver reads. Nothing is kept between ticks, so nothing is lost on unload or
+  restart and dimensions can't mix up their wires (G6).
+- **Brightness shows the strength in 4 levels** (user: 4 for the first prototype): off, then the
+  range split into thirds (`Range::level`). A wire is written only when its level or shape changes,
+  once per tick at the end (§6). Showing every strength would need one state per strength
+  (5,184 dust states at range 64), since Weft has no per-block value for rendering (G16).
+- **No real light** (proposed, verified it can't help): emitted light is a per-state component, so
+  it would need the same states, and a fast clock would relight the area every tick.
 - **Shape = connections** (user, proposed details): the shape always shows exactly what the wire
   connects to and what it powers. Minecraft Java rules, with two changes (both user):
   - **Alone: always a cross.** Dust that connects to nothing points into all four sides. There is
@@ -255,13 +262,12 @@ Dust is the built-in wire. All wire follows these rules; §10.3 says what other 
   directly above the lower dust. When cut, each half is a plain line and points into the block
   ahead of it.
 - Dust always weak-powers the block it sits on.
-- **States** (verified): Weft has no per-block state limit and state ids are `u32`. Dust needs
-  strength (up to 64 values) × 4 sides × {none, side, up}. That's 64 × 81 = 5,184 states, which
-  fits. If the total state count of all mods exceeds 65,536, client terrain generation falls back
-  to the CPU (`crates/engine/src/client/terrain_gpu.rs:50,422-428`). The builder should keep an
-  eye on this (for example, register strength values only up to the largest range).
+- **States** (verified): Weft has no per-block state limit and state ids are `u32`, but if the
+  total state count of all mods exceeds 65,536, client terrain generation falls back to the CPU
+  (`crates/engine/src/client/terrain_gpu.rs:50,422-428`). Dust has 4 levels × 4 sides ×
+  {none, side, up} = 4 × 81 = 324 states.
 - **Models and color** (verified): no JSON multipart. Per-state boxes are built in code with
-  `.states()` + `.model_box()`. Biome tint can't color by strength, so use a texture per strength
+  `.states()` + `.model_box()`. Biome tint can't color by level, so use a texture per brightness
   level, optionally with an emission mask (G9, details in the gaps doc). Exact look: builder.
 
 ## 9. Blocks
@@ -446,7 +452,9 @@ What a wire type may define (proposed):
 - **which wires it connects to**: same kind only (insulated), plus plain dust (colored), and so on
 - **what it powers**: dust's default (block below + blocks it points into) or nothing but devices it
   touches directly (insulated)
-- its look per strength. It gets the strength as a block-state property like dust.
+- its look per strength: an optional `level` property with any number of values (at least 2). The
+  mod sets it to the wire's brightness level (`Range::level`) like dust's. Strength itself is never
+  stored (§8).
 
 ### 10.4 Connectable sides (user)
 

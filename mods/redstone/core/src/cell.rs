@@ -35,6 +35,8 @@ pub struct Wire {
     /// Weak-powers the block below and the blocks its shape points into (dust does, insulated
     /// wire doesn't).
     pub powers_blocks: bool,
+    /// Worlds don't store it and report 0: strength follows from the sources, so the tick solves
+    /// it when it's needed (`sim::Solved`).
     pub strength: u8,
 }
 

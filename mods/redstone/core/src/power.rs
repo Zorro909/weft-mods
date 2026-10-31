@@ -37,6 +37,15 @@ impl Range {
     pub fn clamp(self, s: u8) -> u8 {
         s.min(self.max)
     }
+    /// The brightness a wire of strength `s` shows with `levels` levels: 0 only when unpowered,
+    /// the rest spread evenly over the range.
+    pub fn level(self, s: u8, levels: u8) -> u8 {
+        let s = self.clamp(s);
+        if s == 0 || levels < 2 {
+            return 0;
+        }
+        1 + ((s as u32 - 1) * (levels as u32 - 1) / self.max as u32) as u8
+    }
 }
 
 #[cfg(test)]
@@ -48,5 +57,22 @@ mod tests {
         assert_eq!([0, 1, 2, 7].map(|i| Range::from_index(i).max()), [15, 31, 63, 15]);
         assert_eq!(Range::from_index(0).clamp(FULL), 15);
         assert_eq!(Range::from_index(1).clamp(20), 20);
+    }
+
+    #[test]
+    fn levels_spread_over_range() {
+        for i in 0..3 {
+            let r = Range::from_index(i);
+            let levels: Vec<u8> = (0..=r.max()).map(|s| r.level(s, 4)).collect();
+            assert_eq!(levels[0], 0);
+            assert_eq!(levels[1], 1);
+            assert_eq!(*levels.last().unwrap(), 3);
+            assert!(levels.windows(2).all(|w| w[1] >= w[0] && w[1] - w[0] <= 1));
+            for l in 1..=3 {
+                let n = levels.iter().filter(|&&x| x == l).count();
+                assert!(n * 3 >= r.max() as usize - 2 && n * 3 <= r.max() as usize + 3, "range {} level {l}: {n}", r.max());
+            }
+        }
+        assert_eq!(Range::from_index(0).level(15, 1), 0);
     }
 }

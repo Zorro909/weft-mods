@@ -3,6 +3,7 @@
 //! position order, so the same build gives the same result wherever it is and in whatever order it
 //! was changed. Circuits reaching into unloaded cubes freeze (§7.1).
 
+use std::cell::{Cell as StdCell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 use std::mem::discriminant;
 
@@ -23,8 +24,10 @@ pub trait World: View {
     fn cube_loaded(&self, cube: [i32; 3]) -> bool;
     /// The comparator reading of what's behind a comparator at `p`.
     fn container(&self, p: Pos) -> Option<u8>;
-    /// Sets a wire's strength and shape; true if either changed.
-    fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape) -> bool;
+    /// A wire's strength and shape after this tick, for every wire of every network the tick
+    /// solved. The world shows what it can (a brightness level) and skips writes that change
+    /// nothing it shows.
+    fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape);
     fn write_device(&mut self, p: Pos, k: Kind);
     /// What reaches an extension receiver changed.
     fn notify(&mut self, p: Pos, inputs: [SidePower; 6]);
@@ -117,45 +120,50 @@ impl Sim {
             *n > 0
         });
 
-        // 3 + 4. Solve each network next to a change once and write the wires that changed.
+        // 3 + 4. Solve each network next to a change once and hand every wire to the world. Wire
+        // strength isn't stored, so every receiver such a network reaches is a candidate.
         let mut seeds = BTreeSet::new();
         for p in &self.dirty {
             around(&*w, *p, &mut seeds);
         }
-        let mut seen = BTreeSet::new();
-        let mut changed = Vec::new();
+        let mut solved = BTreeMap::new();
+        let mut candidates = BTreeSet::new();
         for s in seeds {
-            if seen.contains(&s) || !matches!(w.cell(s), Cell::Wire(_)) {
+            if solved.contains_key(&s) || !matches!(w.cell(s), Cell::Wire(_)) {
                 continue;
             }
             let net = network(&*w, s);
-            seen.extend(net.wires.iter().copied());
             if net.incomplete {
+                solved.extend(net.wires.iter().map(|p| (*p, None)));
                 self.frozen_dirty.entry(s).or_insert(RETRY);
                 continue;
             }
+            candidates.extend(net.devices.iter().copied());
             for (p, strength) in solve(&*w, &net, range) {
+                solved.insert(p, Some(strength));
                 let Cell::Wire(wire) = w.cell(p) else { continue };
                 let sh = shape(links(&*w, p, &wire));
-                if w.write_wire(p, strength, sh) {
-                    changed.push(p);
-                }
+                w.write_wire(p, strength, sh);
             }
         }
 
         // 5. Receivers whose inputs may have changed react, for a later tick.
-        let mut candidates = BTreeSet::new();
-        for p in self.dirty.iter().chain(&changed) {
+        for p in &self.dirty {
             around(&*w, *p, &mut candidates);
         }
+        let solved = RefCell::new(solved);
         for p in candidates {
             let Cell::Device(dev) = w.cell(p) else { continue };
             if !dev.receives {
                 continue;
             }
-            let r = Recorder::new(&*w);
-            let i = inputs(&r, p);
-            if r.unloaded.get() {
+            let (i, frozen) = {
+                let v = Solved { w: &*w, strengths: &solved, range, frozen: StdCell::new(false) };
+                let r = Recorder::new(&v);
+                let i = inputs(&r, p);
+                (i, r.unloaded.get() || v.frozen.get())
+            };
+            if frozen {
                 self.frozen_dirty.entry(p).or_insert(RETRY);
                 continue;
             }
@@ -209,6 +217,38 @@ impl Sim {
 /// Ticks between retries of a frozen circuit (spec §7.1).
 const RETRY: u32 = 20;
 
+/// The world with wire strengths filled in: those the tick solved, and any other network solved
+/// when one of its wires is first read. A wire of an incomplete network reads as 0 and sets
+/// `frozen`.
+struct Solved<'a, W> {
+    w: &'a W,
+    strengths: &'a RefCell<BTreeMap<Pos, Option<u8>>>,
+    range: Range,
+    frozen: StdCell<bool>,
+}
+
+impl<W: View> View for Solved<'_, W> {
+    fn cell(&self, p: Pos) -> Cell {
+        let c = self.w.cell(p);
+        let Cell::Wire(mut wire) = c else { return c };
+        let known = self.strengths.borrow().get(&p).copied();
+        let strength = known.unwrap_or_else(|| {
+            let net = network(self.w, p);
+            let solved = (!net.incomplete).then(|| solve(self.w, &net, self.range));
+            let mut m = self.strengths.borrow_mut();
+            for q in &net.wires {
+                m.insert(*q, solved.as_ref().map(|s| s[q]));
+            }
+            solved.map(|s| s[&p])
+        });
+        match strength {
+            Some(s) => wire.strength = s,
+            None => self.frozen.set(true),
+        }
+        Cell::Wire(wire)
+    }
+}
+
 /// Adds `p`, its neighbors, the neighbors of solid blocks next to it (they relay power) and the
 /// positions a step away from it (wire climbing to or from it).
 fn around(v: &impl View, p: Pos, out: &mut BTreeSet<Pos>) {
@@ -259,7 +299,7 @@ fn side_lockers(v: &impl View, p: Pos, facing: Dir) -> bool {
 mod tests {
     use super::*;
     use crate::testgrid::MapGrid;
-    use crate::{Power, device};
+    use crate::{Power, Wire, device};
 
     const R15: Range = Range::from_index_const(0);
 
@@ -283,19 +323,20 @@ mod tests {
         }
     }
 
-    /// A grid whose built-in devices take their outputs from their kind and the current range,
-    /// like the adapter does, with unloadable cubes and a log of everything written.
+    /// A grid seen the way the adapter sees Weft: built-in devices take their outputs from their
+    /// kind and the current range, and wire strength isn't stored (every wire reads as 0). What
+    /// the tick wrote is kept aside for the tests, with unloadable cubes and a log.
     struct TestWorld {
         g: MapGrid,
         range: Range,
         unloaded: BTreeSet<[i32; 3]>,
-        shapes: BTreeMap<Pos, Shape>,
+        written: BTreeMap<Pos, (u8, Shape)>,
         log: Vec<Ev>,
     }
 
     impl TestWorld {
         fn new(g: MapGrid) -> TestWorld {
-            TestWorld { g, range: R15, unloaded: BTreeSet::new(), shapes: BTreeMap::new(), log: Vec::new() }
+            TestWorld { g, range: R15, unloaded: BTreeSet::new(), written: BTreeMap::new(), log: Vec::new() }
         }
         fn put(&mut self, p: Pos, k: Kind) -> &mut Self {
             self.g.put(p, Cell::Device(device(k, self.range)));
@@ -307,11 +348,13 @@ mod tests {
                 c => panic!("no device at {p:?}: {c:?}"),
             }
         }
+        /// The strength the tick last wrote for the wire at `p`.
         fn strength(&self, p: Pos) -> u8 {
-            match self.g.cell(p) {
-                Cell::Wire(w) => w.strength,
-                c => panic!("no wire at {p:?}: {c:?}"),
-            }
+            assert!(matches!(self.g.cell(p), Cell::Wire(_)), "no wire at {p:?}");
+            self.written.get(&p).map_or(0, |w| w.0)
+        }
+        fn strengths(&self) -> BTreeMap<Pos, u8> {
+            self.written.iter().map(|(p, w)| (*p, w.0)).collect()
         }
         fn wire_writes(&self) -> Vec<(Pos, u8)> {
             self.log.iter().filter_map(|e| if let Ev::Wire(p, s) = e { Some((*p, *s)) } else { None }).collect()
@@ -331,6 +374,7 @@ mod tests {
             }
             match self.g.cell(p) {
                 Cell::Device(Device { kind: Some(k), .. }) => Cell::Device(device(k, self.range)),
+                Cell::Wire(w) => Cell::Wire(Wire { strength: 0, ..w }),
                 c => c,
             }
         }
@@ -346,15 +390,11 @@ mod tests {
         fn container(&self, _: Pos) -> Option<u8> {
             None
         }
-        fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape) -> bool {
-            let Some(Cell::Wire(w)) = self.g.cells.get_mut(&p) else { panic!("write_wire on non-wire {p:?}") };
-            if w.strength == strength && self.shapes.get(&p) == Some(&shape) {
-                return false;
+        fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape) {
+            assert!(matches!(self.g.cell(p), Cell::Wire(_)), "write_wire on non-wire {p:?}");
+            if self.written.insert(p, (strength, shape)) != Some((strength, shape)) {
+                self.log.push(Ev::Wire(p, strength));
             }
-            w.strength = strength;
-            self.shapes.insert(p, shape);
-            self.log.push(Ev::Wire(p, strength));
-            true
         }
         fn write_device(&mut self, p: Pos, k: Kind) {
             self.g.put(p, Cell::Device(device(k, self.range)));
@@ -511,16 +551,21 @@ mod tests {
                 sim.touch((0..k).fold(*p, |q, _| crate::testgrid::rotate_pos(q)));
             }
             ticks(&mut sim, &mut w, 20);
-            w.g
+            let s = w.strengths();
+            (w.g, s)
         };
-        let done = run(start.clone(), 0);
+        let (done, strengths) = run(start.clone(), 0);
         assert_eq!(done.cell([4, 0, 4]), Cell::Device(device(Kind::Lamp { lit: false }, R15)));
         assert!(matches!(done.cell([2, 0, 2]), Cell::Device(Device { kind: Some(Kind::Repeater { powered: true, .. }), .. })));
+        assert_eq!(strengths[&[2, 0, 3]], 15);
         let (mut g, mut want) = (start, done);
         for k in 1..=3 {
             g = g.rotated();
             want = want.rotated();
-            assert_eq!(run(g.clone(), k).cells, want.cells, "after {k} turns");
+            let want_strengths: BTreeMap<Pos, u8> = strengths.iter().map(|(p, s)| ((0..k).fold(*p, |q, _| crate::testgrid::rotate_pos(q)), *s)).collect();
+            let (got, got_strengths) = run(g.clone(), k);
+            assert_eq!(got.cells, want.cells, "after {k} turns");
+            assert_eq!(got_strengths, want_strengths, "strengths after {k} turns");
         }
     }
 
@@ -672,5 +717,52 @@ mod tests {
         sim.touch([0, 0, 0]);
         sim.tick(&mut w);
         assert_eq!(w.notifies(), [([4, 0, 0], want), ([4, 0, 0], [SidePower::default(); 6])]);
+    }
+
+    #[test]
+    fn receiver_follows_strength_not_level() {
+        // One more dust at the end lowers what reaches the receiver by one, a change no
+        // brightness level of the wire next to it would show.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], lever(true));
+        w.g.dust([1, 0, 0]).dust([2, 0, 0]);
+        w.g.put([3, 0, 0], Cell::Device(Device { output: [Power::default(); 6], connects: 0, receives: true, solid: false, kind: None }));
+        let mut sim = Sim::default();
+        sim.touch([0, 0, 0]);
+        sim.tick(&mut w);
+        let at = |s: u8| {
+            let mut i = [SidePower::default(); 6];
+            i[Dir::West.index()] = SidePower { strength: s, strong: false, direct: true };
+            i
+        };
+        assert_eq!(w.notifies(), [([3, 0, 0], at(14))]);
+        // Moving the lever one further away: the wire next to the receiver drops 14 → 13.
+        w.g.air([0, 0, 0]).dust([0, 0, 0]);
+        w.put([-1, 0, 0], lever(true));
+        sim.touch([0, 0, 0]);
+        sim.touch([-1, 0, 0]);
+        sim.tick(&mut w);
+        assert_eq!(w.notifies(), [([3, 0, 0], at(14)), ([3, 0, 0], at(13))]);
+    }
+
+    #[test]
+    fn unchanged_network_solved_on_demand() {
+        // A lamp fed by two networks, one from each side. When only the east one changes, the
+        // west one isn't solved by the tick, and the lamp must still see it powering it.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], lever(true)).put([4, 0, 0], lever(false)).put([2, 0, 0], Kind::Lamp { lit: false });
+        w.g.dust([1, 0, 0]).dust([3, 0, 0]);
+        let mut sim = Sim::default();
+        sim.touch([0, 0, 0]);
+        ticks(&mut sim, &mut w, 2);
+        assert_eq!(w.kind([2, 0, 0]), Kind::Lamp { lit: true });
+        for on in [true, false] {
+            w.put([4, 0, 0], lever(on));
+            sim.touch([4, 0, 0]);
+            sim.tick(&mut w);
+            assert!(!sim.has_pending([2, 0, 0]), "lever east {on}");
+            sim.tick(&mut w);
+            assert_eq!(w.kind([2, 0, 0]), Kind::Lamp { lit: true });
+        }
     }
 }

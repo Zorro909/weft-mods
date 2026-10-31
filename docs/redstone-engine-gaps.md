@@ -133,8 +133,8 @@ Paths are relative to `Weft/`.
   ABI `ModelBox` has per-face textures and uv, which the SDK doesn't expose
   (`crates/abi/src/lib.rs:371-381`). Biome tint (15 kinds) can't color by state, and block shaders
   get no state input (`docs/shaders.md:79-90`).
-- **Needed for:** dust color by strength and shape by connections.
-- **Workaround:** a texture per strength level, with boxes per state built in code.
+- **Needed for:** dust color by brightness level and shape by connections.
+- **Workaround:** a texture per brightness level (G16), with boxes per state built in code.
 - **Upstream fix:** multipart/variant models, per-box textures in the SDK, or a per-state tint
   value.
 
@@ -188,3 +188,22 @@ Paths are relative to `Weft/`.
 - **Needed for:** redstone networks would fit the same pattern and get load/unload and
   region-move handling for free.
 - **Upstream fix:** a mod-registrable network type with the grid's hooks.
+
+## G16. No per-block value for rendering
+
+- **Verified.** What a block looks like comes only from its state. Block shaders get `uv`,
+  `albedo`, `light`, `pos` and `time`, nothing of the block itself
+  (`crates/engine/assets/shaders/common.wgsl:43-53`). Emitted light is the per-state `light`
+  component (`crates/sdk/src/content.rs:510-514`), and mods can only read light at a position, not
+  set it (`crates/sdk/src/game.rs:25-38`). Connected textures choose by neighbors on the client, but
+  only for full cube faces, not box models (`docs/ctm.md:10`). Every look a block can have is
+  therefore one more state, and the total state count matters: above 65,536 states the client stops
+  generating terrain on the GPU (`crates/engine/src/client/terrain_gpu.rs:50`).
+- **Needed for:** dust brightness by signal strength. Showing all 64 strengths of the largest range
+  would take 64 × 81 shapes = 5,184 dust states.
+- **Workaround:** strength isn't stored at all. The mod computes it when needed (it follows from the
+  sources) and dust shows 4 brightness levels: 4 × 81 = 324 states. A wire is only rewritten when
+  its level or shape changes, which also saves block writes (G7).
+- **Upstream fix:** a small per-block value outside the state (a byte would do) that block shaders
+  can read, set by mods without a state change and synced to clients. Dust would then need 81
+  states (shapes only) and could show every strength.

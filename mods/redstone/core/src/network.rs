@@ -13,6 +13,8 @@ pub struct Network {
     pub incomplete: bool,
     /// The cubes (16³) of every position read, to check later that all of them are still loaded.
     pub cubes: BTreeSet<[i32; 3]>,
+    /// Every device read on the way: all receivers its strengths can reach.
+    pub devices: BTreeSet<Pos>,
 }
 
 /// The network of the wire at `start`.
@@ -47,19 +49,20 @@ pub fn network(v: &impl View, start: Pos) -> Network {
         queue.extend(next.iter().copied());
         edges.insert(p, next);
     }
-    Network { wires, edges, incomplete: r.unloaded.get(), cubes: r.cubes.into_inner() }
+    Network { wires, edges, incomplete: r.unloaded.get(), cubes: r.cubes.into_inner(), devices: r.devices.into_inner() }
 }
 
-/// A view that notes which cubes were read and whether any position was unloaded.
+/// A view that notes which cubes and devices were read and whether any position was unloaded.
 pub(crate) struct Recorder<'a, V> {
     v: &'a V,
     pub(crate) cubes: RefCell<BTreeSet<[i32; 3]>>,
+    pub(crate) devices: RefCell<BTreeSet<Pos>>,
     pub(crate) unloaded: StdCell<bool>,
 }
 
 impl<'a, V> Recorder<'a, V> {
     pub(crate) fn new(v: &'a V) -> Self {
-        Recorder { v, cubes: RefCell::new(BTreeSet::new()), unloaded: StdCell::new(false) }
+        Recorder { v, cubes: RefCell::new(BTreeSet::new()), devices: RefCell::new(BTreeSet::new()), unloaded: StdCell::new(false) }
     }
 }
 
@@ -67,8 +70,12 @@ impl<V: View> View for Recorder<'_, V> {
     fn cell(&self, p: Pos) -> Cell {
         self.cubes.borrow_mut().insert(cube_of(p));
         let c = self.v.cell(p);
-        if c == Cell::Unloaded {
-            self.unloaded.set(true);
+        match c {
+            Cell::Unloaded => self.unloaded.set(true),
+            Cell::Device(_) => {
+                self.devices.borrow_mut().insert(p);
+            }
+            _ => {}
         }
         c
     }
@@ -174,6 +181,16 @@ mod tests {
         let mut g = MapGrid::default();
         g.dust([0, 0, 0]).solid([0, 0, 1]).unloaded([0, 0, 2]);
         assert!(network(&g, [0, 0, 0]).incomplete);
+    }
+
+    #[test]
+    fn devices_reached_directly_and_through_blocks() {
+        // A lamp at the end of the line, another one behind the block the line points into.
+        let lamp = Cell::Device(Device { output: [Power::default(); 6], connects: 0, receives: true, solid: true, kind: None });
+        let mut g = MapGrid::default();
+        g.put([-1, 0, 0], source(15)).dust([0, 0, 0]).dust([1, 0, 0]).put([2, 0, 0], lamp.clone()).solid([0, 0, 1]).put([0, 0, 2], lamp);
+        let n = network(&g, [0, 0, 0]);
+        assert!(n.devices.contains(&[2, 0, 0]) && n.devices.contains(&[0, 0, 2]) && n.devices.contains(&[-1, 0, 0]));
     }
 
     #[test]
