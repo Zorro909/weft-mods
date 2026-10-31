@@ -1,0 +1,12 @@
+[package]
+name = "redstone_tests"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+weft_sdk = { path = "../../Weft/crates/sdk" }
+redstone_core = { path = "../redstone/core" }
+redstone_api = { path = "../redstone/api" }

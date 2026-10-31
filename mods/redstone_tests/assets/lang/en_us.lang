@@ -1,0 +1,3 @@
+mod.redstone_tests.name = Redstone tests
+command.redstone_tests.queued = queued {0} redstone test(s)
+command.redstone_tests.unknown = no redstone test named {0}

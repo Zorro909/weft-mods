@@ -1,0 +1,4 @@
+mod.redstone.name = Redstone
+mod.redstone.description = Redstone signals, wire and devices that behave the same every time, and cost nothing while idle.
+config.redstone.signal_range = Signal range
+config.redstone.signal_range.tooltip = How many strength levels a signal has. Wire loses one per block.

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["mods/redstone/core"]
+members = ["mods/redstone/core", "mods/redstone/api", "mods/redstone", "mods/redstone_tests"]
 exclude = ["Weft"]
 
 [workspace.package]

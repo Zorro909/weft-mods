@@ -1,0 +1,8 @@
+[package]
+name = "redstone_api"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+weft_sdk = { path = "../../../Weft/crates/sdk" }
+redstone_core = { path = "../core" }
