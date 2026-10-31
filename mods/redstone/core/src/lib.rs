@@ -4,6 +4,7 @@
 mod cell;
 mod devices;
 mod dir;
+mod network;
 mod power;
 mod power_rules;
 #[cfg(any(test, feature = "testgrid"))]
@@ -13,6 +14,7 @@ mod wire;
 pub use cell::*;
 pub use devices::*;
 pub use dir::*;
+pub use network::*;
 pub use power::*;
 pub use power_rules::*;
 pub use wire::*;
