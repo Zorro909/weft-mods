@@ -8,9 +8,11 @@ mod power;
 mod power_rules;
 #[cfg(any(test, feature = "testgrid"))]
 pub mod testgrid;
+mod wire;
 
 pub use cell::*;
 pub use devices::*;
 pub use dir::*;
 pub use power::*;
 pub use power_rules::*;
+pub use wire::*;

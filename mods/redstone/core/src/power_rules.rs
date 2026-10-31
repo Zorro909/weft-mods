@@ -30,9 +30,10 @@ pub fn block_power(v: &impl View, p: Pos) -> BlockPower {
     bp
 }
 
-/// Whether wire at `wire` weak-powers its neighbor on side `toward`: always the block it sits on.
-fn wire_powers(_v: &impl View, _wire: Pos, toward: Dir) -> bool {
-    toward == Dir::Down
+/// Whether wire at `wire` reaches its neighbor on side `toward`: the block it sits on, and what
+/// its shape points into.
+fn wire_powers(v: &impl View, wire: Pos, toward: Dir) -> bool {
+    toward == Dir::Down || (toward != Dir::Up && crate::points_into(v, wire, step(wire, toward)))
 }
 
 /// The strength wire at `p` gets from outside its network: adjacent devices and strongly powered
