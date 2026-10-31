@@ -150,6 +150,15 @@ impl Ctx<'_> {
         std::array::from_fn(|i| pos[i] - self.origin[i] as f64)
     }
 
+    /// Keeps the player hovering where a scenario at this origin starts them (`tick`), for a
+    /// scenario continuing one from before a restart.
+    pub fn come_back(&mut self) {
+        let o = self.origin;
+        let at = [o[0] as f64 - 3.5, o[1] as f64 - 24.0, o[2] as f64 - 3.5];
+        *self.hover = Some(at);
+        self.w.teleport(self.player, None, at);
+    }
+
     /// Back where the player was before the first `go`.
     pub fn go_back(&mut self) {
         if let Some(s) = *self.start {
@@ -380,9 +389,12 @@ fn tick(run: &mut Runner, w: &World) {
     } else {
         cur.clearing = Some(clear_area(&cur.touched));
     }
-    // Back where `Ctx::go` took them from first, so the area loads again before it is cleared.
+    // Back where `Ctx::go` took them from first, so the area loads again before it is cleared;
+    // before a restart they stay away, so the game quits with the area unloaded.
     cur.hover = None;
-    if let Some(s) = cur.start.take() {
+    if let Some(s) = cur.start.take()
+        && scenario.restart != Restart::Before
+    {
         w.teleport(player, None, s);
         cur.settle = SETTLE;
     }

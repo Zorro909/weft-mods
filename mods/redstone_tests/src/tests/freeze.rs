@@ -1,7 +1,7 @@
 //! Torches, pending changes across unload and restart, and circuits frozen at the edge of the
 //! loaded area (plan Task 9).
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 
 use crate::scenario::{Ctx, Restart, Scenario, Step};
 
@@ -147,21 +147,60 @@ pub fn break_pending_torch() -> Scenario {
     Scenario::new("break_pending_torch", steps)
 }
 
-/// First launch: a torch clock left running when the game quits.
+/// A wood button (on for 30 ticks) away from the clock.
+const BUTTON: [i32; 3] = [4, 1, 0];
+const UNDER_BUTTON: [i32; 3] = [4, 0, 0];
+
+/// When the restarted game loaded the button again.
+static LOADED_AT: AtomicU64 = AtomicU64::new(0);
+
+/// First launch: a torch clock left running when the game quits, and a button pressed just
+/// before the player leaves, so its area unloads with most of its 30 ticks left and the game
+/// quits a while later.
 pub fn restart_before() -> Scenario {
     let mut steps = vec![Step::Do(build_clock), Step::Wait(3)];
     alternating(&mut steps, 4);
+    steps.extend([
+        Step::Do(|c| {
+            c.set(UNDER_BUTTON, "base:stone");
+            c.set(BUTTON, "redstone:wood_button[facing=up,on=false]");
+        }),
+        Step::Wait(2),
+        Step::Do(|c| redstone_api::press(c.w, c.at(BUTTON))),
+        Step::Wait(2),
+        Step::Do(|c| {
+            c.check_eq(c.prop(BUTTON, "on"), "true".to_string(), "pressed");
+            c.go([2000.0, 0.0, 0.0]);
+        }),
+        Step::Until(|c| !c.loaded(BUTTON), 300),
+        Step::Wait(60),
+    ]);
     Scenario::new("restart_before", steps).restart(Restart::Before)
 }
 
-/// Second launch on the same world: the clock's pending change was saved, so it runs on.
+/// Second launch on the same world: the clock's pending change was saved, so it runs on; the
+/// button goes off with what it had left when its area unloaded, not at once.
 pub fn restart_after() -> Scenario {
-    let mut steps = vec![Step::Until(clock_loaded, 900), Step::Wait(5)];
+    let mut steps = vec![
+        Step::Do(|c| c.come_back()),
+        Step::Until(|c| clock_loaded(c) && c.loaded(BUTTON), 900),
+        Step::Do(|c| {
+            LOADED_AT.store(c.w.time(), Ordering::Relaxed);
+            c.check_eq(c.prop(BUTTON, "on"), "true".to_string(), "button still on after the restart");
+        }),
+        Step::Wait(5),
+    ];
     alternating(&mut steps, 10);
-    steps.push(Step::Do(|c| {
-        for p in [DUST, TORCH, ABOVE, S] {
-            c.set(p, "core:air");
-        }
-    }));
+    steps.extend([
+        Step::Do(|c| c.check_eq(c.prop(BUTTON, "on"), "true".to_string(), "button on 16 ticks after loading")),
+        Step::Until(|c| c.prop(BUTTON, "on") == "false", 40),
+        Step::Do(|c| {
+            let after = c.w.time() - LOADED_AT.load(Ordering::Relaxed);
+            c.check(after <= 32, &format!("button off {after} ticks after loading, it had less than 30 left"));
+            for p in [DUST, TORCH, ABOVE, S, BUTTON, UNDER_BUTTON] {
+                c.set(p, "core:air");
+            }
+        }),
+    ]);
     Scenario::new("restart_after", steps).restart(Restart::After)
 }

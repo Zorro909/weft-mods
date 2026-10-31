@@ -230,3 +230,57 @@ pub fn long_line_clock() -> Scenario {
     }
     Scenario::new("long_line_clock", steps)
 }
+
+/// A dust sheet's side, and the spacing of the power blocks under it.
+const SHEET: i32 = 45;
+const SPACING: i32 = 8;
+
+/// The floor cells under the sheet that switch between stone and power blocks.
+fn sheet_sources() -> impl Iterator<Item = [i32; 3]> {
+    (2..SHEET).step_by(SPACING as usize).flat_map(|x| (2..SHEET).step_by(SPACING as usize).map(move |z| [x, 0, z]))
+}
+
+fn sheet_check(c: &mut Ctx, on: bool) {
+    let mut wrong = 0;
+    let mut first = None;
+    for x in 0..SHEET {
+        for z in 0..SHEET {
+            let level = c.prop([x, 1, z], "level");
+            if (level != "0") != on {
+                wrong += 1;
+                first.get_or_insert(([x, 1, z], level));
+            }
+        }
+    }
+    if wrong > 0 {
+        c.fail(format!("{wrong} dust shown {} (first {first:?})", if on { "dark" } else { "lit" }));
+    }
+}
+
+/// 2,025 dust in one network (a sheet fed by 36 power blocks under it) switching every 2 ticks:
+/// every dust shows the level the tick wrote, and the writes stay under Weft's neighbor-update
+/// budget (`scripts/test.sh` checks the log for a storm).
+pub fn dust_sheet_toggles() -> Scenario {
+    let mut steps = vec![Step::Do(|c| {
+        for x in 0..SHEET {
+            for z in 0..SHEET {
+                c.set([x, 0, z], "base:stone");
+                c.set([x, 1, z], "redstone:dust");
+            }
+        }
+    })];
+    steps.push(Step::Wait(3));
+    steps.push(Step::Do(|c| sheet_check(c, false)));
+    for _ in 0..5 {
+        steps.push(Step::Do(|c| sheet_sources().for_each(|p| c.set(p, "redstone:power_block"))));
+        steps.push(Step::Wait(2));
+        steps.push(Step::Do(|c| {
+            sheet_check(c, true);
+            c.check_eq(c.prop([2, 1, 2], "level"), "3".to_string(), "dust on a power block");
+            sheet_sources().for_each(|p| c.set(p, "base:stone"));
+        }));
+        steps.push(Step::Wait(2));
+        steps.push(Step::Do(|c| sheet_check(c, false)));
+    }
+    Scenario::new("dust_sheet_toggles", steps)
+}

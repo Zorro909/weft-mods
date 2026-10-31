@@ -203,8 +203,8 @@ impl redstone_core::World for WeftWorld<'_> {
         persist::save(self.w, p, pending);
     }
 
-    fn reserve(&mut self, p: Pos) {
-        pistons::reserve(self.w, p);
+    fn reserve(&mut self, p: Pos) -> bool {
+        pistons::reserve(self.w, p)
     }
 
     fn shift(&mut self, to: Dir, moved: &[Pos], broken: &[Pos], head: Option<Pos>) {

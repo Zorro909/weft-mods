@@ -42,11 +42,10 @@ pub fn register(r: &mut Registry) {
         .drops_nothing();
 }
 
-/// `redstone_core::World::reserve`.
-pub fn reserve(w: &World, p: Pos) {
-    if w.get(p) == 0 {
-        w.set(p, MOVING.id());
-    }
+/// `redstone_core::World::reserve`. Fails past the top or bottom of the world, which reads as
+/// air (G1).
+pub fn reserve(w: &World, p: Pos) -> bool {
+    w.get(p) == 0 && w.set(p, MOVING.id())
 }
 
 /// Takes away a placeholder no move will fill.
@@ -84,8 +83,10 @@ pub fn shift(w: &World, to: redstone_core::Dir, moved: &[Pos], broken: &[Pos], h
     push_entities(w, &cells, to);
     for q in moved {
         let s = w.get(*q);
-        w.set(step(*q, to), s);
-        w.set(*q, 0);
+        // Never lose a block: it leaves only once it is written where it goes.
+        if w.set(step(*q, to), s) {
+            w.set(*q, 0);
+        }
     }
 }
 

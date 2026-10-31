@@ -35,7 +35,9 @@ Paths are relative to `Weft/`.
   bottom the same way. Pinned by the `dust_at_height_limit` scenario (dust on flatlands' top
   layer powers). **Failure mode:** a circuit crossing the top or bottom of a player's loaded
   column (simulation distance straight up or down) is solved without the part beyond it instead
-  of freezing.
+  of freezing. A piston pushing into such a cell finds it can't reserve it (`set` fails) and
+  counts as blocked, so nothing is pushed out of the world (core test
+  `push_past_the_top_is_blocked`); a block whose destination can't be written stays where it is.
 - **Upstream fix:** `is_loaded(pos)`, or a sentinel value from `get_block`; and the dimension's
   height (or id) on `World`.
 
@@ -102,7 +104,10 @@ Paths are relative to `Weft/`.
 - **Needed for:** torch, repeater, button and piston delays surviving unload and restart.
 - **Workaround:** saved entity timers on a per-device block entity (`w.after`, stored in the
   saved `core:timers` component, `crates/engine/src/registry.rs:1274-1277`; fired when overdue,
-  `dim.rs:1115-1144`).
+  `dim.rs:1115-1144`). The redstone mod saves what a change has left every tick it counts, and
+  a timer that finds its change still saved sets itself again, so every saved change has a timer
+  and a restart continues from what was left even if the area unloaded long before
+  (`mods/redstone/src/persist.rs`; scenario pair `restart_before`/`restart_after` with a button).
 - **Upstream fix:** save scheduled ticks with their cube and fire overdue ones on load; add
   cancel.
 
@@ -124,7 +129,11 @@ Paths are relative to `Weft/`.
   two dimensions is two devices. Still shared by position: a queued change is claimed by the first
   region with redstone at or next to it. If two dimensions have redstone at the same place while
   both are loaded (two players), a change in one can be taken by the other, and the first misses
-  it until something there changes again. Frozen-circuit retries are claimed the same way.
+  it until something there changes again. Frozen-circuit retries are claimed the same way. When
+  the claiming dimension has no device there, the simulation forgets everything at that position,
+  the other dimension's pending changes and piston moves included; those come back from their
+  saves when their timer fires (when they were due, or a retry later) and go on with what they
+  had left: late, but not lost.
   Comparators re-reading containers are re-checked in every region, which only costs work.
   Piston moves are keyed like pending changes (position and block entity id).
 - **Upstream fix:** a dimension id on `World`, and per-region mod storage that moves with sections
