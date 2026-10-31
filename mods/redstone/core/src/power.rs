@@ -26,7 +26,10 @@ pub struct Range {
 impl Range {
     /// From the `signal_range` setting's index (16, 32 or 64 levels).
     pub fn from_index(i: u32) -> Range {
-        Range { max: [15, 31, 63].get(i as usize).copied().unwrap_or(15) }
+        Range::from_index_const(i)
+    }
+    pub const fn from_index_const(i: u32) -> Range {
+        Range { max: match i { 1 => 31, 2 => 63, _ => 15 } }
     }
     pub fn max(self) -> u8 {
         self.max
