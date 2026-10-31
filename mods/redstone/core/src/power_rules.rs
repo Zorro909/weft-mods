@@ -30,6 +30,19 @@ pub fn block_power(v: &impl View, p: Pos) -> BlockPower {
     bp
 }
 
+/// The strong power of the solid block at `p`: only devices give it, so only its neighbors are
+/// read (`block_power` also works out the weak power wire gives it).
+fn strong_into(v: &impl View, p: Pos) -> u8 {
+    Dir::ALL
+        .iter()
+        .map(|d| match v.cell(step(p, *d)) {
+            Cell::Device(dev) if dev.output[d.opposite().index()].strong => dev.output[d.opposite().index()].strength,
+            _ => 0,
+        })
+        .max()
+        .unwrap_or(0)
+}
+
 /// Whether wire at `wire` reaches its neighbor on side `toward`: the block it sits on, and what
 /// its shape points into.
 fn wire_powers(v: &impl View, wire: Pos, toward: Dir) -> bool {
@@ -39,12 +52,17 @@ fn wire_powers(v: &impl View, wire: Pos, toward: Dir) -> bool {
 /// The strength wire at `p` gets from outside its network: adjacent devices and strongly powered
 /// blocks, never weakly powered ones.
 pub fn source_into_wire(v: &impl View, p: Pos) -> u8 {
+    source_from(v, p, &Dir::ALL.map(|d| v.cell(step(p, d))))
+}
+
+/// `source_into_wire` with the cells around `p` already read, by `Dir::ALL`.
+pub(crate) fn source_from(v: &impl View, p: Pos, around: &[Cell; 6]) -> u8 {
     let mut best = 0;
     for d in Dir::ALL {
         let q = step(p, d);
-        let s = match v.cell(q) {
+        let s = match &around[d.index()] {
             Cell::Device(dev) => dev.output[d.opposite().index()].strength,
-            Cell::Block { solid: true, .. } => block_power(v, q).strong,
+            Cell::Block { solid: true, .. } => strong_into(v, q),
             _ => 0,
         };
         best = best.max(s);

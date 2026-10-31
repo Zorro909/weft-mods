@@ -273,3 +273,18 @@ Paths are relative to `Weft/`.
   every tick. That costs one inventory scan per such comparator and tick, idle or not.
 - **Upstream fix:** an event (or a per-block-entity callback) when a slot of a block entity's
   inventory changes.
+
+## G18. Every `set` relights on the spot
+
+- **Verified (Weft `39f8073`).** `Dim::set` runs the lighter for each changed block before it
+  returns, outside framed dimensions (`crates/engine/src/server/dim.rs:717-723`). Changing a
+  block that gives light undoes and redoes its light out to its range.
+- **Measured** (scenarios `bench_*`, `redstone` timings in the log): a torch (light 7) turning on
+  or off costs about 65 µs of the redstone tick, a lamp (light 15) about 550 µs; a dust write
+  about 0.4 µs. A circuit with three lamps and a torch on a 1-tick clock spends 1.8 of its 2.0 ms
+  per tick in `set`; a hundred of them 140 of 155 ms.
+- **Needed for:** clocks and anything else that flips lamps and torches often.
+- **Workaround:** none in the mod short of giving off less light (cheaper: the work grows with
+  the light's range).
+- **Upstream fix:** collect light changes and relight once per tick (a block flipped twice costs
+  nothing), or off the tick thread; or a `set` that defers its lighting.

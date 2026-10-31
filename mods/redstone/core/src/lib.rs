@@ -4,6 +4,7 @@
 mod cell;
 mod devices;
 mod dir;
+mod hash;
 mod network;
 mod piston;
 mod power;
@@ -16,6 +17,7 @@ mod wire;
 pub use cell::*;
 pub use devices::*;
 pub use dir::*;
+pub use hash::*;
 pub use network::*;
 pub use piston::*;
 pub use power::*;

@@ -38,15 +38,22 @@ pub struct Scenario {
     /// overworld where they were.
     pub place: Option<(&'static Dimension, [f64; 3])>,
     pub restart: Restart,
+    /// A benchmark: runs only when named, never in `all`.
+    pub bench: bool,
 }
 
 impl Scenario {
     pub fn new(name: &'static str, steps: Vec<Step>) -> Scenario {
-        Scenario { name, steps, place: None, restart: Restart::No }
+        Scenario { name, steps, place: None, restart: Restart::No, bench: false }
     }
 
     pub fn restart(mut self, r: Restart) -> Scenario {
         self.restart = r;
+        self
+    }
+
+    pub fn bench(mut self) -> Scenario {
+        self.bench = true;
         self
     }
 
@@ -243,7 +250,7 @@ pub fn register(r: &mut Registry, all: Vec<Scenario>) {
         let mut guard = RUNNER.lock().unwrap();
         let Some(run) = guard.as_mut() else { return };
         let picked: Vec<usize> = if names == "all" {
-            (0..run.all.len()).filter(|&i| run.all[i].restart == Restart::No).collect()
+            (0..run.all.len()).filter(|&i| run.all[i].restart == Restart::No && !run.all[i].bench).collect()
         } else {
             let mut v = Vec::new();
             for n in names.split(',').map(str::trim) {

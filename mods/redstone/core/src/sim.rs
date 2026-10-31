@@ -9,7 +9,7 @@ use std::mem::discriminant;
 
 use crate::devices::sides_of;
 use crate::network::Recorder;
-use crate::{Action, Cell, Device, Dir, Kind, PistonPhase, Pos, PushPlan, Range, Shape, SidePower, View, apply, cube_of, inputs, links, network, piston_step, pull_plan, push_plan, react, resolve_conflicts, resume_plan, shape, solve, step};
+use crate::{Action, Cell, Device, Dir, Kind, PistonPhase, Pos, PushPlan, Range, Shape, SidePower, View, apply, cube_of, inputs, network, piston_step, pull_plan, push_plan, react, resolve_conflicts, resume_plan, shape, solve, step};
 
 /// A device change counting down.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -143,6 +143,11 @@ impl Sim {
         // unloaded cube stops counting down.
         let mut due = Vec::new();
         for (&(p, owner), e) in &mut self.pending {
+            // Not loaded here: neither here nor countable. Asked first, it is the cheap answer
+            // for the many changes a world doesn't have.
+            if !w.cube_loaded(cube_of(p)) {
+                continue;
+            }
             let here = matches!(w.cell(p), Cell::Device(Device { kind: Some(k), .. }) if discriminant(&k) == discriminant(&e.pending.next))
                 && w.instance(p) == owner;
             if !here {
@@ -150,7 +155,7 @@ impl Sim {
             }
             // New here: scheduled, restored or pushed by a piston.
             let located = e.cubes.is_none();
-            let cubes = e.cubes.get_or_insert_with(|| reach(&*w, p));
+            let cubes = e.cubes.get_or_insert_with(|| reach(&*w, p, &Known::default()));
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
             // A scheduled change starts counting in the tick after the first one that sees it.
             if !frozen && !e.fresh {
@@ -200,6 +205,7 @@ impl Sim {
             around(&*w, *p, &mut seeds);
         }
         let mut solved = BTreeMap::new();
+        let mut known = Known::default();
         let mut candidates = BTreeSet::new();
         for s in seeds {
             if solved.contains_key(&s) || !matches!(w.cell(s), Cell::Wire(_)) {
@@ -212,11 +218,10 @@ impl Sim {
                 continue;
             }
             candidates.extend(net.devices.iter().copied());
-            for (p, strength) in solve(&*w, &net, range) {
+            known.add(&net);
+            for (p, strength) in solve(&net, range) {
                 solved.insert(p, Some(strength));
-                let Cell::Wire(wire) = w.cell(p) else { continue };
-                let sh = shape(links(&*w, p, &wire));
-                w.write_wire(p, strength, sh);
+                w.write_wire(p, strength, shape(net.links[&p]));
             }
         }
 
@@ -248,7 +253,7 @@ impl Sim {
                     let run = self.pistons.entry((p, w.instance(p))).or_insert_with(|| PistonRun::new(phase, powered));
                     run.powered = powered;
                 }
-                Some(k) => self.react(w, p, k, i, range),
+                Some(k) => self.react(w, p, k, i, range, &known),
                 None => {
                     let last = self.last_inputs.get(&p).copied().unwrap_or_default();
                     if i != last {
@@ -413,7 +418,7 @@ impl Sim {
         self.dirty.extend(head);
     }
 
-    fn react(&mut self, w: &mut impl World, p: Pos, k: Kind, i: [SidePower; 6], range: Range) {
+    fn react(&mut self, w: &mut impl World, p: Pos, k: Kind, i: [SidePower; 6], range: Range, known: &Known) {
         let container = if matches!(k, Kind::Comparator { .. }) { w.container(p) } else { None };
         if container.is_some() {
             self.readers.insert(p);
@@ -438,7 +443,7 @@ impl Sim {
         }
         if let Some((delay, next)) = react(k, i, range, container, lockers) {
             let pending = Pending { next, remaining: delay.max(1) };
-            let cubes = reach(&*w, p);
+            let cubes = reach(&*w, p, known);
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
             w.save_pending(p, Some((pending, frozen)));
             self.pending.insert((p, owner), Entry { pending, cubes: Some(cubes), frozen, fresh: false });
@@ -466,7 +471,7 @@ impl<W: View> View for Solved<'_, W> {
         let known = self.strengths.borrow().get(&p).copied();
         let strength = known.unwrap_or_else(|| {
             let net = network(self.w, p);
-            let solved = (!net.incomplete).then(|| solve(self.w, &net, self.range));
+            let solved = (!net.incomplete).then(|| solve(&net, self.range));
             let mut m = self.strengths.borrow_mut();
             for q in &net.wires {
                 m.insert(*q, solved.as_ref().map(|s| s[q]));
@@ -499,8 +504,24 @@ fn around(v: &impl View, p: Pos, out: &mut BTreeSet<Pos>) {
     }
 }
 
+/// The networks this tick already found, so `reach` doesn't look for them again: each wire's
+/// network, by the index of its cubes.
+#[derive(Default)]
+struct Known {
+    by_wire: BTreeMap<Pos, usize>,
+    cubes: Vec<BTreeSet<[i32; 3]>>,
+}
+
+impl Known {
+    fn add(&mut self, net: &crate::Network) {
+        let i = self.cubes.len();
+        self.cubes.push(net.cubes.clone());
+        self.by_wire.extend(net.wires.iter().map(|p| (*p, i)));
+    }
+}
+
 /// The cubes a device's circuit spans: everything its inputs read and the networks around it.
-fn reach(v: &impl View, p: Pos) -> BTreeSet<[i32; 3]> {
+fn reach(v: &impl View, p: Pos, known: &Known) -> BTreeSet<[i32; 3]> {
     let r = Recorder::new(v);
     inputs(&r, p);
     let mut cubes = r.cubes.into_inner();
@@ -509,6 +530,10 @@ fn reach(v: &impl View, p: Pos) -> BTreeSet<[i32; 3]> {
     around(v, p, &mut near);
     let mut seen = BTreeSet::new();
     for q in near {
+        if let Some(&i) = known.by_wire.get(&q) {
+            cubes.extend(known.cubes[i].iter().copied());
+            continue;
+        }
         if !seen.contains(&q) && matches!(v.cell(q), Cell::Wire(_)) {
             let net = network(v, q);
             seen.extend(net.wires);
@@ -570,11 +595,13 @@ mod tests {
         instances: BTreeMap<Pos, u64>,
         /// Cells that read as air but can't be written: past the top of the world.
         unwritable: BTreeSet<Pos>,
+        /// `cell` calls so far.
+        reads: StdCell<u64>,
     }
 
     impl TestWorld {
         fn new(g: MapGrid) -> TestWorld {
-            TestWorld { g, range: R15, unloaded: BTreeSet::new(), written: BTreeMap::new(), log: Vec::new(), containers: BTreeMap::new(), instances: BTreeMap::new(), unwritable: BTreeSet::new() }
+            TestWorld { g, range: R15, unloaded: BTreeSet::new(), written: BTreeMap::new(), log: Vec::new(), containers: BTreeMap::new(), instances: BTreeMap::new(), unwritable: BTreeSet::new(), reads: StdCell::new(0) }
         }
         fn put(&mut self, p: Pos, k: Kind) -> &mut Self {
             self.g.put(p, Cell::Device(device(k, self.range)));
@@ -607,6 +634,7 @@ mod tests {
 
     impl View for TestWorld {
         fn cell(&self, p: Pos) -> Cell {
+            self.reads.set(self.reads.get() + 1);
             if self.unloaded.contains(&crate::cube_of(p)) {
                 return Cell::Unloaded;
             }
@@ -746,6 +774,46 @@ mod tests {
             assert_eq!(w.kind([1, 0, 0]), Kind::Torch { lit: n % 2 == 1, attached: Dir::West }, "after tick {n}");
             assert_eq!(w.strength([0, 1, 0]), if n % 2 == 1 { 14 } else { 0 }, "dust after tick {n}");
         }
+    }
+
+    #[test]
+    fn clock_on_a_line_reads_little() {
+        // `torch_clock_one_tick`, its dust running on 40 blocks west: every tick solves the line.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.g.solid([0, 0, 0]).dust([1, 1, 0]).dust([0, 1, 0]);
+        for x in -40..0 {
+            w.g.solid([x, 0, 0]).dust([x, 1, 0]);
+        }
+        w.put([1, 0, 0], Kind::Torch { lit: true, attached: Dir::West });
+        let mut sim = Sim::default();
+        sim.touch([1, 0, 0]);
+        ticks(&mut sim, &mut w, 4);
+        let before = w.reads.get();
+        ticks(&mut sim, &mut w, 20);
+        assert_eq!(w.strength([-13, 1, 0]), if w.kind([1, 0, 0]) == (Kind::Torch { lit: false, attached: Dir::West }) { 0 } else { 1 }, "the line still flips");
+        let per_tick = (w.reads.get() - before) / 20;
+        assert!(per_tick <= 42 * 30, "{per_tick} reads per tick, {} per wire", per_tick / 42);
+    }
+
+    /// `cargo test --release -p redstone_core -- --ignored --nocapture sheet_speed`: the clock
+    /// driving 32 × 32 dust, time per tick of the rules alone (the test world's reads are cheap).
+    #[test]
+    #[ignore]
+    fn sheet_speed() {
+        let mut w = TestWorld::new(MapGrid::default());
+        w.g.solid([0, 0, 0]).dust([0, 1, 0]).solid([1, 1, 0]);
+        for x in 2..34 {
+            for z in 0..32 {
+                w.g.solid([x, 0, z]).dust([x, 1, z]);
+            }
+        }
+        w.put([1, 0, 0], Kind::Torch { lit: true, attached: Dir::West });
+        let mut sim = Sim::default();
+        sim.touch([1, 0, 0]);
+        ticks(&mut sim, &mut w, 10);
+        let (reads, t) = (w.reads.get(), std::time::Instant::now());
+        ticks(&mut sim, &mut w, 200);
+        println!("{:?} per tick, {} reads per tick", t.elapsed() / 200, (w.reads.get() - reads) / 200);
     }
 
     #[test]
@@ -1284,6 +1352,25 @@ mod tests {
         assert!(!powered(a.kind([0, 0, 0])));
         sim.tick(&mut a);
         assert!(powered(a.kind([0, 0, 0])));
+    }
+
+    #[test]
+    fn changes_where_nothing_is_loaded_cost_no_reads() {
+        // A world that has the cube of none of the pending devices (they are in an area that
+        // unloaded, or in another dimension) doesn't read their positions every tick.
+        let mut a = TestWorld::new(MapGrid::default());
+        for x in 0..50 {
+            a.put([x * 2, 0, 0], Kind::Torch { lit: true, attached: Dir::Down });
+        }
+        let mut sim = Sim::default();
+        for x in 0..50 {
+            sim.schedule([x * 2, 0, 0], Pending { next: Kind::Torch { lit: false, attached: Dir::Down }, remaining: 5 }, 0);
+        }
+        let mut b = TestWorld::new(MapGrid::default());
+        b.unloaded.extend((0..8).map(|x| [x, 0, 0]));
+        ticks(&mut sim, &mut b, 10);
+        assert_eq!(b.reads.get(), 0);
+        assert_eq!(sim.pending.len(), 50);
     }
 
     #[test]

@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use redstone_api::{COMPARATOR_READING, CONNECTS, EMITS, INPUT_CHANGED, Inputs, OUTPUT, RECEIVER, SidePowerV, UNPUSHABLE, WIRE};
-use redstone_core::{Cell, Device, Dir, Kind, Pending, Pos, Power, Push, Range, Shape, SidePower, View, Wire, container_level, cube_of, network, solve, step};
+use redstone_core::{Cell, Device, Dir, Kind, Pending, Pos, PosMap, Power, Push, Range, Shape, SidePower, View, Wire, container_level, cube_of, network, solve, step};
 use weft_sdk::abi::block_flags;
 use weft_sdk::{HARDNESS, SUPPORT_FACE, World, block_of, max_stack, query, state_flags, state_with};
 
@@ -24,13 +24,16 @@ pub struct WeftWorld<'a> {
     range: Range,
     /// Whether a cube is loaded, probed once per tick.
     cubes: RefCell<HashMap<[i32; 3], bool>>,
+    /// What each position read as this tick. The rules read the same few cells many times, and
+    /// a read through Weft costs several calls; writes through this world keep it current.
+    cells: RefCell<PosMap<Pos, Cell>>,
     /// Every block this tick wrote, so `on_neighbor` can tell them from other changes.
     pub own: Vec<(Pos, u32)>,
 }
 
 impl<'a> WeftWorld<'a> {
     pub fn new(w: &'a World) -> WeftWorld<'a> {
-        WeftWorld { w, range: redstone_api::range(), cubes: RefCell::new(HashMap::new()), own: Vec::new() }
+        WeftWorld { w, range: redstone_api::range(), cubes: RefCell::new(HashMap::new()), cells: RefCell::default(), own: Vec::new() }
     }
 
     /// Whether `p` is loaded, for a position known to read as air (so the probe writes air over
@@ -123,12 +126,12 @@ impl<'a> WeftWorld<'a> {
     fn write(&mut self, p: Pos, state: u32) {
         if self.w.get(p) != state && self.w.set(p, state) {
             self.own.push((p, state));
+            self.cells.get_mut().remove(&p);
         }
     }
-}
 
-impl View for WeftWorld<'_> {
-    fn cell(&self, p: Pos) -> Cell {
+    /// `View::cell` without the per-tick memory.
+    fn read(&self, p: Pos) -> Cell {
         let s = self.w.get(p);
         if s == 0 {
             return self.air_or_unloaded(p);
@@ -143,6 +146,17 @@ impl View for WeftWorld<'_> {
             return c;
         }
         Cell::Block { solid: Self::solid(s), push: self.push(p, s) }
+    }
+}
+
+impl View for WeftWorld<'_> {
+    fn cell(&self, p: Pos) -> Cell {
+        if let Some(c) = self.cells.borrow().get(&p) {
+            return c.clone();
+        }
+        let c = self.read(p);
+        self.cells.borrow_mut().insert(p, c.clone());
+        c
     }
 }
 
@@ -204,14 +218,17 @@ impl redstone_core::World for WeftWorld<'_> {
     }
 
     fn reserve(&mut self, p: Pos) -> bool {
+        self.cells.get_mut().remove(&p);
         pistons::reserve(self.w, p)
     }
 
     fn shift(&mut self, to: Dir, moved: &[Pos], broken: &[Pos], head: Option<Pos>) {
+        self.cells.get_mut().clear();
         pistons::shift(self.w, to, moved, broken, head);
     }
 
     fn head(&mut self, p: Pos, head: Option<(Dir, bool)>) {
+        self.cells.get_mut().remove(&p);
         pistons::head(self.w, p, head);
     }
 }
@@ -226,7 +243,7 @@ pub fn strength_at(w: &World, p: Pos) -> u8 {
     if net.incomplete {
         return 0;
     }
-    solve(&v, &net, v.range).get(&p).copied().unwrap_or(0)
+    solve(&net, v.range).get(&p).copied().unwrap_or(0)
 }
 
 /// Whether redstone has anything at `p` or next to it.

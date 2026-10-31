@@ -1,6 +1,7 @@
 //! The scenario list.
 
 mod basics;
+mod bench;
 mod devices;
 mod extension;
 mod freeze;
@@ -50,5 +51,8 @@ pub fn all() -> Vec<Scenario> {
         pistons::chest_unpushable(),
         freeze::restart_before(),
         freeze::restart_after(),
+        bench::bench_circuit(),
+        bench::bench_stress(),
+        bench::bench_sheet(),
     ]
 }

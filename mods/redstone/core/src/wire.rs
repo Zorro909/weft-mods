@@ -16,10 +16,15 @@ pub enum Link {
 
 /// The connections of wire `w` at `p`, by `Dir::HORIZONTAL`.
 pub fn links(v: &impl View, p: Pos, w: &Wire) -> [Link; 4] {
+    links_from(v, p, w, &Dir::ALL.map(|d| v.cell(step(p, d))))
+}
+
+/// `links` with the cells around `p` already read, by `Dir::ALL`.
+pub(crate) fn links_from(v: &impl View, p: Pos, w: &Wire, around: &[Cell; 6]) -> [Link; 4] {
     Dir::HORIZONTAL.map(|d| {
         let q = step(p, d);
-        match v.cell(q) {
-            Cell::Wire(b) if linked(w, &b) => return Link::Flat,
+        match &around[d.index()] {
+            Cell::Wire(b) if linked(w, b) => return Link::Flat,
             Cell::Device(dev) if dev.connects_on(d.opposite()) => return Link::Flat,
             _ => {}
         }
@@ -45,15 +50,16 @@ pub fn linked(a: &Wire, b: &Wire) -> bool {
 /// test from either end, so steps always work both ways. Anything unloaded: no step.
 fn stair(v: &impl View, lower: Pos, d: Dir, w: &Wire) -> bool {
     let side = step(lower, d);
+    // In this order, stopping at the first no: most sides of most wires carry nothing.
     let carries = match v.cell(side) {
         Cell::Block { .. } => true,
         Cell::Device(dev) => dev.solid,
         _ => false,
     };
-    let lower_ok = matches!(v.cell(lower), Cell::Wire(b) if linked(w, &b));
-    let upper_ok = matches!(v.cell(step(side, Dir::Up)), Cell::Wire(b) if linked(w, &b));
-    let open = matches!(v.cell(step(lower, Dir::Up)), Cell::Air | Cell::Wire(_) | Cell::Block { solid: false, .. } | Cell::Device(Device { solid: false, .. }));
-    carries && lower_ok && upper_ok && open
+    carries
+        && matches!(v.cell(lower), Cell::Wire(b) if linked(w, &b))
+        && matches!(v.cell(step(side, Dir::Up)), Cell::Wire(b) if linked(w, &b))
+        && matches!(v.cell(step(lower, Dir::Up)), Cell::Air | Cell::Wire(_) | Cell::Block { solid: false, .. } | Cell::Device(Device { solid: false, .. }))
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

@@ -3,7 +3,9 @@
 use std::cell::{Cell as StdCell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{Cell, Dir, Link, Pos, Range, View, links, source_into_wire, step};
+use crate::power_rules::source_from;
+use crate::wire::links_from;
+use crate::{Cell, Dir, Link, Pos, PosSet, Range, View, step};
 
 pub struct Network {
     pub wires: BTreeSet<Pos>,
@@ -15,41 +17,55 @@ pub struct Network {
     pub cubes: BTreeSet<[i32; 3]>,
     /// Every device read on the way: all receivers its strengths can reach.
     pub devices: BTreeSet<Pos>,
+    /// What each wire gets from outside the network (`source_into_wire`), and its links, read
+    /// once here for `solve` and the wire's shape.
+    pub sources: BTreeMap<Pos, u8>,
+    pub links: BTreeMap<Pos, [Link; 4]>,
 }
 
 /// The network of the wire at `start`.
 pub fn network(v: &impl View, start: Pos) -> Network {
     let r = Recorder::new(v);
-    let mut wires = BTreeSet::new();
-    let mut edges = BTreeMap::new();
+    // Each wire once, marked when queued; sorted into the network's maps at the end.
+    let mut found = Vec::new();
+    let mut queued = PosSet::default();
+    queued.insert(start);
     let mut queue = std::collections::VecDeque::from([start]);
     while let Some(p) = queue.pop_front() {
-        if wires.contains(&p) {
-            continue;
-        }
         let Cell::Wire(w) = r.cell(p) else { continue };
-        wires.insert(p);
-        let ls = links(&r, p, &w);
+        // Read once for its links, where they lead and what feeds it.
+        let around = Dir::ALL.map(|d| r.cell(step(p, d)));
+        let ls = links_from(&r, p, &w, &around);
         let mut next = Vec::new();
         for (d, l) in Dir::HORIZONTAL.into_iter().zip(ls) {
             let q = step(p, d);
             let n = match l {
                 Link::None => continue,
                 // Flat may also be a connectable device, which isn't part of the network.
-                Link::Flat => q,
+                Link::Flat if matches!(around[d.index()], Cell::Wire(_)) => q,
+                Link::Flat => continue,
                 Link::Up => step(q, Dir::Up),
                 Link::Down => step(q, Dir::Down),
             };
-            if matches!(r.cell(n), Cell::Wire(_)) {
+            if l == Link::Flat || matches!(r.cell(n), Cell::Wire(_)) {
                 next.push(n);
             }
         }
-        // Read what feeds it too, so an unloaded source makes the network incomplete.
-        source_into_wire(&r, p);
-        queue.extend(next.iter().copied());
-        edges.insert(p, next);
+        // What feeds it is read here too, so an unloaded source makes the network incomplete.
+        let source = source_from(&r, p, &around);
+        queue.extend(next.iter().copied().filter(|n| queued.insert(*n)));
+        found.push((p, next, source, ls));
     }
-    Network { wires, edges, incomplete: r.unloaded.get(), cubes: r.cubes.into_inner(), devices: r.devices.into_inner() }
+    found.sort_unstable_by_key(|f| f.0);
+    Network {
+        wires: found.iter().map(|f| f.0).collect(),
+        sources: found.iter().map(|f| (f.0, f.2)).collect(),
+        links: found.iter().map(|f| (f.0, f.3)).collect(),
+        edges: found.into_iter().map(|f| (f.0, f.1)).collect(),
+        incomplete: r.unloaded.get(),
+        cubes: r.cubes.into_inner(),
+        devices: r.devices.into_inner(),
+    }
 }
 
 /// A view that notes which cubes and devices were read and whether any position was unloaded.
@@ -58,17 +74,23 @@ pub(crate) struct Recorder<'a, V> {
     pub(crate) cubes: RefCell<BTreeSet<[i32; 3]>>,
     pub(crate) devices: RefCell<BTreeSet<Pos>>,
     pub(crate) unloaded: StdCell<bool>,
+    /// The cube of the last read, already in `cubes`: most reads are in the same one.
+    last: StdCell<Option<[i32; 3]>>,
 }
 
 impl<'a, V> Recorder<'a, V> {
     pub(crate) fn new(v: &'a V) -> Self {
-        Recorder { v, cubes: RefCell::new(BTreeSet::new()), devices: RefCell::new(BTreeSet::new()), unloaded: StdCell::new(false) }
+        Recorder { v, cubes: RefCell::new(BTreeSet::new()), devices: RefCell::new(BTreeSet::new()), unloaded: StdCell::new(false), last: StdCell::new(None) }
     }
 }
 
 impl<V: View> View for Recorder<'_, V> {
     fn cell(&self, p: Pos) -> Cell {
-        self.cubes.borrow_mut().insert(cube_of(p));
+        let cube = cube_of(p);
+        if self.last.get() != Some(cube) {
+            self.cubes.borrow_mut().insert(cube);
+            self.last.set(Some(cube));
+        }
         let c = self.v.cell(p);
         match c {
             Cell::Unloaded => self.unloaded.set(true),
@@ -87,12 +109,12 @@ pub fn cube_of(p: Pos) -> [i32; 3] {
 }
 
 /// The strength of every wire in `net`: the best of its sources minus the distance, never below 0.
-pub fn solve(v: &impl View, net: &Network, range: Range) -> BTreeMap<Pos, u8> {
+pub fn solve(net: &Network, range: Range) -> BTreeMap<Pos, u8> {
     let mut best: BTreeMap<Pos, u8> = net.wires.iter().map(|p| (*p, 0)).collect();
     // A bucket per strength, highest first: each wire is settled by its strongest arrival.
     let mut buckets: Vec<Vec<Pos>> = vec![Vec::new(); range.max() as usize + 1];
     for p in &net.wires {
-        let s = range.clamp(source_into_wire(v, *p));
+        let s = range.clamp(net.sources[p]);
         if s > 0 {
             best.insert(*p, s);
             buckets[s as usize].push(*p);
@@ -135,7 +157,7 @@ mod tests {
             for x in 0..=max + 1 {
                 g.dust([x, 0, 0]);
             }
-            let s = solve(&g, &network(&g, [0, 0, 0]), Range::from_index(i));
+            let s = solve(&network(&g, [0, 0, 0]), Range::from_index(i));
             assert_eq!(s[&[0, 0, 0]], max as u8);
             assert_eq!(s[&[max - 1, 0, 0]], 1);
             assert_eq!(s[&[max, 0, 0]], 0);
@@ -150,7 +172,7 @@ mod tests {
         for x in 0..=10 {
             g.dust([x, 0, 0]);
         }
-        let s = solve(&g, &network(&g, [0, 0, 0]), Range::from_index(0));
+        let s = solve(&network(&g, [0, 0, 0]), Range::from_index(0));
         assert_eq!(s[&[5, 0, 0]], 10);
         assert_eq!(s[&[9, 0, 0]], 14);
     }
@@ -163,7 +185,7 @@ mod tests {
         }
         let n = network(&g, [0, 0, 0]);
         assert_eq!(n.wires.len(), 8);
-        assert!(solve(&g, &n, Range::from_index(0)).values().all(|&x| x == 0));
+        assert!(solve(&n, Range::from_index(0)).values().all(|&x| x == 0));
     }
 
     #[test]
@@ -206,7 +228,7 @@ mod tests {
     fn steps_are_part_of_the_network() {
         let mut g = MapGrid::default();
         g.put([-1, 0, 0], source(15)).dust([0, 0, 0]).solid([1, 0, 0]).dust([1, 1, 0]).dust([2, 1, 0]);
-        let s = solve(&g, &network(&g, [0, 0, 0]), Range::from_index(0));
+        let s = solve(&network(&g, [0, 0, 0]), Range::from_index(0));
         assert_eq!(s[&[2, 1, 0]], 13);
     }
 
@@ -217,12 +239,12 @@ mod tests {
         out[Dir::East.index()] = Power { strength: 12, strong: false };
         g.put([-1, 0, 0], Cell::Device(Device { output: out, connects: 0b111111, receives: false, solid: false, kind: None }));
         g.dust([0, 0, 0]).dust([1, 0, 0]).dust([1, 0, 1]).dust([1, 0, 2]).solid([2, 0, 2]).dust([2, 1, 2]).dust([0, 0, 2]).put([0, 0, 3], source(7));
-        let base = solve(&g, &network(&g, [0, 0, 0]), Range::from_index(0));
+        let base = solve(&network(&g, [0, 0, 0]), Range::from_index(0));
         let mut r = g.clone();
         for k in 1..=3 {
             r = r.rotated();
             let start = (0..k).fold([0, 0, 0], |q, _| rotate_pos(q));
-            let got = solve(&r, &network(&r, start), Range::from_index(0));
+            let got = solve(&network(&r, start), Range::from_index(0));
             for (p, s) in &base {
                 let rp = (0..k).fold(*p, |q, _| rotate_pos(q));
                 assert_eq!(got[&rp], *s, "{p:?} after {k} turns");
