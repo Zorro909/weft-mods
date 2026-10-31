@@ -163,7 +163,9 @@ pub fn bench_sheet() -> Scenario {
     steps.push(Step::Do(|c| {
         let on = SHEET_SEEN.load(Ordering::Relaxed);
         if !(3..=7).contains(&on) {
-            c.fail(format!("the sheet's first dust was powered in {on} of 10 ticks, want about half"));
+            // The clock is in reach of the player: a click in the window can break it.
+            let parts: Vec<_> = [[0, 0, 0], [1, 1, 0], [1, 0, 0], [0, 1, 0]].map(|p| c.get(p)).into();
+            c.fail(format!("the sheet's first dust was powered in {on} of 10 ticks, want about half; clock {parts:?}"));
         }
     }));
     Scenario::new("bench_sheet", steps).in_dimension(&FLATLANDS, AT).bench()
