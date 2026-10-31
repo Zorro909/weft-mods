@@ -25,8 +25,9 @@ static SIM: LazyLock<Mutex<Sim>> = LazyLock::new(|| Mutex::new(Sim::default()));
 static DIRTY: Mutex<BTreeMap<Pos, Instant>> = Mutex::new(BTreeMap::new());
 /// What the tick wrote where, and in which world tick, so `on_neighbor` can ignore it.
 static OWN: Mutex<BTreeMap<Pos, (u32, u64)>> = Mutex::new(BTreeMap::new());
-/// Changes started outside the tick (a button's release), for the next one.
-static SCHEDULED: Mutex<Vec<(Pos, Pending)>> = Mutex::new(Vec::new());
+/// Changes started outside the tick (a button's release) with their device's block entity, for
+/// the next one.
+static SCHEDULED: Mutex<Vec<(Pos, Pending, u64)>> = Mutex::new(Vec::new());
 
 const UNCLAIMED: Duration = Duration::from_secs(5);
 
@@ -47,7 +48,7 @@ pub fn press(w: &World, p: Pos) {
     if w.set(p, s) {
         queue(p);
         let remaining = if wood { BUTTON_WOOD } else { BUTTON_STONE };
-        lock(&SCHEDULED).push((p, Pending { next: Kind::Button { on: false, attached, wood }, remaining }));
+        lock(&SCHEDULED).push((p, Pending { next: Kind::Button { on: false, attached, wood }, remaining }, w.block_entity(p)));
     }
 }
 
@@ -85,14 +86,14 @@ fn tick(w: &World) {
 
     // Changes restored from saves after a restart (`persist`); the region that has the device
     // claims the position below.
-    for (p, pending) in persist::take_restored() {
-        if !sim.has_pending(p) {
-            sim.schedule(p, pending);
+    for (p, pending, owner) in persist::take_restored() {
+        if !sim.has_pending(p, owner) {
+            sim.schedule(p, pending, owner);
         }
         queue(p);
     }
-    for (p, pending) in std::mem::take(&mut *lock(&SCHEDULED)) {
-        sim.schedule(p, pending);
+    for (p, pending, owner) in std::mem::take(&mut *lock(&SCHEDULED)) {
+        sim.schedule(p, pending, owner);
     }
 
     // Claim what this world has redstone at or next to; leave the rest for other regions.

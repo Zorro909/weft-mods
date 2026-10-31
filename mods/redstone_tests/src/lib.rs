@@ -4,6 +4,7 @@
 //! `--redstone-test <names>` the game opens the world given by `--world`, runs them, writes
 //! `--redstone-report <file>` and quits with the number of failed scenarios (`scripts/test.sh`).
 
+mod ext;
 mod scenario;
 mod tests;
 
@@ -14,6 +15,7 @@ use weft_sdk::*;
 declare_mod!(deps: ["base", "redstone"], init: init);
 
 fn init(r: &mut Registry) {
+    ext::register(r);
     scenario::register(r, tests::all());
     let Some(names) = launch_option("redstone-test") else { return };
     r.client_frame(move |c| {

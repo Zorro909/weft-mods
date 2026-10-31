@@ -128,6 +128,13 @@ impl Ctx<'_> {
         self.w.teleport(self.player, None, to);
     }
 
+    /// Moves the player to `at` in `dim` and keeps them hovering there; only for scenarios with a
+    /// `place`, which end in the overworld where they started.
+    pub fn visit(&mut self, dim: &Dimension, at: [f64; 3]) {
+        *self.hover = Some(at);
+        self.w.teleport(self.player, Some(dim), at);
+    }
+
     /// Back where the player was before the first `go`.
     pub fn go_back(&mut self) {
         if let Some(s) = *self.start {

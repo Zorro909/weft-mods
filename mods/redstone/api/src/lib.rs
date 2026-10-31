@@ -12,6 +12,8 @@
 
 use weft_sdk::*;
 
+/// `FULL`: the strength that means "the world's maximum" in `EMITS` and `OUTPUT`. `Range`: a
+/// world's signal range (`range()`).
 pub use redstone_core::{FULL, Range};
 
 /// The world's signal range: 16, 32 or 64 levels. Change with `/rule redstone:signal_range <0|1|2>`.
@@ -32,6 +34,8 @@ value! {
     /// What a block emits to each side, by face index (-X +X -Y +Y -Z +Z).
     pub struct Emits { pub sides: [SidePowerV; 6] }
 }
+/// On an emitter's states: what each state puts out. A state without it emits nothing (unless the
+/// `OUTPUT` chain says otherwise). Clamped to the world's range.
 pub static EMITS: Component<Emits> = Component::named("redstone:emits");
 
 /// The sides wire connects to, a bit per face index. Change it with a state change (and
@@ -47,9 +51,12 @@ value! {
     /// the block below and the blocks its shape points into, like dust.
     pub struct WireType { pub kind: u32, pub links: u32, pub powers_blocks: u8 }
 }
+/// On every state of a wire block. Wire is weak-only: it powers what it points into and the block
+/// below (if `powers_blocks`), never strongly.
 pub static WIRE: Component<WireType> = Component::named("redstone:wire");
 
 value! {
+    /// A position, for `CHANGED` and `PRESS`.
     pub struct Changed { pub pos: [i32; 3] }
 }
 /// A redstone-relevant block changed by code. Redstone notices placing and breaking by players

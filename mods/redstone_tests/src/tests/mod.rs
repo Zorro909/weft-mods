@@ -2,6 +2,7 @@
 
 mod basics;
 mod devices;
+mod extension;
 mod freeze;
 mod smoke;
 
@@ -27,6 +28,12 @@ pub fn all() -> Vec<Scenario> {
         devices::comparator_reads_through_block(),
         devices::buttons_lengths(),
         devices::plate_on_off(),
+        extension::ext_emitter_powers_dust(),
+        extension::ext_receiver_gets_sides(),
+        extension::ext_wire_isolated(),
+        extension::ext_connectable_change(),
+        extension::ext_dynamic_output(),
+        extension::two_dimensions(),
         freeze::restart_before(),
         freeze::restart_after(),
     ]

@@ -31,8 +31,8 @@ const NONE: PendingV = PendingV { next: 0, remaining: 0, from_tick: 0, frozen: 0
 /// Ticks until a frozen change's timer: the core's retry.
 const RETRY: u32 = 20;
 
-/// Changes restored from saves, for the driver's next tick.
-static RESTORED: Mutex<Vec<(Pos, Pending)>> = Mutex::new(Vec::new());
+/// Changes restored from saves with their device's block entity, for the driver's next tick.
+static RESTORED: Mutex<Vec<(Pos, Pending, u64)>> = Mutex::new(Vec::new());
 
 pub fn register(r: &mut Registry, devices: &[&Block]) {
     r.entity_component(&PENDING, NONE, component_flags::SAVE);
@@ -42,7 +42,7 @@ pub fn register(r: &mut Registry, devices: &[&Block]) {
     }
     r.on(&WAKE, |b| {
         let w = b.world();
-        let found: Vec<_> = b.iter().filter_map(|e| restore(&w, e.pos).map(|p| (e.pos, p))).collect();
+        let found: Vec<_> = b.iter().filter_map(|e| restore(&w, e.pos).map(|(p, be)| (e.pos, p, be))).collect();
         if !found.is_empty() {
             RESTORED.lock().unwrap_or_else(|e| e.into_inner()).extend(found);
         }
@@ -65,8 +65,8 @@ pub fn save(w: &World, p: Pos, pending: Option<(Pending, bool)>) {
     }
 }
 
-/// The change saved at `p`, as it stands now.
-fn restore(w: &World, p: Pos) -> Option<Pending> {
+/// The change saved at `p`, as it stands now, and the block entity it is saved on.
+fn restore(w: &World, p: Pos) -> Option<(Pending, u64)> {
     let be = w.block_entity(p);
     if be == 0 {
         return None;
@@ -78,10 +78,10 @@ fn restore(w: &World, p: Pos) -> Option<Pending> {
     let next = decode(v.next)?;
     // The driver schedules it next tick, from which `remaining` counts (`Sim::schedule`).
     let passed = if v.frozen != 0 { 0 } else { (w.time() + 1).saturating_sub(v.from_tick) };
-    Some(Pending { next, remaining: (v.remaining as u64).saturating_sub(passed).max(1) as u32 })
+    Some((Pending { next, remaining: (v.remaining as u64).saturating_sub(passed).max(1) as u32 }, be))
 }
 
 /// What timers found since the last call; the driver schedules those the `Sim` doesn't know.
-pub fn take_restored() -> Vec<(Pos, Pending)> {
+pub fn take_restored() -> Vec<(Pos, Pending, u64)> {
     std::mem::take(&mut *RESTORED.lock().unwrap_or_else(|e| e.into_inner()))
 }

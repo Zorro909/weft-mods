@@ -24,6 +24,9 @@ pub trait World: View {
     fn cube_loaded(&self, cube: [i32; 3]) -> bool;
     /// The comparator reading of what's behind a comparator at `p`.
     fn container(&self, p: Pos) -> Option<u8>;
+    /// Which device is at `p`, as an id no other device in any world has, 0 if it has none. A
+    /// pending change applies only to the device it started on.
+    fn instance(&self, p: Pos) -> u64;
     /// A wire's strength and shape after this tick, for every wire of every network the tick
     /// solved. The world shows what it can (a brightness level) and skips writes that change
     /// nothing it shows.
@@ -39,7 +42,8 @@ pub trait World: View {
 
 #[derive(Default)]
 pub struct Sim {
-    pending: BTreeMap<Pos, Entry>,
+    /// By position and `World::instance`: the same place in two dimensions are two devices.
+    pending: BTreeMap<(Pos, u64), Entry>,
     dirty: BTreeSet<Pos>,
     /// Positions in a frozen circuit, retried when their countdown runs out.
     frozen_dirty: BTreeMap<Pos, u32>,
@@ -65,54 +69,59 @@ impl Sim {
 
     /// Starts (or replaces) the pending change of the device at `p`. The next tick saves it, and
     /// it applies `remaining` ticks after that one.
-    pub fn schedule(&mut self, p: Pos, pending: Pending) {
-        self.pending.insert(p, Entry { pending, cubes: None, frozen: false });
+    pub fn schedule(&mut self, p: Pos, pending: Pending, owner: u64) {
+        self.pending.insert((p, owner), Entry { pending, cubes: None, frozen: false });
     }
 
     /// The device at `p` is gone.
     pub fn forget(&mut self, p: Pos) {
-        self.pending.remove(&p);
+        let at: Vec<_> = self.pending.range((p, 0)..=(p, u64::MAX)).map(|(k, _)| *k).collect();
+        for k in at {
+            self.pending.remove(&k);
+        }
         self.frozen_dirty.remove(&p);
         self.last_inputs.remove(&p);
         self.readers.remove(&p);
     }
 
-    pub fn has_pending(&self, p: Pos) -> bool {
-        self.pending.contains_key(&p)
+    pub fn has_pending(&self, p: Pos, owner: u64) -> bool {
+        self.pending.contains_key(&(p, owner))
     }
 
     pub fn tick(&mut self, w: &mut impl World) {
         let range = w.range();
 
         // 1. Only changes whose device is in this world count: every region and dimension ticks
-        // the same Sim (G6), and a device that was removed or replaced is simply never seen
-        // again (`forget` cleans up). A change whose circuit reaches an unloaded cube stops
-        // counting down.
+        // the same Sim (G6), and a change belongs to the device instance it started on, so the
+        // same place in another dimension is another device. One that was removed or replaced is
+        // simply never seen again (`forget` cleans up). A change whose circuit reaches an
+        // unloaded cube stops counting down.
         let mut due = Vec::new();
-        for (p, e) in &mut self.pending {
-            let here = matches!(w.cell(*p), Cell::Device(Device { kind: Some(k), .. }) if discriminant(&k) == discriminant(&e.pending.next));
+        for (&(p, owner), e) in &mut self.pending {
+            let here = matches!(w.cell(p), Cell::Device(Device { kind: Some(k), .. }) if discriminant(&k) == discriminant(&e.pending.next))
+                && w.instance(p) == owner;
             if !here {
                 continue;
             }
             let fresh = e.cubes.is_none();
-            let cubes = e.cubes.get_or_insert_with(|| reach(&*w, *p));
+            let cubes = e.cubes.get_or_insert_with(|| reach(&*w, p));
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
             // A scheduled change starts counting in the tick after the first one that sees it.
             if !frozen && !fresh {
                 e.pending.remaining = e.pending.remaining.saturating_sub(1);
             }
             if e.pending.remaining == 0 {
-                due.push(*p);
+                due.push((p, owner));
             } else if fresh || frozen != e.frozen {
                 // Saved as counted down, like a fresh change: `remaining` ticks after this one.
-                w.save_pending(*p, Some((e.pending, frozen)));
+                w.save_pending(p, Some((e.pending, frozen)));
             }
             e.frozen = frozen;
         }
 
         // 2. Apply every change due now, all at once.
-        for p in due {
-            let e = self.pending.remove(&p).expect("due entry");
+        for (p, owner) in due {
+            let e = self.pending.remove(&(p, owner)).expect("due entry");
             let next = match w.cell(p) {
                 Cell::Device(Device { kind: Some(k), .. }) => apply(k, e.pending.next),
                 _ => e.pending.next,
@@ -213,12 +222,13 @@ impl Sim {
             Kind::Repeater { facing, .. } => side_lockers(&*w, p, facing),
             _ => false,
         };
-        if let Some(e) = self.pending.get(&p) {
+        let owner = w.instance(p);
+        if let Some(e) = self.pending.get(&(p, owner)) {
             // One pending change per device, except that locking or unlocking a repeater replaces
             // a change that would leave it in the wrong lock state.
             match e.pending.next {
                 Kind::Repeater { locked, .. } if locked != lockers => {
-                    self.pending.remove(&p);
+                    self.pending.remove(&(p, owner));
                     w.save_pending(p, None);
                 }
                 _ => return,
@@ -229,7 +239,7 @@ impl Sim {
             let cubes = reach(&*w, p);
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
             w.save_pending(p, Some((pending, frozen)));
-            self.pending.insert(p, Entry { pending, cubes: Some(cubes), frozen });
+            self.pending.insert((p, owner), Entry { pending, cubes: Some(cubes), frozen });
         }
     }
 }
@@ -354,11 +364,13 @@ mod tests {
         log: Vec<Ev>,
         /// Comparator readings by the comparator's position.
         containers: BTreeMap<Pos, u8>,
+        /// Device instance ids (`World::instance`), 0 where not set.
+        instances: BTreeMap<Pos, u64>,
     }
 
     impl TestWorld {
         fn new(g: MapGrid) -> TestWorld {
-            TestWorld { g, range: R15, unloaded: BTreeSet::new(), written: BTreeMap::new(), log: Vec::new(), containers: BTreeMap::new() }
+            TestWorld { g, range: R15, unloaded: BTreeSet::new(), written: BTreeMap::new(), log: Vec::new(), containers: BTreeMap::new(), instances: BTreeMap::new() }
         }
         fn put(&mut self, p: Pos, k: Kind) -> &mut Self {
             self.g.put(p, Cell::Device(device(k, self.range)));
@@ -411,6 +423,9 @@ mod tests {
         }
         fn container(&self, p: Pos) -> Option<u8> {
             self.containers.get(&p).copied()
+        }
+        fn instance(&self, p: Pos) -> u64 {
+            self.instances.get(&p).copied().unwrap_or(0)
         }
         fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape) {
             assert!(matches!(self.g.cell(p), Cell::Wire(_)), "write_wire on non-wire {p:?}");
@@ -467,12 +482,12 @@ mod tests {
         sim.tick(&mut w);
         assert_eq!(w.wire_writes(), (1..=5).map(|x| ([x, 0, 0], 16 - x as u8)).collect::<Vec<_>>());
         assert_eq!(w.kind([6, 0, 0]), Kind::Lamp { lit: false });
-        assert_eq!(sim.pending[&[6, 0, 0]].pending, Pending { next: Kind::Lamp { lit: true }, remaining: 1 });
+        assert_eq!(sim.pending[&([6, 0, 0], 0)].pending, Pending { next: Kind::Lamp { lit: true }, remaining: 1 });
         w.log.clear();
         sim.tick(&mut w);
         assert_eq!(w.kind([6, 0, 0]), Kind::Lamp { lit: true });
         assert!(w.wire_writes().is_empty());
-        assert!(!sim.has_pending([6, 0, 0]));
+        assert!(!sim.has_pending([6, 0, 0], 0));
     }
 
     #[test]
@@ -646,7 +661,7 @@ mod tests {
         let mut sim = Sim::default();
         sim.touch([-1, 0, 0]);
         sim.tick(&mut w);
-        assert_eq!(sim.pending[&[0, 0, 0]].pending.remaining, 3);
+        assert_eq!(sim.pending[&([0, 0, 0], 0)].pending.remaining, 3);
         sim.tick(&mut w);
         // The lever's cube goes: the repeater is still here, its circuit isn't whole.
         w.unloaded.insert([-1, 0, 0]);
@@ -658,7 +673,7 @@ mod tests {
         // Its own cube goes too: not seen at all, still not counting.
         w.unloaded.insert([0, 0, 0]);
         ticks(&mut sim, &mut w, 10);
-        assert_eq!(sim.pending[&[0, 0, 0]].pending.remaining, 2);
+        assert_eq!(sim.pending[&([0, 0, 0], 0)].pending.remaining, 2);
         w.unloaded.clear();
         sim.tick(&mut w);
         assert_eq!(w.device_writes([0, 0, 0]), 0);
@@ -698,7 +713,7 @@ mod tests {
             if t == 12 {
                 // As restored after a restart: scheduled fresh, saved by the next tick.
                 w.put([0, 0, 0], repeater(Dir::East, 4));
-                sim.schedule([0, 0, 0], Pending { next: Kind::Repeater { facing: Dir::East, delay: 4, powered: true, locked: false }, remaining: 3 });
+                sim.schedule([0, 0, 0], Pending { next: Kind::Repeater { facing: Dir::East, delay: 4, powered: true, locked: false }, remaining: 3 }, 0);
             }
         }
         assert_eq!(checked, 2);
@@ -712,7 +727,7 @@ mod tests {
         let on = Kind::Button { on: true, attached: Dir::Down, wood: false };
         w.put([0, 0, 0], on);
         let mut sim = Sim::default();
-        sim.schedule([0, 0, 0], Pending { next: Kind::Button { on: false, attached: Dir::Down, wood: false }, remaining: 3 });
+        sim.schedule([0, 0, 0], Pending { next: Kind::Button { on: false, attached: Dir::Down, wood: false }, remaining: 3 }, 0);
         for n in 1..=3 {
             sim.tick(&mut w);
             assert_eq!(w.kind([0, 0, 0]), on, "after tick {n}");
@@ -762,6 +777,33 @@ mod tests {
     }
 
     #[test]
+    fn same_place_in_two_worlds() {
+        // Two dimensions with the same circuit at the same place share the Sim (G6): only the
+        // world whose lever changed reacts, whichever of them ticks first.
+        let (mut a, mut b) = (lever_line(), lever_line());
+        a.instances.insert([6, 0, 0], 1);
+        b.instances.insert([6, 0, 0], 2);
+        let mut sim = Sim::default();
+        a.put([0, 0, 0], lever(true));
+        sim.tick(&mut b);
+        sim.touch([0, 0, 0]);
+        sim.tick(&mut a);
+        for _ in 0..3 {
+            sim.tick(&mut b);
+            sim.tick(&mut a);
+        }
+        assert_eq!(a.kind([6, 0, 0]), Kind::Lamp { lit: true });
+        assert_eq!(b.kind([6, 0, 0]), Kind::Lamp { lit: false });
+        // A change scheduled from outside belongs to the instance it names.
+        sim.schedule([6, 0, 0], Pending { next: Kind::Lamp { lit: true }, remaining: 1 }, 1);
+        a.put([6, 0, 0], Kind::Lamp { lit: false });
+        for _ in 0..3 {
+            sim.tick(&mut b);
+        }
+        assert_eq!(b.kind([6, 0, 0]), Kind::Lamp { lit: false });
+    }
+
+    #[test]
     fn incomplete_network_not_written() {
         let mut w = TestWorld::new(MapGrid::default());
         w.put([12, 0, 0], lever(true));
@@ -788,7 +830,7 @@ mod tests {
         let mut sim = Sim::default();
         sim.touch([1, 0, 0]);
         sim.tick(&mut w);
-        assert!(sim.has_pending([0, 1, 0]));
+        assert!(sim.has_pending([0, 1, 0], 0));
         w.g.air([0, 1, 0]);
         sim.tick(&mut w);
         assert_eq!(w.device_writes([0, 1, 0]), 0);
@@ -806,7 +848,7 @@ mod tests {
         sim.tick(&mut a);
         ticks(&mut sim, &mut b, 5);
         assert!(b.log.is_empty(), "{:?}", b.log);
-        assert_eq!(sim.pending[&[0, 0, 0]].pending.remaining, 3);
+        assert_eq!(sim.pending[&([0, 0, 0], 0)].pending.remaining, 3);
         ticks(&mut sim, &mut a, 2);
         assert!(!powered(a.kind([0, 0, 0])));
         sim.tick(&mut a);
@@ -921,7 +963,7 @@ mod tests {
             w.put([4, 0, 0], lever(on));
             sim.touch([4, 0, 0]);
             sim.tick(&mut w);
-            assert!(!sim.has_pending([2, 0, 0]), "lever east {on}");
+            assert!(!sim.has_pending([2, 0, 0], 0), "lever east {on}");
             sim.tick(&mut w);
             assert_eq!(w.kind([2, 0, 0]), Kind::Lamp { lit: true });
         }

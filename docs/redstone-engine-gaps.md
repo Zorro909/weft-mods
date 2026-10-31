@@ -113,6 +113,14 @@ Paths are relative to `Weft/`.
 - **Workaround:** builder's choice; mod state must be `Sync`. Options: key caches by position plus
   something dimension-specific, rebuild caches lazily from block state, or store data on block
   entities (ids are globally unique).
+- **What the redstone mod does:** one simulation for every region. Wire strength isn't stored, so
+  there is nothing to mix up there. A pending device change is keyed by position and its device's
+  block entity id (one counter for all dimensions, `server/mod.rs:322-323`), so the same place in
+  two dimensions is two devices. Still shared by position: a queued change is claimed by the first
+  region with redstone at or next to it. If two dimensions have redstone at the same place while
+  both are loaded (two players), a change in one can be taken by the other, and the first misses
+  it until something there changes again. Frozen-circuit retries are claimed the same way.
+  Comparators re-reading containers are re-checked in every region, which only costs work.
 - **Upstream fix:** a dimension id on `World`, and per-region mod storage that moves with sections
   on merge and split, the way scheduled ticks and the energy grid do.
 

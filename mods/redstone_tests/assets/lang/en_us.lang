@@ -1,3 +1,8 @@
 mod.redstone_tests.name = Redstone tests
 command.redstone_tests.queued = queued {0} redstone test(s)
 command.redstone_tests.unknown = no redstone test named {0}
+block.redstone_tests.beacon = Test Beacon
+block.redstone_tests.counter = Test Counter
+block.redstone_tests.blue_wire = Blue Wire
+block.redstone_tests.switchable = Test Switchable
+block.redstone_tests.dynamo = Test Dynamo

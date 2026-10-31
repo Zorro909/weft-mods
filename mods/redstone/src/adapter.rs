@@ -163,6 +163,11 @@ impl redstone_core::World for WeftWorld<'_> {
         (inv.is_some() || v > 0).then_some(v)
     }
 
+    fn instance(&self, p: Pos) -> u64 {
+        // Block entity ids are unique across dimensions (G6).
+        self.w.block_entity(p)
+    }
+
     fn write_wire(&mut self, p: Pos, strength: u8, shape: Shape) {
         let s = self.w.get(p);
         let new = if blocks::DUST.is(s) { blocks::dust_state(self.range.level(strength, blocks::DUST_LEVELS), &shape) } else { self.other_wire_state(s, strength, &shape) };
