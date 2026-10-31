@@ -18,7 +18,7 @@ use redstone_core::{BUTTON_STONE, BUTTON_WOOD, Cell, Kind, Pending, Pos, Sim, Vi
 use weft_sdk::*;
 
 use crate::adapter::{self, WeftWorld};
-use crate::{blocks, persist};
+use crate::{blocks, persist, pistons};
 
 static SIM: LazyLock<Mutex<Sim>> = LazyLock::new(|| Mutex::new(Sim::default()));
 /// Positions something changed at, with when they were queued.
@@ -103,7 +103,10 @@ fn tick(w: &World) {
     for (p, at) in pending {
         if adapter::redstone_near(&v, p) {
             if !matches!(v.cell(p), Cell::Device(_)) {
-                sim.forget(p);
+                // A piston broken mid-move leaves placeholders nothing will fill.
+                for c in sim.forget(p) {
+                    pistons::unreserve(w, c);
+                }
             }
             sim.touch(p);
         } else if clock.duration_since(at) < UNCLAIMED {

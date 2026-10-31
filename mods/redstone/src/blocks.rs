@@ -6,10 +6,10 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use redstone_api::{CONNECTS, EMITS, Emits, SidePowerV, WIRE, WireType};
-use redstone_core::{Kind, Link, Range, Shape};
+use redstone_core::{Kind, Link, PistonPhase, Range, Shape};
 use weft_sdk::*;
 
-use crate::{driver, persist, plates};
+use crate::{driver, persist, pistons, plates};
 
 pub static DUST: Block = Block::named("dust");
 pub static LEVER: Block = Block::named("lever");
@@ -21,6 +21,8 @@ pub static COMPARATOR: Block = Block::named("comparator");
 pub static STONE_BUTTON: Block = Block::named("stone_button");
 pub static WOOD_BUTTON: Block = Block::named("wood_button");
 pub static PLATE: Block = Block::named("pressure_plate");
+pub static PISTON: Block = Block::named("piston");
+pub static STICKY_PISTON: Block = Block::named("sticky_piston");
 
 pub static TAB: CreativeTab = CreativeTab::named("redstone");
 static DUST_ITEM: Item = Item::named("dust");
@@ -30,6 +32,9 @@ pub const DUST_LEVELS: u8 = 4;
 /// Dust's side properties, in `redstone_core::Dir::HORIZONTAL` order.
 const SIDES: [&str; 4] = ["west", "east", "north", "south"];
 const SIDE_VALUES: [&str; 3] = ["none", "side", "up"];
+
+/// A piston's `phase` values; moving phases don't show how far along they are.
+const PHASES: [&str; 4] = ["retracted", "extending", "extended", "retracting"];
 
 /// How high dust lies, in pixels.
 const DUST_H: f32 = 0.25;
@@ -236,9 +241,43 @@ pub fn register(r: &mut Registry) {
             device_components(s.model_box([1.0, 0.0, 1.0], [15.0, if on { 0.5 } else { 1.0 }, 15.0]), Kind::Plate { on })
         });
 
-    // Devices that can have a change pending keep it in their block entity; plates keep when
-    // they last saw someone in theirs.
-    persist::register(r, &[&TORCH, &LAMP, &REPEATER, &COMPARATOR, &STONE_BUTTON, &WOOD_BUTTON]);
+    // Pistons face whoever placed them and push that way. While the head is out the base is drawn
+    // short, with the rod.
+    for (block, sticky) in [(&PISTON, false), (&STICKY_PISTON, true)] {
+        r.block(block)
+            .facing(Facings::ALL, Toward::Player)
+            .prop("phase", PHASES)
+            .hardness(0.5)
+            .tab(&TAB)
+            .on_neighbor(driver::neighbor)
+            .states(move |p, s| {
+                let k = piston_kind(p, sticky);
+                let Kind::Piston { facing, phase, .. } = k else { unreachable!() };
+                let out = matches!(phase, PistonPhase::Extended | PistonPhase::Retracting { .. });
+                let front = if out {
+                    "piston_inner"
+                } else if sticky {
+                    "piston_sticky"
+                } else {
+                    "piston_front"
+                };
+                let mut faces = ["piston_side"; 6];
+                faces[facing.index()] = front;
+                faces[facing.opposite().index()] = "piston_back";
+                let mut s = s.faces(faces).tag(pistons::BASE);
+                if out {
+                    let (lo, hi) = onto(facing.opposite(), [0.0, 0.0, 0.0], [16.0, 12.0, 16.0]);
+                    let (rlo, rhi) = onto(facing.opposite(), [6.0, 12.0, 6.0], [10.0, 16.0, 10.0]);
+                    s = s.model_box(lo, hi).model_box(rlo, rhi);
+                }
+                device_components(s, k)
+            });
+    }
+    pistons::register(r);
+
+    // Devices that can have a change pending keep it in their block entity (a piston's is the
+    // phase it is in); plates keep when they last saw someone in theirs.
+    persist::register(r, &[&TORCH, &LAMP, &REPEATER, &COMPARATOR, &STONE_BUTTON, &WOOD_BUTTON, &PISTON, &STICKY_PISTON]);
     plates::register(r);
 }
 
@@ -277,7 +316,7 @@ fn climb(i: usize) -> ([f32; 3], [f32; 3]) {
 
 /// A box drawn for something on the floor (height = y), moved onto the face `attached` of its
 /// block: the height axis points away from that face.
-fn onto(attached: redstone_core::Dir, lo: [f32; 3], hi: [f32; 3]) -> ([f32; 3], [f32; 3]) {
+pub(crate) fn onto(attached: redstone_core::Dir, lo: [f32; 3], hi: [f32; 3]) -> ([f32; 3], [f32; 3]) {
     use redstone_core::Dir as D;
     let map = |[a, h, b]: [f32; 3]| match attached {
         D::Down => [a, h, b],
@@ -302,6 +341,36 @@ fn repeater_kind(p: &Props) -> Kind {
 
 fn comparator_kind(p: &Props) -> Kind {
     Kind::Comparator { facing: core_dir(p.facing()).opposite(), subtract: p.is("mode", "subtract"), output: p.int("output") as u8 }
+}
+
+fn piston_kind(p: &Props, sticky: bool) -> Kind {
+    Kind::Piston { facing: core_dir(p.facing()), sticky, phase: phase_of(p.get("phase")) }
+}
+
+fn phase_of(name: &str) -> PistonPhase {
+    match name {
+        "extending" => PistonPhase::Extending { since: 0 },
+        "extended" => PistonPhase::Extended,
+        "retracting" => PistonPhase::Retracting { since: 0, pull: false },
+        _ => PistonPhase::Retracted,
+    }
+}
+
+/// A piston's state shows only which phase it is in; the tick keeps how far along it is.
+fn shown(k: Kind) -> Kind {
+    match k {
+        Kind::Piston { facing, sticky, phase } => Kind::Piston { facing, sticky, phase: phase_of(PHASES[phase_index(phase)]) },
+        k => k,
+    }
+}
+
+fn phase_index(phase: PistonPhase) -> usize {
+    match phase {
+        PistonPhase::Retracted => 0,
+        PistonPhase::Extending { .. } => 1,
+        PistonPhase::Extended => 2,
+        PistonPhase::Retracting { .. } => 3,
+    }
 }
 
 fn torch_kind(p: &Props) -> Kind {
@@ -331,7 +400,7 @@ fn tables() -> &'static Tables {
     static T: OnceLock<Tables> = OnceLock::new();
     T.get_or_init(|| {
         let mut kinds = HashMap::new();
-        for block in [&LEVER, &LAMP, &POWER_BLOCK, &TORCH, &REPEATER, &COMPARATOR, &STONE_BUTTON, &WOOD_BUTTON, &PLATE] {
+        for block in [&LEVER, &LAMP, &POWER_BLOCK, &TORCH, &REPEATER, &COMPARATOR, &STONE_BUTTON, &WOOD_BUTTON, &PLATE, &PISTON, &STICKY_PISTON] {
             let mut s = block.id();
             while s != u32::MAX && block.is(s) {
                 if let Some(k) = kind_from_state(block, s) {
@@ -367,6 +436,9 @@ fn kind_from_state(block: &Block, s: u32) -> Option<Kind> {
         Kind::Button { on: prop("on") == "true", attached: core_dir(facing).opposite(), wood: std::ptr::eq(block, &WOOD_BUTTON) }
     } else if std::ptr::eq(block, &PLATE) {
         Kind::Plate { on: prop("on") == "true" }
+    } else if std::ptr::eq(block, &PISTON) || std::ptr::eq(block, &STICKY_PISTON) {
+        let facing = core_dir(Dir::from_name(prop("facing"))?);
+        Kind::Piston { facing, sticky: std::ptr::eq(block, &STICKY_PISTON), phase: phase_of(prop("phase")) }
     } else {
         Kind::PowerBlock
     };
@@ -380,7 +452,7 @@ pub fn kind_of(state: u32) -> Option<Kind> {
 
 /// The state of a built-in device.
 pub fn state_of(k: Kind) -> Option<u32> {
-    tables().states.get(&k).copied()
+    tables().states.get(&shown(k)).copied()
 }
 
 fn side_value(shape: &Shape, i: usize) -> u32 {

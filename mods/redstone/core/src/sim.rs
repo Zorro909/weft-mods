@@ -9,7 +9,7 @@ use std::mem::discriminant;
 
 use crate::devices::sides_of;
 use crate::network::Recorder;
-use crate::{Cell, Device, Dir, Kind, Pos, Range, Shape, SidePower, View, apply, cube_of, inputs, links, network, react, shape, solve, step};
+use crate::{Action, Cell, Device, Dir, Kind, PistonPhase, Pos, PushPlan, Range, Shape, SidePower, View, apply, cube_of, inputs, links, network, piston_step, pull_plan, push_plan, react, resolve_conflicts, resume_plan, shape, solve, step};
 
 /// A device change counting down.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -38,6 +38,16 @@ pub trait World: View {
     /// it is frozen and not counting down. Unless frozen it applies `remaining` ticks after the
     /// tick it was saved in.
     fn save_pending(&mut self, p: Pos, pending: Option<(Pending, bool)>);
+    /// Holds the air cell `p` free for a block moving into it: an invisible solid placeholder
+    /// that reads as `Push::Reserved`.
+    fn reserve(&mut self, p: Pos);
+    /// A piston move lands: breaks `broken` with drops, then moves each of `moved` (the far end
+    /// first) one step `to`, with what the mod keeps for its own devices. Entities in the cells
+    /// the blocks move into, and in `head` (the piston head's cell), move the same step.
+    fn shift(&mut self, to: Dir, moved: &[Pos], broken: &[Pos], head: Option<Pos>);
+    /// Puts a piston head (its facing and whether it is sticky) into `p`, or with `None` takes
+    /// away the head or placeholder there, and nothing else.
+    fn head(&mut self, p: Pos, head: Option<(Dir, bool)>);
 }
 
 #[derive(Default)]
@@ -52,6 +62,8 @@ pub struct Sim {
     /// Comparators reading a container, which react every tick: nothing says when a container
     /// changes.
     readers: BTreeSet<Pos>,
+    /// Pistons that are moving, powered but blocked, or about to retract, keyed like `pending`.
+    pistons: BTreeMap<(Pos, u64), PistonRun>,
 }
 
 struct Entry {
@@ -59,6 +71,29 @@ struct Entry {
     /// The cubes its circuit spans; `None` until the next tick works them out.
     cubes: Option<BTreeSet<[i32; 3]>>,
     frozen: bool,
+    /// Scheduled from outside the tick: the first tick that sees it doesn't count it down.
+    fresh: bool,
+}
+
+/// A piston's move, in phases of `piston_step`. Its pending change is the phase.
+struct PistonRun {
+    phase: PistonPhase,
+    powered: bool,
+    /// The cells the move under way touches: no other piston starts a move through them.
+    busy: Vec<Pos>,
+    /// The placeholders it put into the world.
+    reserved: Vec<Pos>,
+}
+
+impl PistonRun {
+    fn new(phase: PistonPhase, powered: bool) -> PistonRun {
+        PistonRun { phase, powered, busy: Vec::new(), reserved: Vec::new() }
+    }
+
+    /// Nothing to do until its power changes.
+    fn idle(&self) -> bool {
+        matches!((self.phase, self.powered), (PistonPhase::Retracted, false) | (PistonPhase::Extended, true))
+    }
 }
 
 impl Sim {
@@ -69,12 +104,20 @@ impl Sim {
 
     /// Starts (or replaces) the pending change of the device at `p`. The next tick saves it, and
     /// it applies `remaining` ticks after that one.
+    /// A piston's change is the phase it is in, and the tick continues its move from there.
     pub fn schedule(&mut self, p: Pos, pending: Pending, owner: u64) {
-        self.pending.insert((p, owner), Entry { pending, cubes: None, frozen: false });
+        if let Kind::Piston { phase, .. } = pending.next {
+            // Its power is read again when something next to it changes.
+            let powered = matches!(phase, PistonPhase::Extending { .. });
+            self.pistons.insert((p, owner), PistonRun::new(phase, powered));
+            return;
+        }
+        self.pending.insert((p, owner), Entry { pending, cubes: None, frozen: false, fresh: true });
     }
 
-    /// The device at `p` is gone.
-    pub fn forget(&mut self, p: Pos) {
+    /// The device at `p` is gone. Returns the placeholders a piston there had put into the
+    /// world, which nothing will fill now.
+    pub fn forget(&mut self, p: Pos) -> Vec<Pos> {
         let at: Vec<_> = self.pending.range((p, 0)..=(p, u64::MAX)).map(|(k, _)| *k).collect();
         for k in at {
             self.pending.remove(&k);
@@ -82,10 +125,12 @@ impl Sim {
         self.frozen_dirty.remove(&p);
         self.last_inputs.remove(&p);
         self.readers.remove(&p);
+        let runs: Vec<_> = self.pistons.range((p, 0)..=(p, u64::MAX)).map(|(k, _)| *k).collect();
+        runs.into_iter().filter_map(|k| self.pistons.remove(&k)).flat_map(|r| r.reserved).collect()
     }
 
     pub fn has_pending(&self, p: Pos, owner: u64) -> bool {
-        self.pending.contains_key(&(p, owner))
+        self.pending.contains_key(&(p, owner)) || self.pistons.contains_key(&(p, owner))
     }
 
     pub fn tick(&mut self, w: &mut impl World) {
@@ -103,16 +148,18 @@ impl Sim {
             if !here {
                 continue;
             }
-            let fresh = e.cubes.is_none();
+            // New here: scheduled, restored or pushed by a piston.
+            let located = e.cubes.is_none();
             let cubes = e.cubes.get_or_insert_with(|| reach(&*w, p));
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
             // A scheduled change starts counting in the tick after the first one that sees it.
-            if !frozen && !fresh {
+            if !frozen && !e.fresh {
                 e.pending.remaining = e.pending.remaining.saturating_sub(1);
             }
+            e.fresh = false;
             if e.pending.remaining == 0 {
                 due.push((p, owner));
-            } else if fresh || frozen != e.frozen {
+            } else if located || frozen != e.frozen {
                 // Saved as counted down, like a fresh change: `remaining` ticks after this one.
                 w.save_pending(p, Some((e.pending, frozen)));
             }
@@ -130,6 +177,7 @@ impl Sim {
             w.save_pending(p, None);
             self.dirty.insert(p);
         }
+        self.step_pistons(w);
         // A frozen circuit's retry waits for a world that has redstone there.
         self.frozen_dirty.retain(|p, n| {
             *n = n.saturating_sub(1);
@@ -192,6 +240,12 @@ impl Sim {
                 continue;
             }
             match dev.kind {
+                Some(Kind::Piston { facing, phase, .. }) => {
+                    // Not from the face it pushes with (spec §9.1).
+                    let powered = Dir::ALL.iter().any(|d| *d != facing && i[d.index()].strength > 0);
+                    let run = self.pistons.entry((p, w.instance(p))).or_insert_with(|| PistonRun::new(phase, powered));
+                    run.powered = powered;
+                }
                 Some(k) => self.react(w, p, k, i, range),
                 None => {
                     let last = self.last_inputs.get(&p).copied().unwrap_or_default();
@@ -209,6 +263,141 @@ impl Sim {
 
         // 6.
         self.dirty.clear();
+        self.pistons.retain(|_, r| !r.idle());
+    }
+
+    /// Every piston in this world steps at once (spec §9.1): moves start where no other piston
+    /// wants the same cells, and land at the end of their second tick.
+    fn step_pistons(&mut self, w: &mut impl World) {
+        let mut here = Vec::new();
+        for &(p, owner) in self.pistons.keys() {
+            if let Cell::Device(Device { kind: Some(Kind::Piston { facing, sticky, .. }), .. }) = w.cell(p)
+                && w.instance(p) == owner
+            {
+                here.push((p, owner, facing, sticky));
+            }
+        }
+        // What would start a move this tick: pushes, and sticky pulls.
+        let mut busy = BTreeSet::new();
+        let mut plans = BTreeMap::new();
+        for &(p, owner, facing, sticky) in &here {
+            let r = &self.pistons[&(p, owner)];
+            busy.extend(r.busy.iter().copied());
+            let plan = match r.phase {
+                PistonPhase::Retracted if r.powered => push_plan(&*w, p, facing),
+                PistonPhase::Extended if !r.powered && sticky => match pull_plan(&*w, p, facing) {
+                    Some(b) => PushPlan::Move { head: step(p, facing), moved: vec![b], broken: Vec::new(), reserve: None },
+                    None => continue,
+                },
+                _ => continue,
+            };
+            plans.insert(p, plan);
+        }
+        let mut blocked = resolve_conflicts(&plans);
+        for (p, plan) in &plans {
+            if let PushPlan::Move { head, moved, broken, reserve } = plan
+                && [*head].iter().chain(moved).chain(broken).chain(reserve).any(|c| busy.contains(c))
+            {
+                blocked.insert(*p);
+            }
+        }
+
+        for (p, owner, facing, sticky) in here {
+            let (phase, powered) = {
+                let r = &self.pistons[&(p, owner)];
+                (r.phase, r.powered)
+            };
+            let plan = plans.get(&p).filter(|_| !blocked.contains(&p));
+            // A blocked pull waits extended, like a blocked push waits retracted.
+            if phase == PistonPhase::Extended && plans.contains_key(&p) && plan.is_none() {
+                continue;
+            }
+            let (next, action) = piston_step(phase, powered, sticky, matches!(plan, Some(PushPlan::Move { .. })));
+            let head = step(p, facing);
+            let mut busy = Vec::new();
+            let mut reserved = Vec::new();
+            match (phase, action) {
+                (PistonPhase::Retracted, _) => {
+                    if let Some(PushPlan::Move { head, moved, broken, reserve }) = plan
+                        && next != phase
+                    {
+                        reserved.extend(*reserve);
+                        if moved.is_empty() && broken.is_empty() {
+                            reserved.push(*head);
+                        }
+                        for c in &reserved {
+                            w.reserve(*c);
+                        }
+                        busy = [*head].iter().chain(moved).chain(broken).chain(reserve).copied().collect();
+                    }
+                }
+                (PistonPhase::Extended, Action::StartRetract { pull: true }) => {
+                    if let Some(PushPlan::Move { moved, .. }) = plan {
+                        busy = [head].iter().chain(moved).copied().collect();
+                    }
+                }
+                (PistonPhase::Extending { .. }, Action::Land { .. } | Action::Snap) => {
+                    // What it reserved is free to it; anything else in the way (or unloaded)
+                    // makes it wait.
+                    let PushPlan::Move { moved, broken, .. } = resume_plan(&*w, p, facing) else { continue };
+                    self.shift(w, facing, &moved, &broken, Some(head));
+                    w.head(head, Some((facing, sticky)));
+                }
+                (PistonPhase::Retracting { .. }, Action::Land { pull }) => {
+                    if !w.cube_loaded(cube_of(head)) {
+                        continue;
+                    }
+                    let pulled = if pull { pull_plan(&*w, p, facing) } else { None };
+                    w.head(head, None);
+                    self.dirty.insert(head);
+                    if let Some(b) = pulled {
+                        self.shift(w, facing.opposite(), &[b], &[], None);
+                    }
+                }
+                _ => {}
+            }
+            if next == phase {
+                continue;
+            }
+            let r = self.pistons.get_mut(&(p, owner)).expect("piston run");
+            r.phase = next;
+            r.busy = busy;
+            if !reserved.is_empty() || matches!(action, Action::Land { .. } | Action::Snap) {
+                r.reserved = reserved;
+            }
+            let k = Kind::Piston { facing, sticky, phase: next };
+            w.write_device(p, k);
+            let moving = matches!(next, PistonPhase::Extending { .. } | PistonPhase::Retracting { .. });
+            w.save_pending(p, moving.then_some((Pending { next: k, remaining: 1 }, false)));
+            self.dirty.insert(p);
+        }
+    }
+
+    /// Lands a piston move, taking along what the tick keeps for the devices that move: their
+    /// pending changes still apply on time.
+    fn shift(&mut self, w: &mut impl World, to: Dir, moved: &[Pos], broken: &[Pos], head: Option<Pos>) {
+        let mut carried = Vec::new();
+        for q in moved.iter().chain(broken) {
+            let key = (*q, w.instance(*q));
+            carried.push(self.pending.remove(&key));
+            // A moved piston is a retracted one: its power is read again where it lands.
+            self.pistons.remove(&key);
+            self.frozen_dirty.remove(q);
+            self.last_inputs.remove(q);
+            self.readers.remove(q);
+        }
+        w.shift(to, moved, broken, head);
+        for (q, e) in moved.iter().zip(carried) {
+            let d = step(*q, to);
+            if let Some(mut e) = e {
+                e.cubes = None;
+                self.pending.insert((d, w.instance(d)), e);
+            }
+            self.dirty.insert(*q);
+            self.dirty.insert(d);
+        }
+        self.dirty.extend(broken.iter().copied());
+        self.dirty.extend(head);
     }
 
     fn react(&mut self, w: &mut impl World, p: Pos, k: Kind, i: [SidePower; 6], range: Range) {
@@ -239,7 +428,7 @@ impl Sim {
             let cubes = reach(&*w, p);
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
             w.save_pending(p, Some((pending, frozen)));
-            self.pending.insert((p, owner), Entry { pending, cubes: Some(cubes), frozen });
+            self.pending.insert((p, owner), Entry { pending, cubes: Some(cubes), frozen, fresh: false });
         }
     }
 }
@@ -329,7 +518,7 @@ fn side_lockers(v: &impl View, p: Pos, facing: Dir) -> bool {
 mod tests {
     use super::*;
     use crate::testgrid::MapGrid;
-    use crate::{Power, Wire, device};
+    use crate::{Power, Push, Wire, device};
 
     const R15: Range = Range::from_index_const(0);
 
@@ -442,6 +631,40 @@ mod tests {
         }
         fn save_pending(&mut self, p: Pos, pending: Option<(Pending, bool)>) {
             self.log.push(Ev::Save(p, pending));
+        }
+        fn reserve(&mut self, p: Pos) {
+            self.g.put(p, Cell::Block { solid: false, push: Push::Reserved });
+        }
+        fn shift(&mut self, facing: Dir, moved: &[Pos], broken: &[Pos], _head: Option<Pos>) {
+            for b in broken {
+                self.g.air(*b);
+            }
+            for p in moved {
+                let c = self.g.cell(*p);
+                self.g.put(step(*p, facing), c);
+                self.g.air(*p);
+            }
+        }
+        fn head(&mut self, p: Pos, head: Option<(Dir, bool)>) {
+            if head.is_some() {
+                self.g.put(p, HEAD);
+            } else if matches!(self.g.cell(p), HEAD | Cell::Block { push: Push::Reserved, .. }) {
+                self.g.air(p);
+            }
+        }
+    }
+
+    /// How the test world shows a piston head.
+    const HEAD: Cell = Cell::Block { solid: false, push: Push::Never };
+
+    fn piston(facing: Dir, sticky: bool, phase: PistonPhase) -> Kind {
+        Kind::Piston { facing, sticky, phase }
+    }
+
+    fn phase_at(w: &TestWorld, p: Pos) -> PistonPhase {
+        match w.kind(p) {
+            Kind::Piston { phase, .. } => phase,
+            k => panic!("no piston at {p:?}: {k:?}"),
         }
     }
 
@@ -801,6 +1024,107 @@ mod tests {
             sim.tick(&mut b);
         }
         assert_eq!(b.kind([6, 0, 0]), Kind::Lamp { lit: false });
+    }
+
+    #[test]
+    fn piston_pushes_two_ticks_after_reacting() {
+        // A lever beside a piston facing east, two blocks in front of it.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], piston(Dir::East, false, PistonPhase::Retracted)).put([0, 0, 1], lever(true));
+        w.g.solid([1, 0, 0]).solid([2, 0, 0]);
+        let mut sim = Sim::default();
+        sim.touch([0, 0, 1]);
+        sim.tick(&mut w);
+        assert_eq!(phase_at(&w, [0, 0, 0]), PistonPhase::Retracted, "reacts a tick later");
+        sim.tick(&mut w);
+        assert!(matches!(phase_at(&w, [0, 0, 0]), PistonPhase::Extending { .. }));
+        assert_eq!(w.g.cell([3, 0, 0]), Cell::Block { solid: false, push: Push::Reserved }, "destination held");
+        assert_eq!(w.g.cell([1, 0, 0]), Cell::block(true), "blocks stay while moving");
+        sim.tick(&mut w);
+        assert_eq!(w.g.cell([1, 0, 0]), Cell::block(true));
+        sim.tick(&mut w);
+        assert_eq!(phase_at(&w, [0, 0, 0]), PistonPhase::Extended);
+        assert_eq!((w.g.cell([1, 0, 0]), w.g.cell([2, 0, 0]), w.g.cell([3, 0, 0])), (HEAD, Cell::block(true), Cell::block(true)));
+        // Off: the head goes 1 + 2 ticks later, the blocks stay.
+        w.put([0, 0, 1], lever(false));
+        sim.touch([0, 0, 1]);
+        ticks(&mut sim, &mut w, 3);
+        assert_eq!(phase_at(&w, [0, 0, 0]), PistonPhase::Retracting { since: 1, pull: false });
+        sim.tick(&mut w);
+        assert_eq!(phase_at(&w, [0, 0, 0]), PistonPhase::Retracted);
+        assert_eq!((w.g.cell([1, 0, 0]), w.g.cell([2, 0, 0])), (Cell::Air, Cell::block(true)));
+        assert!(sim.pistons.is_empty(), "idle pistons aren't kept");
+    }
+
+    #[test]
+    fn sticky_piston_pulls_back() {
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], piston(Dir::East, true, PistonPhase::Extended)).put([0, 0, 1], lever(false));
+        w.g.put([1, 0, 0], HEAD).solid([2, 0, 0]);
+        let mut sim = Sim::default();
+        sim.touch([0, 0, 1]);
+        ticks(&mut sim, &mut w, 4);
+        assert_eq!(phase_at(&w, [0, 0, 0]), PistonPhase::Retracted);
+        assert_eq!((w.g.cell([1, 0, 0]), w.g.cell([2, 0, 0])), (Cell::block(true), Cell::Air));
+    }
+
+    #[test]
+    fn pushed_repeater_fires_on_time() {
+        // A repeater counting down its delay of 4 is pushed one block east meanwhile.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], piston(Dir::East, false, PistonPhase::Retracted)).put([0, 0, -1], lever(true));
+        w.put([1, 0, 0], repeater(Dir::North, 4)).put([1, 0, 1], Kind::PowerBlock);
+        let mut sim = Sim::default();
+        sim.touch([0, 0, -1]);
+        sim.touch([1, 0, 1]);
+        sim.tick(&mut w);
+        assert!(sim.has_pending([1, 0, 0], 0));
+        ticks(&mut sim, &mut w, 3);
+        assert_eq!(w.kind([2, 0, 0]), repeater(Dir::North, 4), "pushed, not fired yet");
+        sim.tick(&mut w);
+        assert!(powered(w.kind([2, 0, 0])), "fires 4 ticks after reacting");
+    }
+
+    #[test]
+    fn conflicting_pistons_wait() {
+        // Both heads into [1, 0, 0]: neither moves until one loses power.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], piston(Dir::East, false, PistonPhase::Retracted)).put([0, 0, 1], lever(true));
+        w.put([2, 0, 0], piston(Dir::West, false, PistonPhase::Retracted)).put([2, 0, 1], lever(true));
+        let mut sim = Sim::default();
+        sim.touch([0, 0, 1]);
+        sim.touch([2, 0, 1]);
+        ticks(&mut sim, &mut w, 5);
+        assert_eq!((phase_at(&w, [0, 0, 0]), phase_at(&w, [2, 0, 0])), (PistonPhase::Retracted, PistonPhase::Retracted));
+        w.put([2, 0, 1], lever(false));
+        sim.touch([2, 0, 1]);
+        ticks(&mut sim, &mut w, 5);
+        assert_eq!((phase_at(&w, [0, 0, 0]), phase_at(&w, [2, 0, 0])), (PistonPhase::Extended, PistonPhase::Retracted));
+    }
+
+    #[test]
+    fn piston_not_powered_from_its_face() {
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], piston(Dir::East, true, PistonPhase::Retracted)).put([1, 0, 0], Kind::PowerBlock);
+        let mut sim = Sim::default();
+        sim.touch([1, 0, 0]);
+        ticks(&mut sim, &mut w, 5);
+        assert_eq!(phase_at(&w, [0, 0, 0]), PistonPhase::Retracted);
+        assert!(sim.pistons.is_empty());
+    }
+
+    #[test]
+    fn restored_move_lands_through_its_reservation() {
+        // Restarted mid-move: the Sim knows only the phase, the world has the reservation.
+        let mut w = TestWorld::new(MapGrid::default());
+        w.put([0, 0, 0], piston(Dir::East, false, PistonPhase::Extending { since: 0 })).put([0, 0, 1], lever(true));
+        w.g.solid([1, 0, 0]).put([2, 0, 0], Cell::Block { solid: false, push: Push::Reserved });
+        let mut sim = Sim::default();
+        sim.schedule([0, 0, 0], Pending { next: piston(Dir::East, false, PistonPhase::Extending { since: 1 }), remaining: 1 }, 0);
+        sim.touch([0, 0, 1]);
+        sim.tick(&mut w);
+        assert_eq!(phase_at(&w, [0, 0, 0]), PistonPhase::Extended);
+        assert_eq!((w.g.cell([1, 0, 0]), w.g.cell([2, 0, 0])), (HEAD, Cell::block(true)));
     }
 
     #[test]

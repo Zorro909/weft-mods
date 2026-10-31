@@ -4,6 +4,7 @@ mod basics;
 mod devices;
 mod extension;
 mod freeze;
+mod pistons;
 mod smoke;
 
 use crate::scenario::Scenario;
@@ -34,6 +35,17 @@ pub fn all() -> Vec<Scenario> {
         extension::ext_connectable_change(),
         extension::ext_dynamic_output(),
         extension::two_dimensions(),
+        pistons::piston_pushes_line(),
+        pistons::piston_limit(),
+        pistons::piston_breaks_torch_in_path(),
+        pistons::piston_not_powered_from_face(),
+        pistons::blocked_piston_extends_when_cleared(),
+        pistons::sticky_pull(),
+        pistons::sticky_drop_on_one_tick(),
+        pistons::pistons_conflict_both_blocked(),
+        pistons::piston_pushes_player(),
+        pistons::piston_pushes_own_repeater_with_pending(),
+        pistons::chest_unpushable(),
         freeze::restart_before(),
         freeze::restart_after(),
     ]

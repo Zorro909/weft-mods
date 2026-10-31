@@ -12,12 +12,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use redstone_api::{COMPARATOR_READING, CONNECTS, EMITS, INPUT_CHANGED, Inputs, OUTPUT, RECEIVER, SidePowerV, WIRE};
-use redstone_core::{Cell, Device, Kind, Pending, Pos, Power, Range, Shape, SidePower, View, Wire, container_level, cube_of, network, solve, step};
+use redstone_api::{COMPARATOR_READING, CONNECTS, EMITS, INPUT_CHANGED, Inputs, OUTPUT, RECEIVER, SidePowerV, UNPUSHABLE, WIRE};
+use redstone_core::{Cell, Device, Dir, Kind, Pending, Pos, Power, Push, Range, Shape, SidePower, View, Wire, container_level, cube_of, network, solve, step};
 use weft_sdk::abi::block_flags;
-use weft_sdk::{World, block_of, max_stack, query, state_flags, state_with};
+use weft_sdk::{HARDNESS, SUPPORT_FACE, World, block_of, max_stack, query, state_flags, state_with};
 
-use crate::{blocks, persist};
+use crate::{blocks, persist, pistons};
 
 pub struct WeftWorld<'a> {
     w: &'a World,
@@ -106,6 +106,20 @@ impl<'a> WeftWorld<'a> {
         out
     }
 
+    /// What a piston does with the block `s` at `p` (spec §9.1). Built-in devices, wire and other
+    /// mods' devices have their own rules in `redstone_core`.
+    fn push(&self, p: Pos, s: u32) -> Push {
+        if pistons::MOVING.is(s) {
+            return Push::Reserved;
+        }
+        // Other mods' block entities can't be moved intact yet (G11).
+        if pistons::HEAD.is(s) || UNPUSHABLE.on_block(s) || HARDNESS.on_block(s).is_some_and(|h| h < 0.0) || self.w.block_entity(p) != 0 {
+            return Push::Never;
+        }
+        let f = state_flags(s);
+        if f & block_flags::REPLACEABLE != 0 || f & block_flags::SOLID == 0 || SUPPORT_FACE.on_block(s).is_some() { Push::Break } else { Push::Move }
+    }
+
     fn write(&mut self, p: Pos, state: u32) {
         if self.w.get(p) != state && self.w.set(p, state) {
             self.own.push((p, state));
@@ -128,7 +142,7 @@ impl View for WeftWorld<'_> {
         if let Some(c) = self.extension(p, s) {
             return c;
         }
-        Cell::block(Self::solid(s))
+        Cell::Block { solid: Self::solid(s), push: self.push(p, s) }
     }
 }
 
@@ -187,6 +201,18 @@ impl redstone_core::World for WeftWorld<'_> {
 
     fn save_pending(&mut self, p: Pos, pending: Option<(Pending, bool)>) {
         persist::save(self.w, p, pending);
+    }
+
+    fn reserve(&mut self, p: Pos) {
+        pistons::reserve(self.w, p);
+    }
+
+    fn shift(&mut self, to: Dir, moved: &[Pos], broken: &[Pos], head: Option<Pos>) {
+        pistons::shift(self.w, to, moved, broken, head);
+    }
+
+    fn head(&mut self, p: Pos, head: Option<(Dir, bool)>) {
+        pistons::head(self.w, p, head);
     }
 }
 

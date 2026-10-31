@@ -135,6 +135,21 @@ impl Ctx<'_> {
         self.w.teleport(self.player, Some(dim), at);
     }
 
+    /// Puts the player's feet into the cell at `rel` and lets them be there (no hovering), until
+    /// they go back where they were when the scenario ends.
+    pub fn stand(&mut self, rel: Pos) {
+        self.start.get_or_insert(self.player_pos);
+        *self.hover = None;
+        let p = self.at(rel);
+        self.w.teleport(self.player, None, [p[0] as f64 + 0.5, p[1] as f64, p[2] as f64 + 0.5]);
+    }
+
+    /// Where the player is, relative to the origin.
+    pub fn player_at(&self) -> [f64; 3] {
+        let pos = self.w.entity(self.player).map_or(self.player_pos, |e| e.pos);
+        std::array::from_fn(|i| pos[i] - self.origin[i] as f64)
+    }
+
     /// Back where the player was before the first `go`.
     pub fn go_back(&mut self) {
         if let Some(s) = *self.start {

@@ -64,7 +64,8 @@ Paths are relative to `Weft/`.
 - **Needed for:** a blocked piston noticing that an obstruction up to 13 blocks away was removed;
   noticing removal of an emitter whose neighbors aren't redstone blocks; keeping network caches
   correct when other mods edit blocks.
-- **Workaround:** blocked, powered pistons re-check every tick. Listen to `BLOCK_PLACED` /
+- **Workaround:** blocked, powered pistons re-check every tick (done: they stay in the
+  simulation's piston runs until they move or lose power). Listen to `BLOCK_PLACED` /
   `BLOCK_BROKEN`. Extension blocks must announce their changes. Raw `set` changes by other mods
   that touch no redstone block go unseen.
 - **Upstream fix:** a block-changed event (position, old state, new state) for every `Dim::set`,
@@ -79,8 +80,12 @@ Paths are relative to `Weft/`.
   world → structure → world path, hard-coded for one block (`dim.rs:763-805`).
 - **Inferred.** An empty template is allowed (`content.rs:1766-1784,1959-1964`). Not run.
 - **Needed for:** animated piston moves.
-- **Workaround:** pistons move blocks instantly. Possibly later: spawn an empty-template entity,
-  copy blocks in one by one, move it, copy them back.
+- **Workaround:** pistons move blocks instantly (done). During the 2-tick move the blocks stay
+  where they were and an invisible solid `redstone:moving` placeholder holds the cell the far end
+  moves into. At the end, blocks are written far end first with `set`. Possibly later: spawn an
+  empty-template entity, copy blocks in one by one, move it, copy them back.
+- **Not done:** entities standing on top of moving blocks don't ride along (spec §9.1: optional).
+  Only entities in the cells blocks move into, and in the head's cell, are moved.
 - **Upstream fix:** "lift region into structure" and "commit structure into world", carrying
   block entities along.
 
@@ -121,6 +126,7 @@ Paths are relative to `Weft/`.
   both are loaded (two players), a change in one can be taken by the other, and the first misses
   it until something there changes again. Frozen-circuit retries are claimed the same way.
   Comparators re-reading containers are re-checked in every region, which only costs work.
+  Piston moves are keyed like pending changes (position and block entity id).
 - **Upstream fix:** a dimension id on `World`, and per-region mod storage that moves with sections
   on merge and split, the way scheduled ticks and the energy grid do.
 
@@ -167,6 +173,8 @@ Paths are relative to `Weft/`.
   `crates/sdk/src/client.rs:489-493`).
 - **Needed for:** pistons pushing players. Not a blocker: use `teleport`. Listed so the piston
   code doesn't rely on `set_entity` for players.
+- **What the redstone mod does:** players are moved with `teleport` (applied at the end of the
+  tick), other entities with `set_entity` (scenario `piston_pushes_player`).
 
 ## G11. Block entities can't be moved intact
 
@@ -176,7 +184,10 @@ Paths are relative to `Weft/`.
 - **Inferred.** There's no way to list an entity's components or learn their names or sizes from
   an id, so other mods' machine state can't be copied generically.
 - **Needed for:** pistons pushing chests and machines.
-- **Workaround:** blocks with a block entity are unpushable.
+- **Workaround:** other mods' blocks with a block entity are unpushable (scenario
+  `chest_unpushable`). The redstone mod's own devices move: `set` gives them a new block entity
+  (`dim.rs:698-700`), and the simulation carries their pending change over to it, so a repeater
+  pushed mid-delay still fires on time.
 - **Upstream fix:** a "move block with its block entity" call.
 
 ## G12. No id aliases for renamed blocks

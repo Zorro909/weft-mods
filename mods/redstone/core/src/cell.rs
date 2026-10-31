@@ -18,6 +18,9 @@ pub enum Push {
     Move,
     Break,
     Never,
+    /// A moving block's destination, held free until it lands (only a piston resuming its own
+    /// move after a restart goes through it).
+    Reserved,
 }
 
 impl Cell {

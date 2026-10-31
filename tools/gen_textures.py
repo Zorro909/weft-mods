@@ -108,6 +108,33 @@ def main():
     png(block / "button_stone.png", noisy((140, 140, 140), 0.10, 900))
     png(block / "button_wood.png", noisy((160, 120, 70), 0.12, 901))
     png(block / "pressure_plate.png", noisy((135, 135, 135), 0.06, 902))
+    # Pistons: stone with a wooden band on the sides, a wooden front (green when sticky), the
+    # base's front with a hole for the rod while the head is out.
+    side = noisy((125, 125, 125), 0.10, 1000)
+    for y in range(0, 4):
+        for x in range(16):
+            side[y][x] = tuple(max(0, min(255, int(c * (0.9 + 0.05 * (x % 3))))) for c in (165, 125, 75)) + (255,)
+    png(block / "piston_side.png", side)
+    front = noisy((170, 130, 80), 0.10, 1001)
+    for y in (3, 7, 11, 15):
+        for x in range(16):
+            front[y][x] = (120, 90, 55, 255)
+    png(block / "piston_front.png", front)
+    sticky = [row[:] for row in front]
+    for y in range(3, 13):
+        for x in range(3, 13):
+            sticky[y][x] = (90, 170 + (x * 5 + y * 3) % 30, 70, 255)
+    png(block / "piston_sticky.png", sticky)
+    back = noisy((110, 110, 110), 0.10, 1002)
+    for y in range(6, 10):
+        for x in range(6, 10):
+            back[y][x] = (70, 70, 70, 255)
+    png(block / "piston_back.png", back)
+    inner = noisy((125, 125, 125), 0.10, 1003)
+    for y in range(6, 10):
+        for x in range(6, 10):
+            inner[y][x] = (165, 125, 75, 255)
+    png(block / "piston_inner.png", inner)
     # Dust's item: a few specks on transparent.
     rng = random.Random(600)
     item = [[(0, 0, 0, 0)] * 16 for _ in range(16)]

@@ -53,20 +53,23 @@ enum Rule {
     Blocked,
 }
 
-fn rule(c: &Cell) -> Rule {
+fn rule(c: &Cell, resuming: bool) -> Rule {
     match c {
         Cell::Air => Rule::End,
+        Cell::Block { push: Push::Reserved, .. } if resuming => Rule::End,
         Cell::Unloaded => Rule::Blocked,
         Cell::Block { push: Push::Move, .. } => Rule::Move,
         Cell::Block { push: Push::Break, .. } => Rule::Break,
-        Cell::Block { push: Push::Never, .. } => Rule::Blocked,
+        Cell::Block { push: Push::Never | Push::Reserved, .. } => Rule::Blocked,
         // Wire needs the block under it.
         Cell::Wire(_) => Rule::Break,
         Cell::Device(Device { kind: Some(k), .. }) => match k {
-            Kind::PowerBlock | Kind::Lamp { .. } | Kind::Piston { phase: PistonPhase::Retracted, .. } => Rule::Move,
+            // The mod moves its own devices with what they have pending: piston doors and flying
+            // machines need that.
+            Kind::PowerBlock | Kind::Lamp { .. } | Kind::Repeater { .. } | Kind::Comparator { .. } | Kind::Piston { phase: PistonPhase::Retracted, .. } => Rule::Move,
             Kind::Piston { .. } => Rule::Blocked,
-            // Everything hanging on or standing on a block breaks, like dust.
-            Kind::Lever { .. } | Kind::Button { .. } | Kind::Plate { .. } | Kind::Torch { .. } | Kind::Repeater { .. } | Kind::Comparator { .. } => Rule::Break,
+            // What hangs on a block or lies on it breaks, like dust.
+            Kind::Lever { .. } | Kind::Button { .. } | Kind::Plate { .. } | Kind::Torch { .. } => Rule::Break,
         },
         // Other mods' devices: their data can't be moved yet.
         Cell::Device(Device { kind: None, .. }) => Rule::Blocked,
@@ -75,11 +78,21 @@ fn rule(c: &Cell) -> Rule {
 
 /// What the piston at `piston` pushing to `facing` moves, from the head cell on.
 pub fn push_plan(v: &impl View, piston: Pos, facing: Dir) -> PushPlan {
+    plan(v, piston, facing, false)
+}
+
+/// `push_plan` for a piston landing a move it started before a restart: the cells it reserved
+/// then are free to it.
+pub fn resume_plan(v: &impl View, piston: Pos, facing: Dir) -> PushPlan {
+    plan(v, piston, facing, true)
+}
+
+fn plan(v: &impl View, piston: Pos, facing: Dir, resuming: bool) -> PushPlan {
     let head = step(piston, facing);
     let mut moved = Vec::new();
     let mut at = head;
     loop {
-        match rule(&v.cell(at)) {
+        match rule(&v.cell(at), resuming) {
             Rule::End => {
                 let reserve = (!moved.is_empty()).then_some(at);
                 moved.reverse();
@@ -104,7 +117,7 @@ pub fn push_plan(v: &impl View, piston: Pos, facing: Dir) -> PushPlan {
 /// The block a sticky piston pulls back: the one in front of its head, if it moves.
 pub fn pull_plan(v: &impl View, piston: Pos, facing: Dir) -> Option<Pos> {
     let at = step(step(piston, facing), facing);
-    matches!(rule(&v.cell(at)), Rule::Move).then_some(at)
+    matches!(rule(&v.cell(at), false), Rule::Move).then_some(at)
 }
 
 /// The pistons whose plans touch a cell another plan touches (the piston itself, its head cell,
@@ -187,12 +200,18 @@ mod tests {
         other.kind = None;
         g.put([2, 0, 0], Cell::Device(other));
         assert_eq!(push_plan(&g, P, Dir::East), PushPlan::Blocked);
-        // A retracted piston, a lamp and a power block move.
+        // A retracted piston, a lamp, a power block and a repeater move.
         let mut g = line(4);
         put(&mut g, [1, 0, 0], Kind::Piston { facing: Dir::Up, sticky: true, phase: PistonPhase::Retracted });
         put(&mut g, [2, 0, 0], Kind::Lamp { lit: true });
         put(&mut g, [3, 0, 0], Kind::PowerBlock);
+        put(&mut g, [4, 0, 0], Kind::Repeater { facing: Dir::East, delay: 1, powered: false, locked: false });
         assert!(matches!(push_plan(&g, P, Dir::East), PushPlan::Move { ref moved, .. } if moved.len() == 4));
+        // Reserved cells block, except for the piston resuming its own move.
+        let mut g = line(2);
+        g.put([3, 0, 0], Cell::Block { solid: false, push: Push::Reserved });
+        assert_eq!(push_plan(&g, P, Dir::East), PushPlan::Blocked);
+        assert_eq!(resume_plan(&g, P, Dir::East), PushPlan::Move { head: [1, 0, 0], moved: vec![[2, 0, 0], [1, 0, 0]], broken: vec![], reserve: Some([3, 0, 0]) });
     }
 
     #[test]
@@ -201,7 +220,7 @@ mod tests {
         g.put([3, 0, 0], Cell::block(false));
         assert_eq!(push_plan(&g, P, Dir::East), PushPlan::Move { head: [1, 0, 0], moved: vec![[2, 0, 0], [1, 0, 0]], broken: vec![[3, 0, 0]], reserve: None });
         // Dust and devices that need support break too.
-        for c in [Cell::Wire(crate::Wire::dust(0)), Cell::Device(device(Kind::Lever { on: true, attached: Dir::Down }, Range::from_index(0))), Cell::Device(device(Kind::Repeater { facing: Dir::East, delay: 1, powered: false, locked: false }, Range::from_index(0)))] {
+        for c in [Cell::Wire(crate::Wire::dust(0)), Cell::Device(device(Kind::Lever { on: true, attached: Dir::Down }, Range::from_index(0))), Cell::Device(device(Kind::Torch { lit: true, attached: Dir::West }, Range::from_index(0)))] {
             let mut g = line(0);
             g.put([1, 0, 0], c.clone());
             assert_eq!(push_plan(&g, P, Dir::East), PushPlan::Move { head: [1, 0, 0], moved: vec![], broken: vec![[1, 0, 0]], reserve: None }, "{c:?}");
