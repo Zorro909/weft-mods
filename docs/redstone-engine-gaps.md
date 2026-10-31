@@ -5,7 +5,8 @@ Weft's current public mod interface. Each entry says what is missing, why redsto
 WIP workaround and what would fix it upstream. The list is meant to become a Weft issue or PR
 once a WIP build exists.
 
-Checked against Weft `f213253`. **Verified** = code read and traced. **Inferred** = search only.
+Checked against Weft `f213253`; G5 updated for `39f8073`. Line numbers outside G5 are from
+`f213253`. **Verified** = code read and traced. **Inferred** = search only.
 Paths are relative to `Weft/`.
 
 ---
@@ -91,16 +92,23 @@ Paths are relative to `Weft/`.
 - **Upstream fix:** "lift region into structure" and "commit structure into world", carrying
   block entities along.
 
-## G5. Scheduled ticks are not saved and can be lost
+## G5. Scheduled ticks: saved since `39f8073`, but can fire twice
 
-- **Verified.** `w.schedule` clamps the delay to at least 1 (`dim.rs:1697-1700`). Ticks due in the
-  same tick run in position order; duplicates run once (`dim.rs:939-956`). There is no cancel.
-- **Verified.** A tick that comes due while its cube isn't loaded is silently dropped (`dim.rs:939-956`).
-  Ticks are not in cube, entity or world serialization (`world/cube.rs:347-403`,
-  `server/persist.rs:109-161`, `saves.rs:82-103`). They do move with sections when regions merge
-  or split (`dim.rs:1806-1835`).
+- **Fixed upstream in `39f8073` (verified).** A cube's pending ticks are saved with it, as
+  (position, ticks left), on unload (`server/load.rs:278`) and autosave, in a trailer of its saved
+  data (`server/persist.rs:166-191`, `Dim::ticks_in` at `dim.rs:1941`). Loading the cube schedules
+  them again with what was left (`server/regions.rs:190-191`, `dim.rs:1957`). Time spent unloaded
+  doesn't count, which is the freeze redstone wants.
+- **Verified, not run: a tick can fire twice.** Unloading doesn't take the cube's ticks out of
+  the in-memory queue (`retain_cubes`, `dim.rs:631-677`), and firing only needs the block to be
+  there (`dim.rs:1116-1133`). A cube that loads again before its tick is due gets the old entry
+  and the restored copy: two `on_scheduled` calls. A tick due while its cube is unloaded is still
+  dropped, but the saved copy brings it back.
+- **Verified, unchanged.** `w.schedule` clamps the delay to at least 1 (`dim.rs:1964-1967`).
+  Ticks due in the same tick run in position order; duplicates run once (`dim.rs:1116-1133`).
+  There is no cancel.
 - **Docs bug:** `docs/modding.md:228` says scheduled ticks "catch up on time nobody was there for".
-  The code does that only for growth.
+  The code does that only for growth; scheduled ticks resume where they were.
 - **Needed for:** torch, repeater, button and piston delays surviving unload and restart.
 - **Workaround:** saved entity timers on a per-device block entity (`w.after`, stored in the
   saved `core:timers` component, `crates/engine/src/registry.rs:1274-1277`; fired when overdue,
@@ -108,8 +116,9 @@ Paths are relative to `Weft/`.
   a timer that finds its change still saved sets itself again, so every saved change has a timer
   and a restart continues from what was left even if the area unloaded long before
   (`mods/redstone/src/persist.rs`; scenario pair `restart_before`/`restart_after` with a button).
-- **Upstream fix:** save scheduled ticks with their cube and fire overdue ones on load; add
-  cancel.
+- **Why the mod keeps its own timers:** moving to `w.schedule` would mean handling the double
+  fire above, and the simulation already counts and freezes the changes itself.
+- **Upstream fix:** drop a cube's ticks from the queue when it unloads; add cancel.
 
 ## G6. No region or dimension identity, no per-region mod state
 

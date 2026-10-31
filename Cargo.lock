@@ -34,15 +34,15 @@ dependencies = [
 
 [[package]]
 name = "weft_abi"
-version = "26.10.2"
+version = "26.10.3"
 
 [[package]]
 name = "weft_noise"
-version = "26.10.2"
+version = "26.10.3"
 
 [[package]]
 name = "weft_sdk"
-version = "26.10.2"
+version = "26.10.3"
 dependencies = [
  "weft_abi",
  "weft_noise",

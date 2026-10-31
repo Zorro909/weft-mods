@@ -12,6 +12,7 @@ use crate::scenario::Scenario;
 pub fn all() -> Vec<Scenario> {
     vec![
         smoke::range_default(),
+        smoke::no_spawn_eggs(),
         basics::lever_dust_lamp(),
         basics::fade_ranges(),
         basics::dust_shapes(),

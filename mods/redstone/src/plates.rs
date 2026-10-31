@@ -16,7 +16,7 @@ pub static PLATE: Component<Plate> = Component::named("plate");
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&PLATE, Plate { last_seen: 0 }, component_flags::SAVE);
-    r.entity(&PLATE_DEVICE).flags(entity_flags::NO_GRAVITY | entity_flags::INVULNERABLE).attach(&PLATE);
+    r.entity(&PLATE_DEVICE).no_egg().flags(entity_flags::NO_GRAVITY | entity_flags::INVULNERABLE).attach(&PLATE);
     r.block_entity(&blocks::PLATE, &PLATE_DEVICE, 0);
     r.system(&PLATE, |b| {
         let w = b.world();

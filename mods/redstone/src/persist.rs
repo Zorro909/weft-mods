@@ -38,7 +38,7 @@ static RESTORED: Mutex<Vec<(Pos, Pending, u64)>> = Mutex::new(Vec::new());
 
 pub fn register(r: &mut Registry, devices: &[&Block]) {
     r.entity_component(&PENDING, NONE, component_flags::SAVE);
-    r.entity(&DEVICE).flags(entity_flags::NO_GRAVITY | entity_flags::INVULNERABLE).attach(&PENDING);
+    r.entity(&DEVICE).no_egg().flags(entity_flags::NO_GRAVITY | entity_flags::INVULNERABLE).attach(&PENDING);
     for b in devices {
         r.block_entity(b, &DEVICE, 0);
     }
