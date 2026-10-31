@@ -23,4 +23,11 @@ set +e
 code=$?
 set -e
 if [ -f "$report" ]; then cat "$report"; else echo "no report written (game exit code $code)"; [ "$code" -ne 0 ] || code=1; fi
+# Weft drops neighbor updates past its per-flush budget and says so; redstone must never cause it.
+log=$(ls -t run/logs/*.log 2>/dev/null | head -1)
+if [ -n "$log" ] && grep -q "neighbor update storm" "$log"; then
+    echo "FAIL neighbor update storm in $log:"
+    grep "neighbor update storm" "$log" | head -3
+    code=$((code + 1))
+fi
 exit "$code"

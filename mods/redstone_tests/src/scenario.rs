@@ -20,7 +20,27 @@ pub enum Step {
 pub struct Scenario {
     pub name: &'static str,
     pub steps: Vec<Step>,
+    /// Run somewhere else: the player is moved to this dimension and position, kept hovering
+    /// there, and the origin is that position (+4, 0, +4). Afterwards they go back to the
+    /// overworld where they were.
+    pub place: Option<(&'static Dimension, [f64; 3])>,
 }
+
+impl Scenario {
+    pub fn new(name: &'static str, steps: Vec<Step>) -> Scenario {
+        Scenario { name, steps, place: None }
+    }
+
+    pub fn in_dimension(mut self, dim: &'static Dimension, pos: [f64; 3]) -> Scenario {
+        self.place = Some((dim, pos));
+        self
+    }
+}
+
+static OVERWORLD: Dimension = Dimension::named("base:overworld");
+
+/// Ticks to let a teleport happen and the area around it load.
+const SETTLE: u32 = 20;
 
 /// The failures of the whole run once it ended, -1 before.
 pub static DONE: AtomicI32 = AtomicI32::new(-1);
@@ -39,13 +59,14 @@ impl Ctx<'_> {
         [self.origin[0] + rel[0], self.origin[1] + rel[1], self.origin[2] + rel[2]]
     }
 
-    /// Sets a block by its full name, properties included: `base:stone`,
-    /// `redstone:dust[power=3,west=side]`.
+    /// Sets a block by its full name, properties included (`base:stone`,
+    /// `redstone:lever[facing=up,powered=true]`), and tells redstone, like any mod changing
+    /// blocks by code should.
     pub fn set(&mut self, rel: Pos, state: &str) {
         let p = self.at(rel);
         match parse_state(state) {
             Some(s) => {
-                if !self.w.set(p, s) {
+                if !redstone_api::set_and_announce(self.w, p, s) {
                     self.fail(format!("cannot set {state} at {rel:?} (unloaded?)"));
                 }
                 self.touched.push(p);
@@ -57,6 +78,11 @@ impl Ctx<'_> {
     /// Full state name with properties, as `/tk get` shows it.
     pub fn get(&self, rel: Pos) -> String {
         block_name(self.w.get(self.at(rel))).to_string()
+    }
+
+    /// The strength of the wire at `rel`, as redstone solves it.
+    pub fn strength(&self, rel: Pos) -> u8 {
+        redstone_api::strength(self.w, self.at(rel))
     }
 
     /// One property of the block at `rel`, empty if it has none.
@@ -99,6 +125,10 @@ struct Current {
     idx: usize,
     step: usize,
     wait: u32,
+    /// Ticks to do nothing, after a teleport.
+    settle: u32,
+    /// Where the player was before `Scenario::place` moved them.
+    home: Option<[f64; 3]>,
     origin: Option<Pos>,
     failures: Vec<String>,
     touched: Vec<Pos>,
@@ -162,28 +192,59 @@ fn tick(run: &mut Runner, w: &World) {
     }
     if run.cur.is_none() {
         match run.queue.pop_front() {
-            Some(idx) => run.cur = Some(Current { idx, step: 0, wait: 0, origin: None, failures: Vec::new(), touched: Vec::new(), clearing: None }),
+            Some(idx) => run.cur = Some(Current { idx, step: 0, wait: 0, settle: 0, home: None, origin: None, failures: Vec::new(), touched: Vec::new(), clearing: None }),
             None => return finish(run),
         }
     }
     let player = run.player;
     let cur = run.cur.as_mut().unwrap();
+    let place = run.all[cur.idx].place;
+    if cur.settle > 0 {
+        cur.settle -= 1;
+        if cur.settle == 0 && cur.clearing.is_some() {
+            // Back home after a scenario somewhere else.
+            run.cur = None;
+        }
+        return;
+    }
     if let Some(left) = cur.clearing.as_mut() {
         let n = left.len().min(CLEAR_PER_TICK);
         for p in left.drain(..n) {
             w.set(p, 0);
         }
         if left.is_empty() {
-            run.cur = None;
+            match cur.home.take() {
+                Some(home) => {
+                    w.teleport(player, Some(&OVERWORLD), home);
+                    cur.settle = SETTLE;
+                }
+                None => run.cur = None,
+            }
         }
         return;
+    }
+    let Some(st) = w.entity(player) else { return };
+    if let Some((dim, at)) = place {
+        if cur.home.is_none() {
+            cur.home = Some(st.pos);
+            w.teleport(player, Some(dim), at);
+            cur.settle = SETTLE;
+            return;
+        }
+        // Keep them hovering there, so the area stays loaded around the scenario.
+        if (0..3).any(|i| (st.pos[i] - at[i]).abs() > 0.5) {
+            w.teleport(player, None, at);
+        }
     }
     let origin = match cur.origin {
         Some(o) => o,
         None => {
-            // Above the player, in loaded air.
-            let Some(st) = w.entity(player) else { return };
-            let o = [st.pos[0].floor() as i32 + 4, st.pos[1].floor() as i32 + 24, st.pos[2].floor() as i32 + 4];
+            // Above the player (or at the scenario's place), in loaded air.
+            let (base, up) = match place {
+                Some((_, at)) => (at, 0),
+                None => (st.pos, 24),
+            };
+            let o = [base[0].floor() as i32 + 4, base[1].floor() as i32 + up, base[2].floor() as i32 + 4];
             if !w.set(o, w.get(o)) {
                 return;
             }

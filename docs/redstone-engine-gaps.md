@@ -23,7 +23,21 @@ Paths are relative to `Weft/`.
   a no-op otherwise (`crates/engine/src/server/dim.rs:635-646`). Risks: it calls `Arc::make_mut`
   before the no-op check, which may clone a shared cube; it returns false in non-editable
   dimensions.
-- **Upstream fix:** `is_loaded(pos)`, or a sentinel value from `get_block`.
+- **Verified: the probe also fails past a dimension's top and bottom.** Cubes outside
+  `min_cube_y..=max_cube_y` are never loaded (`crates/engine/src/world/view.rs:58-65` clamps the
+  loaded column), so they look exactly like unloaded ones. A mod can't ask a dimension's height,
+  and can't even tell which dimension a `World` is: `compute` passes `Query.dim` through unfilled
+  (`host.rs:1472-1476`, `server/extend.rs:146-158`). Most dimensions are bounded: base's
+  flatlands is cubes -2..8 (`mods/base/src/lib.rs:51`); the overworld is unbounded.
+- **Rule used (`mods/redstone/src/adapter.rs`):** an unloaded position in the bottom layer of its
+  cube whose cube below is loaded, or in the top layer with the cube above loaded, is the edge of
+  the dimension and reads as air; `cube_loaded` treats the cube just past a loaded column's top or
+  bottom the same way. Pinned by the `dust_at_height_limit` scenario (dust on flatlands' top
+  layer powers). **Failure mode:** a circuit crossing the top or bottom of a player's loaded
+  column (simulation distance straight up or down) is solved without the part beyond it instead
+  of freezing.
+- **Upstream fix:** `is_loaded(pos)`, or a sentinel value from `get_block`; and the dimension's
+  height (or id) on `World`.
 
 ## G2. No cube load/unload events for mods
 
@@ -173,6 +187,11 @@ Paths are relative to `Weft/`.
   fixed test list (`mods/testkit/src/tests/mod.rs:27`), so mods outside the submodule need their
   own test mod.
 - **Upstream fix:** headless test runs, a force-unload op, and test registration from other mods.
+
+- **Verified.** In one process (single player) the client applies every setting value the
+  server syncs to the store the server reads too (`crates/engine/src/client/mod.rs:793-797`). A
+  value still on its way overwrites a newer `Config::set` made on the server right after it: the
+  `fade_ranges` scenario's `RANGE.set(2)` read back as 1. Tests wait 10 ticks after a change.
 
 ## G14. `on_use` doesn't see sneaking
 

@@ -79,8 +79,16 @@ impl Sim {
     pub fn tick(&mut self, w: &mut impl World) {
         let range = w.range();
 
-        // 1. A pending change whose circuit reaches an unloaded cube stops counting down.
+        // 1. Only changes whose device is in this world count: every region and dimension ticks
+        // the same Sim (G6), and a device that was removed or replaced is simply never seen
+        // again (`forget` cleans up). A change whose circuit reaches an unloaded cube stops
+        // counting down.
+        let mut due = Vec::new();
         for (p, e) in &mut self.pending {
+            let here = matches!(w.cell(*p), Cell::Device(Device { kind: Some(k), .. }) if discriminant(&k) == discriminant(&e.pending.next));
+            if !here {
+                continue;
+            }
             let fresh = e.cubes.is_none();
             let cubes = e.cubes.get_or_insert_with(|| reach(&*w, *p));
             let frozen = !cubes.iter().all(|c| w.cube_loaded(*c));
@@ -88,36 +96,32 @@ impl Sim {
                 w.save_pending(*p, Some((e.pending, frozen)));
             }
             e.frozen = frozen;
-        }
-
-        // 2. Apply every change due now, all at once.
-        let mut due = Vec::new();
-        for (p, e) in &mut self.pending {
-            if !e.frozen {
+            if !frozen {
                 e.pending.remaining = e.pending.remaining.saturating_sub(1);
                 if e.pending.remaining == 0 {
                     due.push(*p);
                 }
             }
         }
+
+        // 2. Apply every change due now, all at once.
         for p in due {
             let e = self.pending.remove(&p).expect("due entry");
-            let next = e.pending.next;
-            // Dropped if the device was removed or replaced since.
-            if let Cell::Device(Device { kind: Some(k), .. }) = w.cell(p)
-                && discriminant(&k) == discriminant(&next)
-            {
-                w.write_device(p, next);
-                w.save_pending(p, None);
-                self.dirty.insert(p);
-            }
+            w.write_device(p, e.pending.next);
+            w.save_pending(p, None);
+            self.dirty.insert(p);
         }
+        // A frozen circuit's retry waits for a world that has redstone there.
         self.frozen_dirty.retain(|p, n| {
-            *n -= 1;
-            if *n == 0 {
-                self.dirty.insert(*p);
+            *n = n.saturating_sub(1);
+            if *n > 0 {
+                return true;
             }
-            *n > 0
+            if matches!(w.cell(*p), Cell::Wire(_) | Cell::Device(_)) {
+                self.dirty.insert(*p);
+                return false;
+            }
+            true
         });
 
         // 3 + 4. Solve each network next to a change once and hand every wire to the world. Wire
@@ -626,12 +630,17 @@ mod tests {
         sim.tick(&mut w);
         assert_eq!(sim.pending[&[0, 0, 0]].pending.remaining, 3);
         sim.tick(&mut w);
-        w.unloaded.insert([0, 0, 0]);
+        // The lever's cube goes: the repeater is still here, its circuit isn't whole.
+        w.unloaded.insert([-1, 0, 0]);
         w.log.clear();
         ticks(&mut sim, &mut w, 10);
         assert_eq!(w.device_writes([0, 0, 0]), 0);
         let next = Kind::Repeater { facing: Dir::East, delay: 3, powered: true, locked: false };
         assert_eq!(w.log, [Ev::Save([0, 0, 0], Some((Pending { next, remaining: 2 }, true)))]);
+        // Its own cube goes too: not seen at all, still not counting.
+        w.unloaded.insert([0, 0, 0]);
+        ticks(&mut sim, &mut w, 10);
+        assert_eq!(sim.pending[&[0, 0, 0]].pending.remaining, 2);
         w.unloaded.clear();
         sim.tick(&mut w);
         assert_eq!(w.device_writes([0, 0, 0]), 0);
@@ -670,7 +679,46 @@ mod tests {
         w.g.air([0, 1, 0]);
         sim.tick(&mut w);
         assert_eq!(w.device_writes([0, 1, 0]), 0);
-        assert!(!sim.has_pending([0, 1, 0]));
+    }
+
+    #[test]
+    fn pending_counts_only_where_its_device_is() {
+        // Several regions and dimensions share one Sim (G6): a world without the device, here an
+        // empty one, neither counts its change down nor drops it.
+        let mut a = TestWorld::new(MapGrid::default());
+        a.put([-1, 0, 0], lever(true)).put([0, 0, 0], repeater(Dir::East, 3));
+        let mut b = TestWorld::new(MapGrid::default());
+        let mut sim = Sim::default();
+        sim.touch([-1, 0, 0]);
+        sim.tick(&mut a);
+        ticks(&mut sim, &mut b, 5);
+        assert!(b.log.is_empty(), "{:?}", b.log);
+        assert_eq!(sim.pending[&[0, 0, 0]].pending.remaining, 3);
+        ticks(&mut sim, &mut a, 2);
+        assert!(!powered(a.kind([0, 0, 0])));
+        sim.tick(&mut a);
+        assert!(powered(a.kind([0, 0, 0])));
+    }
+
+    #[test]
+    fn frozen_retry_waits_for_its_world() {
+        // A frozen network's retry comes due while another world ticks: it waits for a world
+        // that has the wire.
+        let mut a = TestWorld::new(MapGrid::default());
+        a.put([12, 0, 0], lever(true));
+        for x in 13..=17 {
+            a.g.dust([x, 0, 0]);
+        }
+        a.unloaded.insert([1, 0, 0]);
+        let mut b = TestWorld::new(MapGrid::default());
+        let mut sim = Sim::default();
+        sim.touch([12, 0, 0]);
+        sim.tick(&mut a);
+        a.unloaded.clear();
+        ticks(&mut sim, &mut b, 40);
+        assert!(a.wire_writes().is_empty());
+        sim.tick(&mut a);
+        assert!(a.wire_writes().contains(&([13, 0, 0], 15)));
     }
 
     #[test]

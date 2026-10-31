@@ -31,6 +31,8 @@ impl Range {
     pub const fn from_index_const(i: u32) -> Range {
         Range { max: match i { 1 => 31, 2 => 63, _ => 15 } }
     }
+    /// No clamping at all: `FULL` stays `FULL`. For describing outputs independent of a world.
+    pub const UNCLAMPED: Range = Range { max: u8::MAX };
     pub fn max(self) -> u8 {
         self.max
     }

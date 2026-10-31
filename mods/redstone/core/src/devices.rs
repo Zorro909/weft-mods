@@ -1,7 +1,7 @@
 use crate::{Device, Dir, FULL, Power, Range, SidePower};
 
 /// The built-in devices and their state.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Kind {
     Lever { on: bool, attached: Dir },
     Button { on: bool, attached: Dir, wood: bool },

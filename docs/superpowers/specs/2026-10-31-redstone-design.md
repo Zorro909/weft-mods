@@ -195,7 +195,9 @@ air is ambiguous. Probe it with `w.set(p, w.get(p))`, which returns false only w
 isn't loaded and does nothing otherwise (`dim.rs:635-646`). Only air reads need probing. Known
 risks, all in the gaps doc: the probe calls `Arc::make_mut` before its no-op check, which may
 clone a cube; it returns false in non-editable dimensions (redstone can't work there anyway,
-because wire writes fail too).
+because wire writes fail too). The probe also fails past a dimension's top and bottom, which
+mods can't locate; positions right past a loaded column's top or bottom count as air there (G1
+has the rule and its failure mode).
 
 **Resuming.** No load events exist, so a frozen circuit retries on a timer (§7.2) every N ticks
 (builder: N, suggested 20) until it is complete. The retry costs one traversal per frozen circuit
