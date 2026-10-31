@@ -33,11 +33,15 @@ impl Kind {
     }
 }
 
-/// Ticks a button stays on.
-pub const BUTTON_STONE: u32 = 20;
-pub const BUTTON_WOOD: u32 = 30;
-/// Ticks a plate stays on after the last entity left it.
-pub const PLATE_OFF: u32 = 20;
+/// Game ticks per redstone tick: redstone steps at 10 Hz, like Minecraft's. Every delay here and
+/// in `Sim` is in redstone ticks.
+pub const GAME_TICKS: u32 = 2;
+
+/// Ticks a button stays on: 1 s and 1.5 s.
+pub const BUTTON_STONE: u32 = 10;
+pub const BUTTON_WOOD: u32 = 15;
+/// Ticks a plate stays on after the last entity left it: 1 s.
+pub const PLATE_OFF: u32 = 10;
 
 /// What a device emits to each side, clamped to `range`.
 pub fn outputs(k: Kind, range: Range) -> [Power; 6] {

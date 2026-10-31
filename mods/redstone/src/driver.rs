@@ -14,7 +14,7 @@ use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use redstone_api::{CHANGED, PRESS, STRENGTH};
-use redstone_core::{BUTTON_STONE, BUTTON_WOOD, Cell, Kind, Pending, Pos, Sim, View};
+use redstone_core::{BUTTON_STONE, BUTTON_WOOD, Cell, GAME_TICKS, Kind, Pending, Pos, Sim, View};
 use weft_sdk::*;
 
 use crate::adapter::{self, WeftWorld};
@@ -79,8 +79,12 @@ pub fn register(r: &mut Registry) {
 }
 
 fn tick(w: &World) {
-    let mut sim = lock(&SIM);
     let now = w.time();
+    // Redstone steps every `GAME_TICKS` game ticks; what happens in between waits for the next.
+    if now % GAME_TICKS as u64 != 0 {
+        return;
+    }
+    let mut sim = lock(&SIM);
     lock(&OWN).retain(|_, (_, at)| *at + 2 >= now);
     let mut v = WeftWorld::new(w);
 

@@ -451,8 +451,8 @@ impl Sim {
     }
 }
 
-/// Ticks between retries of a frozen circuit (spec §7.1).
-const RETRY: u32 = 20;
+/// Ticks between retries of a frozen circuit (spec §7.1): 1 s.
+pub const RETRY: u32 = 10;
 
 /// The world with wire strengths filled in: those the tick solved, and any other network solved
 /// when one of its wires is first read. A wire of an incomplete network reads as 0 and sets

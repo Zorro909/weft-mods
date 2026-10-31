@@ -123,8 +123,10 @@ break this: wire is never allowed to produce strong power (§10.3).
 
 ## 6. Timing and the computation model
 
-- **All changes happen on tick boundaries** (user). Weft runs at 20 TPS. All delays are in game
-  ticks (proposed).
+- **All changes happen on tick boundaries** (user). Weft runs at 20 TPS; redstone steps at
+  **10 Hz**, every second game tick, like Minecraft's redstone tick (user, 2026-10-31). Every
+  delay and "tick" in this spec is a redstone tick (0.1 s) unless it says game ticks. What players
+  and other mods change between two redstone ticks waits for the next one.
 - **Wire is instant within a tick. Every device reacts at least one tick after its input changes.**
 - **Per tick** (proposed):
   1. Apply every device change due this tick, all at once.
@@ -288,8 +290,8 @@ with drops when its support goes (verified).
 - **Lever** (user): on/off, full strength. Strong-powers the block it's attached to, powers
   adjacent dust and devices directly. Toggled with use (`on_use`).
 - **Buttons** (user: Minecraft pulse lengths): full strength, strong-powers the attached block.
-  - stone-style: **20 ticks** (1 s)
-  - wood-style: **30 ticks** (1.5 s)
+  - stone-style: **10 ticks** (1 s)
+  - wood-style: **15 ticks** (1.5 s)
 
   Proposed: the tooltip shows the length. Pressing a button that's on does nothing (no timer
   restart). Arrows don't press buttons. The pulse end is a pending change (§7.2). Other mods (and
@@ -297,7 +299,7 @@ with drops when its support goes (verified).
 - **Pressure plate** (user: simply turns on): full strength while anything stands on it.
   Proposed: one kind, reacts to any entity (players, mobs, dropped items), strong-powers the block
   underneath, powers adjacent dust. It turns on the tick after something steps on it and turns off
-  20 ticks after the last entity leaves, so walking over it gives a usable pulse.
+  10 ticks (1 s) after the last entity leaves, so walking over it gives a usable pulse.
   **Detection is a gap** (G8): Weft has no "entity on block" callback, and `w.near` scans every
   entity in the region (O(entities)). WIP: builder's choice, for example each plate checks with a
   small `w.near` every tick, tagging the plate cost as a known performance risk. An event would

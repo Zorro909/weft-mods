@@ -1,8 +1,8 @@
 //! Scenarios run on the server, one at a time, in the region of the player who asked for them.
-//! A scenario is a list of steps: `Do` runs code against the world, `Wait(n)` lets exactly n world
-//! ticks pass (redstone's own tick runs before ours, so a change made by a `Do` is solved by the
-//! tick after it), `Until(f, max)` runs `f` once a tick until it returns true, failing after `max`
-//! ticks.
+//! A scenario is a list of steps: `Do` runs code against the world, `Wait(n)` lets exactly n
+//! redstone ticks pass (the runner steps every `GAME_TICKS` game ticks, right after redstone's own
+//! tick, so a change made by a `Do` is solved by the tick after it), `Until(f, max)` runs `f` once
+//! a tick until it returns true, failing after `max` ticks. Every "tick" here is a redstone tick.
 
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -120,6 +120,11 @@ impl Ctx<'_> {
     }
 
     /// Whether the block at `rel` is loaded (writing what is there changes nothing).
+    /// The world's time in redstone ticks.
+    pub fn ticks(&self) -> u64 {
+        self.w.time() / redstone_core::GAME_TICKS as u64
+    }
+
     pub fn loaded(&self, rel: Pos) -> bool {
         let p = self.at(rel);
         self.w.set(p, self.w.get(p))
@@ -278,7 +283,7 @@ pub fn register(r: &mut Registry, all: Vec<Scenario>) {
 }
 
 fn tick(run: &mut Runner, w: &World) {
-    if !run.running || !w.players().contains(&run.player) {
+    if !run.running || !w.players().contains(&run.player) || w.time() % redstone_core::GAME_TICKS as u64 != 0 {
         return;
     }
     if run.cur.is_none() {

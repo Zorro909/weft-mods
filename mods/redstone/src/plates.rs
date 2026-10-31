@@ -1,8 +1,8 @@
-//! Pressure plates: on while anything stands in the plate's cell, off `PLATE_OFF` ticks after the
-//! last one left. Each plate's block entity remembers when it last saw someone (saved, so a
-//! restart doesn't cut that short) and a system looks every tick.
+//! Pressure plates: on while anything stands in the plate's cell, off `PLATE_OFF` redstone ticks
+//! after the last one left. Each plate's block entity remembers when it last saw someone (saved,
+//! so a restart doesn't cut that short) and a system looks every game tick.
 
-use redstone_core::{Kind, PLATE_OFF};
+use redstone_core::{GAME_TICKS, Kind, PLATE_OFF};
 use weft_sdk::*;
 
 use crate::{blocks, driver};
@@ -29,7 +29,7 @@ pub fn register(r: &mut Registry) {
             if seen {
                 plate.last_seen = now;
             }
-            let want = seen || (on && now.saturating_sub(plate.last_seen) < PLATE_OFF as u64);
+            let want = seen || (on && now.saturating_sub(plate.last_seen) < (PLATE_OFF * GAME_TICKS) as u64);
             if want != on {
                 if let Some(s) = blocks::state_of(Kind::Plate { on: want }) {
                     w.set(p, s);

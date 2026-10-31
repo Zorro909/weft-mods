@@ -185,18 +185,18 @@ pub fn restart_after() -> Scenario {
         Step::Do(|c| c.come_back()),
         Step::Until(|c| clock_loaded(c) && c.loaded(BUTTON), 900),
         Step::Do(|c| {
-            LOADED_AT.store(c.w.time(), Ordering::Relaxed);
+            LOADED_AT.store(c.ticks(), Ordering::Relaxed);
             c.check_eq(c.prop(BUTTON, "on"), "true".to_string(), "button still on after the restart");
         }),
-        Step::Wait(5),
+        Step::Wait(3),
+        Step::Do(|c| c.check_eq(c.prop(BUTTON, "on"), "true".to_string(), "button on 3 ticks after loading")),
     ];
-    alternating(&mut steps, 10);
+    alternating(&mut steps, 6);
     steps.extend([
-        Step::Do(|c| c.check_eq(c.prop(BUTTON, "on"), "true".to_string(), "button on 16 ticks after loading")),
-        Step::Until(|c| c.prop(BUTTON, "on") == "false", 40),
+        Step::Until(|c| c.prop(BUTTON, "on") == "false", 20),
         Step::Do(|c| {
-            let after = c.w.time() - LOADED_AT.load(Ordering::Relaxed);
-            c.check(after <= 32, &format!("button off {after} ticks after loading, it had less than 30 left"));
+            let after = c.ticks() - LOADED_AT.load(Ordering::Relaxed);
+            c.check(after <= 16, &format!("button off {after} ticks after loading, it had less than 15 left"));
             for p in [DUST, TORCH, ABOVE, S, BUTTON, UNDER_BUTTON] {
                 c.set(p, "core:air");
             }

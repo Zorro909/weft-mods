@@ -53,12 +53,14 @@ Comparators reading something re-read it every tick.
 
 ## Timing
 
+- Redstone steps at 10 Hz, every second game tick (`redstone_core::GAME_TICKS`); "tick" below is
+  such a redstone tick. Changes announced in between wait for the next one.
 - A change announced in tick T is solved in tick T+1: wire takes its strength and shape then, and
   receivers react to it in that tick (for a later one).
 - Each device has at most one change counting down. A change applies all at once at a tick
   boundary.
 - A circuit reaching into an unloaded area freezes: nothing in it changes, delays stop counting,
-  and it resumes when the area is back (checked every 20 ticks). Pending changes survive unload and
+  and it resumes when the area is back (checked every 10 ticks, 1 s). Pending changes survive unload and
   restart.
 - One redstone simulation serves every region and dimension. The same coordinates in two
   dimensions are kept apart for devices with a pending change; see the engine gaps (G6) for what

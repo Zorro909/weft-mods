@@ -26,11 +26,11 @@ fn floor(c: &mut Ctx, from: [i32; 3], to: [i32; 3]) {
 static START: AtomicU64 = AtomicU64::new(0);
 
 fn start(c: &Ctx) {
-    START.store(c.w.time(), Ordering::Relaxed);
+    START.store(c.ticks(), Ordering::Relaxed);
 }
 
 fn since(c: &Ctx) -> u64 {
-    c.w.time() - START.load(Ordering::Relaxed)
+    c.ticks() - START.load(Ordering::Relaxed)
 }
 
 /// The delay being measured.
@@ -282,7 +282,7 @@ pub fn comparator_reads_through_block() -> Scenario {
     )
 }
 
-/// Stone button on for exactly 20 ticks, wood for 30; pressing again while on doesn't extend.
+/// Stone button on for exactly 10 ticks, wood for 15; pressing again while on doesn't extend.
 pub fn buttons_lengths() -> Scenario {
     const STONE_B: [i32; 3] = [0, 1, 0];
     const WOOD_B: [i32; 3] = [3, 1, 0];
@@ -314,7 +314,8 @@ pub fn buttons_lengths() -> Scenario {
         if i == 1 {
             steps.push(Step::Do(|c| c.check_eq(c.strength([1, 1, 0]), 15, "dust next to the pressed button")));
         }
-        if i == 10 {
+        // Both still on.
+        if i == 5 {
             steps.push(Step::Do(|c| {
                 redstone_api::press(c.w, c.at(STONE_B));
                 redstone_api::press(c.w, c.at(WOOD_B));
@@ -322,8 +323,8 @@ pub fn buttons_lengths() -> Scenario {
         }
     }
     steps.push(Step::Do(|c| {
-        c.check_eq(COUNT.load(Ordering::Relaxed), 20, "stone button ticks on");
-        c.check_eq(COUNT2.load(Ordering::Relaxed), 30, "wood button ticks on");
+        c.check_eq(COUNT.load(Ordering::Relaxed), redstone_core::BUTTON_STONE, "stone button ticks on");
+        c.check_eq(COUNT2.load(Ordering::Relaxed), redstone_core::BUTTON_WOOD, "wood button ticks on");
         c.check_eq(c.strength([1, 1, 0]), 0, "dust after");
     }));
     Scenario::new("buttons_lengths", steps)
@@ -368,7 +369,8 @@ pub fn plate_on_off() -> Scenario {
             Step::Until(|c| c.prop(PLATE, "on") == "false", 40),
             Step::Do(|c| {
                 let t = since(c);
-                c.check((19..=21).contains(&t), &format!("off {t} ticks after the item went, want 20 (±1 for the system's place in the tick)"));
+                let want = redstone_core::PLATE_OFF as u64;
+                c.check((want - 1..=want + 1).contains(&t), &format!("off {t} ticks after the item went, want {want} (±1 for the system's place in the tick)"));
             }),
         ],
     )

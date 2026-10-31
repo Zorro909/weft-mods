@@ -11,7 +11,7 @@
 
 use std::sync::Mutex;
 
-use redstone_core::{Pending, Pos, decode, encode};
+use redstone_core::{GAME_TICKS, Pending, Pos, decode, encode};
 use weft_sdk::*;
 
 pub static DEVICE: Entity = Entity::named("device");
@@ -30,8 +30,8 @@ pub static WAKE: Event<Wake> = Event::named("wake");
 
 const NONE: PendingV = PendingV { next: 0, remaining: 0, from_tick: 0, frozen: 0 };
 
-/// Ticks until a frozen change's timer: the core's retry.
-const RETRY: u32 = 20;
+/// Game ticks until a frozen change's timer: the core's retry.
+const RETRY: u32 = redstone_core::RETRY * GAME_TICKS;
 
 /// Changes restored from saves with their device's block entity, for the driver's next tick.
 static RESTORED: Mutex<Vec<(Pos, Pending, u64)>> = Mutex::new(Vec::new());
@@ -69,7 +69,7 @@ pub fn save(w: &World, p: Pos, pending: Option<(Pending, bool)>) {
             let new = v.remaining == 0;
             *v = PendingV { next: encode(pd.next), remaining: pd.remaining, from_tick: w.time(), frozen: frozen as u8 };
             if new {
-                w.after(be, if frozen { RETRY } else { pd.remaining }, &WAKE, Wake { pos: p });
+                w.after(be, if frozen { RETRY } else { pd.remaining * GAME_TICKS }, &WAKE, Wake { pos: p });
             }
         }
     }
