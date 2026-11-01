@@ -33,8 +33,15 @@ pub fn tick_tubes(b: &mut SystemBatch<Tube>) {
             }
         }
     }
+    let mut passed_on = vec![false; tubes.len()];
     for h in handoffs {
-        hand_on(&w, &ids, &index, tubes, h);
+        let tube = h.tube;
+        passed_on[tube] |= hand_on(&w, &ids, &index, tubes, h);
+    }
+    for (i, tube) in tubes.iter_mut().enumerate() {
+        if let Some(st) = w.entity(ids[i]) {
+            super::overflow::check(&w, ids[i], st.block_pos(), tube, passed_on[i]);
+        }
     }
 }
 
@@ -105,25 +112,33 @@ fn spill(w: &World, pos: [i32; 3], face: u32, stack: ItemStack) {
 }
 
 /// Sends an item waiting at its tube's far face on: into the next tube, into a machine, or out.
-fn hand_on(w: &World, ids: &[u64], index: &HashMap<u64, usize>, tubes: &mut [Tube], h: Handoff) {
+/// True when it left the tube.
+fn hand_on(
+    w: &World,
+    ids: &[u64],
+    index: &HashMap<u64, usize>,
+    tubes: &mut [Tube],
+    h: Handoff,
+) -> bool {
     let id = ids[h.tube];
     let Some(pos) = w.entity(id).map(|st| st.block_pos()) else {
-        return;
+        return false;
     };
     let m = tubes[h.tube].moving[h.slot];
     let stack = w.inventory(id).get(h.slot as u32);
     let next = step(pos, m.to);
     let other = w.block_entity(next);
     if let Some(&j) = index.get(&other) {
-        if into_tube(w, next, other, &mut tubes[j], m, stack) {
+        let moved = into_tube(w, next, other, &mut tubes[j], m, stack);
+        if moved {
             w.inventory(id).set(h.slot as u32, ItemStack::EMPTY);
             tubes[h.tube].moving[h.slot] = Motion::default();
         }
-        return;
+        return moved;
     }
     if other != 0 && w.component(other, &TUBE).is_some() {
         // A tube outside this batch (another region): the item waits.
-        return;
+        return false;
     }
     let left = if other != 0 {
         crate::store::insert(w, other, stack, false)
@@ -137,11 +152,12 @@ fn hand_on(w: &World, ids: &[u64], index: &HashMap<u64, usize>, tubes: &mut [Tub
         // Full: back the way it came, to be sent somewhere else.
         w.inventory(id).set(h.slot as u32, left);
         (m.from, m.to, m.pos) = (m.to, NONE, 0.0);
-        return;
+        return false;
     }
     w.inventory(id).set(h.slot as u32, ItemStack::EMPTY);
     visual::remove(w, m.visual);
     *m = Motion::default();
+    true
 }
 
 /// Moves the item `m` into a free slot of the tube `id` at `pos`, entering by the face it came

@@ -43,6 +43,11 @@ pub fn sweep(lo: [i32; 3], c: [i32; 3], done: f32) -> [f32; 3] {
     ]
 }
 
+/// Where the drill is in the block `c` with `spent` of its `cost` paid: past it once paid.
+pub fn progress_point(lo: [i32; 3], c: [i32; 3], spent: i64, cost: i64) -> [f32; 3] {
+    sweep(lo, c, (spent as f32 / cost.max(1) as f32).min(1.0))
+}
+
 /// Moves the drill toward `goal` as far as this tick's energy pays for; true once it is there.
 pub fn drill_to(w: &World, id: u64, d: &mut Dig, goal: [f32; 3]) -> bool {
     let gap: [f32; 3] = std::array::from_fn(|i| goal[i] - d.head[i]);
@@ -107,6 +112,21 @@ mod tests {
             sweep(lo, [3, 5, 2], 0.25),
             [3.75, 5.0, 2.5],
             "the other way on the next row"
+        );
+    }
+
+    #[test]
+    fn a_block_under_way_is_carried_on_from_where_the_drill_got_to() {
+        let (lo, c) = ([0, 0, 0], [3, 5, 1]);
+        assert_eq!(
+            progress_point(lo, c, 500, 1000),
+            [3.5, 5.0, 1.5],
+            "half paid, half way"
+        );
+        assert_eq!(
+            progress_point(lo, c, 1500, 1000),
+            sweep(lo, c, 1.0),
+            "never past the far edge"
         );
     }
 }

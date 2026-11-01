@@ -2,7 +2,7 @@
 
 use weft_sdk::*;
 
-use super::mine::{Mined, block_cost, drill_to, mine_block, sweep};
+use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
 use super::power::{hold, pay};
 use super::{Dig, EXCAVATOR, GANTRY_FRAME, area, rig, stage, status};
 use crate::harvest::opens_into;
@@ -97,17 +97,18 @@ fn mine_next(w: &World, id: u64, d: &mut Dig) {
         return;
     };
     let state = w.get(target);
-    if !drill_to(w, id, d, sweep(d.lo, target, 0.0)) {
+    let cost = block_cost(state);
+    // Where the energy paid so far has the drill: into a block it has begun, it carries on from
+    // there instead of going back to its edge.
+    if !drill_to(w, id, d, progress_point(d.lo, target, d.spent, cost)) {
         return;
     }
     let mined = mine_block(w, id, d, target, state);
-    // The drill shows how far the block is: past it, it is mined.
-    let done = match mined {
-        Mined::Done => 1.0,
-        Mined::Skipped => 0.0,
-        Mined::Waiting(_) => (d.spent as f32 / block_cost(state) as f32).min(1.0),
-    };
-    d.head = sweep(d.lo, target, done);
+    match mined {
+        Mined::Done => d.head = sweep(d.lo, target, 1.0),
+        Mined::Waiting(_) => d.head = progress_point(d.lo, target, d.spent, cost),
+        Mined::Skipped => {}
+    }
     match mined {
         Mined::Done | Mined::Skipped => d.cursor = area::next(d.lo, d.hi, target),
         Mined::Waiting(s) => d.status = s,

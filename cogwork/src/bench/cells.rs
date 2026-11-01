@@ -1,11 +1,14 @@
-//! The pattern's cells: a ghost item each says what goes there, and each holds at most one real
-//! item, put in one at a time. A craft takes them all at once.
+//! The pattern's cells: a ghost item each says what goes there, and each holds a stack of it.
+//! A craft takes one item from every cell.
 
 use weft_sdk::*;
 
-/// The cell an `item` goes into next: one whose ghost it is and that is still empty.
-pub fn free_cell(pattern: &[u32], grid: &[ItemStack], item: u32) -> Option<usize> {
-    (0..pattern.len()).find(|&i| item != 0 && pattern[i] == item && grid[i].is_empty())
+/// The cell the next `item` goes into: of those whose ghost it is and that have room (`cap` a
+/// cell), the emptiest, so the cells of one item fill evenly and crafting goes on.
+pub fn free_cell(pattern: &[u32], grid: &[ItemStack], item: u32, cap: u32) -> Option<usize> {
+    (0..pattern.len())
+        .filter(|&i| item != 0 && pattern[i] == item && grid[i].count < cap)
+        .min_by_key(|&i| grid[i].count)
 }
 
 /// Whether every cell holds what its ghost asks for, and only that.
@@ -32,33 +35,20 @@ mod tests {
     const NONE: ItemStack = ItemStack::EMPTY;
 
     #[test]
-    fn items_fill_their_cells_one_each() {
+    fn items_fill_their_cells_evenly_up_to_a_stack() {
         let pattern = [PLANK, 0, PLANK];
         let mut grid = [NONE; 3];
-        assert_eq!(
-            free_cell(&pattern, &grid, STICK),
-            None,
-            "no cell asks for a stick"
-        );
-        assert_eq!(
-            free_cell(&pattern, &grid, PLANK),
-            Some(0),
-            "the first plank cell"
-        );
+        let next = |grid: &[ItemStack], item| free_cell(&pattern, grid, item, 64);
+        assert_eq!(next(&grid, STICK), None, "no cell asks for a stick");
+        assert_eq!(next(&grid, PLANK), Some(0), "the first plank cell");
         grid[0] = ItemStack::new(PLANK, 1);
         assert!(!complete(&pattern, &grid), "one plank short");
-        assert_eq!(
-            free_cell(&pattern, &grid, PLANK),
-            Some(2),
-            "then the next one"
-        );
+        assert_eq!(next(&grid, PLANK), Some(2), "then the emptier one");
         grid[2] = ItemStack::new(PLANK, 1);
         assert!(complete(&pattern, &grid), "every cell filled");
-        assert_eq!(
-            free_cell(&pattern, &grid, PLANK),
-            None,
-            "and no room for more"
-        );
+        assert_eq!(next(&grid, PLANK), Some(0), "and on, a stack each");
+        grid = [ItemStack::new(PLANK, 64), NONE, ItemStack::new(PLANK, 64)];
+        assert_eq!(next(&grid, PLANK), None, "till both are full");
     }
 
     #[test]

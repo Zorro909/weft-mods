@@ -1,6 +1,6 @@
 //! Setting the pattern: clicking a cell of the bench's screen sends what the player holds, and
 //! the cell shows it as a ghost; nothing leaves the player's hands. And filling it: items given
-//! to the bench go into the cells that ask for them.
+//! to the bench are spread over the cells that ask for them.
 
 use weft_sdk::*;
 
@@ -45,15 +45,21 @@ pub fn set(p: &Packet, g: SetGhost) {
     }
 }
 
-/// Puts what of `stack` the pattern of the bench `id` still waits for into its cells, one item
-/// a cell; returns the rest. `None` when `id` is no bench.
+/// Puts what of `stack` the pattern of the bench `id` has room for into its cells, one item at a
+/// time into the emptiest; returns the rest. `None` when `id` is no bench.
 pub fn insert(w: &World, id: u64, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
     let pattern = w.component(id, &BENCH)?.pattern;
     let grid = w.inventory(id).group("grid");
     let mut cells: Vec<ItemStack> = (0..grid.len()).map(|i| grid.get(i)).collect();
     let mut left = stack;
-    while let Some(i) = cells::free_cell(&pattern, &cells, left.item).filter(|_| !left.is_empty()) {
-        cells[i] = ItemStack { count: 1, ..left };
+    let cap = max_stack(stack.item);
+    while let Some(i) =
+        cells::free_cell(&pattern, &cells, left.item, cap).filter(|_| !left.is_empty())
+    {
+        cells[i] = ItemStack {
+            count: cells[i].count + 1,
+            ..left
+        };
         if !simulate {
             grid.set(i as u32, cells[i]);
         }

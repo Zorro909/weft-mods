@@ -1,6 +1,6 @@
 //! The assembly bench: makes the recipe of its pattern again and again. The pattern is ghosts,
-//! set by clicking its cells with an item; tubes then fill each cell with one item of its ghost,
-//! and engine power turns a full pattern into the result.
+//! set by clicking its cells with an item; tubes then fill each cell with a stack of its ghost,
+//! and engine power turns one item of every cell into the result.
 
 mod cells;
 mod craft;
@@ -14,13 +14,15 @@ pub static ASSEMBLY_BENCH: Block = Block::named("assembly_bench");
 static BENCH_MENU: Menu = Menu::named("assembly_bench");
 
 value! {
-    /// The pattern's ghost items (0 for an empty cell), energy put into the craft under way, and
-    /// what the screen says.
+    /// The pattern's ghost items (0 for an empty cell), energy put into the craft under way,
+    /// what the screen says, and which cells hold items (a bit each) for the screen. New fields
+    /// go last: a saved bench loads with them 0.
     #[derive(Default)]
     pub struct Bench {
         pub pattern: [u32; 9],
         pub spent: i64,
         pub status: u32,
+        pub filled: u32,
     }
 }
 static BENCH: Component<Bench> = Component::named("cogwork:bench");
@@ -56,7 +58,7 @@ pub fn register(r: &mut Registry) {
     r.machine(&ASSEMBLY_BENCH, &BENCH_MENU)
         .block(block)
         // Filled by tubes only, through `insert`; taken from only by crafting.
-        .group("grid", Slots::grid(3, 3).input().limit(1).accepts(NOTHING))
+        .group("grid", Slots::grid(3, 3).input().accepts(NOTHING))
         .group("output", Slots::row(3).output())
         .recipes(&CRAFTING)
         .attach(&BENCH)
@@ -123,7 +125,8 @@ fn screen(ui: &mut Ui) {
 
 /// One cell of the pattern, three parts on top of each other: the slot with the real item, a
 /// button over it that sets the ghost, and the ghost, drawn smaller. A click reaches the button
-/// through the ghost, and the slot draws its item over everything.
+/// through the ghost. Item icons in text are drawn after everything, so a cell holding items
+/// shows no ghost, which would cover their count.
 fn cell(ui: &mut Ui, i: u32) {
     ui.row(S::row().gap(-SLOT), |ui| {
         ui.group_slot("grid", i);
@@ -132,11 +135,13 @@ fn cell(ui: &mut Ui, i: u32) {
         // Text pixels are half a GUI pixel: 1.5 draws the ghost 12 wide, 3 in from the edges.
         ui.column(S::col().size(SLOT, SLOT).pad(3.0), |ui| {
             ui.text_bind_styled(S::col().scale(1.5), move |c, out| {
-                let item = c.menu_component(&BENCH).unwrap_or_default().pattern[i as usize];
-                let ghost = if item == 0 {
-                    Arg::Text("")
-                } else {
+                let b = c.menu_component(&BENCH).unwrap_or_default();
+                let item = b.pattern[i as usize];
+                let shown = item != 0 && b.filled & (1 << i) == 0;
+                let ghost = if shown {
                     Arg::Item(item)
+                } else {
+                    Arg::Text("")
                 };
                 out.set("cogwork.bench.ghost", &[ghost]);
             });

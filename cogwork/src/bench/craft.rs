@@ -1,5 +1,5 @@
-//! A bench's tick: what its pattern makes, paid for with energy once every cell is filled, the
-//! cells used up into the result.
+//! A bench's tick: what its pattern makes, paid for with energy once every cell holds its item,
+//! one item of each cell used up into the result.
 
 use base_api::CRAFTING;
 use weft_sdk::*;
@@ -17,6 +17,7 @@ pub fn tick(b: &mut SystemBatch<Bench>) {
         let pos = st.block_pos();
         evict_misplaced(&w, id, pos, &bench.pattern);
         bench.status = work(&w, id, pos, bench);
+        bench.filled = filled(&grid(&w, id));
         let working = if bench.status == status::WORKING {
             "true"
         } else {
@@ -31,6 +32,13 @@ pub fn tick(b: &mut SystemBatch<Bench>) {
 fn grid(w: &World, id: u64) -> Vec<ItemStack> {
     let g = w.inventory(id).group("grid");
     (0..g.len()).map(|i| g.get(i)).collect()
+}
+
+/// Which cells hold items, a bit each.
+fn filled(cells: &[ItemStack]) -> u32 {
+    (0..cells.len())
+        .filter(|&i| !cells[i].is_empty())
+        .fold(0, |bits, i| bits | 1 << i)
 }
 
 /// Moves what the pattern no longer asks for out of its cells, into the output.
@@ -77,7 +85,7 @@ fn work(w: &World, id: u64, pos: [i32; 3], bench: &mut Bench) -> u32 {
     }
     let g = w.inventory(id).group("grid");
     for (i, used) in cells.iter().enumerate().filter(|(_, s)| !s.is_empty()) {
-        g.set(i as u32, ItemStack::EMPTY);
+        g.set(i as u32, used.shrink(1));
         // What a used-up ingredient leaves behind (a bucket of a water bucket).
         if let Some(left) = REMAINDER.on_item(used.item) {
             put_out(w, id, pos, ItemStack::new(left.0, 1));

@@ -12,7 +12,7 @@ makes land flat. It is built on the SDK and `base_api` only, and depends on `bas
 | **Cogs** (wooden, stone, iron, gold, diamond) | Crafting parts; each tier is made around the one before. |
 | **Tuning Wrench** | Turns an engine, sets a directing tube's output. Any item tagged `wrenches` works too. |
 | **Stone Tube** | Carries items to the tubes and machines it touches. |
-| **Timber Extraction Tube** | Pulls items out of chests and machines when an engine drives it. Two of them don't join. |
+| **Timber Extraction Tube** | Pulls items out of chests and machines when an engine drives it, once a stroke: one item with a spring engine, eight with an ember engine. Two of them don't join. |
 | **Gilded Tube** | Speeds items up. |
 | **Sorting Tube** | One row of samples per side: an item leaves by a side whose row holds its kind, else by a side with an empty row. |
 | **Directing Tube** | Sends everything out of one side (the orange arm). |
@@ -21,7 +21,7 @@ makes land flat. It is built on the SDK and `base_api` only, and depends on `bas
 | **Spring Engine** | Runs on a redstone signal, 10 energy per tick. |
 | **Ember Engine** | Burns any `fuel`, 40 energy per tick; stops to cool down when its energy has nowhere to go. |
 | **Excavator** | Builds a frame, then mines the inside from the top of the frame down to y = -64. Needs a standby of 10 energy per tick plus 1 per 4 blocks of area (9 by 9: 30); short of that it doesn't run at all, and what comes in beyond it sets how fast it digs. |
-| **Assembly Bench** | Click its pattern cells with an item to lay out a crafting recipe: the cell shows a small ghost of it and the item stays with you; an empty hand clears a cell. Tubes fill each cell with one item of its ghost, and once all are filled it crafts, 240 energy a craft. A timber tube takes the results out. |
+| **Assembly Bench** | Click its pattern cells with an item to lay out a crafting recipe: the cell shows a small ghost of it and the item stays with you; an empty hand clears a cell. Tubes fill the cells with stacks of their ghosts, evenly where several ask for the same item, and while every cell holds something it crafts, one item of each cell and 240 energy a craft. A timber tube takes the results out. |
 | **Leveler** | Makes the area behind it, or a marked one, flat at its height: clears up to 16 blocks above into its output, then fills holes up to 4 deep with whole blocks from its stock. |
 | **Survey Marker** | Three in an L at one height mark a rectangle; an excavator or leveler placed next to one works that instead. |
 
@@ -29,6 +29,8 @@ Engines push energy into the block their trunk points at (a timber tube, the exc
 mod's machine with `core:energy`), and offer it to energy networks through torque shafts.
 Machines are filled and emptied by their slot groups (`fuel`, `input`, `output`, `chest`), so
 tubes work with the base game's furnace and chest and with other mods' machines.
+A full tube that passes nothing on for three seconds drops what is stuck in it, so a line
+never jams for good.
 
 ## Quick start
 

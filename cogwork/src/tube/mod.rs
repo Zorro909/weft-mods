@@ -3,6 +3,7 @@
 //! and its `Tube` component holds where each of them is on its way.
 
 mod extract;
+mod overflow;
 mod route;
 mod shape;
 mod sorting;
@@ -32,10 +33,11 @@ value! {
 }
 
 value! {
-    /// A tube's state: its kind, a countdown its kind may use (the timber tube's pulls) and the
-    /// items in it.
+    /// A tube's state: its kind, a countdown its kind may use (the timber tube's pulls), the
+    /// items in it, and how long it has been full without passing anything on. New fields go
+    /// last: a saved tube loads with them 0.
     #[derive(Default)]
-    pub struct Tube { pub kind: u32, pub timer: u32, pub moving: [Motion; SLOTS] }
+    pub struct Tube { pub kind: u32, pub timer: u32, pub moving: [Motion; SLOTS], pub stuck: u32 }
 }
 
 pub static TUBE: Component<Tube> = Component::named("cogwork:tube");
