@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use super::{Engine, kind, model};
+use super::{ENGINE, Engine, kind, model};
 
 /// The pistons lying flat (engines facing up or down), then standing (facing sideways), by
 /// engine kind.
@@ -31,12 +31,16 @@ pub fn register(r: &mut Registry) {
         let models = [(&FLAT[k], plate()), (&STANDING[k], standing_plate())];
         for (entity, part) in models {
             // Small enough to stay inside the engine, so aiming at it aims at the block.
-            crate::owned::kind(r.entity(entity))
+            crate::owned::kind(r.entity(entity), claims)
                 .model(Model::from(vec![part]).uv(64, 20))
                 .texture(TEXTURES[k])
                 .size(0.25, 0.25);
         }
     }
+}
+
+fn claims(w: &World, owner: u64, id: u64) -> bool {
+    w.component(owner, &ENGINE).is_some_and(|e| e.piston == id)
 }
 
 /// A 16 by 4 by 16 plate centered on the pivot, which is 2 texels above the entity's feet.
