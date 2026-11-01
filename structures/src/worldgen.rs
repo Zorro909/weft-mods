@@ -1,9 +1,7 @@
 //! Puts every structure compiled into the mod into base's overworld, all the same way.
 
-use structures_api::Structure;
+use structures_api::{Foundation, Structure};
 use weft_sdk::*;
-
-static COBBLESTONE: Block = Block::named("base:cobblestone");
 
 /// One chance per cell of this many blocks square.
 const SPACING: u32 = 192;
@@ -27,7 +25,7 @@ pub fn register(r: &mut Registry) {
             .spacing(SPACING)
             .chance(CHANCE)
             .biome(BIOME)
-            .foundation(&COBBLESTONE)
+            .foundation(Foundation::Ground)
             .max_slope(MAX_SLOPE);
     }
 }

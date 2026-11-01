@@ -33,7 +33,7 @@ pub use fit::{Fit, Ground};
 pub use format::Structure;
 pub use generator::Planner;
 pub use locate::{locate, names};
-pub use part::Placed;
+pub use part::{Foundation, Placed};
 pub use placement::{Placement, place};
 pub use plan::{Plan, PlanError};
 pub use planning::{Planning, plan};

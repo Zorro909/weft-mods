@@ -326,8 +326,8 @@ mod tests {
         let mut plan = plan();
         assert_eq!(
             plan.fit(&HUT, [10, 10], Turn::None, &Fit::new()),
-            Some([10, 64, 10]),
-            "on the ground"
+            Some([10, 63, 10]),
+            "level with the ground"
         );
         assert_eq!(
             plan.fit(&HUT, [62, 10], Turn::None, &Fit::new()),

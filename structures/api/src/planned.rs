@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use crate::part::Part;
-use crate::stamp;
+use crate::stamp::{self, Surface};
 
 pub(crate) struct Planned {
     parts: Vec<Part>,
@@ -37,11 +37,20 @@ impl Planned {
 
     /// Calls `set` for every block the plan puts into the cube at `origin`, later parts after
     /// earlier ones.
-    pub fn stamp(&self, origin: [i32; 3], set: &mut dyn FnMut([usize; 3], u32)) {
-        let column = [origin[0].div_euclid(16), origin[2].div_euclid(16)];
-        for &i in self.columns.get(&column).into_iter().flatten() {
-            stamp::stamp(&self.parts[i], origin, set);
+    pub fn stamp(&self, origin: [i32; 3], surface: Surface, set: &mut dyn FnMut([usize; 3], u32)) {
+        for &i in self.parts_in(origin) {
+            stamp::stamp(&self.parts[i], origin, surface, set);
         }
+    }
+
+    /// Whether anything of it may be in the cube at `origin`.
+    pub fn reaches(&self, origin: [i32; 3]) -> bool {
+        self.parts_in(origin).next().is_some()
+    }
+
+    fn parts_in(&self, origin: [i32; 3]) -> impl Iterator<Item = &usize> {
+        let column = [origin[0].div_euclid(16), origin[2].div_euclid(16)];
+        self.columns.get(&column).into_iter().flatten()
     }
 }
 
@@ -55,7 +64,7 @@ mod tests {
 
     fn states(planned: &Planned, origin: [i32; 3]) -> Vec<u32> {
         let mut out = Vec::new();
-        planned.stamp(origin, &mut |_, state| out.push(state));
+        planned.stamp(origin, &|_, _| 0, &mut |_, state| out.push(state));
         out
     }
 

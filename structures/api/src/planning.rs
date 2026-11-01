@@ -19,7 +19,7 @@ const DEFAULT_REGION: i32 = 512;
 ///     let [x, z] = p.spot(48);
 ///     let turn = p.random().turn();
 ///     let Some(corner) = p.fit(&WELL, [x, z], turn, &Fit::new().max_slope(3)) else { return Ok(()) };
-///     p.structure(&WELL, corner, turn)?.foundation(&COBBLESTONE).clear_above();
+///     p.structure(&WELL, corner, turn)?.foundation(Foundation::Ground).clear_above();
 ///     Ok(())
 /// }
 /// structures_api::plan(r, "village", village).dimension(&base_api::OVERWORLD).region(512);

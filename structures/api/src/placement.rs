@@ -6,6 +6,7 @@ use weft_sdk::*;
 use crate::fit::Fit;
 use crate::format::Structure;
 use crate::generator::Generator;
+use crate::part::Foundation;
 use crate::plan::{Plan, PlanError};
 use crate::templates;
 use crate::turn::Turn;
@@ -15,12 +16,11 @@ use crate::turn::Turn;
 /// when the game loads, `world.place(..)` can put it anywhere, and plans can use it.
 ///
 /// ```ignore
-/// static COBBLESTONE: Block = Block::named("base:cobblestone");
 /// let hut = Structure::decode(include_bytes!("../assets/structures/hut.wst")).expect("hut.wst");
 /// structures_api::place(r, "hut", hut)
 ///     .dimension(&base_api::OVERWORLD)
 ///     .spacing(256).chance(0.3).biome("#animals")
-///     .foundation(&COBBLESTONE).max_slope(5);
+///     .foundation(Foundation::Ground).max_slope(5);
 /// ```
 pub fn place<'a>(registry: &'a mut Registry, name: &str, structure: Structure) -> Placement<'a> {
     Placement {
@@ -43,7 +43,7 @@ pub struct Placement<'a> {
     structure: Structure,
     dimensions: Vec<&'static Dimension>,
     fit: Fit,
-    foundation: Option<&'static Block>,
+    foundation: Option<Foundation>,
     spacing: i32,
     chance: f32,
     turns: bool,
@@ -72,8 +72,8 @@ impl Placement<'_> {
         self
     }
     /// Fills under its bottom layer down to the ground, so it never floats. Without, the gap stays.
-    pub fn foundation(mut self, block: &'static Block) -> Self {
-        self.foundation = Some(block);
+    pub fn foundation(mut self, foundation: Foundation) -> Self {
+        self.foundation = Some(foundation);
         self
     }
     /// How much the ground under it may rise and fall, in blocks (6 by default): steeper places
@@ -82,7 +82,7 @@ impl Placement<'_> {
         self.fit = self.fit.max_slope(blocks);
         self
     }
-    /// How far its bottom layer goes into the ground (0 by default: it stands on it).
+    /// How much further down its bottom layer goes (0 by default: level with the ground).
     pub fn buried(mut self, blocks: i32) -> Self {
         self.fit = self.fit.buried(blocks);
         self
@@ -125,7 +125,7 @@ struct Single {
     /// Unturned.
     size: [i32; 3],
     fit: Fit,
-    foundation: Option<&'static Block>,
+    foundation: Option<Foundation>,
     chance: f32,
     turns: bool,
 }
@@ -147,8 +147,8 @@ impl Single {
             return Ok(());
         };
         let placed = p.structure(self.template, corner, turn)?.clear_above();
-        if let Some(block) = self.foundation {
-            placed.foundation(block);
+        if let Some(foundation) = self.foundation {
+            placed.foundation(foundation);
         }
         Ok(())
     }

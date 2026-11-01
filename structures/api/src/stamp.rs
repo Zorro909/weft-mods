@@ -1,16 +1,24 @@
 //! A part's blocks that fall into one cube: a template with its foundation pillars and the
 //! ground cut away above it, or a box of blocks. Each cube writes only its own share.
 
-use crate::part::{Part, Piece};
+use crate::part::{Foundation, Part, Piece};
 use crate::templates::Resolved;
+
+/// The block the ground has on top of column (`x`, `z`), 0 where there is none.
+pub(crate) type Surface<'a> = &'a dyn Fn(i32, i32) -> u32;
 
 /// Calls `set` with the position inside the cube at `origin` and the state of everything
 /// `part` puts there.
-pub(crate) fn stamp(part: &Part, origin: [i32; 3], set: &mut dyn FnMut([usize; 3], u32)) {
+pub(crate) fn stamp(
+    part: &Part,
+    origin: [i32; 3],
+    surface: Surface,
+    set: &mut dyn FnMut([usize; 3], u32),
+) {
     match part {
         Part::Piece(piece) => {
             if let Some(resolved) = piece.template.resolved() {
-                stamp_piece(piece, resolved, origin, set);
+                stamp_piece(piece, resolved, origin, surface, set);
             }
         }
         Part::Fill { from, to, state } => {
@@ -29,6 +37,7 @@ fn stamp_piece(
     piece: &Piece,
     resolved: &Resolved,
     origin: [i32; 3],
+    surface: Surface,
     set: &mut dyn FnMut([usize; 3], u32),
 ) {
     let [sx, sy, sz] = piece.size();
@@ -43,9 +52,17 @@ fn stamp_piece(
                 continue;
             };
             let floor = resolved.state(piece.turn, [dx, 0, dz]);
+            let pillar = overlap(ground + 1, cy - ground - 1, origin[1]);
             if let Some(foundation) = piece.foundation.filter(|_| floor != resolved.air) {
-                for (_, y) in overlap(ground + 1, cy - ground - 1, origin[1]) {
-                    set([x, y, z], foundation);
+                let (wx, wz) = (origin[0] + x as i32, origin[2] + z as i32);
+                let state = match foundation {
+                    Foundation::Ground => surface(wx, wz),
+                    Foundation::Block(block) => block.id(),
+                };
+                if state != 0 && state != u32::MAX {
+                    for (_, y) in pillar {
+                        set([x, y, z], state);
+                    }
                 }
             }
             if piece.clear_above {
@@ -93,7 +110,7 @@ mod tests {
             template: templates::add("test:stamp", template),
             corner,
             turn: Turn::None,
-            foundation: Some(STONE),
+            foundation: Some(Foundation::Ground),
             clear_above: true,
             ground: ground.into_iter().map(Some).collect(),
         }
@@ -101,7 +118,9 @@ mod tests {
 
     fn placed(piece: &Piece, origin: [i32; 3]) -> Vec<([usize; 3], u32)> {
         let mut out = Vec::new();
-        stamp_piece(piece, &resolved(), origin, &mut |p, s| out.push((p, s)));
+        stamp_piece(piece, &resolved(), origin, &|_, _| STONE, &mut |p, s| {
+            out.push((p, s))
+        });
         out.sort();
         out
     }
@@ -126,6 +145,31 @@ mod tests {
             !blocks.iter().any(|(p, s)| p[0] == 4 && p[2] == 4 && *s == STONE),
             "none under a gap in the floor"
         );
+    }
+
+    #[test]
+    fn a_ground_foundation_takes_each_columns_top_block() {
+        let piece = piece([3, 5, 3], vec![1, 4, 4, 1]);
+        let mut blocks = Vec::new();
+        let sand_at_x3 = |x: i32, _: i32| if x == 3 { 12 } else { STONE };
+        stamp_piece(&piece, &resolved(), [0, 0, 0], &sand_at_x3, &mut |p, s| {
+            blocks.push((p, s))
+        });
+        let under = |x: usize, z: usize| {
+            blocks
+                .iter()
+                .filter(move |(p, _)| p[0] == x && p[2] == z && p[1] < 5)
+        };
+        assert!(
+            under(3, 3).all(|(_, s)| *s == 12),
+            "the top block of its own column"
+        );
+        let nothing = |_: i32, _: i32| 0;
+        let mut set = 0;
+        stamp_piece(&piece, &resolved(), [0, 0, 0], &nothing, &mut |p, _| {
+            set += (p[1] < 5) as u32
+        });
+        assert_eq!(set, 0, "no foundation where the ground has no top block");
     }
 
     #[test]
@@ -178,7 +222,7 @@ mod tests {
             state: STONE,
         };
         let mut here = 0;
-        stamp(&fill, [0, 0, 0], &mut |_, _| here += 1);
+        stamp(&fill, [0, 0, 0], &|_, _| 0, &mut |_, _| here += 1);
         assert_eq!(here, 2, "two of its four blocks are in this cube");
     }
 }

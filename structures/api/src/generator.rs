@@ -63,12 +63,12 @@ impl Generator {
 
     fn generate(&self, g: &mut Gen) {
         let (seed, dimension) = (g.seed(), g.dimension());
-        let [ox, oy, oz] = g.origin();
+        let [ox, _, oz] = g.origin();
         for iz in region::indices(oz, oz + 15, self.region) {
             for ix in region::indices(ox, ox + 15, self.region) {
                 let slot = self.planned(seed, dimension, [ix, iz], &|x, z| ground(g, x, z));
                 if let Some(Some(planned)) = slot.get() {
-                    planned.stamp([ox, oy, oz], &mut |[x, y, z], state| g.set(x, y, z, state));
+                    stamp(planned, g);
                 }
             }
         }
@@ -120,6 +120,23 @@ impl Generator {
                 None
             }
         }
+    }
+}
+
+/// Writes the plan's blocks into the cube. They are gathered first: reading the ground's top
+/// blocks and writing the cube both go through `g`.
+fn stamp(planned: &Planned, g: &mut Gen) {
+    let origin = g.origin();
+    if !planned.reaches(origin) {
+        return;
+    }
+    let mut blocks = Vec::new();
+    let surface = |x, z| g.surface_block(x, z);
+    planned.stamp(origin, &surface, &mut |pos, state| {
+        blocks.push((pos, state))
+    });
+    for ([x, y, z], state) in blocks {
+        g.set(x, y, z, state);
     }
 }
 

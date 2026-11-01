@@ -18,14 +18,22 @@ pub(crate) enum Part {
     },
 }
 
+/// What fills under a structure's bottom layer down to the ground, so it never floats. Only
+/// under blocks of the bottom layer that aren't air.
+#[derive(Clone, Copy)]
+pub enum Foundation {
+    /// The block the ground has on top in each column: grass, sand, snow.
+    Ground,
+    Block(&'static Block),
+}
+
 /// A template placed by a plan.
 pub(crate) struct Piece {
     pub template: Arc<Entry>,
     /// Its lowest corner.
     pub corner: [i32; 3],
     pub turn: Turn,
-    /// Filled under its bottom layer down to the ground.
-    pub foundation: Option<u32>,
+    pub foundation: Option<Foundation>,
     /// Ground rising above its bottom layer is cut away.
     pub clear_above: bool,
     /// The ground height under each column of the turned footprint, x fastest, then z; filled
@@ -64,10 +72,8 @@ pub struct Placed<'p> {
 }
 
 impl Placed<'_> {
-    /// Fills under its bottom layer down to the ground with `block`, so it never floats; only
-    /// under blocks of the bottom layer that aren't air.
-    pub fn foundation(self, block: &Block) -> Self {
-        self.piece.foundation = Some(block.id()).filter(|&id| id != u32::MAX);
+    pub fn foundation(self, foundation: Foundation) -> Self {
+        self.piece.foundation = Some(foundation);
         self.with_ground()
     }
 

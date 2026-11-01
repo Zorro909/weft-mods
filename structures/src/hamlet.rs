@@ -1,13 +1,12 @@
 //! The hamlet: a well with cottages and wheat farms around it, joined to it by gravel paths. A
 //! dynamic structure, built from the same files the single structures use.
 
-use structures_api::{Fit, Plan, PlanError, Turn};
+use structures_api::{Fit, Foundation, Plan, PlanError, Turn};
 use weft_sdk::*;
 
 static WELL: Template = Template::named("well");
 static COTTAGE: Template = Template::named("cottage");
 static FARM: Template = Template::named("wheat_farm");
-static COBBLESTONE: Block = Block::named("base:cobblestone");
 static GRAVEL: Block = Block::named("base:gravel");
 static ANIMALS: Tag = Tag::named("animals");
 
@@ -43,7 +42,7 @@ fn hamlet(p: &mut Plan) -> Result<(), PlanError> {
         return Ok(());
     };
     p.structure(&WELL, well, Turn::None)?
-        .foundation(&COBBLESTONE)
+        .foundation(Foundation::Ground)
         .clear_above();
     let mut areas = vec![Area::of(corner, [5, 5])];
     for _ in 0..TRIES {
@@ -84,7 +83,7 @@ fn building(p: &mut Plan, centre: [i32; 2], areas: &[Area]) -> Result<Option<Are
         return Ok(None);
     };
     p.structure(template, corner, turn)?
-        .foundation(&COBBLESTONE)
+        .foundation(Foundation::Ground)
         .clear_above();
     Ok(Some(area))
 }

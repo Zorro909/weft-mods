@@ -21,15 +21,13 @@ structures_api = { path = "<path to weft-mods>/structures/api" }
 One template, stood on the ground now and then, turned whichever way the seed says:
 
 ```rust
-static COBBLESTONE: Block = Block::named("base:cobblestone");
-
 let hut = Structure::decode(include_bytes!("../assets/structures/hut.wst")).expect("hut.wst");
 structures_api::place(r, "hut", hut)
     .dimension(&base_api::OVERWORLD)
     .spacing(256)          // one chance per 256 x 256 blocks
     .chance(0.3)
     .biome("#animals")     // only where the biome has this tag
-    .foundation(&COBBLESTONE)
+    .foundation(Foundation::Ground) // fill under it with the ground's own top block
     .max_slope(5);         // skip places where the ground varies more
 ```
 
@@ -61,7 +59,7 @@ fn village(p: &mut Plan) -> Result<(), PlanError> {
     let Some(corner) = p.fit(&WELL, [x, z], Turn::None, &Fit::new().max_slope(3)) else {
         return Ok(());                       // the ground doesn't suit it
     };
-    p.structure(&WELL, corner, Turn::None)?.foundation(&COBBLESTONE).clear_above();
+    p.structure(&WELL, corner, Turn::None)?.foundation(Foundation::Ground).clear_above();
     if let Some(ground) = p.ground(x - 1, z) {
         p.set([x - 1, ground.height, z], &PATH)?;
     }
@@ -80,7 +78,7 @@ What a planner has:
 | `p.size(&T, turn)` | a template's size once turned |
 | `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) |
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned |
-| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(&B)` and `.clear_above()` meet the ground |
+| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` and `.clear_above()` meet the ground |
 | `p.set(pos, &B)?`, `p.set_state(..)?`, `p.fill(from, to, &B)?` | blocks |
 
 Later parts win where two overlap. A planner must be pure: it runs on the server and on every
@@ -112,9 +110,11 @@ every client gets the same answer:
 2. A static structure takes its region with `chance`, at a spot and a turn from the seed. The
    biome under its middle must have the tag; the ground under all of it may vary by at most
    `max_slope` blocks and must have no cave mouth.
-3. The bottom layer stands on the median ground height (`buried(n)` sinks it). Under it the
-   foundation block fills down to the ground, only below blocks of the bottom layer; ground that
-   rises above it is cut away.
+3. The bottom layer is the structure's floor: it takes the place of the ground's top block at
+   the median ground height, so doors are level with the ground around it (`buried(n)` sinks it
+   further). Under it the foundation fills down to the ground, only below blocks of the bottom
+   layer: `Foundation::Ground` with the top block the ground has in that column (grass, sand),
+   `Foundation::Block(&B)` with one block. Ground that rises above it is cut away.
 4. A turned structure turns its blocks too: `facing`, `axis` and the sides a block connects to
    (`north=true`) follow the turn.
 
@@ -128,7 +128,7 @@ mods' needs the engine to let mods register a locator.
 
 1. In the game, run `/structure save <name> <from> <to>`. The two corners are blocks of the box,
    inclusive (`~ ~ ~` works), at most 128 blocks along each side. Start the box at the floor:
-   the bottom layer stands on the ground, and the foundation goes under it.
+   the bottom layer is laid level with the ground, and the foundation goes under it.
 2. The file goes to `structures/<name>.wst` in the folder the game was started from (`Weft/`
    when you start it from the source tree). The reply shows the full path.
 3. Copy it into `assets/structures/` and rebuild. `build.rs` compiles every file there in.

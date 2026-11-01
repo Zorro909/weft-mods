@@ -73,7 +73,7 @@ impl Draft {
 /// brick chimney, and a workbench, furnace and chest inside.
 fn cottage() -> Structure {
     let mut d = Draft::new([9, 9, 7]);
-    d.fill([0, 0, 0], [8, 0, 6], "base:cobblestone");
+    d.fill([0, 0, 0], [8, 0, 6], "base:oak_planks");
     for y in 1..=3 {
         d.ring(y, [0, 0], [8, 6], "base:oak_planks");
     }

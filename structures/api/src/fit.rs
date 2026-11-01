@@ -26,7 +26,7 @@ impl Default for Fit {
 }
 
 impl Fit {
-    /// Any biome, ground varying by at most 6 blocks, the bottom layer standing on it.
+    /// Any biome, ground varying by at most 6 blocks, the bottom layer level with it.
     pub const fn new() -> Fit {
         Fit {
             biome: None,
@@ -44,14 +44,15 @@ impl Fit {
         self.max_slope = blocks;
         self
     }
-    /// How far its bottom layer goes into the ground.
+    /// How much further down its bottom layer goes.
     pub fn buried(mut self, blocks: i32) -> Fit {
         self.sink = blocks;
         self
     }
 
     /// The height of the bottom layer of a footprint of `size` (x, z) with its lowest corner at
-    /// `corner`, if the ground there meets the conditions. `ground` is `None` where nothing may
+    /// `corner`, if the ground there meets the conditions. The bottom layer takes the place of
+    /// the ground's top block, so a structure's own floor is level with the ground around it. `ground` is `None` where nothing may
     /// stand (no terrain, a cave mouth).
     pub(crate) fn floor(
         &self,
@@ -82,7 +83,7 @@ fn floor(
     if highest - lowest > max_slope {
         return None;
     }
-    Some(median(&heights) + 1 - sink)
+    Some(median(&heights) - sink)
 }
 
 /// The ground height of each column of a footprint, x fastest, then z.
@@ -120,9 +121,13 @@ mod tests {
     #[test]
     fn flat_ground_is_stood_on() {
         let y = floor(4, 0, [3, 3], [5, 5], &flat(70), &anywhere);
-        assert_eq!(y, Some(71), "the bottom layer on top of the ground");
+        assert_eq!(
+            y,
+            Some(70),
+            "the floor takes the place of the top block, level with it"
+        );
         let buried = floor(4, 2, [3, 3], [5, 5], &flat(70), &anywhere);
-        assert_eq!(buried, Some(69), "two layers into it");
+        assert_eq!(buried, Some(68), "two layers further down");
     }
 
     #[test]
@@ -134,7 +139,7 @@ mod tests {
             })
         };
         let y = floor(4, 0, [0, 0], [5, 1], &slope, &anywhere);
-        assert_eq!(y, Some(63), "62 is the middle of 60..=64");
+        assert_eq!(y, Some(62), "62 is the middle of 60..=64");
     }
 
     #[test]
