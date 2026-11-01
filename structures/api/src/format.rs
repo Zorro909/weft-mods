@@ -16,7 +16,7 @@ use crate::packing;
 const MAGIC: &[u8] = b"WSTR";
 const VERSION: u8 = 1;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Structure {
     /// Blocks along x, y and z.
     pub size: [u16; 3],

@@ -3,9 +3,8 @@
 
 use std::path::PathBuf;
 
+use structures_api::Structure;
 use weft_sdk::*;
-
-use crate::format::Structure;
 
 /// Longest side of a box, so one command can't stall the server reading millions of blocks.
 const MAX_SIDE: i32 = 128;

@@ -1,0 +1,11 @@
+[package]
+name = "structures_api"
+version = "0.1.0"
+edition = "2024"
+# As `Weft/Cargo.toml` declares; cargo then picks dependency versions that build with it.
+rust-version = "1.90"
+
+[dependencies]
+weft_sdk = { path = "../../Weft/crates/sdk" }
+# The compression world saves use for their cubes.
+lz4_flex = "0.14"
