@@ -3,7 +3,7 @@ name = "structures_api"
 version = "0.1.0"
 edition = "2024"
 # As `Weft/Cargo.toml` declares; cargo then picks dependency versions that build with it.
-rust-version = "1.90"
+rust-version = "1.95"
 
 [dependencies]
 weft_sdk = { path = "../../Weft/crates/sdk" }
