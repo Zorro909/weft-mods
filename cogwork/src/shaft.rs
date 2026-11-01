@@ -1,7 +1,6 @@
 //! The torque shaft: a thin rod that carries energy between engines and machines. It is a
 //! `conductor`, so the engine's energy networks join it with any mod's cables and machines.
 
-use weft_sdk::signal::Frame;
 use weft_sdk::*;
 
 pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
@@ -27,10 +26,9 @@ pub fn register(r: &mut Registry) {
 }
 
 fn model<'s>(p: &Props, s: State<'s>) -> State<'s> {
-    let frame = Frame::new(Dir::Down, Dir::North);
     let rod = |s: State<'s>, lo: [f32; 3], hi: [f32; 3]| {
         // Its boxes are what it collides with, too.
-        s.framed_box(frame, lo, hi, [("torque_shaft", [-1.0; 4]); 6])
+        s.model_box_faces(lo, hi, [("torque_shaft", abi::UV_FROM_BOX); 6])
     };
     let mut s = rod(s.texture("torque_shaft"), [LO; 3], [HI; 3]);
     for d in Dir::ALL.into_iter().filter(|d| p.is(d.name(), "true")) {

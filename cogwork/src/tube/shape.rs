@@ -2,7 +2,6 @@
 //! every neighbor it connects to, one `true`/`false` property per direction. A directing tube
 //! always has its arm toward `out`, so it keeps properties only for the other five.
 
-use weft_sdk::signal::Frame;
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES, step};
@@ -65,9 +64,7 @@ fn model<'s>(
 }
 
 fn with_box<'s>(s: State<'s>, texture: &str, lo: [f32; 3], hi: [f32; 3]) -> State<'s> {
-    // A floor facing north is the block's own axes; `-1` takes each face's picture from the box.
-    let frame = Frame::new(Dir::Down, Dir::North);
-    s.framed_box(frame, lo, hi, [(texture, [-1.0; 4]); 6])
+    s.model_box_faces(lo, hi, [(texture, abi::UV_FROM_BOX); 6])
 }
 
 /// The box from the hub's face toward `d` out to the edge of the block, `lo`..`hi` thick.

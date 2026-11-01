@@ -40,14 +40,13 @@ fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
     const WHOLE: [f32; 4] = [0.0, 0.0, 16.0, 16.0];
     const EDGE: [f32; 4] = [0.0, 0.0, 16.0, 4.0];
     s.texture(&plate_top)
-        .framed_box(
-            frame,
+        .frame(frame)
+        .model_box_faces(
             [0.0; 3],
             [16.0, 4.0, 16.0],
             faces(&plate_side, EDGE, &plate_top, WHOLE),
         )
-        .framed_box(
-            frame,
+        .model_box_faces(
             [4.0; 3],
             [12.0, 16.0, 12.0],
             faces(trunk, [4.0, 0.0, 12.0, 12.0], trunk, [4.0, 4.0, 12.0, 12.0]),
