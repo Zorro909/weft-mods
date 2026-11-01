@@ -63,7 +63,6 @@ impl Generator {
 
     fn generate(&self, g: &mut Gen) {
         let (seed, dimension) = (g.seed(), g.dimension());
-        locate::remember_seed(dimension, seed);
         let [ox, oy, oz] = g.origin();
         for iz in region::indices(oz, oz + 15, self.region) {
             for ix in region::indices(ox, ox + 15, self.region) {

@@ -122,7 +122,7 @@ every client gets the same answer:
 
 `/structure locate <name> [radius]` finds the nearest structure of this mod (4096 blocks around
 the player by default, at most 16384). It knows the structures of this mod only; finding other
-mods' needs the engine to let mods register a locator, or tell them the seed.
+mods' needs the engine to let mods register a locator.
 
 ## Adding a structure to this mod
 

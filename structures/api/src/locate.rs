@@ -1,7 +1,6 @@
 //! Finding structures again: their plans are worked out anew from the seed, so this finds them
 //! whether their cubes are generated or not.
 
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use weft_sdk::*;
@@ -12,29 +11,12 @@ use crate::region;
 
 /// Every structure this mod registered, in order.
 static STRUCTURES: RwLock<Vec<Arc<Generator>>> = RwLock::new(Vec::new());
-/// The seed each dimension generates with, learned at its first cube: the SDK hands mods the
-/// seed only while generating.
-static SEEDS: RwLock<Option<HashMap<u32, u64>>> = RwLock::new(None);
 
 pub(crate) fn add(generator: Arc<Generator>) {
     STRUCTURES
         .write()
         .unwrap_or_else(|e| e.into_inner())
         .push(generator);
-}
-
-pub(crate) fn remember_seed(dimension: u32, seed: u64) {
-    if seed_of(dimension) == Some(seed) {
-        return;
-    }
-    let mut seeds = SEEDS.write().unwrap_or_else(|e| e.into_inner());
-    seeds
-        .get_or_insert_with(HashMap::new)
-        .insert(dimension, seed);
-}
-
-fn seed_of(dimension: u32) -> Option<u64> {
-    SEEDS.read().ok()?.as_ref()?.get(&dimension).copied()
 }
 
 /// The full names of the structures this mod registered with `place` and `plan`.
@@ -45,8 +27,8 @@ pub fn names() -> Vec<String> {
 
 /// The nearest structure `name` (full name) within `radius` blocks of `from` in `world`'s
 /// dimension, seen from above: the lowest corner of the first thing its plan placed. Its cubes
-/// needn't be generated yet. `None` also for a name this mod didn't register, a dimension the
-/// structure isn't in, or a dimension that hasn't generated a cube yet.
+/// needn't be generated yet. `None` also for a name this mod didn't register, or a dimension the
+/// structure isn't in.
 pub fn locate(world: &World, name: &str, from: [i32; 3], radius: i32) -> Option<[i32; 3]> {
     let generator = find(name)?;
     let dimension_id = world.dimension();
@@ -55,7 +37,7 @@ pub fn locate(world: &World, name: &str, from: [i32; 3], radius: i32) -> Option<
     if !allowed {
         return None;
     }
-    let seed = seed_of(dimension_id)?;
+    let seed = world.seed();
     let dimension = Dimension::named(name_of(abi::entry_kind::DIMENSION, dimension_id));
     let ground = |x, z| ground(&dimension, seed, x, z);
     nearest(&generator, seed, dimension_id, from, radius, &ground)
