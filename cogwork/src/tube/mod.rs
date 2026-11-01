@@ -11,6 +11,7 @@ mod travel;
 mod visual;
 
 pub use extract::inject;
+use shape::Arms;
 pub use shape::{arm, connects_to_tube};
 use weft_sdk::*;
 
@@ -72,7 +73,7 @@ pub fn register(r: &mut Registry) {
     r.entity_component(&TUBE, Tube::default(), component_flags::SAVE);
     r.system(&TUBE, travel::tick_tubes);
     for (block, kind, texture) in PLAIN {
-        shape::tube(r.block(block), texture, None).tab(&crate::TAB);
+        shape::tube(r.block(block), texture, Arms::Same).tab(&crate::TAB);
         tube_entity(r, block, kind);
     }
     let timber = Entity::named("timber_tube");
@@ -89,7 +90,7 @@ pub fn register(r: &mut Registry) {
     shape::tube(
         r.block(&DIRECTING_TUBE),
         "tube_directing",
-        Some("tube_directing_out"),
+        Arms::Output("tube_directing_out"),
     )
     .on_use(shape::turn_output)
     .tab(&crate::TAB);
