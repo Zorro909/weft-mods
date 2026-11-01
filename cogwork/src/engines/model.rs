@@ -64,7 +64,7 @@ fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
             [16.0, 8.0 + lift, 16.0],
             faces(&piston_side, EDGE, &piston_top, WHOLE),
         )
-        .collision([0.0; 3], [16.0; 3])
+        .hitbox([0.0; 3], [1.0; 3])
 }
 
 /// A box's faces: `side` all round, `end` on its bottom and top.

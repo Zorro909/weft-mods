@@ -34,7 +34,7 @@ pub fn tube<'a>(
         .on_broken(|w, change| super::visual::clear_broken(w, change.pos))
 }
 
-/// The hub and the connected arms, each a box of its own for collision too.
+/// The hub and the connected arms, each a box of its own, which is what it collides with too.
 fn model<'s>(
     p: &Props,
     s: State<'s>,
@@ -58,7 +58,6 @@ fn with_box<'s>(s: State<'s>, texture: &str, lo: [f32; 3], hi: [f32; 3]) -> Stat
     // A floor facing north is the block's own axes; `-1` takes each face's picture from the box.
     let frame = Frame::new(Dir::Down, Dir::North);
     s.framed_box(frame, lo, hi, [(texture, [-1.0; 4]); 6])
-        .collision(lo, hi)
 }
 
 /// The box from the hub's face toward `d` out to the edge of the block, `lo`..`hi` thick.

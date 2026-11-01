@@ -15,7 +15,7 @@ pub fn register(r: &mut Registry) {
         .texture("survey_marker")
         .model_box([7.0, 0.0, 7.0], [9.0, 9.0, 9.0])
         .model_box([6.0, 9.0, 6.0], [10.0, 13.0, 10.0])
-        .collision([6.0, 0.0, 6.0], [10.0, 13.0, 10.0])
+        .hitbox([0.375, 0.0, 0.375], [0.625, 0.8125, 0.625])
         .needs_below("")
         .hardness(0.0)
         .light(4)
