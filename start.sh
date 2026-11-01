@@ -5,10 +5,26 @@
 #   ./start.sh                  every mod
 #   ./start.sh structures ...   only these; the repository's other mods are taken out of
 #                               `run/mods/` so they don't load. The engine's own (base, ...) stay.
+#
+# Where a toolbox named `weft-build` exists, cargo runs inside it; the game itself runs here.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mods_dir="$root/Weft/run/mods"
+toolbox_name=weft-build
+
+# Whether to build in the toolbox: not when already inside one (`/run/.toolboxenv`).
+use_toolbox() {
+    [ ! -e /run/.toolboxenv ] && command -v toolbox >/dev/null &&
+        toolbox list --containers 2>/dev/null | awk 'NR > 1 { print $2 }' | grep -qx "$toolbox_name"
+}
+
+if use_toolbox; then
+    echo "building in toolbox $toolbox_name"
+    cargo_build() { toolbox run --container "$toolbox_name" cargo build "$@"; }
+else
+    cargo_build() { cargo build "$@"; }
+fi
 
 case "$(uname -s)" in
     Darwin) prefix=lib suffix=dylib ;;
@@ -35,7 +51,7 @@ install_mod() {
     local folder=$1 id
     id="$(mod_id "$folder")"
     echo "building mod $id"
-    (cd "$root/$folder" && cargo build --release)
+    (cd "$root/$folder" && cargo_build --release)
     rm -rf "${mods_dir:?}/$id" "$mods_dir/$id.zip"
     mkdir -p "$mods_dir/$id"
     cp "$root/$folder/target/release/$prefix$id.$suffix" "$mods_dir/$id/"
@@ -64,7 +80,7 @@ for mod in "${chosen[@]}"; do
 done
 
 echo "building the engine"
-(cd "$root/Weft" && cargo build --release --workspace)
+(cd "$root/Weft" && cargo_build --release --workspace)
 mkdir -p "$mods_dir"
 for mod in "${available[@]}"; do
     if [[ " ${chosen[*]} " =~ " $mod " ]]; then
