@@ -1,90 +1,110 @@
-//! The sorting tube: a row of sample items per direction. An item leaves by a direction whose
-//! row holds its kind, else by one whose row is empty. Each direction has a color, on its arm
-//! and beside its row, so players match them up without a compass.
+//! The sorting tube: a row of sample items per direction, ghosts set by clicking them as on the
+//! assembly bench. An item leaves by a direction whose row holds its kind, else by one whose row
+//! is empty. Each direction has a color, on its arm and beside its row, so players match them up
+//! without a compass.
 
 use weft_sdk::*;
 
 use super::shape::Arms;
 use super::{SLOTS, SORTING_TUBE, TUBE, Tube, kind};
+use crate::ghost::{self, SLOT};
 
 static SORTING_MENU: Menu = Menu::named("sorting_tube");
 
 /// Samples per direction.
-const ROW: u32 = 6;
+const ROW: usize = 6;
 
-/// Each face's filter group, color and arm texture. The groups keep their compass names
-/// because saved tubes hold their samples under them.
-const SIDES: [(&str, &str, &str); 6] = [
-    ("filter_west", "green", "tube_sorting_green"),
-    ("filter_east", "yellow", "tube_sorting_yellow"),
-    ("filter_down", "black", "tube_sorting_black"),
-    ("filter_up", "white", "tube_sorting_white"),
-    ("filter_north", "red", "tube_sorting_red"),
-    ("filter_south", "blue", "tube_sorting_blue"),
+value! {
+    /// Each face's row of sample items, 0 where a row has none.
+    #[derive(Default)]
+    pub struct Samples { pub rows: [[u32; ROW]; 6] }
+}
+static SAMPLES: Component<Samples> = Component::named("cogwork:sorting_samples");
+
+/// Each face's color and arm texture.
+const SIDES: [(&str, &str); 6] = [
+    ("green", "tube_sorting_green"),
+    ("yellow", "tube_sorting_yellow"),
+    ("black", "tube_sorting_black"),
+    ("white", "tube_sorting_white"),
+    ("red", "tube_sorting_red"),
+    ("blue", "tube_sorting_blue"),
 ];
 
-fn group(face: u32) -> &'static str {
-    SIDES[face as usize].0
-}
-
 fn arm_texture(d: Dir) -> &'static str {
-    SIDES[d.face() as usize].2
+    SIDES[d.face() as usize].1
 }
 
 pub fn register(r: &mut Registry) {
-    let mut m = r
-        .machine(&SORTING_TUBE, &SORTING_MENU)
+    r.entity_component(
+        &SAMPLES,
+        Samples::default(),
+        component_flags::SAVE | component_flags::SYNC_MENU,
+    );
+    r.machine(&SORTING_TUBE, &SORTING_MENU)
         .block(|b| {
             super::shape::tube(b, "tube_sorting", Arms::PerSide(arm_texture)).tab(&crate::TAB)
         })
-        // First, so the carried items are slots 0..8 as in every tube; out only, so nothing
-        // gets shift-clicked in.
-        .group("transit", Slots::row(SLOTS as u32).output());
-    for face in 0..6 {
-        m = m.group(group(face), Slots::row(ROW).limit(1));
-    }
-    m.attach_with(
-        &TUBE,
-        Tube {
-            kind: kind::SORTING,
-            ..Tube::default()
-        },
-    )
-    .screen(screen);
+        // So the carried items are slots 0..8 as in every tube; out only, so nothing gets
+        // shift-clicked in.
+        .group("transit", Slots::row(SLOTS as u32).output())
+        .attach(&SAMPLES)
+        .attach_with(
+            &TUBE,
+            Tube {
+                kind: kind::SORTING,
+                ..Tube::default()
+            },
+        )
+        .screen(screen);
 }
 
 fn screen(ui: &mut Ui) {
     ui.panel("panel", S::col().pad(7.0).gap(3.0), |ui| {
         ui.title();
-        for (group, color, _) in SIDES {
+        for (face, (color, _)) in SIDES.into_iter().enumerate() {
             ui.row(S::row().gap(6.0), |ui| {
                 ui.image(&format!("cogwork:gui/swatch_{color}"), 10.0, 10.0);
                 ui.text_styled(S::col().w(36.0), &format!("cogwork.color.{color}"), &[]);
-                ui.group(group);
+                ui.row(S::row(), |ui| (0..ROW).for_each(|i| sample(ui, face, i)));
             });
         }
         ui.player_inventory(true);
     });
 }
 
-fn row(w: &World, id: u64, face: u32) -> Vec<ItemStack> {
-    let Some(g) = w.inventory(id).find_group(group(face)) else {
-        return Vec::new();
-    };
-    (0..g.len())
-        .map(|i| g.get(i))
-        .filter(|s| !s.is_empty())
-        .collect()
+/// The ghost cell of sample `i` in the row of `face`.
+fn sample(ui: &mut Ui, face: usize, i: usize) {
+    let under = |ui: &mut Ui| ui.image("base:gui/slot", SLOT, SLOT);
+    ghost::cell(ui, under, (face * ROW + i) as u32, move |c| {
+        c.menu_component(&SAMPLES).unwrap_or_default().rows[face][i]
+    });
+}
+
+/// Sets sample `cell`, counted along the rows, when `owner` is a sorting tube.
+pub fn set_sample(w: &World, owner: u64, cell: u32, item: u32) {
+    if let Some(s) = w.component_mut(owner, &SAMPLES)
+        && let Some(sample) = s.rows.as_flattened_mut().get_mut(cell as usize)
+    {
+        *sample = item;
+    }
+}
+
+fn rows(w: &World, id: u64) -> [[u32; ROW]; 6] {
+    w.component(id, &SAMPLES).map_or([[0; ROW]; 6], |s| s.rows)
 }
 
 /// Whether the row of `face` names the item.
 pub fn passes(w: &World, id: u64, face: u32, stack: ItemStack) -> bool {
-    row(w, id, face).iter().any(|s| s.item == stack.item)
+    rows(w, id)[face as usize].contains(&stack.item)
 }
 
 /// The faces whose rows are empty: they take whatever no row names.
 pub fn unfiltered(w: &World, id: u64) -> Vec<u32> {
-    (0..6).filter(|&f| row(w, id, f).is_empty()).collect()
+    let rows = rows(w, id);
+    (0..6)
+        .filter(|&f| rows[f as usize].iter().all(|&item| item == 0))
+        .collect()
 }
 
 #[cfg(test)]
@@ -101,7 +121,7 @@ mod tests {
     #[test]
     fn every_side_has_its_own_color_pictures_and_name() {
         let lang = include_str!("../../assets/lang/en_us.lang");
-        for (i, (_, color, texture)) in SIDES.iter().enumerate() {
+        for (i, (color, texture)) in SIDES.iter().enumerate() {
             assert!(
                 asset(&format!("textures/block/{texture}.png")),
                 "{color} arm texture"
@@ -115,7 +135,7 @@ mod tests {
                 "{color} name"
             );
             assert!(
-                SIDES[..i].iter().all(|s| s.1 != *color),
+                SIDES[..i].iter().all(|s| s.0 != *color),
                 "{color} used once"
             );
         }

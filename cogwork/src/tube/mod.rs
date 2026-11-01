@@ -13,6 +13,7 @@ mod visual;
 pub use extract::inject;
 use shape::Arms;
 pub use shape::{arm, connects_to_tube};
+pub use sorting::set_sample;
 use weft_sdk::*;
 
 /// Items one tube carries at once.

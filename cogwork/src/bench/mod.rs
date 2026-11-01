@@ -4,11 +4,13 @@
 
 mod cells;
 mod craft;
-mod ghost;
+mod fill;
 
 use base_api::CRAFTING;
-pub use ghost::insert;
+pub use fill::insert;
 use weft_sdk::*;
+
+use crate::ghost::{self, SLOT};
 
 pub static ASSEMBLY_BENCH: Block = Block::named("assembly_bench");
 static BENCH_MENU: Menu = Menu::named("assembly_bench");
@@ -31,8 +33,7 @@ static BENCH: Component<Bench> = Component::named("cogwork:bench");
 const CRAFT_COST: i64 = 240;
 /// A tag no item has: slots that take it are for showing, never for putting things in.
 const NOTHING: &str = "cogwork:nothing";
-/// Side of a slot in GUI pixels, and the player's inventory width.
-const SLOT: f32 = 18.0;
+/// The player's inventory width in GUI pixels.
 const INVENTORY_WIDTH: f32 = 9.0 * SLOT;
 
 /// What the screen says, by `cogwork.bench.<name>`.
@@ -52,7 +53,6 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&BENCH, craft::tick);
-    r.packet(&ghost::SET_GHOST, ghost::set);
     // On a block without an item, so no item has it.
     r.tag(NOTHING, &["gantry_frame"]);
     r.machine(&ASSEMBLY_BENCH, &BENCH_MENU)
@@ -123,28 +123,23 @@ fn screen(ui: &mut Ui) {
     });
 }
 
-/// One cell of the pattern, three parts on top of each other: the slot with the real item, a
-/// button over it that sets the ghost, and the ghost, drawn smaller. A click reaches the button
-/// through the ghost. Item icons in text are drawn after everything, so a cell holding items
-/// shows no ghost, which would cover their count.
+/// One cell of the pattern: the slot with the real items under its ghost. Item icons in text
+/// are drawn after everything, so a cell holding items shows no ghost, which would cover their
+/// count.
 fn cell(ui: &mut Ui, i: u32) {
-    ui.row(S::row().gap(-SLOT), |ui| {
-        ui.group_slot("grid", i);
-        let size = S::default().class("cogwork:ghost_cell").size(SLOT, SLOT);
-        ui.button("", size, move |c| ghost::click(c, i));
-        // Text pixels are half a GUI pixel: 1.5 draws the ghost 12 wide, 3 in from the edges.
-        ui.column(S::col().size(SLOT, SLOT).pad(3.0), |ui| {
-            ui.text_bind_styled(S::col().scale(1.5), move |c, out| {
-                let b = c.menu_component(&BENCH).unwrap_or_default();
-                let item = b.pattern[i as usize];
-                let shown = item != 0 && b.filled & (1 << i) == 0;
-                let ghost = if shown {
-                    Arg::Item(item)
-                } else {
-                    Arg::Text("")
-                };
-                out.set("cogwork.bench.ghost", &[ghost]);
-            });
-        });
+    let under = |ui: &mut Ui| ui.group_slot("grid", i);
+    ghost::cell(ui, under, i, move |c| {
+        let b = c.menu_component(&BENCH).unwrap_or_default();
+        let filled = b.filled & (1 << i) != 0;
+        if filled { 0 } else { b.pattern[i as usize] }
     });
+}
+
+/// Sets the ghost of `cell` when `owner` is a bench.
+pub fn set_ghost(w: &World, owner: u64, cell: u32, item: u32) {
+    if let Some(b) = w.component_mut(owner, &BENCH)
+        && let Some(ghost) = b.pattern.get_mut(cell as usize)
+    {
+        *ghost = item;
+    }
 }

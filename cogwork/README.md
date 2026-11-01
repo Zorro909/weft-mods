@@ -14,7 +14,7 @@ makes land flat. It is built on the SDK and `base_api` only, and depends on `bas
 | **Stone Tube** | Carries items to the tubes and machines it touches. |
 | **Timber Extraction Tube** | Pulls items out of chests and machines when an engine drives it, once a stroke: one item with a spring engine, eight with an ember engine. Two of them don't join. |
 | **Gilded Tube** | Speeds items up. |
-| **Sorting Tube** | One row of samples per side, each side with its own color on the arm and beside its row (west green, east yellow, down black, up white, north red, south blue): an item leaves by a side whose row holds its kind, else by a side with an empty row. |
+| **Sorting Tube** | One row of samples per side, each side with its own color on the arm and beside its row (west green, east yellow, down black, up white, north red, south blue). Samples are ghosts, set as on the assembly bench: click a cell with an item, which stays with you. An item leaves by a side whose row holds its kind, else by a side with an empty row. |
 | **Directing Tube** | Sends everything out of one side (the orange arm). |
 | **Void Tube** | Destroys what reaches it. |
 | **Torque Shaft** | Carries energy; it is a `conductor`, so it joins any mod's cables and machines. |
