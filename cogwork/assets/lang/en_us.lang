@@ -34,7 +34,7 @@ block.cogwork.ember_engine = Ember Engine
 block.cogwork.ember_engine.tooltip = Burns fuel for four times the energy of a spring engine. Stops to cool down when its energy has nowhere to go.
 
 block.cogwork.excavator = Excavator
-block.cogwork.excavator.tooltip = Digs out the area behind it, or the one marked out by survey markers next to it, down to the floor of the world. It runs only on more energy per tick than its standby, which grows with its area; what comes in beyond that sets how fast it digs.
+block.cogwork.excavator.tooltip = Digs out the area marked out by survey markers next to it, else the area of a frame it is placed against, else the area behind it, down to the floor of the world. It runs only on more energy per tick than its standby, which grows with its area; what comes in beyond that sets how fast it digs.
 block.cogwork.gantry_frame = Gantry Frame
 block.cogwork.assembly_bench = Assembly Bench
 block.cogwork.assembly_bench.tooltip = Click its pattern cells with items to lay out a crafting recipe; the items stay with you. Tubes then fill the cells with stacks of their ghosts, and with engine power it makes the recipe again and again, one item of each cell a craft. A timber tube takes the results out.

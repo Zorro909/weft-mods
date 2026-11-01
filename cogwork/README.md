@@ -23,7 +23,7 @@ makes land flat. It is built on the SDK and `base_api` only, and depends on `bas
 | **Excavator** | Builds a frame, then mines the inside from the top of the frame down to y = -64. Needs a standby of 10 energy per tick plus 1 per 4 blocks of area (9 by 9: 30); short of that it doesn't run at all, and what comes in beyond it sets how fast it digs. |
 | **Assembly Bench** | Click its pattern cells with an item to lay out a crafting recipe: the cell shows a small ghost of it and the item stays with you; an empty hand clears a cell. Tubes fill the cells with stacks of their ghosts, evenly where several ask for the same item, and while every cell holds something it crafts, one item of each cell and 240 energy a craft. A timber tube takes the results out. |
 | **Leveler** | Makes the area behind it, or a marked one, flat at its height: clears up to 16 blocks above into its output, then fills holes up to 4 deep with whole blocks from its stock. |
-| **Survey Marker** | Three in an L at one height mark a rectangle; an excavator or leveler placed next to one works that instead. |
+| **Survey Marker** | Three in an L at one height mark a rectangle; an excavator or leveler placed next to one works that instead. Without markers, an excavator placed against the bottom of a standing gantry frame takes up that frame's area again. |
 
 Engines push energy into the block their trunk points at (a timber tube, the excavator, any
 mod's machine with `core:energy`), and offer it to energy networks through torque shafts.
