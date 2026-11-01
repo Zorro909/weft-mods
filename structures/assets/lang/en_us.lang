@@ -1,0 +1,7 @@
+mod.structures.name = Structures
+mod.structures.description = Generates structures from .wst files in the overworld. /structure save <name> <from> <to> writes a box of the world to one.
+structures.saved = Saved {0} ({1} x {2} x {3} blocks) to {4}
+structures.bad_name = A structure's name is lowercase letters, digits and underscores, not {0}
+structures.too_big = A structure is at most {0} blocks along each side
+structures.not_loaded = Part of that box isn't loaded
+structures.write_failed = Could not save {0}: {1}
