@@ -1,0 +1,70 @@
+//! `Structure::place_in`: puts a structure into the world now, turned, the way a command would.
+//! All of it or nothing.
+
+use std::collections::HashMap;
+use std::fmt;
+
+use weft_sdk::*;
+
+use crate::format::Structure;
+use crate::turn::{Turn, turn_state};
+
+/// Why `place_in` placed nothing.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PlaceError {
+    /// A block the structure has and this game doesn't (`base:furnace[facing=east]`).
+    UnknownBlock(String),
+    /// Part of where it would go isn't loaded.
+    NotLoaded,
+}
+
+impl fmt::Display for PlaceError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            PlaceError::UnknownBlock(name) => write!(f, "{name} is no block of this game"),
+            PlaceError::NotLoaded => write!(f, "part of where it would go isn't loaded"),
+        }
+    }
+}
+
+impl Structure {
+    /// Puts it into `world` turned by `turn`, the lowest corner of the turned box at `corner`.
+    /// Every block is set, air too. On an error nothing is. Gives back the blocks it replaced,
+    /// to put back for an undo.
+    pub fn place_in(
+        &self,
+        world: &World,
+        corner: [i32; 3],
+        turn: Turn,
+    ) -> Result<Vec<([i32; 3], u32)>, PlaceError> {
+        let states = self.states(turn)?;
+        let size = self.size.map(|v| v as i32);
+        let blocks: Vec<([i32; 3], u32)> = self
+            .blocks()
+            .map(|(pos, name)| {
+                let [x, y, z] = turn.pos(pos, size);
+                ([corner[0] + x, corner[1] + y, corner[2] + z], states[name])
+            })
+            .collect();
+        let replaced: Option<Vec<([i32; 3], u32)>> = blocks
+            .iter()
+            .map(|&(pos, _)| world.get_loaded(pos).map(|state| (pos, state)))
+            .collect();
+        let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
+        for &(pos, state) in &blocks {
+            world.set(pos, state);
+        }
+        Ok(replaced)
+    }
+
+    /// Each block name as a state, turned.
+    fn states(&self, turn: Turn) -> Result<HashMap<&str, u32>, PlaceError> {
+        self.palette
+            .iter()
+            .map(|name| match Block::lookup(name) {
+                Some(state) => Ok((name.as_str(), turn_state(state, turn))),
+                None => Err(PlaceError::UnknownBlock(name.clone())),
+            })
+            .collect()
+    }
+}
