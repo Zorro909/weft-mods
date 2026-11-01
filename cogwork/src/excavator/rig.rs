@@ -25,6 +25,8 @@ const BEAMS: usize = 19;
 const SLOTS: usize = 2 + SHAFTS + 2 * BEAMS;
 /// Blocks one shaft or beam piece is long.
 const PIECE: f64 = 4.0;
+/// Blocks the bit stands above where it is placed (its tip reaches a quarter below).
+const BIT_HEIGHT: f64 = 0.75;
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
@@ -41,9 +43,13 @@ pub fn register(r: &mut Registry) {
         ),
         (
             &BIT,
+            // `bit` turns about its own axis (`animations/drill_bit.animation.json`), the tip
+            // with it.
             vec![
-                part([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0]),
-                Part::new("tip", [0.0; 3]).cube([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0], [32.0, 0.0]),
+                Part::new("bit", [0.0; 3]).cube([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0], [0.0, 0.0]),
+                Part::new("tip", [0.0; 3])
+                    .cube([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0], [32.0, 0.0])
+                    .child_of(0),
             ],
             [64, 32],
         ),
@@ -85,12 +91,14 @@ fn leave_without_owner(t: &EntityTick) {
 fn layout(d: &Dig) -> Vec<(usize, &'static Entity, [f64; 3], f32)> {
     let [x, y, z] = d.head.map(|v| v as f64);
     let top = d.hi[1] as f64 + 0.25;
+    // On top of the block it drills, only its tip in it; never above the carriage.
+    let bit = (y + 1.0).min(top - BIT_HEIGHT);
     let mut out = vec![
         (0, &CARRIAGE, [x, top, z], 0.0),
-        (1, &BIT, [x, y + 0.25, z], 0.0),
+        (1, &BIT, [x, bit, z], 0.0),
     ];
     // Shaft pieces hang from the carriage down to the bit; the lowest reaches into the ground.
-    let reach = top - (y + 1.0);
+    let reach = top - (bit + BIT_HEIGHT);
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
     out.extend((0..shafts).map(|k| (2 + k, &SHAFT, [x, top - PIECE * (k + 1) as f64, z], 0.0)));
     let beam_y = top + 0.125;
@@ -141,24 +149,23 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
 
 /// Moves the piece `id` to `pos`, or makes it if it is gone; returns its id.
 fn place(w: &World, owner: u64, id: u64, kind: &'static Entity, pos: [f64; 3], yaw: f32) -> u64 {
-    let id = match w.entity(id).filter(|st| id != 0 && st.kind == kind.id()) {
-        Some(_) => id,
-        None => {
-            let new = w.spawn(kind, pos);
-            if let Some(o) = w.component_mut(new, &OWNER) {
-                *o = owner;
-            }
-            new
+    let Some(mut st) = w.entity(id).filter(|st| id != 0 && st.kind == kind.id()) else {
+        let new = w.spawn(kind, pos);
+        if let Some(o) = w.component_mut(new, &OWNER) {
+            *o = owner;
         }
-    };
-    if let Some(mut st) = w.entity(id) {
-        let moved = (0..3).any(|i| (st.pos[i] - pos[i]).abs() > 1e-4) || st.yaw != yaw.to_radians();
-        if moved {
-            st.vel = std::array::from_fn(|i| (pos[i] - st.pos[i]) * 20.0);
-            st.pos = pos;
+        if let Some(mut st) = w.entity(new) {
             st.yaw = yaw.to_radians();
-            w.set_entity(id, &st);
+            w.set_entity(new, &st);
         }
+        return new;
+    };
+    // A kinematic entity moves by its velocity after this tick's systems: just that speed lands
+    // it on `pos`, and it stands still once there. Placing it as well would overshoot.
+    let vel: [f64; 3] = std::array::from_fn(|i| (pos[i] - st.pos[i]) * 20.0);
+    if vel != st.vel {
+        st.vel = vel;
+        w.set_entity(id, &st);
     }
     id
 }
@@ -189,10 +196,25 @@ mod tests {
             .map(|p| p.2[1])
             .collect();
         let lowest = shafts.iter().copied().fold(f64::MAX, f64::min);
-        assert!(lowest <= -2.0, "down to the top of the bit");
+        assert!(lowest <= -2.0 + BIT_HEIGHT, "down to the top of the bit");
         assert!(
             shafts.iter().all(|y| y + PIECE <= 8.25 + 1e-9),
             "none above the carriage"
         );
+    }
+
+    #[test]
+    fn the_bit_stands_on_the_block_it_drills() {
+        let d = Dig {
+            stage: stage::MINE,
+            hi: [10, 8, 10],
+            head: [5.5, -3.0, 5.5],
+            ..Dig::default()
+        };
+        let bit = layout(&d)
+            .into_iter()
+            .find(|p| std::ptr::eq(p.1, &BIT))
+            .map(|p| p.2[1]);
+        assert_eq!(bit, Some(-2.0), "its foot on top of the block at -3");
     }
 }
