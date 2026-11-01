@@ -17,10 +17,14 @@ static STANDING: [Entity; 2] = [
 ];
 const TEXTURES: [&str; 2] = ["spring_piston", "ember_piston"];
 
+/// Ticks the piston takes to rise or to fall, and to rest at each end: the client eases it
+/// toward where it is, so without the rest it would turn back short of the ends.
+const TRAVEL: u32 = 6;
+const REST: u32 = 3;
 /// Ticks of one stroke, up and back down.
-pub const STROKE_TICKS: u32 = 18;
-/// Texels the piston rises at the top of its stroke.
-const LIFT: f64 = 6.0;
+pub const STROKE_TICKS: u32 = 2 * (TRAVEL + REST);
+/// Texels the piston rises: from on the base plate (4..8) to flush with the trunk's end (12..16).
+const LIFT: f64 = 8.0;
 
 pub fn register(r: &mut Registry) {
     for k in 0..2 {
@@ -45,15 +49,20 @@ fn standing_plate() -> Part {
     plate().rotation(90.0, 0.0, 0.0)
 }
 
-/// Texels the piston stands above its rest at `stroke` ticks into it: up and back down.
+/// Texels the piston stands above its rest at `stroke` ticks into it: up, a rest, back down, a
+/// rest.
 pub fn lift(stroke: u32) -> f64 {
-    let half = STROKE_TICKS / 2;
-    let up = if stroke <= half {
-        stroke
+    let s = stroke % STROKE_TICKS;
+    let up = if s < TRAVEL {
+        s
+    } else if s < TRAVEL + REST {
+        TRAVEL
+    } else if s < 2 * TRAVEL + REST {
+        2 * TRAVEL + REST - s
     } else {
-        STROKE_TICKS - stroke
+        0
     };
-    LIFT * up as f64 / half as f64
+    LIFT * up as f64 / TRAVEL as f64
 }
 
 /// Puts the engine `id`'s piston where its stroke has it.
@@ -83,9 +92,17 @@ mod tests {
     #[test]
     fn the_piston_rises_and_falls_once_a_stroke() {
         assert_eq!(lift(0), 0.0, "starts at rest");
-        assert_eq!(lift(STROKE_TICKS / 2), LIFT, "top halfway through");
-        assert_eq!(lift(3), lift(STROKE_TICKS - 3), "down the way it came up");
         assert!(lift(1) < lift(2), "rising");
+        let lifts: Vec<f64> = (0..STROKE_TICKS).map(lift).collect();
+        let max = lifts.iter().copied().fold(0.0, f64::max);
+        assert_eq!(
+            4.0 + max + 4.0,
+            16.0,
+            "the plate and piston reach the trunk's end"
+        );
+        let at_top = lifts.iter().filter(|&&l| l == max).count();
+        let at_bottom = lifts.iter().filter(|&&l| l == 0.0).count();
+        assert!(at_top > 2 && at_bottom > 2, "rests at both ends: {lifts:?}");
     }
 
     #[test]
