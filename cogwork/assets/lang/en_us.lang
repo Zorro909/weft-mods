@@ -1,0 +1,81 @@
+language.name = English
+mod.cogwork.name = Cogwork
+mod.cogwork.description = Gears, item tubes and engines, an excavator that digs out a whole area layer by layer, an assembly bench that crafts on its own and a leveler that makes land flat.\n\nTimber tubes pull items out of chests and machines when an engine drives them. Stone tubes carry them along, and every item can be seen travelling inside. Gilded tubes speed items up, sorting tubes send each kind its own way, directing tubes send everything one way, and void tubes destroy what reaches them.\n\nThe excavator builds a frame around its area and lowers a drill on a gantry, mining down to the floor of the world and handing everything to the tubes or chests beside it.
+mod.cogwork.authors = Zorro909
+tab.cogwork.cogwork = Cogwork
+
+item.cogwork.wooden_cog = Wooden Cog
+item.cogwork.stone_cog = Stone Cog
+item.cogwork.iron_cog = Iron Cog
+item.cogwork.gold_cog = Gold Cog
+item.cogwork.diamond_cog = Diamond Cog
+item.cogwork.tuning_wrench = Tuning Wrench
+item.cogwork.tuning_wrench.tooltip = Use on a directing tube to change its output, on an engine to turn it.
+
+block.cogwork.stone_tube = Stone Tube
+block.cogwork.stone_tube.tooltip = Carries items to the tubes and machines it touches.
+block.cogwork.timber_tube = Timber Extraction Tube
+block.cogwork.timber_tube.tooltip = Pulls items out of the chests and machines it touches when an engine drives it: one item a stroke with a spring engine, eight with an ember engine. Two of them don't join.
+block.cogwork.gilded_tube = Gilded Tube
+block.cogwork.gilded_tube.tooltip = Speeds up the items going through it.
+block.cogwork.sorting_tube = Sorting Tube
+block.cogwork.sorting_tube.tooltip = Sends each item out of the side whose row holds a sample of it, or else out of a side with an empty row.
+block.cogwork.directing_tube = Directing Tube
+block.cogwork.directing_tube.tooltip = Sends everything out of one side. Change it with a tuning wrench.
+block.cogwork.void_tube = Void Tube
+block.cogwork.void_tube.tooltip = Destroys every item that reaches it.
+
+block.cogwork.torque_shaft = Torque Shaft
+block.cogwork.torque_shaft.tooltip = Carries energy between engines and machines, and joins any mod's cables.
+
+block.cogwork.spring_engine = Spring Engine
+block.cogwork.spring_engine.tooltip = Runs while it gets a redstone signal. Pushes energy into the block its trunk points at.
+block.cogwork.ember_engine = Ember Engine
+block.cogwork.ember_engine.tooltip = Burns fuel for four times the energy of a spring engine. Stops to cool down when its energy has nowhere to go.
+
+block.cogwork.excavator = Excavator
+block.cogwork.excavator.tooltip = Digs out the area marked out by survey markers next to it, else the area of a frame it is placed against, else the area behind it, down to the floor of the world. It runs only on more energy per tick than its standby, which grows with its area; what comes in beyond that sets how fast it digs.
+block.cogwork.gantry_frame = Gantry Frame
+block.cogwork.assembly_bench = Assembly Bench
+block.cogwork.assembly_bench.tooltip = Click its pattern cells with items to lay out a crafting recipe; the items stay with you. Tubes then fill the cells with stacks of their ghosts, and with engine power it makes the recipe again and again, one item of each cell a craft. A timber tube takes the results out.
+block.cogwork.leveler = Leveler
+block.cogwork.leveler.tooltip = Makes the area behind it, or the one marked out by survey markers next to it, flat at its height: clears up to 16 blocks above and fills holes up to 4 deep with whole blocks from its stock.
+block.cogwork.survey_marker = Survey Marker
+block.cogwork.survey_marker.tooltip = Place up to three more along two straight lines to mark a rectangle, then put an excavator or a leveler next to one. Use one to see the area; a marker without one puffs.
+
+cogwork.energy = {color:dim}{0} / {1} energy{/}
+cogwork.engine.heat = Heat {0}%
+cogwork.engine.overheated = {#ff5040}Overheated: cooling down{/}
+cogwork.side.west = West
+cogwork.side.east = East
+cogwork.side.down = Down
+cogwork.side.up = Up
+cogwork.side.north = North
+cogwork.side.south = South
+
+cogwork.excavator.idle = Waiting to start
+cogwork.excavator.no_power = Not enough energy: needs more than {1} per tick
+cogwork.excavator.frame = Building the frame
+cogwork.excavator.mining = Mining layer {0}
+cogwork.excavator.full = Output full: connect a tube or a chest
+cogwork.excavator.done = Finished
+cogwork.excavator.blocked = Waiting for the area to load
+cogwork.excavator.area = {color:dim}Area {0} x {1}, standby {2} energy per tick{/}
+
+cogwork.bench.no_recipe = Click cells to set a recipe
+cogwork.bench.missing = Waiting for ingredients
+cogwork.bench.full = Output full
+cogwork.bench.no_power = Needs engine power
+cogwork.bench.working = Crafting
+cogwork.bench.ghost = {0}
+
+cogwork.leveler.idle = Waiting to start
+cogwork.leveler.no_power = Needs energy from an engine
+cogwork.leveler.clearing = Clearing layer {0}
+cogwork.leveler.filling = Filling layer {0}
+cogwork.leveler.full = Output full: connect a tube or a chest
+cogwork.leveler.no_blocks = Needs whole blocks in its stock to fill with
+cogwork.leveler.blocked = Waiting for the area to load
+cogwork.leveler.done = Finished
+cogwork.leveler.area = {color:dim}Area {0} x {1}, flat at height {2}{/}
+cogwork.leveler.stock = Stock

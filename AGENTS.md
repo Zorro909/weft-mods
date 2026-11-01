@@ -39,4 +39,5 @@ Read the matching guide before you start; each is short.
 - Every fixed bug comes with a test that fails without the fix.
 - For a mod, run the checks in `docs/agents/mods.md`. For an engine change, run in `Weft/`: `cargo build --release --workspace`, `cargo test --release --workspace`, then `--test all` through `tools/run-headless.sh` as `docs/agents/testing.md` runs it; upstream CI runs no tests, so this is the only check. Report any check you could not run, and say when something visual needs a human to look at it in the game.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org).
+- Commit and push every finished change in this repository without waiting to be asked. Engine work in `Weft/` reaches upstream only through your user.
 - For a pull request to the upstream project, give your user a short, factual summary to write their own description from: what changed, why, what you ran, and what you did with AI help.

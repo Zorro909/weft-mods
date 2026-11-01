@@ -1,0 +1,12 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.drill_bit.idle": {
+      "loop": true,
+      "animation_length": 0.4,
+      "bones": {
+        "bit": { "rotation": { "0": [0, 0, 0], "0.1": [0, 90, 0], "0.2": [0, 180, 0], "0.3": [0, 270, 0], "0.4": [0, 360, 0] } }
+      }
+    }
+  }
+}
