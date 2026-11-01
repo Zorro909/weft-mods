@@ -5,6 +5,7 @@
 mod area;
 mod dig;
 mod mine;
+mod power;
 mod rig;
 
 use weft_sdk::*;
@@ -84,7 +85,8 @@ pub fn register(r: &mut Registry) {
             Energy {
                 stored: 0,
                 capacity: 20_000,
-                max_in: 1_000,
+                // Any number of engines: standby alone can pass 1000 on a large area.
+                max_in: 20_000,
                 max_out: 0,
             },
         )
@@ -110,7 +112,10 @@ fn screen(ui: &mut Ui) {
                     let name = status::NAMES.get(d.status as usize).unwrap_or(&"idle");
                     out.set(
                         &format!("cogwork.excavator.{name}"),
-                        &[Arg::Int(d.cursor[1] as i64)],
+                        &[
+                            Arg::Int(d.cursor[1] as i64),
+                            Arg::Int(power::standby(d.lo, d.hi)),
+                        ],
                     );
                 });
                 ui.text_bind(|c, out| {
@@ -118,7 +123,11 @@ fn screen(ui: &mut Ui) {
                     let (x, z) = (d.hi[0] - d.lo[0] - 1, d.hi[2] - d.lo[2] - 1);
                     out.set(
                         "cogwork.excavator.area",
-                        &[Arg::Int(x.max(0) as i64), Arg::Int(z.max(0) as i64)],
+                        &[
+                            Arg::Int(x.max(0) as i64),
+                            Arg::Int(z.max(0) as i64),
+                            Arg::Int(power::standby(d.lo, d.hi)),
+                        ],
                     );
                 });
             });

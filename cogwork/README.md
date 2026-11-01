@@ -19,7 +19,7 @@ area layer by layer. It is built on the SDK and `base_api` only, and depends on 
 | **Torque Shaft** | Carries energy; it is a `conductor`, so it joins any mod's cables and machines. |
 | **Spring Engine** | Runs on a redstone signal, 10 energy per tick. |
 | **Ember Engine** | Burns any `fuel`, 40 energy per tick; stops to cool down when its energy has nowhere to go. |
-| **Excavator** | Builds a frame, then mines the inside from the top of the frame down to y = -64. |
+| **Excavator** | Builds a frame, then mines the inside from the top of the frame down to y = -64. Needs a standby of 10 energy per tick plus 1 per 4 blocks of area (9 by 9: 30); short of that it doesn't run at all, and what comes in beyond it sets how fast it digs. |
 | **Survey Marker** | Three in an L at one height mark a rectangle; an excavator placed next to one digs that instead. |
 
 Engines push energy into the block their trunk points at (a timber tube, the excavator, any
@@ -33,7 +33,7 @@ tubes work with the base game's furnace and chest and with other mods' machines.
 2. Place a spring engine against the timber tube (it points into the block you click), and
    power it with redstone. Items leave the first chest and travel to the second.
 3. Place an excavator with an ember engine on it and a chest or tube beside it, and put coal in
-   the engine. It digs out the 9 by 9 area behind it.
+   the engine. It digs out the 9 by 9 area behind it; add engines and it digs faster.
 
 ## Build and install
 

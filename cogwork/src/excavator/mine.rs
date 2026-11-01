@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use super::dig::pay;
+use super::power::{pay, travel};
 use super::{Dig, EXCAVATOR, GANTRY_FRAME, status};
 
 /// Energy per block: a base and as much again per point of hardness (stone 1.5: 1000).
@@ -46,8 +46,8 @@ pub fn worth_mining(state: u32) -> bool {
         && !EXCAVATOR.is(state)
 }
 
-/// Moves the drill toward `target`; true once it is there.
-pub fn drill_to(d: &mut Dig, target: [i32; 3]) -> bool {
+/// Moves the drill toward `target` as far as this tick's energy pays for; true once it is there.
+pub fn drill_to(w: &World, id: u64, d: &mut Dig, target: [i32; 3]) -> bool {
     let goal = [
         target[0] as f32 + 0.5,
         target[1] as f32,
@@ -55,12 +55,18 @@ pub fn drill_to(d: &mut Dig, target: [i32; 3]) -> bool {
     ];
     let gap: [f32; 3] = std::array::from_fn(|i| goal[i] - d.head[i]);
     let length = gap.iter().map(|v| v * v).sum::<f32>().sqrt();
-    if length <= DRILL_SPEED {
+    let step = travel(w, id, length.min(DRILL_SPEED));
+    if step >= length {
         d.head = goal;
         return true;
     }
+    d.status = if step > 0.0 {
+        status::MINING
+    } else {
+        status::NO_POWER
+    };
     for i in 0..3 {
-        d.head[i] += gap[i] / length * DRILL_SPEED;
+        d.head[i] += gap[i] / length * step;
     }
     false
 }

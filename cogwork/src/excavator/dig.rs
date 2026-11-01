@@ -3,13 +3,11 @@
 use weft_sdk::*;
 
 use super::mine::{Mined, mine_block, opens_into};
+use super::power::{hold, pay};
 use super::{Dig, EXCAVATOR, GANTRY_FRAME, area, rig, stage, status};
 
 /// Energy to put up one block of frame.
 const FRAME_COST: i64 = 100;
-/// The most energy it puts into its work per tick, however many engines drive it: stone takes
-/// at least 8 ticks.
-const DRAW_RATE: i64 = 120;
 /// The most blocks looked at per tick for the next one to mine (air is skipped).
 const SCAN: u32 = 512;
 /// Ticks a layer may stay unloaded before the excavator takes it for the floor of the world.
@@ -29,7 +27,9 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
             start(&w, pos, d);
         }
         eject(&w, id, pos);
-        match d.stage {
+        let current = d.stage;
+        match current {
+            stage::FRAME | stage::MINE if !hold(&w, id, d) => {}
             stage::FRAME => build_frame(&w, id, d),
             stage::MINE => mine_next(&w, id, d),
             _ => {}
@@ -90,34 +90,13 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
     ];
 }
 
-/// Puts stored energy into a job of `cost` until `d.spent` covers it; true once it does. The
-/// caller starts `spent` over when the job is done.
-pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
-    let drawn = w
-        .energy(id)
-        .map_or(0, |e| e.stored)
-        .min((cost - d.spent).clamp(0, DRAW_RATE));
-    if let Some(e) = w.energy_mut(id) {
-        e.stored -= drawn;
-    }
-    d.spent += drawn;
-    if d.spent >= cost {
-        return true;
-    }
-    if drawn == 0 {
-        d.status = status::NO_POWER;
-    }
-    false
-}
-
 /// Mines toward the next block that is there to mine.
 fn mine_next(w: &World, id: u64, d: &mut Dig) {
     let Some(target) = find_target(w, d) else {
         return;
     };
     let state = w.get(target);
-    if !super::mine::drill_to(d, target) {
-        d.status = status::MINING;
+    if !super::mine::drill_to(w, id, d, target) {
         return;
     }
     match mine_block(w, id, d, target, state) {

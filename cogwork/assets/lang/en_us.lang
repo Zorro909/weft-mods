@@ -34,7 +34,7 @@ block.cogwork.ember_engine = Ember Engine
 block.cogwork.ember_engine.tooltip = Burns fuel for four times the energy of a spring engine. Stops to cool down when its energy has nowhere to go.
 
 block.cogwork.excavator = Excavator
-block.cogwork.excavator.tooltip = Digs out the area behind it, or the one marked out by survey markers next to it, down to the floor of the world.
+block.cogwork.excavator.tooltip = Digs out the area behind it, or the one marked out by survey markers next to it, down to the floor of the world. It runs only on more energy per tick than its standby, which grows with its area; what comes in beyond that sets how fast it digs.
 block.cogwork.gantry_frame = Gantry Frame
 block.cogwork.survey_marker = Survey Marker
 block.cogwork.survey_marker.tooltip = Place up to three more along two straight lines to mark a rectangle, then put an excavator next to one. Use one to see the area; a marker without one puffs.
@@ -50,10 +50,10 @@ cogwork.side.north = North
 cogwork.side.south = South
 
 cogwork.excavator.idle = Waiting to start
-cogwork.excavator.no_power = Needs energy from an engine
+cogwork.excavator.no_power = Not enough energy: needs more than {1} per tick
 cogwork.excavator.frame = Building the frame
 cogwork.excavator.mining = Mining layer {0}
 cogwork.excavator.full = Output full: connect a tube or a chest
 cogwork.excavator.done = Finished
 cogwork.excavator.blocked = Waiting for the area to load
-cogwork.excavator.area = {color:dim}Area {0} x {1}{/}
+cogwork.excavator.area = {color:dim}Area {0} x {1}, standby {2} energy per tick{/}
