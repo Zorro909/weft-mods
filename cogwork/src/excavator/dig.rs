@@ -2,9 +2,10 @@
 
 use weft_sdk::*;
 
-use super::mine::{Mined, mine_block, opens_into};
+use super::mine::{Mined, block_cost, drill_to, mine_block, sweep};
 use super::power::{hold, pay};
 use super::{Dig, EXCAVATOR, GANTRY_FRAME, area, rig, stage, status};
+use crate::harvest::opens_into;
 
 /// Energy to put up one block of frame.
 const FRAME_COST: i64 = 100;
@@ -26,7 +27,7 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
         if d.stage == stage::NEW {
             start(&w, pos, d);
         }
-        eject(&w, id, pos);
+        crate::store::eject(&w, id, pos);
         let current = d.stage;
         match current {
             stage::FRAME | stage::MINE if !hold(&w, id, d) => {}
@@ -96,10 +97,18 @@ fn mine_next(w: &World, id: u64, d: &mut Dig) {
         return;
     };
     let state = w.get(target);
-    if !super::mine::drill_to(w, id, d, target) {
+    if !drill_to(w, id, d, sweep(d.lo, target, 0.0)) {
         return;
     }
-    match mine_block(w, id, d, target, state) {
+    let mined = mine_block(w, id, d, target, state);
+    // The drill shows how far the block is: past it, it is mined.
+    let done = match mined {
+        Mined::Done => 1.0,
+        Mined::Skipped => 0.0,
+        Mined::Waiting(_) => (d.spent as f32 / block_cost(state) as f32).min(1.0),
+    };
+    d.head = sweep(d.lo, target, done);
+    match mined {
         Mined::Done | Mined::Skipped => d.cursor = area::next(d.lo, d.hi, target),
         Mined::Waiting(s) => d.status = s,
     }
@@ -135,28 +144,4 @@ fn find_target(w: &World, d: &mut Dig) -> Option<[i32; 3]> {
 fn finish(d: &mut Dig) {
     d.stage = stage::DONE;
     d.status = status::DONE;
-}
-
-/// Hands one stack of what it mined to a tube or machine beside it.
-fn eject(w: &World, id: u64, pos: [i32; 3]) {
-    let out = w.inventory(id).group("output");
-    let Some(slot) = (0..out.len()).find(|&i| !out.get(i).is_empty()) else {
-        return;
-    };
-    let mut stack = out.get(slot);
-    for face in 0..6 {
-        let other = w.block_entity(crate::tube::step(pos, face));
-        if other == 0 || other == id {
-            continue;
-        }
-        stack = if w.component(other, &crate::tube::TUBE).is_some() {
-            crate::tube::inject(w, other, stack)
-        } else {
-            crate::store::insert(w, other, stack, false)
-        };
-        if stack.is_empty() {
-            break;
-        }
-    }
-    out.set(slot, stack);
 }

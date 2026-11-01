@@ -1,8 +1,9 @@
 # Cogwork
 
-A Weft mod about moving items and digging: item tubes that show every item travelling inside
-them, engines to drive them, and an excavator that builds a gantry frame and mines out a whole
-area layer by layer. It is built on the SDK and `base_api` only, and depends on `base`.
+A Weft mod about moving items, digging and making things: item tubes that show every item
+travelling inside them, engines to drive them, an excavator that builds a gantry frame and mines
+out a whole area layer by layer, an assembly bench that crafts on its own, and a leveler that
+makes land flat. It is built on the SDK and `base_api` only, and depends on `base`.
 
 ## Content
 
@@ -20,7 +21,9 @@ area layer by layer. It is built on the SDK and `base_api` only, and depends on 
 | **Spring Engine** | Runs on a redstone signal, 10 energy per tick. |
 | **Ember Engine** | Burns any `fuel`, 40 energy per tick; stops to cool down when its energy has nowhere to go. |
 | **Excavator** | Builds a frame, then mines the inside from the top of the frame down to y = -64. Needs a standby of 10 energy per tick plus 1 per 4 blocks of area (9 by 9: 30); short of that it doesn't run at all, and what comes in beyond it sets how fast it digs. |
-| **Survey Marker** | Three in an L at one height mark a rectangle; an excavator placed next to one digs that instead. |
+| **Assembly Bench** | Click its pattern cells with an item to lay out a crafting recipe: the cell shows a small ghost of it and the item stays with you; an empty hand clears a cell. Tubes fill each cell with one item of its ghost, and once all are filled it crafts, 240 energy a craft. A timber tube takes the results out. |
+| **Leveler** | Makes the area behind it, or a marked one, flat at its height: clears up to 16 blocks above into its output, then fills holes up to 4 deep with whole blocks from its stock. |
+| **Survey Marker** | Three in an L at one height mark a rectangle; an excavator or leveler placed next to one works that instead. |
 
 Engines push energy into the block their trunk points at (a timber tube, the excavator, any
 mod's machine with `core:energy`), and offer it to energy networks through torque shafts.
@@ -57,6 +60,9 @@ it loads.
 
 ## Known limits
 
+- The assembly bench takes exactly the items of its ghosts: a recipe that takes any planks still
+  needs the kind of planks laid out. Only tubes fill it, not players by hand.
+- The leveler leaves liquids above its height where they are; below it, it fills them in.
 - An excavator doesn't make up time it was unloaded or skipped (`/tick sprint`); it just carries
   on.
 - Liquids are left where they are; the excavator mines around and below them.

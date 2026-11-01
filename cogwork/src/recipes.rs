@@ -108,6 +108,32 @@ fn machines(r: &mut Registry) {
     );
     r.shaped(
         &CRAFTING,
+        "assembly_bench",
+        1,
+        &["iTi", "cCc", "iri"],
+        &[
+            ('i', "#ingots/iron"),
+            ('T', "base:crafting_table"),
+            ('c', "#cogs/iron"),
+            ('C', "base:chest"),
+            ('r', "base:redstone"),
+        ],
+    );
+    r.shaped(
+        &CRAFTING,
+        "leveler",
+        1,
+        &["iri", "gSg", "iCi"],
+        &[
+            ('i', "#ingots/iron"),
+            ('r', "base:redstone"),
+            ('g', "#cogs/gold"),
+            ('S', "#shovels/diamond"),
+            ('C', "base:chest"),
+        ],
+    );
+    r.shaped(
+        &CRAFTING,
         "survey_marker",
         4,
         &["t", "s"],

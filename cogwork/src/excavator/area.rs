@@ -3,57 +3,17 @@
 
 use weft_sdk::*;
 
-use crate::markers::{SURVEY_MARKER, beside, rectangle};
-
 /// The frame's height above the excavator's block.
 const FRAME_RISE: i32 = 4;
 /// Inside of the frame when no markers say otherwise: 9 by 9.
 const DEFAULT_INSIDE: i32 = 9;
 
-/// The frame's lowest and highest corner for an excavator at `pos` facing `front`: the rectangle
-/// of the survey markers next to it (taken down for it), else a 9 by 9 area behind it.
+/// The frame's lowest and highest corner for an excavator at `pos` facing `front`: on the
+/// rectangle of the survey markers next to it, else around a 9 by 9 area behind it.
 pub fn plan(w: &World, pos: [i32; 3], front: Dir) -> ([i32; 3], [i32; 3]) {
-    if let Some(found) = beside(w, pos).and_then(|m| rectangle(w, m)) {
-        let (lo, hi) = (found.0, found.1);
-        let roomy = hi[0] - lo[0] >= 2 && hi[2] - lo[2] >= 2;
-        let outside = !(lo[0]..=hi[0]).contains(&pos[0]) || !(lo[2]..=hi[2]).contains(&pos[2]);
-        if roomy && outside {
-            take_markers(w, lo, hi);
-            return ([lo[0], pos[1], lo[2]], [hi[0], pos[1] + FRAME_RISE, hi[2]]);
-        }
-    }
-    // Across is any horizontal way at right angles: the area is the same either way round.
-    let across = if front == Dir::West || front == Dir::East {
-        Dir::North
-    } else {
-        Dir::West
-    };
-    let (back, side) = (front.opposite().offset(), across.offset());
-    let half = DEFAULT_INSIDE / 2 + 1;
-    let corner = |depth: i32, across: i32| {
-        [
-            pos[0] + back[0] * depth + side[0] * across,
-            0,
-            pos[2] + back[2] * depth + side[2] * across,
-        ]
-    };
-    let (a, b) = (corner(1, -half), corner(DEFAULT_INSIDE + 2, half));
-    (
-        [a[0].min(b[0]), pos[1], a[2].min(b[2])],
-        [a[0].max(b[0]), pos[1] + FRAME_RISE, a[2].max(b[2])],
-    )
-}
-
-/// Breaks the markers at the corners of the rectangle; they drop as items.
-fn take_markers(w: &World, lo: [i32; 3], hi: [i32; 3]) {
-    for x in [lo[0], hi[0]] {
-        for z in [lo[2], hi[2]] {
-            let p = [x, lo[1], z];
-            if SURVEY_MARKER.is(w.get(p)) {
-                w.break_block(p, ItemStack::EMPTY, 0, true);
-            }
-        }
-    }
+    let (lo, hi) = crate::markers::take_area(w, pos)
+        .unwrap_or_else(|| crate::markers::square_behind(pos, front, DEFAULT_INSIDE, 1));
+    ([lo[0], pos[1], lo[2]], [hi[0], pos[1] + FRAME_RISE, hi[2]])
 }
 
 /// The frame's blocks: every edge of the box, from the bottom up.
@@ -81,12 +41,16 @@ pub fn first(lo: [i32; 3], hi: [i32; 3]) -> [i32; 3] {
     [lo[0] + 1, hi[1], lo[2] + 1]
 }
 
+/// Which way along x the row of `c` is mined: 1 on the first row of a layer, then -1, 1 ...
+pub fn row_dir(lo: [i32; 3], c: [i32; 3]) -> i32 {
+    if (c[2] - (lo[2] + 1)) % 2 == 0 { 1 } else { -1 }
+}
+
 /// The block mined after `c`: along the row, back the other way on the next row, then the
 /// next layer down.
 pub fn next(lo: [i32; 3], hi: [i32; 3], c: [i32; 3]) -> [i32; 3] {
     let (x0, x1, z0, z1) = (lo[0] + 1, hi[0] - 1, lo[2] + 1, hi[2] - 1);
-    let forward = (c[2] - z0) % 2 == 0;
-    let x = if forward { c[0] + 1 } else { c[0] - 1 };
+    let x = c[0] + row_dir(lo, c);
     if (x0..=x1).contains(&x) {
         return [x, c[1], c[2]];
     }

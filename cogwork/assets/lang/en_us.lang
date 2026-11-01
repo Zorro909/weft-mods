@@ -1,6 +1,6 @@
 language.name = English
 mod.cogwork.name = Cogwork
-mod.cogwork.description = Gears, item tubes and engines, and an excavator that digs out a whole area layer by layer.\n\nTimber tubes pull items out of chests and machines when an engine drives them. Stone tubes carry them along, and every item can be seen travelling inside. Gilded tubes speed items up, sorting tubes send each kind its own way, directing tubes send everything one way, and void tubes destroy what reaches them.\n\nThe excavator builds a frame around its area and lowers a drill on a gantry, mining down to the floor of the world and handing everything to the tubes or chests beside it.
+mod.cogwork.description = Gears, item tubes and engines, an excavator that digs out a whole area layer by layer, an assembly bench that crafts on its own and a leveler that makes land flat.\n\nTimber tubes pull items out of chests and machines when an engine drives them. Stone tubes carry them along, and every item can be seen travelling inside. Gilded tubes speed items up, sorting tubes send each kind its own way, directing tubes send everything one way, and void tubes destroy what reaches them.\n\nThe excavator builds a frame around its area and lowers a drill on a gantry, mining down to the floor of the world and handing everything to the tubes or chests beside it.
 mod.cogwork.authors = Zorro909
 tab.cogwork.cogwork = Cogwork
 
@@ -36,8 +36,12 @@ block.cogwork.ember_engine.tooltip = Burns fuel for four times the energy of a s
 block.cogwork.excavator = Excavator
 block.cogwork.excavator.tooltip = Digs out the area behind it, or the one marked out by survey markers next to it, down to the floor of the world. It runs only on more energy per tick than its standby, which grows with its area; what comes in beyond that sets how fast it digs.
 block.cogwork.gantry_frame = Gantry Frame
+block.cogwork.assembly_bench = Assembly Bench
+block.cogwork.assembly_bench.tooltip = Click its pattern cells with items to lay out a crafting recipe; the items stay with you. Tubes then fill each cell with one item, and with engine power it makes the recipe again and again. A timber tube takes the results out.
+block.cogwork.leveler = Leveler
+block.cogwork.leveler.tooltip = Makes the area behind it, or the one marked out by survey markers next to it, flat at its height: clears up to 16 blocks above and fills holes up to 4 deep with whole blocks from its stock.
 block.cogwork.survey_marker = Survey Marker
-block.cogwork.survey_marker.tooltip = Place up to three more along two straight lines to mark a rectangle, then put an excavator next to one. Use one to see the area; a marker without one puffs.
+block.cogwork.survey_marker.tooltip = Place up to three more along two straight lines to mark a rectangle, then put an excavator or a leveler next to one. Use one to see the area; a marker without one puffs.
 
 cogwork.energy = {color:dim}{0} / {1} energy{/}
 cogwork.engine.heat = Heat {0}%
@@ -57,3 +61,21 @@ cogwork.excavator.full = Output full: connect a tube or a chest
 cogwork.excavator.done = Finished
 cogwork.excavator.blocked = Waiting for the area to load
 cogwork.excavator.area = {color:dim}Area {0} x {1}, standby {2} energy per tick{/}
+
+cogwork.bench.no_recipe = Click cells to set a recipe
+cogwork.bench.missing = Waiting for ingredients
+cogwork.bench.full = Output full
+cogwork.bench.no_power = Needs engine power
+cogwork.bench.working = Crafting
+cogwork.bench.ghost = {0}
+
+cogwork.leveler.idle = Waiting to start
+cogwork.leveler.no_power = Needs energy from an engine
+cogwork.leveler.clearing = Clearing layer {0}
+cogwork.leveler.filling = Filling layer {0}
+cogwork.leveler.full = Output full: connect a tube or a chest
+cogwork.leveler.no_blocks = Needs whole blocks in its stock to fill with
+cogwork.leveler.blocked = Waiting for the area to load
+cogwork.leveler.done = Finished
+cogwork.leveler.area = {color:dim}Area {0} x {1}, flat at height {2}{/}
+cogwork.leveler.stock = Stock

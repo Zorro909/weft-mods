@@ -1,6 +1,7 @@
 //! Putting items into and taking them out of any mod's machines, by the names of their slot
 //! groups: `fuel` and `input` take, `output` gives, a chest's `chest` does both. An inventory
-//! without any of these names is one big chest.
+//! without any of these names is one big chest. An assembly bench takes what its pattern asks
+//! for.
 
 use base_api::FUEL;
 use weft_sdk::*;
@@ -74,6 +75,9 @@ fn gives(inv: Inventory) -> Option<Span> {
 /// Puts `stack` into the machine `owner` and returns what didn't fit. With `simulate` nothing
 /// changes.
 pub fn insert(w: &World, owner: u64, stack: ItemStack, simulate: bool) -> ItemStack {
+    if let Some(left) = crate::bench::insert(w, owner, stack, simulate) {
+        return left;
+    }
     let Some(span) = takes(w.inventory(owner), stack) else {
         return stack;
     };
@@ -165,4 +169,28 @@ pub fn extract(w: &World, owner: u64, max: u32) -> ItemStack {
 pub fn has_inventory(w: &World, pos: [i32; 3]) -> Option<u64> {
     let id = w.block_entity(pos);
     (id != 0 && w.inventory(id).size() > 0).then_some(id)
+}
+
+/// Hands one stack of the `output` of the machine `id` at `pos` to a tube or machine beside it.
+pub fn eject(w: &World, id: u64, pos: [i32; 3]) {
+    let out = w.inventory(id).group("output");
+    let Some(slot) = (0..out.len()).find(|&i| !out.get(i).is_empty()) else {
+        return;
+    };
+    let mut stack = out.get(slot);
+    for face in 0..6 {
+        let other = w.block_entity(crate::tube::step(pos, face));
+        if other == 0 || other == id {
+            continue;
+        }
+        stack = if w.component(other, &crate::tube::TUBE).is_some() {
+            crate::tube::inject(w, other, stack)
+        } else {
+            insert(w, other, stack, false)
+        };
+        if stack.is_empty() {
+            break;
+        }
+    }
+    out.set(slot, stack);
 }

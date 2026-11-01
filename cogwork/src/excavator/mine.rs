@@ -1,18 +1,17 @@
 //! Mining one block: the drill travels to it, energy is paid by how hard it is, and what it drops
-//! goes into the excavator's output, as if mined with a diamond pickaxe.
+//! goes into the excavator's output.
 
 use weft_sdk::*;
 
 use super::power::{pay, travel};
 use super::{Dig, EXCAVATOR, GANTRY_FRAME, status};
+use crate::harvest::{Harvest, breakable, cost, harvest};
 
 /// Energy per block: a base and as much again per point of hardness (stone 1.5: 1000).
 const BASE_COST: f32 = 400.0;
 const COST_PER_HARDNESS: f32 = 400.0;
 /// Blocks per tick the drill moves.
 const DRILL_SPEED: f32 = 0.25;
-
-static TOOL: Item = Item::named("base:diamond_pickaxe");
 
 pub enum Mined {
     Done,
@@ -22,37 +21,30 @@ pub enum Mined {
     Waiting(u32),
 }
 
-/// A block's loot table, by the block's name.
-struct TableOf(&'static str);
-
-impl LootSource for TableOf {
-    fn table_name(&self) -> &str {
-        self.0
-    }
-}
-
-/// Whether a block can simply be built into: air, plants, liquids.
-pub fn opens_into(state: u32) -> bool {
-    state == 0
-        || state_flags(state) & (abi::block_flags::REPLACEABLE | abi::block_flags::LIQUID) != 0
-}
-
 /// Whether the drill stops for a block: not air or liquid, breakable, and not its own frame.
 pub fn worth_mining(state: u32) -> bool {
-    state != 0
-        && state_flags(state) & abi::block_flags::LIQUID == 0
-        && HARDNESS.on_block(state).is_none_or(|h| h >= 0.0)
-        && !GANTRY_FRAME.is(state)
-        && !EXCAVATOR.is(state)
+    breakable(state) && !GANTRY_FRAME.is(state) && !EXCAVATOR.is(state)
 }
 
-/// Moves the drill toward `target` as far as this tick's energy pays for; true once it is there.
-pub fn drill_to(w: &World, id: u64, d: &mut Dig, target: [i32; 3]) -> bool {
-    let goal = [
-        target[0] as f32 + 0.5,
-        target[1] as f32,
-        target[2] as f32 + 0.5,
-    ];
+/// Energy to mine the block `state`.
+pub fn block_cost(state: u32) -> i64 {
+    cost(state, BASE_COST, COST_PER_HARDNESS)
+}
+
+/// Where the drill is while it mines the block `c`, `done` of the way through (0 to 1): it
+/// crosses the block along its row, from the edge it comes in by to the far one, which is where
+/// the next block of the row starts.
+pub fn sweep(lo: [i32; 3], c: [i32; 3], done: f32) -> [f32; 3] {
+    let dir = super::area::row_dir(lo, c) as f32;
+    [
+        c[0] as f32 + 0.5 + dir * (done - 0.5),
+        c[1] as f32,
+        c[2] as f32 + 0.5,
+    ]
+}
+
+/// Moves the drill toward `goal` as far as this tick's energy pays for; true once it is there.
+pub fn drill_to(w: &World, id: u64, d: &mut Dig, goal: [f32; 3]) -> bool {
     let gap: [f32; 3] = std::array::from_fn(|i| goal[i] - d.head[i]);
     let length = gap.iter().map(|v| v * v).sum::<f32>().sqrt();
     let step = travel(w, id, length.min(DRILL_SPEED));
@@ -76,38 +68,45 @@ pub fn mine_block(w: &World, id: u64, d: &mut Dig, c: [i32; 3], state: u32) -> M
     if !worth_mining(state) {
         return Mined::Skipped;
     }
-    let cost = (BASE_COST + COST_PER_HARDNESS * HARDNESS.on_block(state).unwrap_or(1.0)) as i64;
     d.status = status::MINING;
-    if !pay(w, id, d, cost) {
+    if !pay(w, id, d, block_cost(state)) {
         return Mined::Waiting(d.status);
     }
-    let tool = ItemStack::new(TOOL.id(), 1);
-    let name = block_name(state).split('[').next().unwrap_or("");
-    let drops = w.roll_loot(
-        &TableOf(name),
-        &LootCtx {
-            tool,
-            mined: state,
-            ..LootCtx::default()
-        },
-    );
-    let output = || w.inventory(id).group("output");
-    if drops
-        .iter()
-        .any(|s| !crate::store::insert_into(output(), *s, true).is_empty())
-    {
+    match harvest(w, id, c, state) {
         // Paid for already: it stays paid until there is room.
-        return Mined::Waiting(status::FULL);
-    }
-    d.spent = 0;
-    if !w.break_block(c, tool, 0, false) {
-        return Mined::Skipped;
-    }
-    for s in drops {
-        let left = crate::store::insert_into(output(), s, false);
-        if !left.is_empty() {
-            w.spawn_item(c.map(|v| v as f64 + 0.5), left);
+        Harvest::Full => Mined::Waiting(status::FULL),
+        Harvest::Refused => {
+            d.spent = 0;
+            Mined::Skipped
+        }
+        Harvest::Done => {
+            d.spent = 0;
+            Mined::Done
         }
     }
-    Mined::Done
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_drill_crosses_the_block_along_its_row() {
+        let lo = [0, 0, 0];
+        assert_eq!(
+            sweep(lo, [3, 5, 1], 0.0),
+            [3.0, 5.0, 1.5],
+            "in at the near edge"
+        );
+        assert_eq!(
+            sweep(lo, [3, 5, 1], 1.0),
+            sweep(lo, [4, 5, 1], 0.0),
+            "out where the next starts"
+        );
+        assert_eq!(
+            sweep(lo, [3, 5, 2], 0.25),
+            [3.75, 5.0, 2.5],
+            "the other way on the next row"
+        );
+    }
 }

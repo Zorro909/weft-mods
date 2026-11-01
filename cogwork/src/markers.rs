@@ -1,5 +1,6 @@
-//! Survey markers: posts that mark out a rectangle for an excavator. Three in an L (a corner and
-//! one along each axis, at the same height) are enough; using one shows the rectangle.
+//! Survey markers: posts that mark out a rectangle for an excavator or a leveler. Three in an L
+//! (a corner and one along each axis, at the same height) are enough; using one shows the
+//! rectangle. A machine with no markers next to it works a square behind it.
 
 use weft_sdk::*;
 
@@ -51,8 +52,52 @@ pub fn rectangle(w: &World, pos: [i32; 3]) -> Option<([i32; 3], [i32; 3])> {
     ))
 }
 
+/// The rectangle of the markers next to a machine at `pos`, when the machine is outside it: its
+/// lowest and highest corner at the markers' height. The machine takes the markers down.
+pub fn take_area(w: &World, pos: [i32; 3]) -> Option<([i32; 3], [i32; 3])> {
+    let (lo, hi) = rectangle(w, beside(w, pos)?)?;
+    let outside = !(lo[0]..=hi[0]).contains(&pos[0]) || !(lo[2]..=hi[2]).contains(&pos[2]);
+    if !outside {
+        return None;
+    }
+    for x in [lo[0], hi[0]] {
+        for z in [lo[2], hi[2]] {
+            let p = [x, lo[1], z];
+            if SURVEY_MARKER.is(w.get(p)) {
+                w.break_block(p, ItemStack::EMPTY, 0, true);
+            }
+        }
+    }
+    Some((lo, hi))
+}
+
+/// A square of `size` blocks right behind a machine at `pos` facing `front`, `margin` more on
+/// every side: its lowest and highest corner at `pos`'s height.
+pub fn square_behind(pos: [i32; 3], front: Dir, size: i32, margin: i32) -> ([i32; 3], [i32; 3]) {
+    // Across is any horizontal way at right angles: the square is the same either way round.
+    let across = if front == Dir::West || front == Dir::East {
+        Dir::North
+    } else {
+        Dir::West
+    };
+    let (back, side) = (front.opposite().offset(), across.offset());
+    let half = size / 2 + margin;
+    let corner = |depth: i32, across: i32| {
+        [
+            pos[0] + back[0] * depth + side[0] * across,
+            pos[1],
+            pos[2] + back[2] * depth + side[2] * across,
+        ]
+    };
+    let (a, b) = (corner(1, -half), corner(size + 2 * margin, half));
+    (
+        [a[0].min(b[0]), pos[1], a[2].min(b[2])],
+        [a[0].max(b[0]), pos[1], a[2].max(b[2])],
+    )
+}
+
 /// A marker next to `pos`, if any, on the four sides.
-pub fn beside(w: &World, pos: [i32; 3]) -> Option<[i32; 3]> {
+fn beside(w: &World, pos: [i32; 3]) -> Option<[i32; 3]> {
     [Dir::West, Dir::East, Dir::North, Dir::South]
         .into_iter()
         .find_map(|d| {
@@ -95,5 +140,22 @@ fn outline(w: &World, lo: [i32; 3], hi: [i32; 3]) {
     }
     for p in points {
         drop(w.spawn_particles(&SURVEY_GLOW, p).count(1));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_square_starts_right_behind_the_machine() {
+        let (lo, hi) = square_behind([0, 4, 10], Dir::South, 9, 1);
+        assert_eq!(
+            (lo, hi),
+            ([-5, 4, -1], [5, 4, 9]),
+            "11 wide, from one block behind"
+        );
+        let (lo, hi) = square_behind([0, 4, 10], Dir::East, 9, 0);
+        assert_eq!((lo, hi), ([-9, 4, 6], [-1, 4, 14]), "9 by 9 to the west");
     }
 }
