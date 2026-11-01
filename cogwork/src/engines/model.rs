@@ -1,5 +1,5 @@
-//! An engine's block: a base plate on the side it was placed against, a trunk pointing the other
-//! way that glows with its heat, and a piston plate riding up and down the trunk.
+//! An engine's block: a base plate on the side it was placed against and a trunk pointing the
+//! other way that glows with its heat. The piston riding the trunk is an entity (`piston`).
 
 use weft_sdk::signal::Frame;
 use weft_sdk::*;
@@ -17,7 +17,6 @@ const TRUNKS: [&str; 4] = [
 pub fn engine<'a>(b: BlockBuilder<'a>, kind: &'static str) -> BlockBuilder<'a> {
     b.facing(Facings::ALL, Toward::Face)
         .prop("heat", 0..=3)
-        .prop("stroke", 0..=3)
         .sound_group("base:block.stone")
         .states(move |p, s| shape(p, s, kind))
         .on_use(turn)
@@ -37,12 +36,7 @@ fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
         format!("engine_{kind}_plate_top"),
         format!("engine_{kind}_plate_side"),
     );
-    let (piston_top, piston_side) = (
-        format!("engine_{kind}_piston_top"),
-        format!("engine_{kind}_piston_side"),
-    );
     let trunk = TRUNKS[p.int("heat").min(3) as usize];
-    let lift = 2.0 * p.int("stroke") as f32;
     const WHOLE: [f32; 4] = [0.0, 0.0, 16.0, 16.0];
     const EDGE: [f32; 4] = [0.0, 0.0, 16.0, 4.0];
     s.texture(&plate_top)
@@ -58,12 +52,7 @@ fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
             [12.0, 16.0, 12.0],
             faces(trunk, [4.0, 0.0, 12.0, 12.0], trunk, [4.0, 4.0, 12.0, 12.0]),
         )
-        .framed_box(
-            frame,
-            [0.0, 4.0 + lift, 0.0],
-            [16.0, 8.0 + lift, 16.0],
-            faces(&piston_side, EDGE, &piston_top, WHOLE),
-        )
+        // The whole block, piston and all: nothing walks into the piston's way.
         .hitbox([0.0; 3], [1.0; 3])
 }
 

@@ -1,5 +1,6 @@
 //! What a tube looks like and what it joins: a hub in the middle of the block and an arm toward
-//! every neighbor it connects to, one `true`/`false` property per direction.
+//! every neighbor it connects to, one `true`/`false` property per direction. A directing tube
+//! always has its arm toward `out`, so it keeps properties only for the other five.
 
 use weft_sdk::signal::Frame;
 use weft_sdk::*;
@@ -9,6 +10,9 @@ use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES, step};
 /// The tube's walls, in texels: 8 wide in the middle of the block.
 const LO: f32 = 4.0;
 const HI: f32 = 12.0;
+/// A directing tube's arms besides its output, by their place among the other five directions.
+const OTHER_ARMS: [&str; 5] = ["arm1", "arm2", "arm3", "arm4", "arm5"];
+const BOOL: [&str; 2] = ["false", "true"];
 
 /// A tube block: its properties, model, and joining up with its neighbors. `out_texture` marks
 /// a directing tube, whose `out` arm looks different.
@@ -22,11 +26,15 @@ pub fn tube<'a>(
         .mineable("pickaxe")
         .sound_group("base:block.glass")
         .tag("cogwork:tubes");
-    for d in Dir::ALL {
-        b = b.prop(d.name(), ["false", "true"]);
-    }
     if out_texture.is_some() {
         b = b.prop("out", Dir::ALL.map(Dir::name));
+        for name in OTHER_ARMS {
+            b = b.prop(name, BOOL);
+        }
+    } else {
+        for d in Dir::ALL {
+            b = b.prop(d.name(), BOOL);
+        }
     }
     b.states(move |p, s| model(p, s, texture, out_texture))
         .on_placed(|w, change| refresh(w, change.pos))
@@ -43,10 +51,12 @@ fn model<'s>(
 ) -> State<'s> {
     let mut s = s.texture(texture);
     s = with_box(s, texture, [LO; 3], [HI; 3]);
-    for d in Dir::ALL.into_iter().filter(|d| p.is(d.name(), "true")) {
-        let face_texture = match out_texture {
-            Some(out) if p.get("out") == d.name() => out,
-            _ => texture,
+    let out = out_texture.and_then(|_| Dir::from_name(p.get("out")));
+    for d in Dir::ALL {
+        let face_texture = match arm_prop(out, d) {
+            None => out_texture.unwrap_or(texture),
+            Some(name) if p.is(name, "true") => texture,
+            Some(_) => continue,
         };
         let (lo, hi) = arm(d, LO, HI);
         s = with_box(s, face_texture, lo, hi);
@@ -72,24 +82,48 @@ pub fn arm(d: Dir, lo: f32, hi: f32) -> ([f32; 3], [f32; 3]) {
     (min, max)
 }
 
+/// The property saying whether a tube has its arm toward `d`: the direction's own on a plain
+/// tube. On a directing tube with its output toward `out`, `d`'s place among the other five
+/// directions, and none for the output, whose arm is always there.
+fn arm_prop(out: Option<Dir>, d: Dir) -> Option<&'static str> {
+    let Some(out) = out else {
+        return Some(d.name());
+    };
+    let mut others = Dir::ALL.into_iter().filter(|&o| o != out);
+    others.position(|o| o == d).map(|i| OTHER_ARMS[i])
+}
+
+/// Where the tube `state` sends its items, if it is a directing tube.
+fn output(state: u32) -> Option<Dir> {
+    state_prop(state, "out").and_then(Dir::from_name)
+}
+
 /// Sets every arm property of the tube at `pos` to what its neighbors are now.
 fn refresh(w: &World, pos: [i32; 3]) {
     let state = w.get(pos);
     if !TUBES.on_block(state) {
         return;
     }
-    let mut next = state;
-    for d in Dir::ALL {
+    let next = joined(w, pos, state);
+    if next != state {
+        w.set(pos, next);
+    }
+}
+
+/// `state` with its arm properties set to which neighbors of `pos` it joins.
+fn joined(w: &World, pos: [i32; 3], state: u32) -> u32 {
+    let out = output(state);
+    Dir::ALL.into_iter().fold(state, |next, d| {
+        let Some(name) = arm_prop(out, d) else {
+            return next;
+        };
         let on = if joins(w, pos, state, d) {
             "true"
         } else {
             "false"
         };
-        next = state_with(next, d.name(), on).unwrap_or(next);
-    }
-    if next != state {
-        w.set(pos, next);
-    }
+        state_with(next, name, on).unwrap_or(next)
+    })
 }
 
 /// Whether the tube `state` at `pos` reaches toward `d`: to any other tube but two timber tubes,
@@ -105,7 +139,12 @@ fn joins(w: &World, pos: [i32; 3], state: u32, d: Dir) -> bool {
 
 /// Whether the tube at `pos` has its arm toward `face` out, so a neighbor can hand it items.
 pub fn connects_to_tube(w: &World, pos: [i32; 3], face: u32) -> bool {
-    w.prop(pos, Dir::from_face(face).name()) == Some("true")
+    let state = w.get(pos);
+    let d = Dir::from_face(face);
+    match arm_prop(output(state), d) {
+        Some(name) => state_prop(state, name) == Some("true"),
+        None => joins(w, pos, state, d),
+    }
 }
 
 /// The tuning wrench turns a directing tube's output to its next connected arm.
@@ -115,15 +154,15 @@ pub fn turn_output(u: &mut Use) -> bool {
         return false;
     }
     let pos = u.pos();
-    let now = w
-        .prop(pos, "out")
-        .and_then(Dir::from_name)
-        .map_or(0, Dir::face);
-    let next = (1..=6)
-        .map(|k| Dir::from_face((now + k) % 6))
-        .find(|d| w.prop(pos, d.name()) == Some("true"));
-    if let Some(d) = next.filter(|_| DIRECTING_TUBE.is(w.get(pos))) {
-        w.set_prop(pos, "out", d.name());
+    let state = w.get(pos);
+    let Some(now) = output(state).filter(|_| DIRECTING_TUBE.is(state)) else {
+        return true;
+    };
+    let next = (1..6)
+        .map(|k| Dir::from_face((now.face() + k) % 6))
+        .find(|d| connects_to_tube(&w, pos, d.face()));
+    if let Some(turned) = next.and_then(|d| state_with(state, "out", d.name())) {
+        w.set(pos, joined(&w, pos, turned));
     }
     true
 }
@@ -149,5 +188,32 @@ mod tests {
             ([4.0, 4.0, 12.0], [12.0, 12.0, 16.0]),
             "south"
         );
+    }
+
+    #[test]
+    fn a_directing_tube_names_its_arms_after_the_output() {
+        assert_eq!(
+            arm_prop(None, Dir::Up),
+            Some("up"),
+            "plain tubes by direction"
+        );
+        assert_eq!(
+            arm_prop(Some(Dir::Up), Dir::Up),
+            None,
+            "the output has none"
+        );
+        for out in Dir::ALL {
+            let mut names: Vec<_> = Dir::ALL
+                .iter()
+                .filter_map(|&d| arm_prop(Some(out), d))
+                .collect();
+            names.sort();
+            assert_eq!(
+                names,
+                OTHER_ARMS,
+                "the others get one each, toward {}",
+                out.name()
+            );
+        }
     }
 }

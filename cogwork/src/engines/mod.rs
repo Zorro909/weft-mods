@@ -4,6 +4,7 @@
 //! four times as much, and stops to cool down when its energy has nowhere to go.
 
 mod model;
+mod piston;
 mod run;
 
 use base_api::FUEL;
@@ -14,9 +15,10 @@ pub static EMBER_ENGINE: Block = Block::named("ember_engine");
 static EMBER_MENU: Menu = Menu::named("ember_engine");
 
 value! {
-    /// An engine's state: `heat` 0..1000, fuel burning, and where its piston is.
+    /// An engine's state: `heat` 0..1000, fuel burning, ticks into the piston's stroke, and
+    /// the piston entity.
     #[derive(Default)]
-    pub struct Engine { pub kind: u32, pub heat: u32, pub overheated: u32, pub burn: u32, pub burn_max: u32, pub stroke: u32 }
+    pub struct Engine { pub kind: u32, pub heat: u32, pub overheated: u32, pub burn: u32, pub burn_max: u32, pub stroke: u32, pub piston: u64 }
 }
 pub static ENGINE: Component<Engine> = Component::named("cogwork:engine");
 
@@ -32,6 +34,7 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&ENGINE, run::tick_engines);
+    piston::register(r);
     model::engine(r.block(&SPRING_ENGINE), "spring")
         .hardness(1.5)
         .mineable("axe")

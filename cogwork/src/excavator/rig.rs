@@ -17,8 +17,6 @@ value! {
     pub struct Rig { pub ids: [u64; SLOTS] }
 }
 static RIG: Component<Rig> = Component::named("cogwork:rig");
-/// The excavator a rig entity belongs to.
-static OWNER: Component<u64> = Component::named("cogwork:rig_owner");
 
 const SHAFTS: usize = 40;
 const BEAMS: usize = 19;
@@ -31,7 +29,6 @@ const BIT_HEIGHT: f64 = 0.75;
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
     r.attach(&Entity::named("excavator"), &RIG);
-    r.entity_component(&OWNER, 0u64, component_flags::SAVE);
     let part = |origin: [f32; 3], size: [f32; 3]| {
         Part::new("body", [0.0; 3]).cube(origin, size, [0.0, 0.0])
     };
@@ -65,25 +62,9 @@ pub fn register(r: &mut Registry) {
         ),
     ];
     for (kind, parts, uv) in pieces {
-        r.entity(kind)
+        crate::owned::kind(r.entity(kind))
             .model(Model::from(parts).uv(uv[0], uv[1]))
-            .size(0.5, 0.5)
-            .kinematic()
-            .invulnerable()
-            .unpushable()
-            .no_egg()
-            .attach(&OWNER)
-            .on_tick(leave_without_owner);
-    }
-}
-
-fn leave_without_owner(t: &EntityTick) {
-    let w = t.world();
-    for &id in t.ids() {
-        let owner = w.component(id, &OWNER).copied().unwrap_or(0);
-        if owner == 0 || w.entity(owner).is_none() {
-            w.remove(id);
-        }
+            .size(0.5, 0.5);
     }
 }
 
@@ -134,7 +115,7 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
     let mut used = [false; SLOTS];
     for (slot, kind, pos, yaw) in wanted {
         used[slot] = true;
-        rig.ids[slot] = place(w, owner, rig.ids[slot], kind, pos, yaw);
+        rig.ids[slot] = crate::owned::place(w, owner, rig.ids[slot], kind, pos, yaw);
     }
     for (slot, id) in rig.ids.iter_mut().enumerate() {
         if !used[slot] && *id != 0 {
@@ -145,29 +126,6 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
     if let Some(r) = w.component_mut(owner, &RIG) {
         *r = rig;
     }
-}
-
-/// Moves the piece `id` to `pos`, or makes it if it is gone; returns its id.
-fn place(w: &World, owner: u64, id: u64, kind: &'static Entity, pos: [f64; 3], yaw: f32) -> u64 {
-    let Some(mut st) = w.entity(id).filter(|st| id != 0 && st.kind == kind.id()) else {
-        let new = w.spawn(kind, pos);
-        if let Some(o) = w.component_mut(new, &OWNER) {
-            *o = owner;
-        }
-        if let Some(mut st) = w.entity(new) {
-            st.yaw = yaw.to_radians();
-            w.set_entity(new, &st);
-        }
-        return new;
-    };
-    // A kinematic entity moves by its velocity after this tick's systems: just that speed lands
-    // it on `pos`, and it stands still once there. Placing it as well would overshoot.
-    let vel: [f64; 3] = std::array::from_fn(|i| (pos[i] - st.pos[i]) * 20.0);
-    if vel != st.vel {
-        st.vel = vel;
-        w.set_entity(id, &st);
-    }
-    id
 }
 
 #[cfg(test)]

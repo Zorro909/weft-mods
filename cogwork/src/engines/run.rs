@@ -1,8 +1,9 @@
 //! The engines' tick: make energy, push it out of the trunk, warm up or cool down, and move the
-//! piston while running.
+//! piston while running. A stopped engine finishes its stroke.
 
 use weft_sdk::*;
 
+use super::piston::{self, STROKE_TICKS};
 use super::{Engine, fuel_ticks, kind, model};
 
 /// Energy per tick: a spring engine with a signal, an ember engine burning.
@@ -13,8 +14,6 @@ const PUSH: i64 = 200;
 /// Heat at which an ember engine stops, and below which it starts again.
 const OVERHEAT: u32 = 1000;
 const COOLED: u32 = 300;
-/// Ticks per piston step.
-const STROKE_TICKS: u32 = 3;
 
 pub fn tick_engines(b: &mut SystemBatch<Engine>) {
     let w = b.world();
@@ -36,12 +35,11 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
         let full = store(&w, id, made * ticks as i64);
         push(&w, id, pos);
         warm(e, running, full, ticks);
-        if running && w.time() % STROKE_TICKS as u64 == 0 {
-            e.stroke = (e.stroke + 1) % 6;
-        } else if !running {
-            e.stroke = 0;
+        if running || e.stroke != 0 {
+            e.stroke = (e.stroke + 1) % STROKE_TICKS;
         }
-        show(&w, pos, e);
+        show_heat(&w, pos, e);
+        piston::show(&w, id, pos, e);
     }
 }
 
@@ -112,28 +110,17 @@ fn warm(e: &mut Engine, running: bool, full: bool, ticks: u32) {
     }
 }
 
-/// Shows the heat and piston on the block.
-fn show(w: &World, pos: [i32; 3], e: &Engine) {
+/// Shows the heat on the block's trunk.
+fn show_heat(w: &World, pos: [i32; 3], e: &Engine) {
     let heat = match e.heat {
         _ if e.overheated != 0 => 3,
         0..250 => 0,
         250..500 => 1,
         _ => 2,
     };
-    // Up three steps and back down.
-    let stroke = if e.stroke <= 3 {
-        e.stroke
-    } else {
-        6 - e.stroke
-    };
-    set_if_changed(w, pos, "heat", heat);
-    set_if_changed(w, pos, "stroke", stroke);
-}
-
-fn set_if_changed(w: &World, pos: [i32; 3], prop: &str, value: u32) {
-    let value = value.to_string();
-    if w.prop(pos, prop) != Some(value.as_str()) {
-        w.set_prop(pos, prop, &value);
+    let heat = heat.to_string();
+    if w.prop(pos, "heat") != Some(heat.as_str()) {
+        w.set_prop(pos, "heat", &heat);
     }
 }
 
