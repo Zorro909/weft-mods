@@ -1,6 +1,7 @@
 //! What a tube looks like and what it joins: a hub in the middle of the block and an arm toward
 //! every neighbor it connects to, one `true`/`false` property per direction. A directing tube
-//! always has its arm toward `out`, so it keeps properties only for the other five.
+//! always has its arm toward `out`, so it keeps properties only for the other five. A sorting
+//! tube draws each direction in its own texture.
 
 use weft_sdk::*;
 
@@ -13,19 +14,25 @@ const HI: f32 = 12.0;
 const OTHER_ARMS: [&str; 5] = ["arm1", "arm2", "arm3", "arm4", "arm5"];
 const BOOL: [&str; 2] = ["false", "true"];
 
-/// A tube block: its properties, model, and joining up with its neighbors. `out_texture` marks
-/// a directing tube, whose `out` arm looks different.
-pub fn tube<'a>(
-    b: BlockBuilder<'a>,
-    texture: &'static str,
-    out_texture: Option<&'static str>,
-) -> BlockBuilder<'a> {
+/// How a tube's arms look besides its own texture.
+#[derive(Clone, Copy)]
+pub enum Arms {
+    /// All in the tube's texture.
+    Same,
+    /// A directing tube: its `out` arm in this texture.
+    Output(&'static str),
+    /// A sorting tube: the arm and hub face toward each direction in that direction's texture.
+    PerSide(fn(Dir) -> &'static str),
+}
+
+/// A tube block: its properties, model, and joining up with its neighbors.
+pub fn tube<'a>(b: BlockBuilder<'a>, texture: &'static str, arms: Arms) -> BlockBuilder<'a> {
     let mut b = b
         .hardness(0.4)
         .mineable("pickaxe")
         .sound_group("base:block.glass")
         .tag("cogwork:tubes");
-    if out_texture.is_some() {
+    if matches!(arms, Arms::Output(_)) {
         b = b.prop("out", Dir::ALL.map(Dir::name));
         for name in OTHER_ARMS {
             b = b.prop(name, BOOL);
@@ -35,36 +42,39 @@ pub fn tube<'a>(
             b = b.prop(d.name(), BOOL);
         }
     }
-    b.states(move |p, s| model(p, s, texture, out_texture))
+    b.states(move |p, s| model(p, s, texture, arms))
         .on_placed(|w, change| refresh(w, change.pos))
         .on_neighbor(|e| refresh(&e.world(), e.pos()))
         .on_broken(|w, change| super::visual::clear_broken(w, change.pos))
 }
 
 /// The hub and the connected arms, each a box of its own, which is what it collides with too.
-fn model<'s>(
-    p: &Props,
-    s: State<'s>,
-    texture: &'static str,
-    out_texture: Option<&'static str>,
-) -> State<'s> {
-    let mut s = s.texture(texture);
-    s = with_box(s, texture, [LO; 3], [HI; 3]);
-    let out = out_texture.and_then(|_| Dir::from_name(p.get("out")));
+fn model<'s>(p: &Props, s: State<'s>, texture: &'static str, arms: Arms) -> State<'s> {
+    let side = |d| side_texture(texture, arms, d);
+    let hub = Dir::ALL.map(|d| (side(d), abi::UV_FROM_BOX));
+    let mut s = s.texture(texture).model_box_faces([LO; 3], [HI; 3], hub);
+    let (out, out_texture) = match arms {
+        Arms::Output(out_texture) => (Dir::from_name(p.get("out")), out_texture),
+        _ => (None, texture),
+    };
     for d in Dir::ALL {
         let face_texture = match arm_prop(out, d) {
-            None => out_texture.unwrap_or(texture),
-            Some(name) if p.is(name, "true") => texture,
+            None => out_texture,
+            Some(name) if p.is(name, "true") => side(d),
             Some(_) => continue,
         };
         let (lo, hi) = arm(d, LO, HI);
-        s = with_box(s, face_texture, lo, hi);
+        s = s.model_box_faces(lo, hi, [(face_texture, abi::UV_FROM_BOX); 6]);
     }
     s
 }
 
-fn with_box<'s>(s: State<'s>, texture: &str, lo: [f32; 3], hi: [f32; 3]) -> State<'s> {
-    s.model_box_faces(lo, hi, [(texture, abi::UV_FROM_BOX); 6])
+/// The texture of the hub face and arm toward `d`, unless that arm is a directing tube's output.
+fn side_texture(texture: &'static str, arms: Arms, d: Dir) -> &'static str {
+    match arms {
+        Arms::PerSide(texture_toward) => texture_toward(d),
+        _ => texture,
+    }
 }
 
 /// The box from the hub's face toward `d` out to the edge of the block, `lo`..`hi` thick.

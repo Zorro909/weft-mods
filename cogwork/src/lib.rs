@@ -5,6 +5,7 @@ mod bench;
 mod cogs;
 mod engines;
 mod excavator;
+mod ghost;
 mod harvest;
 mod leveler;
 mod markers;
@@ -29,6 +30,7 @@ fn init(r: &mut Registry) {
     markers::register(r);
     excavator::register(r);
     bench::register(r);
+    ghost::register(r);
     leveler::register(r);
     shaft::register(r);
     recipes::register(r);
