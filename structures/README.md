@@ -127,17 +127,31 @@ every client gets the same answer:
 
 ## In this mod
 
-`/structure locate <name> [radius]` finds the nearest structure of this mod (4096 blocks around
-the player by default, at most 16384). It knows the structures of this mod only; finding other
+`/structure` has everything for making structures in the game:
+
+| command | what it does |
+|---|---|
+| the Structure Wand | hit a block with it for the first corner of the selection, use it on one for the second; your selection is drawn. In creative's Tools tab, or `/give @s structures:wand` |
+| `/structure pos1 [at]`, `pos2 [at]` | the same corners: `at`, else the block you look at, else where you stand |
+| `/structure save <name> [from] [to]` | writes the box between two corners (or your selection) to `structures/<name>.wst` |
+| `/structure load <name> [turn]` | places that file (or the one built in, if there is none) two blocks in front of you, its floor level with where you stand; `turn` is `none`, `right`, `back` or `left` |
+| `/structure undo` | puts back what your last load replaced |
+| `/structure locate <name> [radius]` | the nearest structure of this mod, 4096 blocks around you by default, at most 16384 |
+
+`structures/` is relative to the folder the game was started from (`Weft/` when you start it
+from the source tree): the SDK doesn't tell a mod where the game keeps its files. A box is at
+most 128 blocks along each side, and every block of it must be loaded. `load` sets one block at a
+time, so big boxes take a moment. `locate` knows the structures of this mod only; finding other
 mods' needs the engine to let mods register a locator.
 
 ## Adding a structure to this mod
 
-1. In the game, run `/structure save <name> <from> <to>`. The two corners are blocks of the box,
-   inclusive (`~ ~ ~` works), at most 128 blocks along each side. Start the box at the floor:
-   the bottom layer is laid level with the ground, and the foundation goes under it.
-2. The file goes to `structures/<name>.wst` in the folder the game was started from (`Weft/`
-   when you start it from the source tree). The reply shows the full path.
+1. In the game, select a box with the wand (or `/structure pos1` and `pos2`) and run
+   `/structure save <name>`, or give the two corners: `/structure save <name> <from> <to>`
+   (`~ ~ ~` works). Start the box at the floor: the bottom layer is laid level with the ground,
+   and the foundation goes under it.
+2. The file goes to `structures/<name>.wst`; the reply shows the full path. `/structure load
+   <name>` places it again to look at it from every side, and `/structure undo` takes it away.
 3. Copy it into `assets/structures/` and rebuild. `build.rs` compiles every file there in.
 
 The samples there (cottage, watchtower, well, wheat farm, ruined shrine) are drawn in code in

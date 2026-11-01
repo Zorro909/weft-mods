@@ -1,27 +1,29 @@
-//! `/structure save <name> <from> <to>`: writes a box of the world to `structures/<name>.wst`
-//! in the folder the game was started from, ready to copy into `assets/structures/`.
+//! `/structure save <name> [from] [to]`: writes a box of the world to `structures/<name>.wst`
+//! in the folder the game was started from, ready to copy into `assets/structures/`. Without
+//! corners, the player's selection (`/structure pos1`, `pos2`).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use structures_api::Structure;
 use weft_sdk::*;
 
+use crate::selection;
+
 /// Longest side of a box, so one command can't stall the server reading millions of blocks.
-const MAX_SIDE: i32 = 128;
+pub const MAX_SIDE: i32 = 128;
 /// Relative to the working directory: the SDK doesn't tell a mod where the game keeps its files.
 const FOLDER: &str = "structures";
 
 pub fn run(cmd: &mut ServerCommand) {
-    let (Some(name), Some(from), Some(to)) = (
-        cmd.text("name").map(str::to_string),
-        cmd.pos("from"),
-        cmd.pos("to"),
-    ) else {
+    let Some(name) = cmd.text("name").map(str::to_string) else {
         return;
     };
     if !valid_name(&name) {
         return cmd.reply("structures.bad_name", &[Arg::Text(&name)]);
     }
+    let Some((from, to)) = corners(cmd) else {
+        return cmd.reply("structures.no_selection", &[]);
+    };
     let (lo, size) = block_box(from, to);
     if size.iter().any(|&side| side > MAX_SIDE) {
         return cmd.reply("structures.too_big", &[Arg::Int(MAX_SIDE as i64)]);
@@ -50,8 +52,22 @@ pub fn run(cmd: &mut ServerCommand) {
     }
 }
 
+/// The two corners given, else the player's selection.
+fn corners(cmd: &ServerCommand) -> Option<([f64; 3], [f64; 3])> {
+    if let (Some(from), Some(to)) = (cmd.pos("from"), cmd.pos("to")) {
+        return Some((from, to));
+    }
+    let (from, to) = selection::selected(cmd.world().dimension(), cmd.player())?;
+    Some((from.map(|v| v as f64), to.map(|v| v as f64)))
+}
+
+/// Where structure `name` is saved, relative to the folder the game was started from.
+pub fn path_of(name: &str) -> PathBuf {
+    Path::new(FOLDER).join(format!("{name}.wst"))
+}
+
 /// Becomes the file's name and the template's.
-fn valid_name(name: &str) -> bool {
+pub fn valid_name(name: &str) -> bool {
     !name.is_empty()
         && name
             .chars()
@@ -81,9 +97,10 @@ fn read_box(world: &World, lo: [i32; 3], size: [i32; 3]) -> Option<Structure> {
 }
 
 fn write_file(name: &str, structure: &Structure) -> std::io::Result<PathBuf> {
-    let dir = std::env::current_dir()?.join(FOLDER);
-    std::fs::create_dir_all(&dir)?;
-    let path = dir.join(format!("{name}.wst"));
+    let path = std::env::current_dir()?.join(path_of(name));
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
     std::fs::write(&path, structure.encode())?;
     Ok(path)
 }

@@ -14,6 +14,19 @@ const MAX_SLOPE: i32 = 5;
 
 include!(concat!(env!("OUT_DIR"), "/embedded.rs"));
 
+/// The file built into the mod as `name`.
+pub fn embedded(name: &str) -> Option<&'static [u8]> {
+    EMBEDDED
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, file)| *file)
+}
+
+/// The names of the files built into the mod.
+pub fn embedded_names() -> Vec<&'static str> {
+    EMBEDDED.iter().map(|(name, _)| *name).collect()
+}
+
 pub fn register(r: &mut Registry) {
     for (name, file) in EMBEDDED {
         let Some(structure) = Structure::decode(file) else {
