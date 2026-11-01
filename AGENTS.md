@@ -37,6 +37,6 @@ Read the matching guide before you start; each is short.
 
 - Format your own lines with `tools/fmt-changed.sh` rather than `cargo fmt`, which would reformat whole files. It formats the repository you run it in, so for engine changes run `../tools/fmt-changed.sh` from inside `Weft/`. For a whole branch, pass the commit it started from. Check the diff afterwards.
 - Every fixed bug comes with a test that fails without the fix.
-- For a mod, run the checks in `docs/agents/mods.md`. For an engine change, run in `Weft/`: `cargo build --release --workspace`, `cargo test --release --workspace`, then `--test all` under Xvfb as `docs/agents/testing.md` runs it; upstream CI runs no tests, so this is the only check. Report any check you could not run, and say when something visual needs a human to look at it in the game.
+- For a mod, run the checks in `docs/agents/mods.md`. For an engine change, run in `Weft/`: `cargo build --release --workspace`, `cargo test --release --workspace`, then `--test all` through `tools/run-headless.sh` as `docs/agents/testing.md` runs it; upstream CI runs no tests, so this is the only check. Report any check you could not run, and say when something visual needs a human to look at it in the game.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org).
 - For a pull request to the upstream project, give your user a short, factual summary to write their own description from: what changed, why, what you ran, and what you did with AI help.

@@ -29,4 +29,4 @@ Before adding or changing content, read `modding.md` and the topic guide for it.
 3. Make `Weft/run/mods/<id>/` holding the library from the mod's `target/release/` (`lib<id>.so`, `<id>.dll` or `lib<id>.dylib`) and a copy of its `assets/`. `<id>` is the crate name; a folder named otherwise stops the game at load. `Weft/run/` is the source-tree game's folder, ignored by upstream's git.
 4. Start the game from inside `Weft/`: `target/release/weft`. Launched from elsewhere, a `run/` or `mods/` folder in the current directory becomes the game's root instead.
 5. Check it loads: `target/release/weft --server` starts a dedicated server without a window, and `Weft/run/logs/latest.log` then lists `loaded mod <id>`, or why it refused. Stop the server once that line is there.
-6. Run base's in-game tests with your mod loaded from `run/mods`, under Xvfb as `testing.md` says. That guide also covers what else checks a mod.
+6. Run base's in-game tests with your mod loaded from `run/mods`, through `tools/run-headless.sh` as `testing.md` says. That guide also covers what else checks a mod.
