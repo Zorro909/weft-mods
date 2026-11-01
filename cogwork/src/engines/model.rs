@@ -52,7 +52,7 @@ fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
             faces(trunk, [4.0, 0.0, 12.0, 12.0], trunk, [4.0, 4.0, 12.0, 12.0]),
         )
         // The whole block, piston and all: nothing walks into the piston's way.
-        .hitbox([0.0; 3], [1.0; 3])
+        .hitbox([0.0; 3], [16.0; 3])
 }
 
 /// A box's faces: `side` all round, `end` on its bottom and top.
