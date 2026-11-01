@@ -62,7 +62,7 @@ impl Turn {
 
 /// `state` turned: its `facing`, its `axis` and the sides it connects to (`north=true`) follow
 /// the turn. Properties the block doesn't have are left alone, and so is a value it can't take.
-pub fn turn_state(state: u32, turn: Turn) -> u32 {
+pub(crate) fn turn_state(state: u32, turn: Turn) -> u32 {
     if turn == Turn::None {
         return state;
     }

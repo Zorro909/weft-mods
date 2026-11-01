@@ -8,6 +8,7 @@
 //!   lays out each region from the seed and the terrain's columns: any number of templates
 //!   (`template` registers them) and blocks, anywhere inside the region.
 //! - `locate`: the nearest structure of a name, generated yet or not.
+//! - `Structure::place_in`: puts a structure into the world now, turned, as a command would.
 //!
 //! Everything is worked out from the seed and the terrain's columns, never from blocks, so
 //! every cube and every client gets the same answer. Structures don't know about each other,
@@ -19,6 +20,7 @@ mod generator;
 mod locate;
 mod packing;
 mod part;
+mod place_in;
 mod placement;
 mod plan;
 mod planned;
@@ -34,6 +36,7 @@ pub use format::Structure;
 pub use generator::Planner;
 pub use locate::{locate, names};
 pub use part::{Foundation, Placed};
+pub use place_in::PlaceError;
 pub use placement::{Placement, place};
 pub use plan::{Plan, PlanError};
 pub use planning::{Planning, plan};

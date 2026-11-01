@@ -91,6 +91,13 @@ what reached out and where. A template that wasn't registered fails the plan the
 `src/hamlet.rs` in this mod is a whole dynamic structure: a well with cottages facing it,
 wheat farms and gravel paths.
 
+### Placing one now
+
+`structure.place_in(&world, corner, turn)` puts a structure into the world straight away, turned,
+as a command would: every block of it, or nothing when one of its blocks is unknown
+(`PlaceError::UnknownBlock`) or part of the place isn't loaded (`PlaceError::NotLoaded`). It
+gives back the blocks it replaced, for an undo.
+
 ### Finding them
 
 `structures_api::locate(&world, "mymod:village", from, radius)` gives the nearest one's
