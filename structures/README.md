@@ -1,19 +1,24 @@
 # structures
 
-Structures from `.wst` files, stood on the ground while the world generates. Two crates:
+Structures from `.wst` files, placed while the world generates. Two crates:
 
-- `api/` (`structures_api`): the file format and the placement, for any mod to use.
+- `api/` (`structures_api`): the file format and the placing, for any mod to use.
 - this folder (`structures`): a mod that places the `.wst` files in `assets/structures/` in
-  base's overworld, and adds `/structure save` to make them.
+  base's overworld, alone and gathered into hamlets, and adds `/structure save` to make them and
+  `/structure locate` to find them.
 
 ## Using it from another mod
 
-Add the crate and call `place` from your `init`. Your mod does the placing itself, so it needs
+Add the crate and call it from your `init`. Your mod does the placing itself, so it needs
 neither the `structures` mod loaded nor an entry in `declare_mod!`.
 
 ```toml
 structures_api = { path = "<path to weft-mods>/structures/api" }
 ```
+
+### Static structures
+
+One template, stood on the ground now and then, turned whichever way the seed says:
 
 ```rust
 static COBBLESTONE: Block = Block::named("base:cobblestone");
@@ -28,24 +33,96 @@ structures_api::place(r, "hut", hut)
     .max_slope(5);         // skip places where the ground varies more
 ```
 
-`place` also registers the structure as a template of your mod (`mymod:hut`), so its blocks are
-checked when the game loads and `world.place(..)` puts it anywhere.
+`.keep_facing()` keeps it the way it was saved. `place` also registers the structure as a
+template of your mod (`mymod:hut`), so its blocks are checked when the game loads,
+`world.place(..)` puts it anywhere, and plans can use it.
+
+### Dynamic structures
+
+A planner of your own lays out a structure from any number of templates and blocks. The world
+is split into square regions, and each region gets one plan:
+
+```rust
+static WELL: Template = Template::named("well");
+static HOUSE: Template = Template::named("house");
+static PATH: Block = Block::named("base:gravel");
+
+structures_api::template(r, &WELL, well);    // a template plans may place
+structures_api::template(r, &HOUSE, house);
+structures_api::plan(r, "village", village)
+    .dimension(&base_api::OVERWORLD)
+    .region(512);                            // one plan per 512 x 512 blocks
+
+fn village(p: &mut Plan) -> Result<(), PlanError> {
+    if !p.random().chance(0.3) {
+        return Ok(());
+    }
+    let [x, z] = p.spot(64);                 // at least 64 blocks inside the region
+    let Some(corner) = p.fit(&WELL, [x, z], Turn::None, &Fit::new().max_slope(3)) else {
+        return Ok(());                       // the ground doesn't suit it
+    };
+    p.structure(&WELL, corner, Turn::None)?.foundation(&COBBLESTONE).clear_above();
+    if let Some(ground) = p.ground(x - 1, z) {
+        p.set([x - 1, ground.height, z], &PATH)?;
+    }
+    Ok(())
+}
+```
+
+What a planner has:
+
+| call | what it does |
+|---|---|
+| `p.region()` | the region's corners; everything must stay inside, seen from above |
+| `p.random()` | the same numbers every time: `next`, `below`, `between`, `chance`, `turn` |
+| `p.spot(margin)` | a random column at least `margin` blocks inside the region |
+| `p.ground(x, z)` | the column's height and biome, `None` at a cave mouth |
+| `p.size(&T, turn)` | a template's size once turned |
+| `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) |
+| `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned |
+| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(&B)` and `.clear_above()` meet the ground |
+| `p.set(pos, &B)?`, `p.set_state(..)?`, `p.fill(from, to, &B)?` | blocks |
+
+Later parts win where two overlap. A planner must be pure: it runs on the server and on every
+client, in any order, so it may use only the seed (`p.random()`) and the ground.
+
+Anything that would reach outside the region returns `PlanError`, and `?` stops the planner
+there. That region's plan is then given up whole, nothing of it is placed, and the log says
+what reached out and where. A template that wasn't registered fails the plan the same way.
+
+`src/hamlet.rs` in this mod is a whole dynamic structure: a well with cottages facing it,
+wheat farms and gravel paths.
+
+### Finding them
+
+`structures_api::locate(&world, "mymod:village", from, radius)` gives the nearest one's
+position, generated yet or not, and `structures_api::names()` the names your mod registered.
+Each mod links its own copy of the crate, so these know only your mod's structures. With
+`--log mod:<your mod>=debug` each plan is logged with its position too. `world.structure_near`
+doesn't know them.
 
 ## How a place is chosen
 
 All of it comes from the seed and the terrain's columns, never from blocks, so every chunk and
-every client gets the same answer (`api/src/site.rs`, `api/src/stamp.rs`):
+every client gets the same answer:
 
-1. The world is a grid of `spacing`-sized cells. Each cell gets the structure with `chance`, at a
-   spot in the cell from the seed.
-2. The biome under its middle must have the tag; the ground under all of it may vary by at most
+1. The world is a grid of square regions (`spacing` or `region` blocks). The first cube that
+   needs a region's plan works it out; every cube in it shares that plan and writes only its own
+   blocks.
+2. A static structure takes its region with `chance`, at a spot and a turn from the seed. The
+   biome under its middle must have the tag; the ground under all of it may vary by at most
    `max_slope` blocks and must have no cave mouth.
 3. The bottom layer stands on the median ground height (`buried(n)` sinks it). Under it the
    foundation block fills down to the ground, only below blocks of the bottom layer; ground that
    rises above it is cut away.
+4. A turned structure turns its blocks too: `facing`, `axis` and the sides a block connects to
+   (`north=true`) follow the turn.
 
-To find placed structures, start the game with `--log mod:<your mod>=debug`: each one is logged
-with its position. `world.structure_near` doesn't know them.
+## In this mod
+
+`/structure locate <name> [radius]` finds the nearest structure of this mod (4096 blocks around
+the player by default, at most 16384). It knows the structures of this mod only; finding other
+mods' needs the engine to let mods register a locator, or tell them the seed.
 
 ## Adding a structure to this mod
 
@@ -71,8 +148,8 @@ bits, and LZ4 around it. `api/src/format.rs` has the exact layout. Air in the bo
 - **Block entity contents.** A chest's items or a machine's state aren't saved: those blocks
   are placed empty. World saves keep them as entity data beside the cube (engine
   `server/persist.rs`), and generation only writes block states, so this needs an SDK change.
-- **Turning.** A structure always faces the way it was saved.
-- **Overlaps.** Structures don't know about each other, so two can land on the same spot.
+- **Overlaps.** Structures don't know about each other, so two can land on the same spot, a
+  single cottage inside a hamlet for one.
 - **Water.** The SDK tells a mod no sea level, so the biome tag is what keeps structures out of
   the sea.
 - **Structures from outside the mod.** Files are compiled in. Reading them from a folder at

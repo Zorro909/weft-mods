@@ -1,22 +1,43 @@
-//! Structures for any mod: the `.wst` file format, and `place`, which stands a structure on the
-//! ground while the world generates.
+//! Structures for any mod: the `.wst` file format, and placing structures while the world
+//! generates. A mod links this crate and calls it from its own `init`; it needs neither the
+//! `structures` mod loaded nor an entry in `declare_mod!`.
 //!
-//! A mod links this crate and calls `place` from its own `init`; it needs neither the
-//! `structures` mod loaded nor an entry in `declare_mod!`. The placing runs as that mod's own
-//! decoration (`Registry::decorate`), from the seed and the terrain's columns alone:
-//! - one chance per grid cell, at a spot in the cell from the seed
-//! - only where the biome under its middle has a tag, and the ground under all of it varies by
-//!   at most `max_slope` blocks and has no cave mouth
-//! - the bottom layer on the median ground height; a foundation block fills down to the ground
-//!   under it, and ground rising above it is cut away
+//! - `place`: a static structure, one template stood on the ground now and then, turned
+//!   whichever way the seed says, where the ground meets its conditions.
+//! - `plan`: a dynamic structure. The world is split into square regions, and the mod's planner
+//!   lays out each region from the seed and the terrain's columns: any number of templates
+//!   (`template` registers them) and blocks, anywhere inside the region.
+//! - `locate`: the nearest structure of a name, generated yet or not.
 //!
-//! Structures don't know about each other yet, so two can overlap.
+//! Everything is worked out from the seed and the terrain's columns, never from blocks, so
+//! every cube and every client gets the same answer. Structures don't know about each other,
+//! so two can overlap.
 
+mod fit;
 mod format;
+mod generator;
+mod locate;
 mod packing;
+mod part;
 mod placement;
-mod site;
+mod plan;
+mod planned;
+mod planning;
+mod random;
+mod region;
 mod stamp;
+mod templates;
+mod turn;
 
+pub use fit::{Fit, Ground};
 pub use format::Structure;
+pub use generator::Planner;
+pub use locate::{locate, names};
+pub use part::Placed;
 pub use placement::{Placement, place};
+pub use plan::{Plan, PlanError};
+pub use planning::{Planning, plan};
+pub use random::Random;
+pub use region::Region;
+pub use templates::template;
+pub use turn::Turn;

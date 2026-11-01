@@ -1,53 +1,57 @@
-//! A site's blocks that fall into one cube: the structure itself, foundation pillars from its
-//! bottom layer down to the ground, and the ground that rises above it cut away. Each cube
-//! writes only its own share.
+//! A part's blocks that fall into one cube: a template with its foundation pillars and the
+//! ground cut away above it, or a box of blocks. Each cube writes only its own share.
 
-use crate::site::Site;
+use crate::part::{Part, Piece};
+use crate::templates::Resolved;
 
-/// A structure ready to place: block states, known once the game has loaded.
-#[derive(Debug)]
-pub struct Resolved {
-    pub size: [i32; 3],
-    /// The state of every block, x fastest, then z, then y.
-    pub states: Vec<u32>,
-    pub air: u32,
-    /// Filled under the bottom layer down to the ground; none leaves the gap.
-    pub foundation: Option<u32>,
-}
-
-impl Resolved {
-    fn state(&self, x: i32, y: i32, z: i32) -> u32 {
-        let [sx, _, sz] = self.size;
-        self.states[((y * sz + z) * sx + x) as usize]
+/// Calls `set` with the position inside the cube at `origin` and the state of everything
+/// `part` puts there.
+pub(crate) fn stamp(part: &Part, origin: [i32; 3], set: &mut dyn FnMut([usize; 3], u32)) {
+    match part {
+        Part::Piece(piece) => {
+            if let Some(resolved) = piece.template.resolved() {
+                stamp_piece(piece, resolved, origin, set);
+            }
+        }
+        Part::Fill { from, to, state } => {
+            for (_, z) in overlap(from[2], to[2] - from[2] + 1, origin[2]) {
+                for (_, y) in overlap(from[1], to[1] - from[1] + 1, origin[1]) {
+                    for (_, x) in overlap(from[0], to[0] - from[0] + 1, origin[0]) {
+                        set([x, y, z], *state);
+                    }
+                }
+            }
+        }
     }
 }
 
-/// Calls `set` with the position inside the cube at `origin` and the state of everything
-/// `site` puts there.
-pub fn stamp(
+fn stamp_piece(
+    piece: &Piece,
     resolved: &Resolved,
-    site: &Site,
     origin: [i32; 3],
     set: &mut dyn FnMut([usize; 3], u32),
 ) {
-    let [sx, sy, sz] = resolved.size;
-    let [cx, cy, cz] = site.corner;
+    let [sx, sy, sz] = piece.size();
+    let [cx, cy, cz] = piece.corner;
     for (dz, z) in overlap(cz, sz, origin[2]) {
         for (dx, x) in overlap(cx, sx, origin[0]) {
-            let ground = site.ground[(dz * sx + dx) as usize];
             for (dy, y) in overlap(cy, sy, origin[1]) {
-                set([x, y, z], resolved.state(dx, dy, dz));
+                set([x, y, z], resolved.state(piece.turn, [dx, dy, dz]));
             }
-            if let Some(foundation) = resolved
-                .foundation
-                .filter(|_| resolved.state(dx, 0, dz) != resolved.air)
-            {
+            let ground = piece.ground.get((dz * sx + dx) as usize).copied().flatten();
+            let Some(ground) = ground else {
+                continue;
+            };
+            let floor = resolved.state(piece.turn, [dx, 0, dz]);
+            if let Some(foundation) = piece.foundation.filter(|_| floor != resolved.air) {
                 for (_, y) in overlap(ground + 1, cy - ground - 1, origin[1]) {
                     set([x, y, z], foundation);
                 }
             }
-            for (_, y) in overlap(cy + sy, ground - cy - sy + 1, origin[1]) {
-                set([x, y, z], resolved.air);
+            if piece.clear_above {
+                for (_, y) in overlap(cy + sy, ground - cy - sy + 1, origin[1]) {
+                    set([x, y, z], resolved.air);
+                }
             }
         }
     }
@@ -64,6 +68,9 @@ fn overlap(start: i32, len: i32, origin: i32) -> impl Iterator<Item = (i32, usiz
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::format::Structure;
+    use crate::templates;
+    use crate::turn::Turn;
 
     const AIR: u32 = 0;
     const FLOOR: u32 = 1;
@@ -74,37 +81,41 @@ mod tests {
     fn resolved() -> Resolved {
         Resolved {
             size: [2, 2, 2],
-            states: vec![FLOOR, FLOOR, FLOOR, AIR, WALL, WALL, WALL, WALL],
+            indices: vec![1, 1, 1, 0, 2, 2, 2, 2],
+            palettes: [0, 1, 2, 3].map(|_| vec![AIR, FLOOR, WALL]),
             air: AIR,
-            foundation: Some(STONE),
         }
     }
 
-    fn placed(site: &Site, origin: [i32; 3]) -> Vec<([usize; 3], u32)> {
+    fn piece(corner: [i32; 3], ground: Vec<i32>) -> Piece {
+        let template = Structure::from_names([2, 2, 2], ["core:air"; 8]);
+        Piece {
+            template: templates::add("test:stamp", template),
+            corner,
+            turn: Turn::None,
+            foundation: Some(STONE),
+            clear_above: true,
+            ground: ground.into_iter().map(Some).collect(),
+        }
+    }
+
+    fn placed(piece: &Piece, origin: [i32; 3]) -> Vec<([usize; 3], u32)> {
         let mut out = Vec::new();
-        stamp(&resolved(), site, origin, &mut |p, s| out.push((p, s)));
+        stamp_piece(piece, &resolved(), origin, &mut |p, s| out.push((p, s)));
         out.sort();
         out
     }
 
     #[test]
     fn flat_ground_gets_just_the_structure() {
-        let site = Site {
-            corner: [3, 5, 3],
-            ground: vec![4; 4],
-        };
-        let blocks = placed(&site, [0, 0, 0]);
+        let blocks = placed(&piece([3, 5, 3], vec![4; 4]), [0, 0, 0]);
         assert_eq!(blocks.len(), 8, "no foundation and nothing cut");
         assert!(blocks.contains(&([4, 5, 4], AIR)), "its air clears too");
     }
 
     #[test]
     fn foundations_reach_down_to_the_ground() {
-        let site = Site {
-            corner: [3, 5, 3],
-            ground: vec![1, 4, 4, 1],
-        };
-        let blocks = placed(&site, [0, 0, 0]);
+        let blocks = placed(&piece([3, 5, 3], vec![1, 4, 4, 1]), [0, 0, 0]);
         let pillar: Vec<usize> = blocks
             .iter()
             .filter(|(p, s)| p[0] == 3 && p[2] == 3 && *s == STONE)
@@ -112,20 +123,14 @@ mod tests {
             .collect();
         assert_eq!(pillar, [2, 3, 4], "from above the ground up to the floor");
         assert!(
-            !blocks
-                .iter()
-                .any(|(p, s)| p[0] == 4 && p[2] == 4 && *s == STONE),
+            !blocks.iter().any(|(p, s)| p[0] == 4 && p[2] == 4 && *s == STONE),
             "none under a gap in the floor"
         );
     }
 
     #[test]
     fn ground_above_the_structure_is_cut() {
-        let site = Site {
-            corner: [3, 5, 3],
-            ground: vec![9, 4, 4, 4],
-        };
-        let cut: Vec<usize> = placed(&site, [0, 0, 0])
+        let cut: Vec<usize> = placed(&piece([3, 5, 3], vec![9, 4, 4, 4]), [0, 0, 0])
             .iter()
             .filter(|(p, s)| p[0] == 3 && p[2] == 3 && p[1] >= 7 && *s == AIR)
             .map(|(p, _)| p[1])
@@ -138,13 +143,22 @@ mod tests {
     }
 
     #[test]
+    fn without_modifiers_only_the_structure_is_set() {
+        let mut bare = piece([3, 5, 3], vec![1, 9, 1, 9]);
+        bare.foundation = None;
+        bare.clear_above = false;
+        assert_eq!(
+            placed(&bare, [0, 0, 0]).len(),
+            8,
+            "the ground is left as it is"
+        );
+    }
+
+    #[test]
     fn a_cube_gets_only_its_share() {
-        let site = Site {
-            corner: [15, 5, 3],
-            ground: vec![4; 4],
-        };
-        let here = placed(&site, [0, 0, 0]);
-        let next = placed(&site, [16, 0, 0]);
+        let piece = piece([15, 5, 3], vec![4; 4]);
+        let here = placed(&piece, [0, 0, 0]);
+        let next = placed(&piece, [16, 0, 0]);
         assert!(
             here.iter().all(|(p, _)| p[0] == 15),
             "the first column here"
@@ -154,5 +168,17 @@ mod tests {
             "the second in the next cube"
         );
         assert_eq!(here.len() + next.len(), 8, "every block once");
+    }
+
+    #[test]
+    fn a_fill_is_cut_at_the_cube() {
+        let fill = Part::Fill {
+            from: [14, 0, 0],
+            to: [17, 0, 0],
+            state: STONE,
+        };
+        let mut here = 0;
+        stamp(&fill, [0, 0, 0], &mut |_, _| here += 1);
+        assert_eq!(here, 2, "two of its four blocks are in this cube");
     }
 }
