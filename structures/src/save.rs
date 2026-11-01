@@ -11,11 +11,7 @@ const MAX_SIDE: i32 = 128;
 /// Relative to the working directory: the SDK doesn't tell a mod where the game keeps its files.
 const FOLDER: &str = "structures";
 
-pub fn register(r: &mut Registry) {
-    r.command("structure", "save <name:word> <from:pos> <to:pos>", save);
-}
-
-fn save(cmd: &mut ServerCommand) {
+pub fn run(cmd: &mut ServerCommand) {
     let (Some(name), Some(from), Some(to)) = (
         cmd.text("name").map(str::to_string),
         cmd.pos("from"),
