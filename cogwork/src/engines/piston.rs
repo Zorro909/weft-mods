@@ -49,11 +49,16 @@ fn standing_plate() -> Part {
     plate().rotation(90.0, 0.0, 0.0)
 }
 
-/// Texels the piston stands above its rest at `stroke` ticks into it: up, a rest, back down, a
-/// rest.
+/// Texels the piston stands above its rest at `stroke` ticks into it.
 pub fn lift(stroke: u32) -> f64 {
+    LIFT * steps_up(stroke) as f64 / TRAVEL as f64
+}
+
+/// Ticks of travel the piston is above its rest at `stroke` ticks into it, 0..=`TRAVEL`: up, a
+/// rest, back down, a rest.
+fn steps_up(stroke: u32) -> u32 {
     let s = stroke % STROKE_TICKS;
-    let up = if s < TRAVEL {
+    if s < TRAVEL {
         s
     } else if s < TRAVEL + REST {
         TRAVEL
@@ -61,8 +66,23 @@ pub fn lift(stroke: u32) -> f64 {
         2 * TRAVEL + REST - s
     } else {
         0
-    };
-    LIFT * up as f64 / TRAVEL as f64
+    }
+}
+
+/// The stroke one tick on. Every engine's piston keeps time with the world's ticks, so all of them
+/// rise and fall together: it takes the shared place in the stroke whenever that is no further
+/// than one tick's travel from where it is, and else moves on by itself until the two meet,
+/// within half a stroke. A stopped engine finishes its stroke and stays at rest.
+pub fn advance(stroke: u32, running: bool, time: u64) -> u32 {
+    if !running && steps_up(stroke) == 0 {
+        return stroke;
+    }
+    let shared = (time % STROKE_TICKS as u64) as u32;
+    if steps_up(shared).abs_diff(steps_up(stroke)) <= 1 {
+        shared
+    } else {
+        (stroke + 1) % STROKE_TICKS
+    }
 }
 
 /// Puts the engine `id`'s piston where its stroke has it.
@@ -103,6 +123,35 @@ mod tests {
         let at_top = lifts.iter().filter(|&&l| l == max).count();
         let at_bottom = lifts.iter().filter(|&&l| l == 0.0).count();
         assert!(at_top > 2 && at_bottom > 2, "rests at both ends: {lifts:?}");
+    }
+
+    #[test]
+    fn engines_started_apart_fall_into_step_without_jumping() {
+        for start in 0..STROKE_TICKS as u64 {
+            let mut stroke = 0;
+            for time in start..start + 3 * STROKE_TICKS as u64 {
+                let next = advance(stroke, true, time + 1);
+                let step = steps_up(next).abs_diff(steps_up(stroke));
+                assert!(step <= 1, "no jump starting at {start}");
+                stroke = next;
+            }
+            let time = start + 3 * STROKE_TICKS as u64;
+            assert_eq!(
+                stroke as u64,
+                time % STROKE_TICKS as u64,
+                "in step, started at {start}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_stopped_engine_finishes_its_stroke_and_rests() {
+        let mut stroke = TRAVEL;
+        for time in 0..2 * STROKE_TICKS as u64 {
+            stroke = advance(stroke, false, time);
+        }
+        assert_eq!(lift(stroke), 0.0, "back at rest");
+        assert_eq!(advance(stroke, false, 5), stroke, "and stays there");
     }
 
     #[test]

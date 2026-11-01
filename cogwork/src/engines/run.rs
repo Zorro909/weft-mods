@@ -1,9 +1,9 @@
 //! The engines' tick: make energy, push it out of the trunk, warm up or cool down, and move the
-//! piston while running. A stopped engine finishes its stroke.
+//! piston while running.
 
 use weft_sdk::*;
 
-use super::piston::{self, STROKE_TICKS};
+use super::piston;
 use super::{Engine, fuel_ticks, kind, model};
 
 /// Energy per tick: a spring engine with a signal, an ember engine burning.
@@ -35,9 +35,7 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
         let full = store(&w, id, made * ticks as i64);
         push(&w, id, pos);
         warm(e, running, full, ticks);
-        if running || e.stroke != 0 {
-            e.stroke = (e.stroke + 1) % STROKE_TICKS;
-        }
+        e.stroke = piston::advance(e.stroke, running, w.time());
         show_heat(&w, pos, e);
         piston::show(&w, id, pos, e);
     }
