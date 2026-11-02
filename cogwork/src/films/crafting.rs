@@ -1,37 +1,49 @@
 //! Autocrafting in two steps along one row, west to east: sticks go by tube into a bench that
 //! makes wooden cogs, a timber tube takes them on to a second bench, which also gets
-//! cobblestone from its own line from the north and makes stone cogs into the last chest. The
-//! camera looks at the row from the south, so nothing stands in front of it there.
+//! cobblestone from its own line from the north and makes stone cogs into the last chest.
+//!
+//! Every machine runs on a spring engine, and a low wall behind the row carries redstone from a
+//! lever to all of them: nothing moves until the lever is thrown on camera. The camera looks at
+//! the row from the south, so nothing stands in front of it there.
 
 use showcase_api::Set;
 use weft_sdk::*;
 
 use super::excavators::beside;
-use super::parts::{CHEST, engine, fuel, line, stock};
+use super::parts::{CHEST, line, spring, stock};
 use crate::bench::{ASSEMBLY_BENCH, set_ghost};
 use crate::tube::TIMBER_TUBE;
 
 /// The row everything stands on, and where along it.
-pub const ROW_Z: i32 = 14;
+pub const ROW_Z: i32 = 16;
 pub const STICKS: [i32; 3] = [-12, 0, ROW_Z];
-pub const COGS: [i32; 3] = [-7, 0, ROW_Z];
 pub const STONE_COGS: [i32; 3] = [-2, 0, ROW_Z];
+const COGS: [i32; 3] = [-7, 0, ROW_Z];
 const OUTPUT: [i32; 3] = [3, 0, ROW_Z];
-/// The cobblestone's chest, north of the second bench.
-const COBBLE: [i32; 3] = [-2, 0, ROW_Z - 4];
+/// The cobblestone's chest, north of the second bench behind the wall.
+const COBBLE: [i32; 3] = [-2, 0, ROW_Z - 3];
 /// Timber tubes, each with an engine on top: out of the stick chest, out of each bench, and
 /// out of the cobblestone chest.
 const PULLS: [[i32; 3]; 4] = [
     [-11, 0, ROW_Z],
     [-6, 0, ROW_Z],
     [-1, 0, ROW_Z],
-    [-2, 0, ROW_Z - 3],
+    [-2, 0, ROW_Z - 2],
 ];
+/// The wall behind the row, two blocks high, from end to end of the machines.
+const WALL_Z: i32 = ROW_Z - 1;
+const WALL_X: [i32; 2] = [-12, -1];
+/// On the wall's face above the stick chest, where the camera sees it thrown.
+pub const LEVER: [i32; 3] = [WALL_X[0], 1, ROW_Z];
 
 /// The cells of the patterns: a wooden cog is four sticks round a gap, a stone cog four
 /// cobblestones round a wooden cog.
 const ROUND: [u32; 4] = [1, 3, 5, 7];
 const MIDDLE: u32 = 4;
+
+static STONE_BRICKS: Block = Block::named("base:stone_bricks");
+static REDSTONE: Block = Block::named("base:redstone");
+static LEVER_BLOCK: Block = Block::named("base:lever");
 
 pub fn build(set: &Set) {
     for chest in [STICKS, COBBLE, OUTPUT] {
@@ -39,19 +51,37 @@ pub fn build(set: &Set) {
     }
     for bench in [COGS, STONE_COGS] {
         set.place(bench, ASSEMBLY_BENCH.with(&[("facing", "south")]));
-        engine(set, beside(bench, Dir::Up), Dir::Down);
     }
     for pull in PULLS {
         set.place(pull, TIMBER_TUBE.id());
-        engine(set, beside(pull, Dir::Up), Dir::Down);
+    }
+    for machine in [COGS, STONE_COGS].into_iter().chain(PULLS) {
+        spring(set, beside(machine, Dir::Up), Dir::Down);
     }
     line(set, [-10, 0, ROW_Z], [-8, 0, ROW_Z]);
     line(set, [-5, 0, ROW_Z], [-3, 0, ROW_Z]);
-    line(set, [-2, 0, ROW_Z - 2], [-2, 0, ROW_Z - 1]);
+    line(set, [-2, 0, WALL_Z], [-2, 0, WALL_Z]);
     line(set, [0, 0, ROW_Z], [2, 0, ROW_Z]);
+    power_line(set);
 }
 
-/// Fills the supply chests, lays out both patterns and starts every engine.
+/// The wall, redstone along its top, and the lever on its face. The wire powers the wall's top
+/// blocks, and so every engine touching them.
+fn power_line(set: &Set) {
+    let floor_wire = REDSTONE.with(&[("faces", "4")]);
+    for x in WALL_X[0]..=WALL_X[1] {
+        // The cobblestone's tube runs under the wall.
+        if x != COBBLE[0] {
+            set.place([x, 0, WALL_Z], STONE_BRICKS.id());
+        }
+        set.place([x, 1, WALL_Z], STONE_BRICKS.id());
+        set.place([x, 2, WALL_Z], floor_wire);
+    }
+    let lever = [("attach", "north"), ("front", "down"), ("power", "off")];
+    set.place(LEVER, LEVER_BLOCK.with(&lever));
+}
+
+/// Fills the supply chests and lays out both patterns; the machines wait for the lever.
 pub fn start(set: &Set) {
     stock(set, STICKS, &["base:stick"], 6);
     stock(set, COBBLE, &["base:cobblestone"], 6);
@@ -66,7 +96,9 @@ pub fn start(set: &Set) {
         set_ghost(&world, stone_cogs, cell, item("base:cobblestone"));
     }
     set_ghost(&world, stone_cogs, MIDDLE, item("cogwork:wooden_cog"));
-    for machine in [COGS, STONE_COGS].into_iter().chain(PULLS) {
-        fuel(set, beside(machine, Dir::Up));
-    }
+}
+
+/// Throws the lever: the whole row starts.
+pub fn switch_on(set: &Set) {
+    set.world().set_prop(set.at(LEVER), "power", "on");
 }

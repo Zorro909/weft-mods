@@ -1,6 +1,7 @@
-//! Three excavators in a row, all facing north with their areas behind them to the south: one
-//! that puts up its frame on camera, and two already some layers down, whose output runs
-//! through tubes, sped up by gilded ones, to a sorting tube that fills three chests.
+//! Three excavators in a row, all facing south toward the camera with their areas behind them
+//! to the north: one that puts up its frame on camera, and two already some layers down, whose
+//! output runs south and then west through tubes, sped up by gilded ones, to a sorting tube
+//! that fills three chests.
 
 use showcase_api::Set;
 use weft_sdk::*;
@@ -10,26 +11,28 @@ use crate::excavator::EXCAVATOR;
 use crate::tube::{DIRECTING_TUBE, GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
 
 /// The one that builds its frame while the camera watches.
-pub const BUILDER: [i32; 3] = [-16, 0, -4];
+pub const BUILDER: [i32; 3] = [-16, 0, 4];
 /// The two already digging, and how deep their pits are when the film starts.
-pub const SHALLOW: [i32; 3] = [0, 0, -4];
-pub const DEEP: [i32; 3] = [16, 0, -4];
+pub const SHALLOW: [i32; 3] = [0, 0, 4];
+pub const DEEP: [i32; 3] = [16, 0, 4];
 const SHALLOW_DEPTH: i32 = 4;
 pub const DEEP_DEPTH: i32 = 8;
+/// The middle of each area, north of its excavator.
+pub const AREA_Z: f64 = -1.5;
 /// Where both excavators' output is sorted, and the tube row it arrives along.
-pub const SORTER: [i32; 3] = [-6, 0, -8];
-const ROW_Z: i32 = -8;
+pub const SORTER: [i32; 3] = [-6, 0, 7];
+const ROW_Z: i32 = 7;
 
 pub fn build(set: &Set) {
     for at in [BUILDER, SHALLOW, DEEP] {
-        set.place(at, EXCAVATOR.with(&[("facing", "north")]));
+        set.place(at, EXCAVATOR.with(&[("facing", "south")]));
         for (place, toward) in engines(at) {
             engine(set, place, toward);
         }
     }
     pit(set, SHALLOW, SHALLOW_DEPTH);
     pit(set, DEEP, DEEP_DEPTH);
-    set.place(beside(BUILDER, Dir::North), CHEST.id());
+    set.place(beside(BUILDER, Dir::South), CHEST.id());
     output_lines(set);
     sorting_station(set);
 }
@@ -78,17 +81,17 @@ fn engines(at: [i32; 3]) -> Vec<([i32; 3], Dir)> {
 fn pit(set: &Set, at: [i32; 3], depth: i32) {
     let air = Block::lookup("core:air").unwrap_or(0);
     set.fill(
-        [at[0] - 4, -depth, at[2] + 2],
-        [at[0] + 4, -1, at[2] + 10],
+        [at[0] - 4, -depth, at[2] - 10],
+        [at[0] + 4, -1, at[2] - 2],
         air,
     );
 }
 
-/// From each digging excavator's front north to the row, then west along it to the sorter; a
+/// From each digging excavator's front south to the row, then west along it to the sorter; a
 /// directing tube where the lines meet sends everything on west.
 fn output_lines(set: &Set) {
-    line(set, beside(SHALLOW, Dir::North), [SHALLOW[0], 0, ROW_Z + 1]);
-    line(set, beside(DEEP, Dir::North), [DEEP[0], 0, ROW_Z]);
+    line(set, beside(SHALLOW, Dir::South), [SHALLOW[0], 0, ROW_Z - 1]);
+    line(set, beside(DEEP, Dir::South), [DEEP[0], 0, ROW_Z]);
     line(set, [DEEP[0] - 1, 0, ROW_Z], [11, 0, ROW_Z]);
     line_of(set, [10, 0, ROW_Z], [6, 0, ROW_Z], GILDED_TUBE.id());
     line(set, [5, 0, ROW_Z], [SHALLOW[0] + 1, 0, ROW_Z]);

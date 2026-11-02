@@ -3,7 +3,7 @@
 use showcase_api::Set;
 use weft_sdk::*;
 
-use crate::engines::EMBER_ENGINE;
+use crate::engines::{EMBER_ENGINE, SPRING_ENGINE};
 use crate::tube::STONE_TUBE;
 
 pub static CHEST: Block = Block::named("base:chest");
@@ -13,6 +13,14 @@ pub fn engine(set: &Set, at: [i32; 3], toward: Dir) {
     set.place(
         at,
         EMBER_ENGINE.with(&[("facing", toward.opposite().name())]),
+    );
+}
+
+/// A spring engine at `at`, which runs while it has redstone power.
+pub fn spring(set: &Set, at: [i32; 3], toward: Dir) {
+    set.place(
+        at,
+        SPRING_ENGINE.with(&[("facing", toward.opposite().name())]),
     );
 }
 
