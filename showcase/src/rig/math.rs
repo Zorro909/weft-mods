@@ -1,4 +1,4 @@
-//! Easing curves and the angle and vector arithmetic the rig shares.
+//! The arithmetic the rig shares: easing, mixing, vectors and angles.
 
 use showcase_api::Ease;
 
@@ -35,7 +35,12 @@ pub fn length(v: [f64; 3]) -> f64 {
 
 /// From `a` toward `b` the short way round, in degrees.
 pub fn lerp_angle(a: f64, b: f64, u: f64) -> f64 {
-    a + (b - a + 540.0).rem_euclid(360.0) * u - 180.0 * u
+    a + short_turn(a, b) * u
+}
+
+/// The turn from `a` to `b` the short way round, -180 to 180 degrees.
+pub fn short_turn(a: f64, b: f64) -> f64 {
+    (b - a + 540.0).rem_euclid(360.0) - 180.0
 }
 
 /// Yaw and pitch in degrees that look along `dir` (the game's: yaw 0 looks toward -z, pitch

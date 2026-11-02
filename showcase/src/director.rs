@@ -3,17 +3,18 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
+use std::time::Instant;
 
-use showcase_api::{SIGNAL, SUBJECT, TIMELINE, Timeline, decode, name, name_text};
-use weft_sdk::abi::{PlayerControl, control_mask as cm};
+use showcase_api::{SIGNAL, SUBJECT, TIMELINE, Timeline, name, name_text};
 use weft_sdk::client::client_flags as cf;
 use weft_sdk::*;
 
 use crate::menus::Menus;
 use crate::playback::Playback;
 use crate::rig::Pose;
-use crate::rig::ease::{add, angles_along, forward, sub};
+use crate::rig::math::{add, angles_along, sub};
 use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
+use crate::view::{camera, missing_notice, put, set_fov, titles};
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
 const STOP_FRAMES: u32 = 20;
@@ -33,7 +34,7 @@ struct Director {
     /// Films played to the end since the game started.
     finished: u32,
     /// The last film asked for that never came, and when that was known.
-    missing: Option<(String, std::time::Instant)>,
+    missing: Option<(String, Instant)>,
     menus: Menus,
 }
 
@@ -59,7 +60,10 @@ fn with<R>(f: impl FnOnce(&mut Director) -> R) -> R {
 }
 
 pub fn register(r: &mut Registry) {
-    r.client_packet(&TIMELINE, |c, bytes| start(c, &bytes));
+    r.client_packet(&TIMELINE, |c, timeline| {
+        c.send(&STARTED, &());
+        play(c, timeline);
+    });
     r.client_packet(&SIGNAL, |_, s| {
         with(|d| d.signals.insert(name_text(&s.name).to_string()));
     });
@@ -72,7 +76,7 @@ pub fn register(r: &mut Registry) {
     r.client_packet(&MISSING, |_, m| {
         let film = name_text(&m.film).to_string();
         error!("showcase: no mod sent the film {film}; is it loaded, built with its films?");
-        with(|d| d.missing = Some((film, std::time::Instant::now())));
+        with(|d| d.missing = Some((film, Instant::now())));
     });
     r.client_frame(|c| {
         with(|d| {
@@ -95,18 +99,6 @@ pub fn finished() -> u32 {
 /// Whether a film was asked for and never came.
 pub fn missing() -> bool {
     with(|d| d.missing.is_some())
-}
-
-fn start(c: &Client, bytes: &[u8]) {
-    let Some(timeline) = decode(bytes) else {
-        error!(
-            "showcase: a film arrived that this version can't read ({} bytes)",
-            bytes.len()
-        );
-        return;
-    };
-    c.send(&STARTED, &());
-    play(c, timeline);
 }
 
 /// Plays `timeline` on this client, after loading the world along it.
@@ -153,8 +145,8 @@ fn load(c: &Client, playback: Playback, stops: Vec<[f64; 3]>, at: usize, frames:
         mark("start", &playback.film);
         return Phase::Rolling(playback);
     };
-    let center = playback.origin.map(|v| v as f64 + 0.5);
-    let (yaw, pitch) = angles_along(sub(center, stop)).unwrap_or((0.0, 0.0));
+    let (yaw, pitch) = angles_along(sub(block_center(playback.origin), stop)).unwrap_or_default();
+    // The field of view is left alone until the film rolls.
     put(
         c,
         Pose {
@@ -192,7 +184,7 @@ fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
     let pose = playback.pose();
     put(c, pose);
     set_fov(pose.fov);
-    titles(c, playback, pose);
+    titles(c, &playback.titles, playback.elapsed(), pose);
     d.menus.show(c, playback.menu.as_ref());
 }
 
@@ -227,89 +219,11 @@ fn subject(c: &Client, &(entity, pos): &(u64, [f64; 3])) -> Option<[f64; 3]> {
     Some(add(e.pos, [0.0, e.size[1] as f64 / 2.0, 0.0]))
 }
 
-/// The camera now, from the local player and its settings.
-pub fn camera(c: &Client) -> Pose {
-    let s = c.state();
-    let eye = add(s.pos, [0.0, eye_height(c), 0.0]);
-    Pose {
-        eye,
-        yaw: (s.yaw as f64).to_degrees(),
-        pitch: (s.pitch as f64).to_degrees(),
-        fov: weft_sdk::settings::FOV.get(),
-    }
-}
-
-fn eye_height(c: &Client) -> f64 {
-    c.entity(0).map_or(1.62, |e| e.size[2] as f64)
-}
-
-/// Moves the local player so that its eyes are the camera.
-fn put(c: &Client, pose: Pose) {
-    c.control(&PlayerControl {
-        mask: cm::POS | cm::VEL | cm::LOOK | cm::FLYING,
-        pos: sub(pose.eye, [0.0, eye_height(c), 0.0]),
-        vel: [0.0; 3],
-        yaw: pose.yaw.to_radians() as f32,
-        pitch: pose.pitch.to_radians() as f32,
-        flying: 1,
-        ..PlayerControl::DEFAULT
-    });
-}
-
-/// Sets the field of view, only when it changes: every change is applied as a new setting.
-fn set_fov(fov: f32) {
-    use weft_sdk::settings::FOV;
-    if (FOV.get() - fov).abs() > 0.05 {
-        FOV.set(fov);
-    }
-}
-
 /// Says on screen for a while that the film asked for never came.
 fn notice(c: &Client, d: &Director) {
-    let Some((film, since)) = &d.missing else {
-        return;
-    };
-    if since.elapsed().as_secs_f32() < NOTICE_SECS {
-        c.screen_text(
-            0.5,
-            0.3,
-            "showcase.missing",
-            &[Arg::Text(film)],
-            0xFF8080FF,
-            1.5,
-        );
+    if let Some((film, since)) = &d.missing
+        && since.elapsed().as_secs_f32() < NOTICE_SECS
+    {
+        missing_notice(c, film);
     }
-}
-
-/// The film's titles, faded in and out, near the bottom of the picture. They are drawn as
-/// labels in the world in front of the camera, which stay visible while the HUD is hidden.
-fn titles(c: &Client, playback: &Playback, pose: Pose) {
-    const FADE: f32 = 0.6;
-    // Where the line sits, as a share of the half picture below the middle.
-    const LOW: f64 = 0.78;
-    let now = playback.elapsed();
-    // The field of view is vertical: this many degrees down is that far down the picture.
-    let down = (LOW * (pose.fov as f64 / 2.0).to_radians().tan())
-        .atan()
-        .to_degrees();
-    let ahead = forward(pose.yaw, pose.pitch - down);
-    let at = add(pose.eye, ahead.map(|v| v * 12.0));
-    let size = title_size(c);
-    for title in &playback.titles {
-        let shown = ((now - title.from) / FADE)
-            .min((title.until - now) / FADE)
-            .clamp(0.0, 1.0);
-        let alpha = (shown * 255.0) as u32;
-        c.draw_text(None, at, &title.key, &[], 0xFFFFFF00 | alpha, size);
-    }
-}
-
-/// How big titles are drawn, as a multiple of menu text, which grows with the GUI scale: the
-/// same share of the picture's width at any window size and scale, about 70 letters across.
-fn title_size(c: &Client) -> f32 {
-    // A letter of menu text is about this many GUI pixels wide.
-    const LETTER: f32 = 6.4;
-    const LETTERS_ACROSS: f32 = 70.0;
-    let s = c.state();
-    s.window[0] as f32 / LETTERS_ACROSS / (LETTER * s.gui_scale.max(1.0))
 }

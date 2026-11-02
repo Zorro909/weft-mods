@@ -16,7 +16,7 @@ pub struct Title {
 
 /// A block's menu on screen until `until` seconds into the film.
 #[derive(Clone, Debug, PartialEq)]
-pub struct OpenMenu {
+pub struct ShownMenu {
     pub menu: String,
     /// The block, in the world.
     pub at: [i32; 3],
@@ -39,7 +39,7 @@ pub struct Playback {
     /// The player's field of view, for shots that keep it.
     own_fov: f32,
     pub titles: Vec<Title>,
-    pub menu: Option<OpenMenu>,
+    pub menu: Option<ShownMenu>,
 }
 
 impl Playback {
@@ -47,7 +47,7 @@ impl Playback {
         Playback {
             film: timeline.film,
             origin: timeline.origin,
-            steps: timeline.steps.steps,
+            steps: timeline.steps,
             index: 0,
             clock: 0.0,
             elapsed: 0.0,
@@ -83,11 +83,8 @@ impl Playback {
         self.elapsed += dt;
         self.clock += dt;
         let mut cues = Vec::new();
-        // Steps that take no time all happen in this frame; the bound only guards the loop.
-        for _ in 0..=self.steps.len() {
-            let Some(used) = self.run_step(signals, subjects, &mut cues) else {
-                break;
-            };
+        // Every step that ends within this frame, so steps that take no time all happen now.
+        while let Some(used) = self.run_step(signals, subjects, &mut cues) {
             self.clock = (self.clock - used).max(0.0);
             self.index += 1;
             self.rig = None;
@@ -99,7 +96,8 @@ impl Playback {
         cues
     }
 
-    /// Runs the current step for the clock; `Some(seconds it took)` once it is over.
+    /// Runs the current step for the clock; `Some(seconds it took)` once it is over, `None`
+    /// while it goes on or after the last.
     fn run_step(
         &mut self,
         signals: &mut HashSet<String>,
@@ -122,7 +120,7 @@ impl Playback {
                 Some(0.0)
             }
             Step::Menu { menu, at, secs } => {
-                self.menu = Some(OpenMenu {
+                self.menu = Some(ShownMenu {
                     menu: menu.clone(),
                     at: std::array::from_fn(|i| self.origin[i] + at[i]),
                     until: self.elapsed - clock + secs,
@@ -131,8 +129,11 @@ impl Playback {
             }
             Step::Wait(secs) => (clock >= *secs).then_some(*secs),
             Step::WaitFor { name, max } => {
-                let came = signals.remove(name);
-                (came || clock >= *max).then_some(if came { clock } else { *max })
+                if signals.remove(name) {
+                    Some(clock)
+                } else {
+                    (clock >= *max).then_some(*max)
+                }
             }
             Step::Shot(shot) => {
                 let rig = self
@@ -164,7 +165,7 @@ impl Playback {
 
 #[cfg(test)]
 mod tests {
-    use showcase_api::{Film, hold};
+    use showcase_api::{Film, dolly, follow, hold};
 
     use super::*;
 
@@ -184,7 +185,7 @@ mod tests {
             Timeline {
                 film: "mymod:tour".into(),
                 origin,
-                steps: film,
+                steps: film.steps,
             },
             START,
         )
@@ -262,5 +263,19 @@ mod tests {
         assert_eq!((open.at, open.until), ([12, 64, 9], 3.0));
         p.advance(1.6, &mut signals, &none);
         assert_eq!(p.menu, None, "closed at three seconds");
+    }
+
+    #[test]
+    fn the_world_is_loaded_along_every_shot_but_a_follow() {
+        let film = Film::new()
+            .shot(dolly([0.0; 3], [10.0, 0.0, 0.0]))
+            .shot(follow("item", [0.0, 1.0, 0.0]));
+        let p = play_at([100, 64, 0], film);
+        let stops = [[100.0, 64.0, 0.0], [105.0, 64.0, 0.0], [110.0, 64.0, 0.0]];
+        assert_eq!(
+            p.stops(),
+            stops,
+            "the dolly's start, middle and end in the world"
+        );
     }
 }
