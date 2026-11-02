@@ -1,0 +1,35 @@
+# Checks a pull request: the Rust lines it changes are formatted, and every mod builds for
+# Windows, Linux and macOS against the Weft the submodule pins.
+name: Check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # For the `--file-lines` that `fmt-changed.sh` formats with.
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      # Only the lines the pull request changes, since older code keeps its hand formatting. The
+      # Weft submodule is not checked out, and `fmt-changed.sh` doesn't look into it anyway.
+      - name: Changed lines are formatted
+        run: |
+          tools/fmt-changed.sh "$(git merge-base HEAD "origin/$GITHUB_BASE_REF")"
+          if ! git diff --exit-code; then
+            echo "::error::Unformatted lines; run tools/fmt-changed.sh $GITHUB_BASE_REF and commit the result."
+            exit 1
+          fi
+
+  build:
+    uses: ./.github/workflows/build.yml

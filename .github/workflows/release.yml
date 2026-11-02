@@ -1,0 +1,138 @@
+# Releases the mods. Each release of a mod holds one `<id>.zip` with its Windows, Linux and macOS
+# builds, and README.md lists the newest of every mod and each version before.
+#   - On every push to main, a mod gets a release when its crate version has none yet, and
+#     otherwise a release candidate if it changed since the last one (`tools/ci/plan-release.sh`).
+#   - When the Weft submodule is behind upstream's master, every mod also gets an experimental
+#     prerelease built against that master, once per pair of commits; daily as well, for upstream
+#     commits that come while this repository doesn't change.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A run plans from the tags the one before it made.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.release.outputs.plan }}
+      experimental: ${{ steps.experimental.outputs.plan }}
+      upstream: ${{ steps.upstream.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Mods to release
+        id: release
+        run: |
+          plan='[]'
+          if [ "$GITHUB_EVENT_NAME" != schedule ]; then
+            plan=$(tools/ci/plan-release.sh)
+          fi
+          echo "plan=$plan" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Upstream master
+        id: upstream
+        run: |
+          url=$(git config -f .gitmodules submodule.Weft.url)
+          commit=$(git ls-remote "$url" refs/heads/master | cut -f1)
+          echo "commit=$commit" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Mods to build against upstream master
+        id: experimental
+        env:
+          UPSTREAM: ${{ steps.upstream.outputs.commit }}
+        run: |
+          plan='[]'
+          if [ "$UPSTREAM" != "$(git rev-parse HEAD:Weft)" ]; then
+            plan=$(tools/ci/plan-experimental.sh "$UPSTREAM")
+          fi
+          echo "plan=$plan" | tee -a "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.release != '[]'
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: libraries-*
+          path: libraries
+          merge-multiple: true
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ needs.plan.outputs.release }}
+        run: tools/ci/publish.sh "$PLAN" libraries
+
+  build-experimental:
+    needs: plan
+    if: needs.plan.outputs.experimental != '[]'
+    uses: ./.github/workflows/build.yml
+    with:
+      weft: ${{ needs.plan.outputs.upstream }}
+      artifact: experimental
+
+  publish-experimental:
+    needs: [plan, build-experimental]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Weft at upstream master
+        env:
+          UPSTREAM: ${{ needs.plan.outputs.upstream }}
+        run: tools/ci/use-weft.sh "$UPSTREAM"
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: experimental-*
+          path: libraries
+          merge-multiple: true
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ needs.plan.outputs.experimental }}
+        run: tools/ci/publish.sh "$PLAN" libraries
+
+  # Also after one of the two publish jobs failed, so the other's releases are listed.
+  readme:
+    needs: [publish, publish-experimental]
+    if: always() && contains(needs.*.result, 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Update README.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/ci/update-readme.sh main
