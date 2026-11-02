@@ -60,7 +60,7 @@ pub(crate) struct Entry {
 impl Entry {
     /// Unturned, along x, y and z.
     pub fn size(&self) -> [i32; 3] {
-        self.structure.size.map(|v| v as i32)
+        self.structure.size()
     }
 
     /// `None` (said once) if a block is unknown; the template check at load should have caught it.
@@ -160,7 +160,8 @@ mod tests {
 
     #[test]
     fn templates_are_found_by_name() {
-        add("test:found", Structure::from_names([1, 1, 1], ["core:air"]));
+        let structure = Structure::from_names([1, 1, 1], ["core:air"]).expect("one name");
+        add("test:found", structure);
         let entry = find("test:found").expect("registered");
         assert_eq!(entry.size(), [1, 1, 1], "its size");
         assert!(find("test:missing").is_none(), "an unknown name");

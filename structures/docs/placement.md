@@ -1,6 +1,6 @@
 # How a place is chosen
 
-All of it comes from the seed and the terrain's columns, never from blocks, so every chunk and
+All of it comes from the seed and the terrain's columns, never from blocks, so every cube and
 every client gets the same answer:
 
 1. The world is a grid of square regions (`spacing` or `region` blocks). The first cube that

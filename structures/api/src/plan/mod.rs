@@ -1,12 +1,16 @@
-//! `Plan`: what a planner gets to lay out one region of a structure. It sees the terrain's
-//! columns and never blocks, so every cube and every client works out the same plan.
+//! `Plan`: what a planner gets to lay out one region of a structure, and what it may ask about
+//! the region. It sees the terrain's columns and never blocks, so every cube and every client
+//! works out the same plan.
+
+mod add;
 
 use std::fmt;
 use std::sync::Arc;
 
+use weft_sdk::terrain::Column;
 use weft_sdk::{Block, Template};
 
-use crate::fit::{Fit, Ground};
+use crate::fit::{Columns, Fit};
 use crate::part::{Part, Piece, Placed, box_of};
 use crate::random::Random;
 use crate::region::Region;
@@ -38,7 +42,7 @@ impl fmt::Display for PlanError {
             }
             PlanError::UnknownTemplate(name) => write!(
                 f,
-                "template {name} is not registered with structures_api::template"
+                "template {name} is not registered with structures_api::template or place"
             ),
         }
     }
@@ -49,17 +53,13 @@ impl fmt::Display for PlanError {
 pub struct Plan<'a> {
     region: Region,
     random: Random,
-    ground: &'a dyn Fn(i32, i32) -> Option<Ground>,
+    ground: Columns<'a>,
     parts: Vec<Part>,
     error: Option<PlanError>,
 }
 
 impl<'a> Plan<'a> {
-    pub(crate) fn new(
-        region: Region,
-        random: Random,
-        ground: &'a dyn Fn(i32, i32) -> Option<Ground>,
-    ) -> Plan<'a> {
+    pub(crate) fn new(region: Region, random: Random, ground: Columns<'a>) -> Plan<'a> {
         Plan {
             region,
             random,
@@ -83,17 +83,17 @@ impl<'a> Plan<'a> {
     pub fn spot(&mut self, margin: i32) -> [i32; 2] {
         let [x, z] = self.region.min;
         let size = self.region.size();
-        let room = (size - 2 * margin) as u64;
         if size <= 2 * margin {
             return [x + size / 2, z + size / 2];
         }
+        let room = (size - 2 * margin) as u64;
         let dx = self.random.below(room) as i32;
         let dz = self.random.below(room) as i32;
         [x + margin + dx, z + margin + dz]
     }
 
     /// The ground of column (`x`, `z`): `None` where nothing may stand (no terrain, a cave mouth).
-    pub fn ground(&self, x: i32, z: i32) -> Option<Ground> {
+    pub fn ground(&self, x: i32, z: i32) -> Option<Column> {
         (self.ground)(x, z)
     }
 
@@ -133,62 +133,6 @@ impl<'a> Plan<'a> {
         })
     }
 
-    /// Places `template`, turned by `turn`, with its lowest corner at `corner`. What's added
-    /// later wins where two overlap.
-    pub fn structure(
-        &mut self,
-        template: &Template,
-        corner: [i32; 3],
-        turn: Turn,
-    ) -> Result<Placed<'_>, PlanError> {
-        self.check()?;
-        let entry = self.entry(template)?;
-        let (from, to) = box_of(corner, turn.size(entry.size()));
-        self.inside(&entry.name, from, to)?;
-        self.parts.push(Part::Piece(Piece {
-            template: entry,
-            corner,
-            turn,
-            foundation: None,
-            clear_above: false,
-            ground: Vec::new(),
-        }));
-        let Some(Part::Piece(piece)) = self.parts.last_mut() else {
-            unreachable!("a piece was just pushed");
-        };
-        Ok(Placed {
-            piece,
-            ground: self.ground,
-        })
-    }
-
-    pub fn set(&mut self, pos: [i32; 3], block: &Block) -> Result<(), PlanError> {
-        self.set_state(pos, block.id())
-    }
-
-    /// Sets a block state, like `BLOCK.with(..)` gives.
-    pub fn set_state(&mut self, pos: [i32; 3], state: u32) -> Result<(), PlanError> {
-        self.fill_state(pos, pos, state)
-    }
-
-    /// Every block from `from` to `to`, both included.
-    pub fn fill(&mut self, from: [i32; 3], to: [i32; 3], block: &Block) -> Result<(), PlanError> {
-        self.fill_state(from, to, block.id())
-    }
-
-    fn fill_state(&mut self, a: [i32; 3], b: [i32; 3], state: u32) -> Result<(), PlanError> {
-        self.check()?;
-        let (from, to) = (
-            [0, 1, 2].map(|i| a[i].min(b[i])),
-            [0, 1, 2].map(|i| a[i].max(b[i])),
-        );
-        self.inside("blocks", from, to)?;
-        if state != u32::MAX {
-            self.parts.push(Part::Fill { from, to, state });
-        }
-        Ok(())
-    }
-
     /// The parts, or why the plan was given up: `result` is what the planner returned, and a
     /// mistake it went past fails the plan too.
     pub(crate) fn finish(self, result: Result<(), PlanError>) -> Result<Vec<Part>, PlanError> {
@@ -202,17 +146,6 @@ impl<'a> Plan<'a> {
     /// The first mistake, again: once a plan failed, everything after fails too.
     fn check(&self) -> Result<(), PlanError> {
         self.error.clone().map_or(Ok(()), Err)
-    }
-
-    fn inside(&mut self, what: &str, from: [i32; 3], to: [i32; 3]) -> Result<(), PlanError> {
-        if self.region.holds(from, to) {
-            return Ok(());
-        }
-        Err(self.fail(PlanError::OutsideRegion {
-            what: what.to_string(),
-            from,
-            to,
-        }))
     }
 
     /// The template registered as `template`; the plan fails without one.
@@ -233,78 +166,21 @@ mod tests {
     use super::*;
     use crate::format::Structure;
 
-    static HUT: Template = Template::named("test:plan_hut");
+    pub(super) static HUT: Template = Template::named("test:plan_hut");
     static MISSING: Template = Template::named("test:plan_missing");
 
-    fn flat(_: i32, _: i32) -> Option<Ground> {
-        Some(Ground {
+    fn flat(_: i32, _: i32) -> Option<Column> {
+        Some(Column {
             height: 63,
             biome: 0,
         })
     }
 
     /// A plan of region [0, 0] of a 64-block grid, with a 4 x 2 x 2 hut registered.
-    fn plan() -> Plan<'static> {
-        templates::add(
-            HUT.name(),
-            Structure::from_names([4, 2, 2], ["core:air"; 16]),
-        );
+    pub(super) fn plan() -> Plan<'static> {
+        let hut = Structure::from_names([4, 2, 2], ["core:air"; 16]).expect("one name per block");
+        templates::add(HUT.name(), hut);
         Plan::new(Region::at([0, 0], 64), Random::new(1), &flat)
-    }
-
-    #[test]
-    fn a_structure_inside_the_region_is_added() {
-        let mut plan = plan();
-        assert!(
-            plan.structure(&HUT, [60, 64, 62], Turn::None).is_ok(),
-            "up to the last column"
-        );
-        assert_eq!(
-            plan.finish(Ok(())).map(|parts| parts.len()),
-            Ok(1),
-            "one part"
-        );
-    }
-
-    #[test]
-    fn reaching_outside_fails_the_plan() {
-        let mut plan = plan();
-        let error = plan.structure(&HUT, [61, 64, 0], Turn::None).err();
-        assert!(
-            matches!(
-                error,
-                Some(PlanError::OutsideRegion {
-                    to: [64, 65, 1],
-                    ..
-                })
-            ),
-            "one column too far, got {error:?}"
-        );
-        assert!(
-            plan.set_state([1, 64, 1], 5).is_err(),
-            "nothing after it is taken"
-        );
-        assert!(plan.finish(Ok(())).is_err(), "the whole plan is given up");
-    }
-
-    #[test]
-    fn a_turn_changes_what_fits() {
-        let mut plan = plan();
-        assert!(
-            plan.structure(&HUT, [62, 64, 0], Turn::Right).is_ok(),
-            "2 wide once turned"
-        );
-        assert!(
-            plan.structure(&HUT, [62, 64, 10], Turn::None).is_err(),
-            "4 wide unturned"
-        );
-    }
-
-    #[test]
-    fn an_ignored_error_still_fails_the_plan() {
-        let mut plan = plan();
-        let _ = plan.set_state([-1, 64, 0], 5);
-        assert!(plan.finish(Ok(())).is_err(), "the mistake is remembered");
     }
 
     #[test]

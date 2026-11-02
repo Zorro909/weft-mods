@@ -42,9 +42,11 @@ pub fn read(data: &[u8], volume: usize, palette_len: usize) -> Option<Vec<u16>> 
     let words = words.get(..volume.div_ceil(per) * 8)?;
     let mask = (1u64 << bits) - 1;
     let indices: Vec<u16> = words
-        .chunks_exact(8)
-        .flat_map(|word| {
-            let word = u64::from_le_bytes(word.try_into().unwrap());
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .flat_map(|&word| {
+            let word = u64::from_le_bytes(word);
             (0..per).map(move |k| (word >> (k as u32 * bits) & mask) as u16)
         })
         .take(volume)

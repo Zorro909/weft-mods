@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use weft_sdk::Block;
 
-use crate::fit::{self, Ground};
+use crate::fit::{self, Columns};
 use crate::templates::Entry;
 use crate::turn::Turn;
 
@@ -68,7 +68,7 @@ pub(crate) fn box_of(corner: [i32; 3], size: [i32; 3]) -> ([i32; 3], [i32; 3]) {
 /// A template just added to a plan, to say how it meets the ground.
 pub struct Placed<'p> {
     pub(crate) piece: &'p mut Piece,
-    pub(crate) ground: &'p dyn Fn(i32, i32) -> Option<Ground>,
+    pub(crate) ground: Columns<'p>,
 }
 
 impl Placed<'_> {

@@ -8,8 +8,10 @@ use weft_sdk::*;
 
 use crate::{load, locate, save, selection, worldgen};
 
+type Branch = fn(&mut ServerCommand);
+
 /// Each branch by its first word.
-const BRANCHES: [(&str, fn(&mut ServerCommand)); 6] = [
+const BRANCHES: &[(&str, Branch)] = &[
     ("save", save::run),
     ("load", load::run),
     ("undo", load::undo),
@@ -36,5 +38,4 @@ pub fn register(r: &mut Registry) {
             run(cmd);
         }
     });
-    selection::register(r);
 }

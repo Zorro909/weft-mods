@@ -19,5 +19,8 @@ file) around:
 
 Numbers are little-endian. `api/src/format.rs` and `api/src/packing.rs` are the reference.
 
+A reader refuses a box of more than 16 777 216 blocks (256 x 256 x 256): with a palette of one
+state the file would be a few bytes, but the blocks wouldn't fit in memory.
+
 Block entity contents (a chest's items, a machine's state) are not stored yet: those blocks are
 placed empty.

@@ -1,7 +1,12 @@
 //! Randomness for a plan: the same numbers every time for the same seed, structure and region,
 //! so every cube and every client plans alike.
 
+use weft_sdk::noise;
+
 use crate::turn::Turn;
+
+/// SplitMix64's step between two states.
+const GOLDEN_GAMMA: u64 = 0x9e37_79b9_7f4a_7c15;
 
 pub struct Random {
     state: u64,
@@ -12,14 +17,13 @@ impl Random {
         Random { state: seed }
     }
 
-    /// The next 64 random bits.
+    /// The next 64 random bits (SplitMix64).
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> u64 {
-        // SplitMix64.
-        self.state = self.state.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        let mut z = self.state;
-        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-        z ^ (z >> 31)
+        // `mix` steps once more itself before mixing.
+        let bits = noise::mix(self.state);
+        self.state = self.state.wrapping_add(GOLDEN_GAMMA);
+        bits
     }
 
     /// 0 up to `n - 1`; 0 when `n` is 0.
@@ -56,6 +60,15 @@ mod tests {
             [b.next(), b.next()],
             "pure in the seed"
         );
+    }
+
+    #[test]
+    fn the_numbers_never_change() {
+        // Plans of worlds already generated come from these: changing them moves structures.
+        let mut random = Random::new(42);
+        assert_eq!(random.next(), 0xbdd7_3226_2feb_6e95, "the first");
+        assert_eq!(random.next(), 0x28ef_e333_b266_f103, "the second");
+        assert_eq!(random.between(-5, 5), -2, "and what is made of them");
     }
 
     #[test]

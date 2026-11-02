@@ -5,7 +5,7 @@ use std::sync::{Arc, OnceLock};
 
 use weft_sdk::*;
 
-use crate::fit::Ground;
+use crate::fit::Columns;
 use crate::locate;
 use crate::plan::{Plan, PlanError};
 use crate::planned::Planned;
@@ -21,7 +21,7 @@ pub(crate) type Slot = OnceLock<Option<Planned>>;
 
 /// Lays out one region of a structure. It must be pure: it runs on the server and on clients,
 /// in any order, and maybe twice at once.
-pub type Planner = dyn Fn(&mut Plan) -> Result<(), PlanError> + Send + Sync;
+pub(crate) type Planner = dyn Fn(&mut Plan) -> Result<(), PlanError> + Send + Sync;
 
 pub(crate) struct Generator {
     /// Full name, `mymod:village`.
@@ -80,7 +80,7 @@ impl Generator {
         seed: u64,
         dimension: u32,
         index: [i32; 2],
-        ground: &dyn Fn(i32, i32) -> Option<Ground>,
+        ground: Columns,
     ) -> Arc<Slot> {
         // The cache is keyed by seed: the dimension goes into it so dimensions don't share plans.
         let key = seed ^ noise::mix(dimension as u64 + 1);
@@ -89,13 +89,7 @@ impl Generator {
         slot
     }
 
-    fn make(
-        &self,
-        seed: u64,
-        dimension: u32,
-        index: [i32; 2],
-        ground: &dyn Fn(i32, i32) -> Option<Ground>,
-    ) -> Option<Planned> {
+    fn make(&self, seed: u64, dimension: u32, index: [i32; 2], ground: Columns) -> Option<Planned> {
         let region = Region::at(index, self.region);
         let salt = noise::hash(seed ^ salt(&self.name), index[0] as i64, 0, index[1] as i64);
         let mut plan = Plan::new(region, Random::new(salt), ground);
@@ -148,10 +142,7 @@ fn salt(name: &str) -> u64 {
 }
 
 /// `None` where nothing may stand: no terrain, or a cave took the surface.
-fn ground(g: &Gen, x: i32, z: i32) -> Option<Ground> {
+fn ground(g: &Gen, x: i32, z: i32) -> Option<terrain::Column> {
     let column = g.column(x, z);
-    (column.height != i32::MIN && !g.surface_carved(x, z)).then_some(Ground {
-        height: column.height,
-        biome: column.biome,
-    })
+    (column.height != i32::MIN && !g.surface_carved(x, z)).then_some(column)
 }

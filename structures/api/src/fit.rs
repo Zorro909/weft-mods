@@ -2,14 +2,10 @@
 //! terrain's columns alone, so every cube and every client gets the same answer.
 
 use weft_sdk::Tag;
+use weft_sdk::terrain::Column;
 
-/// What generation knows about a column without reading any block.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Ground {
-    /// The top solid block.
-    pub height: i32,
-    pub biome: u32,
-}
+/// The ground of column (`x`, `z`): `None` where nothing may stand (no terrain, a cave mouth).
+pub(crate) type Columns<'a> = &'a dyn Fn(i32, i32) -> Option<Column>;
 
 /// The conditions a spot must meet, shared by static structures and plans.
 #[derive(Clone, Copy)]
@@ -52,14 +48,8 @@ impl Fit {
 
     /// The height of the bottom layer of a footprint of `size` (x, z) with its lowest corner at
     /// `corner`, if the ground there meets the conditions. The bottom layer takes the place of
-    /// the ground's top block, so a structure's own floor is level with the ground around it. `ground` is `None` where nothing may
-    /// stand (no terrain, a cave mouth).
-    pub(crate) fn floor(
-        &self,
-        corner: [i32; 2],
-        size: [i32; 2],
-        ground: &dyn Fn(i32, i32) -> Option<Ground>,
-    ) -> Option<i32> {
+    /// the ground's top block, so a structure's own floor is level with the ground around it.
+    pub(crate) fn floor(&self, corner: [i32; 2], size: [i32; 2], ground: Columns) -> Option<i32> {
         let fits_biome = |biome| self.biome.is_none_or(|tag| tag.on_biome(biome));
         floor(self.max_slope, self.sink, corner, size, ground, &fits_biome)
     }
@@ -71,7 +61,7 @@ fn floor(
     sink: i32,
     [x, z]: [i32; 2],
     [sx, sz]: [i32; 2],
-    ground: &dyn Fn(i32, i32) -> Option<Ground>,
+    ground: Columns,
     fits_biome: &dyn Fn(u32) -> bool,
 ) -> Option<i32> {
     if !fits_biome(ground(x + sx / 2, z + sz / 2)?.biome) {
@@ -87,11 +77,7 @@ fn floor(
 }
 
 /// The ground height of each column of a footprint, x fastest, then z.
-pub(crate) fn heights(
-    [x, z]: [i32; 2],
-    [sx, sz]: [i32; 2],
-    ground: &dyn Fn(i32, i32) -> Option<Ground>,
-) -> Vec<Option<i32>> {
+pub(crate) fn heights([x, z]: [i32; 2], [sx, sz]: [i32; 2], ground: Columns) -> Vec<Option<i32>> {
     (0..sz)
         .flat_map(|dz| (0..sx).map(move |dx| (dx, dz)))
         .map(|(dx, dz)| ground(x + dx, z + dz).map(|g| g.height))
@@ -110,8 +96,8 @@ fn median(heights: &[i32]) -> i32 {
 mod tests {
     use super::*;
 
-    fn flat(height: i32) -> impl Fn(i32, i32) -> Option<Ground> {
-        move |_, _| Some(Ground { height, biome: 1 })
+    fn flat(height: i32) -> impl Fn(i32, i32) -> Option<Column> {
+        move |_, _| Some(Column { height, biome: 1 })
     }
 
     fn anywhere(_: u32) -> bool {
@@ -133,7 +119,7 @@ mod tests {
     #[test]
     fn the_floor_is_the_median_of_the_ground() {
         let slope = |x: i32, _| {
-            Some(Ground {
+            Some(Column {
                 height: 60 + x.rem_euclid(5),
                 biome: 1,
             })
@@ -145,7 +131,7 @@ mod tests {
     #[test]
     fn steep_ground_does_not_fit() {
         let cliff = |x: i32, _| {
-            Some(Ground {
+            Some(Column {
                 height: 60 + 5 * x.rem_euclid(2),
                 biome: 1,
             })
@@ -157,7 +143,7 @@ mod tests {
     #[test]
     fn a_hole_in_the_ground_does_not_fit() {
         let cave = |x: i32, z: i32| {
-            (x != 3 || z != 3).then_some(Ground {
+            (x != 3 || z != 3).then_some(Column {
                 height: 60,
                 biome: 1,
             })

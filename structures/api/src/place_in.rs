@@ -38,7 +38,7 @@ impl Structure {
         turn: Turn,
     ) -> Result<Vec<([i32; 3], u32)>, PlaceError> {
         let states = self.states(turn)?;
-        let size = self.size.map(|v| v as i32);
+        let size = self.size();
         let blocks: Vec<([i32; 3], u32)> = self
             .blocks()
             .map(|(pos, name)| {

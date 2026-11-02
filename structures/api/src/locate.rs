@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 
 use weft_sdk::*;
 
-use crate::fit::Ground;
+use crate::fit::Columns;
 use crate::generator::Generator;
 use crate::region;
 
@@ -56,7 +56,7 @@ fn nearest(
     dimension: u32,
     from: [i32; 3],
     radius: i32,
-    ground: &dyn Fn(i32, i32) -> Option<Ground>,
+    ground: Columns,
 ) -> Option<[i32; 3]> {
     let [x, _, z] = from;
     let mut best: Option<([i32; 3], i64)> = None;
@@ -78,10 +78,8 @@ fn nearest(
     best.map(|(anchor, _)| anchor)
 }
 
-fn ground(dimension: &Dimension, seed: u64, x: i32, z: i32) -> Option<Ground> {
+/// `None` where nothing may stand: no terrain, or a cave took the surface.
+fn ground(dimension: &Dimension, seed: u64, x: i32, z: i32) -> Option<terrain::Column> {
     let column = dimension.column(seed, x, z);
-    (column.height != i32::MIN && !dimension.surface_carved(seed, x, z)).then_some(Ground {
-        height: column.height,
-        biome: column.biome,
-    })
+    (column.height != i32::MIN && !dimension.surface_carved(seed, x, z)).then_some(column)
 }

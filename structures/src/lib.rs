@@ -19,5 +19,6 @@ fn init(r: &mut Registry) {
     worldgen::register(r);
     hamlet::register(r);
     wand::register(r);
+    selection::register(r);
     command::register(r);
 }

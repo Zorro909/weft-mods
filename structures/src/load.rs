@@ -40,11 +40,7 @@ pub fn run(cmd: &mut ServerCommand) {
     let Some(structure) = Structure::decode(bytes) else {
         return cmd.reply("structures.bad_file", &[Arg::Text(&name)]);
     };
-    if structure
-        .size
-        .iter()
-        .any(|&side| side as i32 > save::MAX_SIDE)
-    {
+    if structure.size().iter().any(|&side| side > save::MAX_SIDE) {
         return cmd.reply("structures.too_big", &[Arg::Int(save::MAX_SIDE as i64)]);
     }
     place(cmd, &name, &structure, turn);
@@ -56,7 +52,7 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
     let Some(me) = world.entity(player) else {
         return cmd.reply("structures.no_player", &[]);
     };
-    let size = turn.size(structure.size.map(|v| v as i32));
+    let size = turn.size(structure.size());
     let corner = in_front(me.pos.map(|v| v.floor() as i32), facing(me.yaw), size);
     let blocks = match structure.place_in(&world, corner, turn) {
         Ok(blocks) => blocks,
