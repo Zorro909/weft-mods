@@ -40,6 +40,7 @@ pub fn register(r: &mut Registry) {
 }
 
 fn tour(set: &Set) -> Film {
+    set.level([-12, -12], [12, 12], 16); // flat ground as far as the camera goes
     build(set); // `set.place(offset, state)`, `set.fill(..)`, `set.world()`
     Film::new()
         .cue("start")
@@ -50,7 +51,9 @@ fn tour(set: &Set) -> Film {
 ```
 
 Positions are in blocks from the set's origin, the block the player stood in when the film
-started; angles are in degrees. A film is a list of steps:
+started; angles are in degrees. Films are made in a natural world, so `set.level(from, to,
+clear)` first makes the ground flat at the origin's height around the set: hills and trees in
+that area go, hollows are filled, and the landscape beyond stays as the backdrop. A film is a list of steps:
 
 | Step | |
 |---|---|
@@ -77,8 +80,9 @@ it is over, or after ten seconds if no mod sends the film.
 `/showcase gallery <mod>` needs no film: it puts every block of the mod on a plinth in a row
 from where you stand and shows each in turn under its name.
 
-`weft --showcase <mod:film>` (or `gallery:<mod>`) makes a fresh world (`base:flatlands`;
-`--showcase-dim` and `--showcase-seed` change that), plays the film once and quits.
+`weft --showcase <mod:film>` (or `gallery:<mod>`) makes a fresh normal world from seed 42,
+whose spawn is a meadow by a lake, plays the film there once and quits. `--showcase-seed`
+picks another seed and `--showcase-dim` another dimension.
 `tools/showcase.sh <mod:film>` in this repository builds everything, runs that on a virtual
 screen and writes the video to `showcase/out/`; `--help` lists its options.
 

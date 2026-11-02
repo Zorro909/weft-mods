@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Records a film a mod here makes with `showcase_api`: builds the engine, the showcase mod and
 # the film's mod with its films (`--features showcase`), plays the film once in a fresh world on
-# a virtual screen, and writes `showcase/out/<mod>-<film>.mp4`. `gallery:<mod>` films every
-# block of that mod instead, which needs no films.
+# a virtual screen, and writes `showcase/out/<mod>-<film>.mp4`. The world is a normal one from a
+# fixed seed (see `showcase/src/launch.rs`). `gallery:<mod>` films every block of that mod
+# instead, which needs no films.
 #
 #   tools/showcase.sh [--gpu 0000:0f:00.0] [--fps 60] [--with <mod folder>]... [--no-build]
 #                     <mod:film | gallery:mod> [-- <more game options>]

@@ -277,18 +277,24 @@ fn notice(c: &Client, d: &Director) {
     }
 }
 
-/// The film's titles, faded in and out, in the lower third of the picture. They are drawn as
+/// The film's titles, faded in and out, near the bottom of the picture. They are drawn as
 /// labels in the world in front of the camera, which stay visible while the HUD is hidden.
 fn titles(c: &Client, playback: &Playback, pose: Pose) {
     const FADE: f32 = 0.6;
+    // Where the line sits, as a share of the half picture below the middle.
+    const LOW: f64 = 0.78;
     let now = playback.elapsed();
-    let ahead = forward(pose.yaw, pose.pitch - 22.0);
+    // The field of view is vertical: this many degrees down is that far down the picture.
+    let down = (LOW * (pose.fov as f64 / 2.0).to_radians().tan())
+        .atan()
+        .to_degrees();
+    let ahead = forward(pose.yaw, pose.pitch - down);
     let at = add(pose.eye, ahead.map(|v| v * 12.0));
     for title in &playback.titles {
         let shown = ((now - title.from) / FADE)
             .min((title.until - now) / FADE)
             .clamp(0.0, 1.0);
         let alpha = (shown * 255.0) as u32;
-        c.draw_text(None, at, &title.key, &[], 0xFFFFFF00 | alpha, 2.5);
+        c.draw_text(None, at, &title.key, &[], 0xFFFFFF00 | alpha, 2.0);
     }
 }

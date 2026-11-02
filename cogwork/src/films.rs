@@ -57,6 +57,8 @@ fn tubes(set: &Set) -> Film {
 /// A chest, a timber tube driven by an ember engine, stone tubes up over a gilded top and down
 /// again, and the chest they end in.
 fn build_tube_arch(set: &Set) {
+    // Flat meadow as far as the camera goes, so that no hill stands in a shot.
+    set.level([-13, -13], [13, 13], 16);
     set.place([-6, 0, 0], CHEST.id());
     set.place([-5, 0, 0], TIMBER_TUBE.id());
     // `facing` is the side its base plate is on; the trunk points the other way.

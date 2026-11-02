@@ -1,7 +1,7 @@
 //! `--showcase <mod:film>`: makes a fresh world, plays the film once and quits, for recording.
 //! `--showcase gallery:<mod>` plays the gallery of a mod's blocks instead.
-//! `--showcase-dim` picks the dimension (`base:flatlands` by default, `none` to stay where the
-//! world starts), `--showcase-seed` the world's seed.
+//! The world is a normal one from `SEED`, the film played where it spawns the player;
+//! `--showcase-seed` picks another seed, `--showcase-dim` another dimension (`base:flatlands`).
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -13,8 +13,13 @@ use crate::director;
 
 /// How long the run waits when even the server never answers (the mod missing altogether).
 const ANSWER_TIME: Duration = Duration::from_secs(30);
-/// Frames to stand in the new dimension before the film is asked for.
+/// A seed whose spawn is a gentle meadow by a lake with a forest behind: room for a set, and
+/// something to see around it.
+const SEED: u64 = 42;
+/// Frames to stand in the new world before the film is asked for.
 const SETTLE_FRAMES: u32 = 60;
+/// Frames after which the film starts even if far terrain is still generating.
+const SETTLE_MAX: u32 = 60 * 30;
 
 enum Stage {
     Start,
@@ -63,7 +68,7 @@ fn step(c: &Client, film: &str, stage: Stage) -> Stage {
         Stage::Start => {
             let seed = launch_option("showcase-seed")
                 .and_then(|s| s.parse().ok())
-                .unwrap_or(1);
+                .unwrap_or(SEED);
             c.new_world(&format!("showcase-{}", film.replace(':', "-")), seed);
             Stage::Joining
         }
@@ -84,7 +89,7 @@ fn step(c: &Client, film: &str, stage: Stage) -> Stage {
                 left,
             }
         }
-        Stage::Settling(frames) if frames >= SETTLE_FRAMES && c.state().flags & cf::LOADED != 0 => {
+        Stage::Settling(frames) if settled(c, frames) => {
             c.run_command(&command(film));
             Stage::Watching {
                 since: Instant::now(),
@@ -94,6 +99,14 @@ fn step(c: &Client, film: &str, stage: Stage) -> Stage {
         Stage::Watching { since } => watch(c, film, since),
         stage => stage,
     }
+}
+
+/// Whether the world around is ready for the film: loaded, and done generating as far as the
+/// player sees, or as done as it gets in `SETTLE_MAX` frames.
+fn settled(c: &Client, frames: u32) -> bool {
+    let flags = c.state().flags;
+    let idle = flags & cf::IDLE != 0 || frames >= SETTLE_MAX;
+    frames >= SETTLE_FRAMES && flags & cf::LOADED != 0 && idle
 }
 
 /// The command that starts `film`.
@@ -107,10 +120,7 @@ fn command(film: &str) -> String {
 /// Commands that make the world the same on every run.
 fn setup() -> Vec<String> {
     let mut lines = vec!["/rule core:mob_spawning 0".to_string()];
-    let dim = launch_option("showcase-dim").unwrap_or_else(|| "base:flatlands".into());
-    if dim != "none" {
-        lines.push(format!("/dim {dim}"));
-    }
+    lines.extend(launch_option("showcase-dim").map(|dim| format!("/dim {dim}")));
     lines
 }
 

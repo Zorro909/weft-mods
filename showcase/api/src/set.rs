@@ -14,6 +14,16 @@ pub struct Set {
 }
 
 impl Set {
+    /// A set around `origin` for `player`, for a mod that builds and sends a film on its own
+    /// (`send`).
+    pub fn new(world: World, player: u64, origin: [i32; 3]) -> Set {
+        Set {
+            world,
+            player,
+            origin,
+        }
+    }
+
     pub fn world(&self) -> World {
         self.world
     }
@@ -52,6 +62,37 @@ impl Set {
                     self.place([x, y, z], state);
                 }
             }
+        }
+    }
+
+    /// Makes the ground flat at the origin's height between two corners (x and z offsets, both
+    /// included), for a set in a natural world: clears everything up to `clear` blocks above it,
+    /// tops it with the block under the origin, and fills hollows below, up to 8 deep, with the
+    /// block under that.
+    pub fn level(&self, from: [i32; 2], to: [i32; 2], clear: i32) {
+        let air = Block::lookup("core:air").unwrap_or(0);
+        let top = self.world.get(self.at([0, -1, 0]));
+        let below = self.world.get(self.at([0, -2, 0]));
+        for x in from[0].min(to[0])..=from[0].max(to[0]) {
+            for z in from[1].min(to[1])..=from[1].max(to[1]) {
+                for y in 0..=clear {
+                    self.place([x, y, z], air);
+                }
+                self.place([x, -1, z], top);
+                self.fill_hollow([x, z], below);
+            }
+        }
+    }
+
+    /// Fills the column at `x, z` from 2 below the origin down to the first block that isn't
+    /// air, a plant or a liquid.
+    fn fill_hollow(&self, [x, z]: [i32; 2], state: u32) {
+        for y in (-9..=-2).rev() {
+            let flags = self.world.flags(self.at([x, y, z]));
+            if flags & (abi::block_flags::REPLACEABLE | abi::block_flags::LIQUID) == 0 {
+                return;
+            }
+            self.place([x, y, z], state);
         }
     }
 
