@@ -68,9 +68,21 @@ fn excavating(film: Film) -> Film {
     ];
     film.cue("build")
         .title("cogwork.film.frame", 5.0)
-        .shot(orbit(frame, 15.0).arc(150.0, 100.0).height(9.0, 6.0).look_at(frame).secs(16.0).blend(2.0))
+        .shot(
+            orbit(frame, 15.0)
+                .arc(150.0, 100.0)
+                .height(9.0, 6.0)
+                .look_at(frame)
+                .secs(16.0)
+                .blend(2.0),
+        )
         .title("cogwork.film.dig", 5.0)
-        .shot(flyby(&across).look(Look::Pan(shallow, deep)).secs(8.0).blend(1.5))
+        .shot(
+            flyby(&across)
+                .look(Look::Pan(shallow, deep))
+                .secs(8.0)
+                .blend(1.5),
+        )
         .shot(flyby(&dive).look_at(deep).secs(8.0).blend(1.0))
 }
 
@@ -89,11 +101,28 @@ fn sorting(film: Film) -> Film {
     ];
     film.shot(flyby(&climb).look(Look::Pan(deep, first_tube)).secs(5.0))
         .title("cogwork.film.tubes", 5.0)
-        .shot(dolly([17.5, 2.5, 10.5], [-3.0, 2.5, 10.5]).look(Look::Pan(first_tube, sorter)).secs(12.0))
+        .shot(
+            dolly([17.5, 2.5, 10.5], [-3.0, 2.5, 10.5])
+                .look(Look::Pan(first_tube, sorter))
+                .secs(12.0),
+        )
         .title("cogwork.film.sorting", 5.0)
-        .shot(orbit(sorter, 4.5).arc(50.0, 100.0).height(2.5, 2.0).ease(Ease::In).secs(5.0).blend(1.5))
+        .shot(
+            orbit(sorter, 4.5)
+                .arc(50.0, 100.0)
+                .height(2.5, 2.0)
+                .ease(Ease::In)
+                .secs(5.0)
+                .blend(1.5),
+        )
         .menu("cogwork:sorting_tube", SORTER, 4.5)
-        .shot(orbit(sorter, 4.5).arc(100.0, 150.0).height(2.0, 1.5).ease(Ease::Out).secs(5.0))
+        .shot(
+            orbit(sorter, 4.5)
+                .arc(100.0, 150.0)
+                .height(2.0, 1.5)
+                .ease(Ease::Out)
+                .secs(5.0),
+        )
 }
 
 /// Round the end of the wall to the lever, which starts the row; along the row while it gets
@@ -115,7 +144,11 @@ fn autocrafting(film: Film) -> Film {
         .cue("switch")
         .wait(2.5)
         .title("cogwork.film.bench", 6.0)
-        .shot(dolly(at_lever, in_front).look(Look::Pan(lever, bench)).secs(13.0))
+        .shot(
+            dolly(at_lever, in_front)
+                .look(Look::Pan(lever, bench))
+                .secs(13.0),
+        )
         .shot(crane(bench, 4.0, 90.0, [2.1, 1.0]).secs(4.0).blend(0.5))
         .menu("cogwork:assembly_bench", crafting::STONE_COGS, 5.0)
         .wait(5.0)

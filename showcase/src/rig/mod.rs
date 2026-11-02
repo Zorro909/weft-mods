@@ -164,7 +164,10 @@ mod tests {
     #[test]
     fn an_orbit_keeps_its_distance_and_looks_at_the_center() {
         let rig = Rig::new(
-            orbit([0.5, 0.0, 0.5], 8.0).height(0.0, 0.0).secs(4.0), [100, 64, -20], 70.0);
+            orbit([0.5, 0.0, 0.5], 8.0).height(0.0, 0.0).secs(4.0),
+            [100, 64, -20],
+            70.0,
+        );
         let center = [100.5, 64.0, -19.5];
         for clock in [0.0, 1.0, 2.5, 4.0] {
             let pose = rig.pose(clock, &none, START);
@@ -196,7 +199,10 @@ mod tests {
                     yaw: 90.0,
                     pitch: 0.0,
                 })
-                .blend(1.0), [0; 3], 70.0);
+                .blend(1.0),
+            [0; 3],
+            70.0,
+        );
         assert_eq!(rig.pose(0.0, &none, START), START, "at the start");
         assert_eq!(rig.pose(1.0, &none, START).eye, [5.0; 3], "after the blend");
     }
