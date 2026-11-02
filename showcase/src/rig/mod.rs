@@ -112,9 +112,10 @@ impl Rig {
             Look::Angles { yaw, pitch } => Some((*yaw as f64, *pitch as f64)),
             Look::Ahead => self.ahead(u, subjects),
             Look::Along(angles) => {
+                // A path that doesn't move (turning on the spot) spreads the angles over time.
                 let at = match &self.curve {
-                    Some(curve) => curve.progress(u),
-                    None => u * angles.len().saturating_sub(1) as f64,
+                    Some(curve) if curve.length() > 1e-6 => curve.progress(u),
+                    _ => u * angles.len().saturating_sub(1) as f64,
                 };
                 turn::along(angles, at)
             }
@@ -234,6 +235,17 @@ mod tests {
             (middle.yaw - 90.0).abs() < 0.5 && (middle.pitch + 30.0).abs() < 0.5,
             "{middle:?}"
         );
+    }
+
+    #[test]
+    fn a_path_marked_on_the_spot_still_turns() {
+        let angles = vec![[0.0, 0.0], [90.0, 0.0]];
+        let shot = showcase_api::flyby(&[[1.0; 3], [1.0; 3]])
+            .look(Look::Along(angles))
+            .ease(showcase_api::Ease::Linear);
+        let rig = Rig::new(shot, [0; 3], 70.0);
+        let yaw = rig.pose(2.5, &none, START).yaw;
+        assert!((yaw - 45.0).abs() < 1e-6, "halfway through the turn: {yaw}");
     }
 
     #[test]
