@@ -1,6 +1,7 @@
 # Checks a pull request: the Rust lines it changes are formatted, every mod's version can be
-# released (a full one only on a tagged Weft), the tests of the CI scripts in `tools/ci` pass, and
-# every mod builds for Windows, Linux and macOS against the Weft the submodule pins.
+# released (a full one only on a tagged Weft), every mod's unit tests and clippy pass, the tests of
+# the CI scripts in `tools/ci` pass, and every mod builds for Windows, Linux and macOS against the
+# Weft the submodule pins.
 name: Check
 
 on:
@@ -45,6 +46,21 @@ jobs:
         run: |
           plan=$(tools/ci/plan-release.sh)
           jq . <<<"$plan"
+
+  # Unit tests and clippy of every mod with all features, the films included.
+  mods:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Tests and clippy of every mod
+        run: tools/check-mods.sh
 
   ci-scripts:
     runs-on: ubuntu-latest
