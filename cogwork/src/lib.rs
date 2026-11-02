@@ -5,6 +5,8 @@ mod bench;
 mod cogs;
 mod engines;
 mod excavator;
+#[cfg(feature = "showcase")]
+mod films;
 mod ghost;
 mod harvest;
 mod leveler;
@@ -17,7 +19,10 @@ mod tube;
 
 use weft_sdk::*;
 
+#[cfg(not(feature = "showcase"))]
 declare_mod!(deps: ["base"], init: init);
+#[cfg(feature = "showcase")]
+declare_mod!(deps: ["base", "showcase"], init: init);
 
 pub static TAB: CreativeTab = CreativeTab::named("cogwork");
 
@@ -34,6 +39,8 @@ fn init(r: &mut Registry) {
     leveler::register(r);
     shaft::register(r);
     recipes::register(r);
+    #[cfg(feature = "showcase")]
+    films::register(r);
 }
 
 /// `a / b`, 0 for nothing out of nothing.

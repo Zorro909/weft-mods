@@ -1,0 +1,21 @@
+[package]
+name = "showcase"
+version = "0.1.0"
+edition = "2024"
+# As `Weft/Cargo.toml` declares; cargo then picks dependency versions that build with it.
+rust-version = "1.95"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+weft_sdk = { path = "../Weft/crates/sdk" }
+showcase_api = { path = "api" }
+
+# Its own cargo root, apart from the engine's workspace in `Weft/`; `cargo test --workspace`
+# tests the API crate too.
+[workspace]
+members = ["api"]
+
+[profile.release]
+debug = "line-tables-only"

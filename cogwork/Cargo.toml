@@ -9,6 +9,12 @@ crate-type = ["cdylib"]
 [dependencies]
 weft_sdk = { path = "../Weft/crates/sdk" }
 base_api = { path = "../Weft/mods/base/api" }
+# Only for the films, which releases leave out.
+showcase_api = { path = "../showcase/api", optional = true }
+
+[features]
+# Builds the films (`src/films.rs`), played by the showcase mod: `--features showcase`.
+showcase = ["dep:showcase_api"]
 
 [workspace]
 

@@ -79,3 +79,6 @@ cogwork.leveler.blocked = Waiting for the area to load
 cogwork.leveler.done = Finished
 cogwork.leveler.area = {color:dim}Area {0} x {1}, flat at height {2}{/}
 cogwork.leveler.stock = Stock
+
+# Films (only with the showcase feature)
+cogwork.film.tubes = Tubes carry whatever you give them
