@@ -1,179 +1,86 @@
-# structures
+<img src="assets/textures/gui/icon.png" width="64" height="64" alt="">
 
-Structures from `.wst` files, placed while the world generates. Two crates:
+# Structures
 
-- `api/` (`structures_api`): the file format and the placing, for any mod to use.
-- this folder (`structures`): a mod that places the `.wst` files in `assets/structures/` in
-  base's overworld, alone and gathered into hamlets, and adds `/structure save` to make them and
-  `/structure locate` to find them.
+A Weft mod that fills the overworld with buildings, and gives players and mod authors the tools
+to make their own. Structures are boxes of blocks saved as `.wst` files; the mod places them
+while the world generates, alone and gathered into hamlets.
 
-## Using it from another mod
+It needs the base game (`base`). Its placing lives in a crate of its own, `structures_api`, that
+any mod can use without this mod being loaded.
 
-Add the crate and call it from your `init`. Your mod does the placing itself, so it needs
-neither the `structures` mod loaded nor an entry in `declare_mod!`.
+## Features
 
-```toml
-structures_api = { path = "<path to weft-mods>/structures/api" }
-```
+### In the world
 
-### Static structures
+Cottages, watchtowers, wells, wheat farms and ruined shrines appear on their own across the
+overworld's land. Hamlets gather a well, cottages and farms, joined by gravel paths. Structures
+sit level with the ground on a foundation of its own top block, and are turned to face every
+way.
 
-One template, stood on the ground now and then, turned whichever way the seed says:
+### Making structures in the game
 
-```rust
-let hut = Structure::decode(include_bytes!("../assets/structures/hut.wst")).expect("hut.wst");
-structures_api::place(r, "hut", hut)
-    .dimension(&base_api::OVERWORLD)
-    .spacing(256)          // one chance per 256 x 256 blocks
-    .chance(0.3)
-    .biome("#animals")     // only where the biome has this tag
-    .foundation(Foundation::Ground) // fill under it with the ground's own top block
-    .max_slope(5);         // skip places where the ground varies more
-```
+The Structure Wand selects a box of the world, and `/structure` saves it to a file, places a
+file in front of you to look at, takes it back again, and finds the nearest structure of a kind.
 
-`.keep_facing()` keeps it the way it was saved. `place` also registers the structure as a
-template of your mod (`mymod:hut`), so its blocks are checked when the game loads,
-`world.place(..)` puts it anywhere, and plans can use it.
+### For other mods: `structures_api`
 
-### Dynamic structures
+- **Static structures:** one template, placed now and then where the ground and biome suit it.
+- **Dynamic structures:** a planner of your own lays out villages, ruins or anything else from
+  any number of templates and blocks.
+- **Placing and finding:** put a structure into the world straight away, or find the nearest
+  one, generated yet or not.
 
-A planner of your own lays out a structure from any number of templates and blocks. The world
-is split into square regions, and each region gets one plan:
+Everything is worked out from the seed and the terrain, so the server and every client agree
+on where structures are without sending them.
 
-```rust
-static WELL: Template = Template::named("well");
-static HOUSE: Template = Template::named("house");
-static PATH: Block = Block::named("base:gravel");
+## Getting started
 
-structures_api::template(r, &WELL, well);    // a template plans may place
-structures_api::template(r, &HOUSE, house);
-structures_api::plan(r, "village", village)
-    .dimension(&base_api::OVERWORLD)
-    .region(512);                            // one plan per 512 x 512 blocks
+1. Find a hamlet: `/structure locate hamlet`, then go there.
+2. Make a structure of your own: take the wand from creative's Tools tab, hit one corner of a
+   building and use the wand on the opposite corner, then `/structure save my_house`.
+3. Look at it again elsewhere with `/structure load my_house`; `/structure undo` takes it away.
 
-fn village(p: &mut Plan) -> Result<(), PlanError> {
-    if !p.random().chance(0.3) {
-        return Ok(());
-    }
-    let [x, z] = p.spot(64);                 // at least 64 blocks inside the region
-    let Some(corner) = p.fit(&WELL, [x, z], Turn::None, &Fit::new().max_slope(3)) else {
-        return Ok(());                       // the ground doesn't suit it
-    };
-    p.structure(&WELL, corner, Turn::None)?.foundation(Foundation::Ground).clear_above();
-    if let Some(ground) = p.ground(x - 1, z) {
-        p.set([x - 1, ground.height, z], &PATH)?;
-    }
-    Ok(())
-}
-```
+## Documentation
 
-What a planner has:
+The details are in [`docs/`](docs/README.md):
 
-| call | what it does |
+- [In the world](docs/worldgen.md): which structures appear, where, and how hamlets are laid out
+- [Wand and commands](docs/commands.md)
+- [Adding a structure to this mod](docs/adding-structures.md)
+- [Using `structures_api`](docs/api.md) from another mod
+- [How a place is chosen](docs/placement.md)
+- [The `.wst` file](docs/file-format.md)
+
+## Layout
+
+| Folder | What it holds |
 |---|---|
-| `p.region()` | the region's corners; everything must stay inside, seen from above |
-| `p.random()` | the same numbers every time: `next`, `below`, `between`, `chance`, `turn` |
-| `p.spot(margin)` | a random column at least `margin` blocks inside the region |
-| `p.ground(x, z)` | the column's height and biome, `None` at a cave mouth |
-| `p.size(&T, turn)` | a template's size once turned |
-| `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) |
-| `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned |
-| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` and `.clear_above()` meet the ground |
-| `p.set(pos, &B)?`, `p.set_state(..)?`, `p.fill(from, to, &B)?` | blocks |
+| `api/` | `structures_api`: the file format and the placing, for any mod |
+| `src/` | the mod: world generation, hamlets, the wand and `/structure` |
+| `assets/structures/` | the `.wst` files compiled into the mod |
+| `examples/samples.rs` | draws the sample structures in code |
 
-Later parts win where two overlap. A planner must be pure: it runs on the server and on every
-client, in any order, so it may use only the seed (`p.random()`) and the ground.
+## Build and install
 
-Anything that would reach outside the region returns `PlanError`, and `?` stops the planner
-there. That region's plan is then given up whole, nothing of it is placed, and the log says
-what reached out and where. A template that wasn't registered fails the plan the same way.
+To play it, take the zip from the [releases](../README.md#downloads). To build it yourself,
+from this folder, with the engine built in `../Weft` (see
+[`docs/agents/mods.md`](../docs/agents/mods.md)):
 
-`src/hamlet.rs` in this mod is a whole dynamic structure: a well with cottages facing it,
-wheat farms and gravel paths.
+```
+cargo build --release
+cargo test --release
+mkdir -p ../Weft/run/mods/structures
+cp target/release/libstructures.so ../Weft/run/mods/structures/
+cp -r assets ../Weft/run/mods/structures/
+```
 
-### Placing one now
+The library is `libstructures.so` on Linux; on Windows it is `structures.dll`, on macOS
+`libstructures.dylib`. `../start.sh structures` builds the engine and the mod, installs it and starts the
+game, on any of the three.
 
-`structure.place_in(&world, corner, turn)` puts a structure into the world straight away, turned,
-as a command would: every block of it, or nothing when one of its blocks is unknown
-(`PlaceError::UnknownBlock`) or part of the place isn't loaded (`PlaceError::NotLoaded`). It
-gives back the blocks it replaced, for an undo.
+## Status
 
-### Finding them
-
-`structures_api::locate(&world, "mymod:village", from, radius)` gives the nearest one's
-position, generated yet or not, and `structures_api::names()` the names your mod registered.
-Each mod links its own copy of the crate, so these know only your mod's structures. With
-`--log mod:<your mod>=debug` each plan is logged with its position too. `world.structure_near`
-doesn't know them.
-
-## How a place is chosen
-
-All of it comes from the seed and the terrain's columns, never from blocks, so every chunk and
-every client gets the same answer:
-
-1. The world is a grid of square regions (`spacing` or `region` blocks). The first cube that
-   needs a region's plan works it out; every cube in it shares that plan and writes only its own
-   blocks.
-2. A static structure takes its region with `chance`, at a spot and a turn from the seed. The
-   biome under its middle must have the tag; the ground under all of it may vary by at most
-   `max_slope` blocks and must have no cave mouth.
-3. The bottom layer is the structure's floor: it takes the place of the ground's top block at
-   the median ground height, so doors are level with the ground around it (`buried(n)` sinks it
-   further). Under it the foundation fills down to the ground, only below blocks of the bottom
-   layer: `Foundation::Ground` with the top block the ground has in that column (grass, sand),
-   `Foundation::Block(&B)` with one block. Ground that rises above it is cut away.
-4. A turned structure turns its blocks too: `facing`, `axis` and the sides a block connects to
-   (`north=true`) follow the turn.
-
-## In this mod
-
-`/structure` has everything for making structures in the game:
-
-| command | what it does |
-|---|---|
-| the Structure Wand | hit a block with it for the first corner of the selection, use it on one for the second; your selection is drawn. In creative's Tools tab, or `/give @s structures:wand` |
-| `/structure pos1 [at]`, `pos2 [at]` | the same corners: `at`, else the block you look at, else where you stand |
-| `/structure save <name> [from] [to]` | writes the box between two corners (or your selection) to `structures/<name>.wst` |
-| `/structure load <name> [turn]` | places that file (or the one built in, if there is none) two blocks in front of you, its floor level with where you stand; `turn` is `none`, `right`, `back` or `left` |
-| `/structure undo` | puts back what your last load replaced |
-| `/structure locate <name> [radius]` | the nearest structure of this mod, 4096 blocks around you by default, at most 16384 |
-
-`structures/` is relative to the folder the game was started from (`Weft/` when you start it
-from the source tree): the SDK doesn't tell a mod where the game keeps its files. A box is at
-most 128 blocks along each side, and every block of it must be loaded. `load` sets one block at a
-time, so big boxes take a moment. `locate` knows the structures of this mod only; finding other
-mods' needs the engine to let mods register a locator.
-
-## Adding a structure to this mod
-
-1. In the game, select a box with the wand (or `/structure pos1` and `pos2`) and run
-   `/structure save <name>`, or give the two corners: `/structure save <name> <from> <to>`
-   (`~ ~ ~` works). Start the box at the floor: the bottom layer is laid level with the ground,
-   and the foundation goes under it.
-2. The file goes to `structures/<name>.wst`; the reply shows the full path. `/structure load
-   <name>` places it again to look at it from every side, and `/structure undo` takes it away.
-3. Copy it into `assets/structures/` and rebuild. `build.rs` compiles every file there in.
-
-The samples there (cottage, watchtower, well, wheat farm, ruined shrine) are drawn in code in
-`examples/samples.rs`; `cargo run --example samples` writes them again.
-
-## The file
-
-A `.wst` file stores a box of block states the way a world save stores a cube: a palette of
-state names like the save's `ids.txt`, palette indices packed into `u64` words with 4, 8 or 16
-bits, and LZ4 around it. `api/src/format.rs` has the exact layout. Air in the box is stored as
-`core:air` and clears what was there.
-
-## Not done yet
-
-- **Block entity contents.** A chest's items or a machine's state aren't saved: those blocks
-  are placed empty. World saves keep them as entity data beside the cube (engine
-  `server/persist.rs`), and generation only writes block states, so this needs an SDK change.
-- **Overlaps.** Structures don't know about each other, so two can land on the same spot, a
-  single cottage inside a hamlet for one.
-- **Water.** The SDK tells a mod no sea level, so the biome tag is what keeps structures out of
-  the sea.
-- **Structures from outside the mod.** Files are compiled in. Reading them from a folder at
-  runtime needs the SDK to tell a mod where the game keeps its files.
-- **Leaving blocks as they are.** Every block of the box is set; there is no "keep" entry
-  yet.
+Chests and machines in a structure are placed empty, structures can overlap each other, and
+files are compiled in rather than read at runtime. The full list, with what each needs, is in
+[Not done yet](docs/README.md#not-done-yet). Text is in English only so far.

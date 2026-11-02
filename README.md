@@ -2,10 +2,75 @@
 
 # weft-mods
 
-Created in [T3 Code](https://t3.codes).
+Mods for [Weft](https://github.com/Weft-Rust/Weft), a voxel sandbox engine written in Rust.
+Each mod is a native library built against Weft's SDK, and adds to the base game that Weft
+ships as its own mod.
+
+## The mods
+
+| | Mod | What it adds |
+|---|---|---|
+| <img src="cogwork/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
+| <img src="structures/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structures](structures/README.md) | Buildings and hamlets across the overworld, a wand and `/structure` command to save and place structures in the game, and `structures_api` for other mods to place their own. |
+| | [Showcase](showcase/README.md) | A tool for mod makers: plays films that mods make of their content in code, and records them to video. |
+
+Each mod's README gives an overview; Cogwork's and Structures' `docs/` folders describe every
+feature, block and item in detail.
+
+## Playing
+
+1. Get Weft from its [releases](https://github.com/Weft-Rust/Weft/releases).
+2. Download a mod's zip from the [downloads](#downloads) below, built against the same Weft.
+3. Put the zip as it is into the game's `mods/` folder and start the game.
+
+Every mod here needs the base game, which every Weft has, and none needs another. Showcase is
+only needed to play a film.
+
+## Building from source
+
+The engine is the submodule `Weft/`, pinned to a Weft release. With Rust and Weft's build
+requirements installed:
+
+```
+git submodule update --init Weft
+./start.sh              # builds the engine and every mod, installs them and starts the game
+./start.sh cogwork      # only this mod
+```
+
+A mod loads only into an engine built from the same Weft commit, so whenever `Weft/` moves,
+rebuild the engine and the mods. [`docs/agents/mods.md`](docs/agents/mods.md) has the build, load
+and check steps one by one.
+
+## Repository layout
+
+| Path | What it holds |
+|---|---|
+| `cogwork/`, `structures/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
+| `Weft/` | The engine, as a submodule |
+| `docs/agents/` | Guides for working on this repository: mods, code style, engine, testing |
+| `tools/` | Formatting, the headless test run, film recording (`showcase.sh`) and CI scripts |
+| `start.sh` | Builds, installs and starts everything |
+
+## Contributing
+
+Changes come as pull requests to `main`. Commits follow
+[Conventional Commits](https://www.conventionalcommits.org), and `tools/fmt-changed.sh` formats
+just the lines you changed. Keep `Weft/` at a Weft release: pull requests that move it
+elsewhere are refused. CI builds every mod on Windows, Linux and macOS.
+
+## Releases
+
+Every push to `main` releases the mods that changed:
+
+- A mod whose version has no release yet is released as that version: a full release
+  (`X.Y.Z`), which needs `Weft/` at a Weft release, or a release candidate (`X.Y.Z-rc.N`).
+- A mod that changed without a new version gets the next release candidate from CI.
+
+Experimental builds follow Weft's upstream `master`. The section below is kept up to date by CI;
+see [`docs/agents/mods.md`](docs/agents/mods.md#releasing) for the details.
 
 <!-- mod-releases:start -->
-## Mods
+## Downloads
 
 Put a mod's zip as it is into the game's `mods/` folder; each one holds the Windows, Linux and
 macOS builds. A mod loads only into a game with the same mod interface as the Weft it was built
