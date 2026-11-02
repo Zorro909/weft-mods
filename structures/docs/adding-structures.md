@@ -9,7 +9,8 @@ described in [In the world](worldgen.md#single-structures). To add one:
    and the foundation goes under it.
 2. The file goes to `structures/<name>.wst`; the reply shows the full path. `/structure load
    <name>` places it again to look at it from every side, and `/structure undo` takes it away.
-3. Copy it into `assets/structures/` and rebuild. `build.rs` compiles every file there in.
+3. Copy it into `assets/structures/` and rebuild. `build.rs` compiles every file there in;
+   a file not named in lowercase letters, digits and underscores fails the build.
 
 See [Wand and commands](commands.md) for the limits on saving.
 
@@ -17,8 +18,9 @@ See [Wand and commands](commands.md) for the limits on saving.
 
 - Air in the box is saved too and clears what was there, so a house keeps its rooms empty when
   it lands in a hill.
-- Build with the door on the north side if the structure may be used in a hamlet: a cottage is
-  turned so that side faces the well.
+- Hamlets are built from `well`, `cottage` and `wheat_farm` only. Replacing `cottage.wst`
+  changes the hamlets' houses too; keep its door on the north side, since a hamlet turns a
+  cottage so that side faces the well.
 - Chests and machines are placed empty: their contents aren't saved yet.
 
 ## The samples

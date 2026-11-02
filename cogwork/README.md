@@ -75,7 +75,9 @@ cp target/release/libcogwork.so ../Weft/run/mods/cogwork/
 cp -r assets ../Weft/run/mods/cogwork/
 ```
 
-`../start.sh cogwork` builds the engine and the mod, installs it and starts the game.
+The library is `libcogwork.so` on Linux; on Windows it is `cogwork.dll`, on macOS
+`libcogwork.dylib`. `../start.sh cogwork` builds the engine and the mod, installs it and starts the
+game, on any of the three.
 
 ## Showcase film
 

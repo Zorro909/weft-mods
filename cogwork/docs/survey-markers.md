@@ -21,6 +21,8 @@ seconds. A marker that isn't the corner of a rectangle puffs instead.
 ## Using the area
 
 Place the excavator or leveler next to the corner marker, outside the rectangle and at the same
-height. When it starts, it takes the rectangle as its area and the corner markers drop as items.
+height. The moment it is placed, it takes the rectangle as its area and the corner markers drop
+as items; markers put down after the machine are ignored.
 
-Without markers, either machine works a 9 by 9 area behind it.
+The excavator stands its frame on the rectangle's edge and mines the inside; the leveler works
+the whole rectangle. Without markers, either machine works a 9 by 9 area behind it.

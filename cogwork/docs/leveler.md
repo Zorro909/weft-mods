@@ -11,9 +11,11 @@ iCi       C = base:chest
 
 ## Its area
 
-When it starts, the leveler takes the rectangle of the [survey markers](survey-markers.md) next
-to it, taking the corner markers down as the [excavator](excavator.md#its-area) does. Without
-markers, it works the 9 by 9 area right behind it. The flat height is the leveler's own.
+The moment it is placed, the leveler takes the rectangle of the
+[survey markers](survey-markers.md) next to it and takes the corner markers down, so put the
+markers down first. It works the whole rectangle, the markers' own rows included; unlike the
+excavator, it has no frame around the edge. Without markers, it works the 9 by 9 area right
+behind it. The flat height is the leveler's own.
 
 ## What it does
 

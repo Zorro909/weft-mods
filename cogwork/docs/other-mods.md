@@ -16,8 +16,12 @@ of its slot groups:
 | `output` | | results |
 | `chest` | anything | anything |
 
-An inventory that names none of these groups counts as one big chest. That is how tubes work
-with the base game's furnace and chest. An assembly bench takes only what its pattern asks for.
+The base game's furnace has `input`, `fuel` and `output`, and its chest has `chest`, so tubes
+fill and empty both. An inventory that names none of these groups, such as a dispenser's, counts
+as one big chest. An assembly bench takes only what its pattern asks for.
+
+An item that burns always goes into a `fuel` group when the machine has one. Logs sent into a
+furnace by tube therefore end up as its fuel, never in its input.
 
 ## Energy
 

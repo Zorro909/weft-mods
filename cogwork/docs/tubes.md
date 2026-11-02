@@ -71,8 +71,10 @@ and beside its row:
 | South | blue |
 
 Samples are ghosts: click a cell with an item to set it, and the item stays with you; click it
-with an empty hand to clear it. An item leaves by a side whose row holds its kind. When no row
-names it, it leaves by a side whose row is empty. With neither, it waits.
+with an empty hand to clear it. An item leaves by a side whose row holds its kind. When no such
+side can take it, because no row names it or what lies there is full, it leaves by a side whose
+row is empty. With neither, it goes on as any tube's item does when it has no way out (see
+below).
 
 ### Directing Tube
 
@@ -106,8 +108,8 @@ Which slots of a machine items go into and come out of is set by the machine's s
 ## Jams
 
 A tube that is full and has passed nothing on for three seconds drops one of its stuck items on
-the ground, then one more every half second while it stays jammed. Two full tubes waiting for
-each other, or items with nowhere to go, so never block a line for good.
+the ground, then one more every half second while it stays jammed. So neither two full tubes
+waiting for each other nor items with nowhere to go block a line for good.
 
 ## How items are shown
 

@@ -6,8 +6,8 @@ selecting a box of the world, saving it to a file, placing a file again, and fin
 ## The Structure Wand
 
 Hit a block with the wand for the first corner of the selection, use it on one for the second.
-Hitting a block with it marks the block instead of breaking it. Once both corners are set, your
-selection is drawn as an outline.
+Hitting a block with it marks the block instead of breaking it. Your selection is drawn as an
+outline: the one corner while only one is set, the whole box once both are.
 
 The wand is in creative's Tools tab, or `/give @s structures:wand`.
 
@@ -34,10 +34,12 @@ from the source tree): the SDK doesn't tell a mod where the game keeps its files
 ### Loading
 
 `load` places every block of the file, or nothing when one of its blocks is unknown to this game
-or part of the place isn't loaded. It sets one block at a time, so big boxes take a moment.
+or part of the place isn't loaded. Like `save`, it takes boxes of at most 128 blocks along each
+side. It sets one block at a time, so big boxes take a moment.
 
 ### Finding structures
 
 `locate` works the structures' places out from the world's seed, so it finds them whether their
 part of the world was generated yet or not. Its names are the mod's single structures and
-`hamlet`. It knows the structures of this mod only.
+`hamlet`. The position it gives is the corner of the first thing the structure placed: for a
+hamlet, its well. It knows the structures of this mod only.

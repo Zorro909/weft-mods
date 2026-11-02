@@ -23,7 +23,20 @@ structures_api::place(r, "hut", hut)
     .max_slope(5);         // skip places where the ground varies more
 ```
 
-`.keep_facing()` keeps it the way it was saved. `place` also registers the structure as a
+Every call after `place` is optional:
+
+| Call | Without it |
+|---|---|
+| `.dimension(&D)` | every dimension but bare ones; call again for more than one |
+| `.spacing(blocks)` | 256 |
+| `.chance(p)` | 0.3 |
+| `.biome("#tag")` | any biome |
+| `.foundation(..)` | no foundation: a gap under it stays |
+| `.max_slope(blocks)` | 6 |
+| `.buried(blocks)` | 0: the bottom layer level with the ground |
+| `.keep_facing()` | turned whichever way the seed says |
+
+A static structure always clears the ground that rises above it. `place` also registers the structure as a
 template of your mod (`mymod:hut`), so its blocks are checked when the game loads,
 `world.place(..)` puts it anywhere, and plans can use it.
 
@@ -68,9 +81,9 @@ What a planner has:
 | `p.spot(margin)` | a random column at least `margin` blocks inside the region |
 | `p.ground(x, z)` | the column's height and biome, `None` at a cave mouth |
 | `p.size(&T, turn)` | a template's size once turned |
-| `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) |
+| `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None` |
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned |
-| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` and `.clear_above()` meet the ground |
+| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it and `.clear_above()` cuts away ground above it, neither unless called |
 | `p.set(pos, &B)?`, `p.set_state(..)?`, `p.fill(from, to, &B)?` | blocks |
 
 Later parts win where two overlap. A planner must be pure: it runs on the server and on every

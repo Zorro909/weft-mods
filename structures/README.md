@@ -73,7 +73,9 @@ cp target/release/libstructures.so ../Weft/run/mods/structures/
 cp -r assets ../Weft/run/mods/structures/
 ```
 
-`../start.sh structures` builds the engine and the mod, installs it and starts the game.
+The library is `libstructures.so` on Linux; on Windows it is `structures.dll`, on macOS
+`libstructures.dylib`. `../start.sh structures` builds the engine and the mod, installs it and starts the
+game, on any of the three.
 
 ## Status
 

@@ -53,12 +53,15 @@ blue when cool, green when warm, orange when hot, red when overheated.
 - An ember engine whose store is full, because nothing takes its energy, climbs to 100% and
   overheats. It then stops burning until it has cooled to 30%, and starts again on its own.
 
-So an ember engine only overheats when it is not connected to anything that uses its energy.
+So an ember engine overheats whenever it makes more than it can hand on: when nothing takes its
+energy, but also when what it drives uses less than 40 a tick. An
+[assembly bench](assembly-bench.md) uses at most 30, and an excavator with a full output only
+its standby, so an ember engine on either of those stops and starts with its heat.
 
 ## Torque Shaft
 
-A thin rod that carries energy between engines and machines. It reaches toward every other
-shaft and every block that holds energy. It is tagged `conductor`, so the engine's energy
+A thin rod that carries energy between engines and machines. It reaches toward every block
+tagged `conductor` (other shafts, other mods' cables) and every block that holds energy. It is tagged `conductor`, so the engine's energy
 networks join it with any mod's cables and machines.
 
 ```

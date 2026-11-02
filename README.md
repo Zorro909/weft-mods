@@ -53,15 +53,19 @@ and check steps one by one.
 
 Changes come as pull requests to `main`. Commits follow
 [Conventional Commits](https://www.conventionalcommits.org), and `tools/fmt-changed.sh` formats
-just the lines you changed. Pull requests are refused unless `Weft/` sits at a Weft release.
-CI builds every mod on Windows, Linux and macOS.
+just the lines you changed. Keep `Weft/` at a Weft release: pull requests that move it
+elsewhere are refused. CI builds every mod on Windows, Linux and macOS.
 
 ## Releases
 
-Every push to `main` releases the mods that changed: a full release when its version is new and
-`Weft/` is at a Weft release, otherwise the next release candidate. Experimental builds follow
-Weft's upstream `master`. The section below is kept up to date by CI; see
-[`docs/agents/mods.md`](docs/agents/mods.md#releasing) for how versions are chosen.
+Every push to `main` releases the mods that changed:
+
+- A mod whose version has no release yet is released as that version: a full release
+  (`X.Y.Z`), which needs `Weft/` at a Weft release, or a release candidate (`X.Y.Z-rc.N`).
+- A mod that changed without a new version gets the next release candidate from CI.
+
+Experimental builds follow Weft's upstream `master`. The section below is kept up to date by CI;
+see [`docs/agents/mods.md`](docs/agents/mods.md#releasing) for the details.
 
 <!-- mod-releases:start -->
 ## Downloads

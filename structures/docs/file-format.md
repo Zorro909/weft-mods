@@ -12,9 +12,10 @@ file) around:
 - the size along x, y and z, a `u16` each;
 - the palette: a `u16` count, then each state's name as a `u16` byte length and UTF-8, written
   like the lines of a save's `ids.txt` (`base:furnace[facing=east,lit=false]`);
-- every block's palette index, x fastest, then z, then y, packed into `u64` words with 4, 8 or
-  16 bits each: lowest bits first, and an index never straddles two words. A palette of one
-  state needs no words at all.
+- one byte with the bits per index: 0, 4, 8 or 16;
+- every block's palette index, x fastest, then z, then y, packed into `u64` words with that
+  many bits each: lowest bits first, and an index never straddles two words. A palette of one
+  state is written as 0 bits and needs no words at all.
 
 Numbers are little-endian. `api/src/format.rs` and `api/src/packing.rs` are the reference.
 
