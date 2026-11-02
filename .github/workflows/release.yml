@@ -7,6 +7,9 @@
 #   - When the Weft submodule is behind upstream's master, every mod also gets an experimental
 #     prerelease built against that master, once per pair of commits; daily as well, for upstream
 #     commits that come while this repository doesn't change.
+# The version bumps and README.md go to main over SSH with the deploy key in the secret
+# `RELEASE_DEPLOY_KEY`, which the ruleset on main lets through. Their commits say `[skip ci]`, so
+# they start no workflow run.
 name: Release
 
 on:
@@ -37,6 +40,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       # For `cargo update` after a version bump.
       - uses: dtolnay/rust-toolchain@stable
@@ -155,6 +159,7 @@ jobs:
           ref: main
           fetch-depth: 0
           submodules: true
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - name: Update README.md
         env:
