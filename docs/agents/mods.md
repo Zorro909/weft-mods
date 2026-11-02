@@ -30,3 +30,7 @@ Before adding or changing content, read `modding.md` and the topic guide for it.
 4. Start the game from inside `Weft/`: `target/release/weft`. Launched from elsewhere, a `run/` or `mods/` folder in the current directory becomes the game's root instead.
 5. Check it loads: `target/release/weft --server` starts a dedicated server without a window, and `Weft/run/logs/latest.log` then lists `loaded mod <id>`, or why it refused. Stop the server once that line is there.
 6. Run base's in-game tests with your mod loaded from `run/mods`, through `tools/run-headless.sh` as `testing.md` says. That guide also covers what else checks a mod.
+
+## Releasing
+
+`.github/workflows/release.yml` publishes from every push to `main`; the top of the file says how. A mod whose crate version in `Cargo.toml` has no release yet gets one, and otherwise a changed mod gets the next release candidate. So bump the version in the change that should become a release. The workflow keeps the releases section of the root `README.md` up to date: leave what lies between its markers to it. Pull requests are checked by `.github/workflows/check.yml`: `tools/fmt-changed.sh` against the base branch, and a build of every mod on Windows, Linux and macOS.

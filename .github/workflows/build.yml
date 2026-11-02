@@ -1,0 +1,56 @@
+# Builds every mod for Windows, Linux and macOS, and uploads each system's libraries as the
+# artifact `<artifact>-<platform>`, laid out `<id>/<library>`. Called by `check.yml` and
+# `release.yml`.
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      weft:
+        description: Weft commit to build against instead of the one the submodule pins
+        type: string
+        default: ""
+      artifact:
+        description: Name the artifacts start with
+        type: string
+        default: libraries
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, platform: windows-x64 }
+          # The oldest available, since a Linux library only runs on this glibc or newer.
+          - { os: ubuntu-22.04, platform: linux-x64 }
+          - { os: macos-latest, platform: macos-arm64 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Weft at ${{ inputs.weft }}
+        if: inputs.weft != ''
+        env:
+          WEFT: ${{ inputs.weft }}
+        run: tools/ci/use-weft.sh "$WEFT"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        run: tools/ci/build-mods.sh libraries
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact }}-${{ matrix.platform }}
+          path: libraries/
+          if-no-files-found: error
+          retention-days: 7
