@@ -122,15 +122,18 @@ jobs:
           PLAN: ${{ needs.plan.outputs.experimental }}
         run: tools/ci/publish.sh "$PLAN" libraries
 
-  # Also after one of the two publish jobs failed, so the other's releases are listed.
+  # On every run, also when nothing was published or one publish job failed: it commits only
+  # when the section changes. Weft's history tells which experimental builds are still ahead.
   readme:
     needs: [publish, publish-experimental]
-    if: always() && contains(needs.*.result, 'success')
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
+          fetch-depth: 0
+          submodules: true
 
       - name: Update README.md
         env:
