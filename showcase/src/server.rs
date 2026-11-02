@@ -37,28 +37,30 @@ static BEFORE: Mutex<Vec<(u64, u32, [f64; 3])>> = Mutex::new(Vec::new());
 static ASKED: Mutex<Vec<(u64, Name, u64)>> = Mutex::new(Vec::new());
 
 pub fn register(r: &mut Registry) {
-    r.command("showcase", "play <film:word>", |cmd| {
-        let film = cmd.text("film").unwrap_or_default().to_string();
+    r.command("showcase", "play <film:word> | gallery <mod:word>", |cmd| {
         let (world, player) = (cmd.world(), cmd.player());
-        let Some(me) = world.entity(player).filter(|_| player != 0) else {
+        let Some(origin) = prepare(&world, player) else {
             cmd.reply("showcase.only_players", &[]);
             return;
         };
-        remember(player, world.game_mode(player), me.pos);
-        world.set_game_mode(player, game_mode::SPECTATOR);
-        world.set_day_time(NOON);
-        world.set_weather(false, false, CLEAR_TICKS);
-        let origin = me.pos.map(|v| v.floor() as i32);
-        world.emit(
-            &PLAY,
-            Play {
-                film: name(&film),
-                player,
-                origin,
-            },
-        );
-        ask(player, name(&film), world.time());
-        cmd.reply("showcase.asked", &[Arg::Text(&film)]);
+        if let Some(film) = cmd.text("film").map(str::to_string) {
+            world.emit(
+                &PLAY,
+                Play {
+                    film: name(&film),
+                    player,
+                    origin,
+                },
+            );
+            ask(player, name(&film), world.time());
+            cmd.reply("showcase.asked", &[Arg::Text(&film)]);
+        } else if let Some(mod_id) = cmd.text("mod").map(str::to_string) {
+            let shown = crate::gallery::show(&world, player, origin, &mod_id);
+            if shown == 0 {
+                restore(&world, player);
+                cmd.reply("showcase.gallery.empty", &[Arg::Text(&mod_id)]);
+            }
+        }
     });
     r.packet(&STARTED, |p, ()| answered(p.player()));
     r.world_tick(give_up);
@@ -72,6 +74,17 @@ pub fn register(r: &mut Registry) {
         p.world().emit(&CUE, cue);
     });
     r.packet(&FINISHED, |p, ()| restore(&p.world(), p.player()));
+}
+
+/// Makes the player the camera: a spectator at noon in clear weather. Returns the block they
+/// stand in, which the film is built around; `None` for no player.
+fn prepare(world: &World, player: u64) -> Option<[i32; 3]> {
+    let me = world.entity(player).filter(|_| player != 0)?;
+    remember(player, world.game_mode(player), me.pos);
+    world.set_game_mode(player, game_mode::SPECTATOR);
+    world.set_day_time(NOON);
+    world.set_weather(false, false, CLEAR_TICKS);
+    Some(me.pos.map(|v| v.floor() as i32))
 }
 
 fn ask(player: u64, film: Name, tick: u64) {

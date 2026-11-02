@@ -76,6 +76,9 @@ pub enum Look {
         yaw: f32,
         pitch: f32,
     },
+    /// Yaw and pitch at each point of a flyby (or spread evenly over any other shot), turning
+    /// smoothly from one to the next: a path marked by hand, looking where it looked.
+    Along(Vec<[f32; 2]>),
 }
 
 /// How a shot speeds up and slows down.

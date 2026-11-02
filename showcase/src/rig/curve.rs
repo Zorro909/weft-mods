@@ -41,21 +41,37 @@ impl Curve {
         let Some(first) = self.points.first() else {
             return [0.0; 3];
         };
+        let (i, f) = self.locate(u);
+        match self.points.get(i + 1) {
+            Some(&b) => lerp3(self.points[i], b, f),
+            None => self.points.get(i).copied().unwrap_or(*first),
+        }
+    }
+
+    /// How far along the points it was made through the curve is after `u` of its length:
+    /// 1.5 is halfway between the second and the third.
+    pub fn progress(&self, u: f64) -> f64 {
+        let (i, f) = self.locate(u);
+        (i as f64 + f) / SAMPLES as f64
+    }
+
+    /// The sample at or before `u` of the length, and how far it is from there to the next.
+    fn locate(&self, u: f64) -> (usize, f64) {
         let want = u.clamp(0.0, 1.0) * self.length();
         let i = self.distance.partition_point(|d| *d < want);
-        if i == 0 {
-            return *first;
+        if i == 0 || i >= self.points.len() {
+            return (
+                i.saturating_sub(1).min(self.points.len().saturating_sub(1)),
+                0.0,
+            );
         }
-        let Some(&b) = self.points.get(i) else {
-            return self.points[i - 1];
-        };
         let (da, db) = (self.distance[i - 1], self.distance[i]);
         let f = if db > da {
             (want - da) / (db - da)
         } else {
             1.0
         };
-        lerp3(self.points[i - 1], b, f)
+        (i - 1, f)
     }
 }
 
@@ -115,6 +131,22 @@ mod tests {
             close(curve.at(0.25), [2.5, 0.0, 0.0]),
             "a quarter: {:?}",
             curve.at(0.25)
+        );
+    }
+
+    #[test]
+    fn progress_counts_the_points_passed() {
+        let curve = Curve::new(&[[0.0; 3], [2.0, 0.0, 0.0], [4.0, 0.0, 0.0]]);
+        assert!(curve.progress(0.0).abs() < 1e-9, "at the first");
+        assert!(
+            (curve.progress(0.5) - 1.0).abs() < 1e-6,
+            "at the second: {}",
+            curve.progress(0.5)
+        );
+        assert!(
+            (curve.progress(1.0) - 2.0).abs() < 1e-9,
+            "at the last: {}",
+            curve.progress(1.0)
         );
     }
 

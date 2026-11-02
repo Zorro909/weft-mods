@@ -3,3 +3,7 @@ mod.showcase.description = Plays the films other mods make of their content: a s
 showcase.asked = Asked for the film {0}
 showcase.only_players = Only a player can watch a film
 showcase.missing = No mod sent the film {0}: is it loaded, and built with its films?
+showcase.camera.marked = Point {0} marked
+showcase.camera.too_few = Mark at least two points with /camera point first
+showcase.camera.cleared = Points forgotten
+showcase.gallery.empty = {0} has no blocks to show

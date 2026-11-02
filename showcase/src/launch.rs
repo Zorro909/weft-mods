@@ -1,4 +1,5 @@
 //! `--showcase <mod:film>`: makes a fresh world, plays the film once and quits, for recording.
+//! `--showcase gallery:<mod>` plays the gallery of a mod's blocks instead.
 //! `--showcase-dim` picks the dimension (`base:flatlands` by default, `none` to stay where the
 //! world starts), `--showcase-seed` the world's seed.
 
@@ -84,7 +85,7 @@ fn step(c: &Client, film: &str, stage: Stage) -> Stage {
             }
         }
         Stage::Settling(frames) if frames >= SETTLE_FRAMES && c.state().flags & cf::LOADED != 0 => {
-            c.run_command(&format!("/showcase play {film}"));
+            c.run_command(&command(film));
             Stage::Watching {
                 since: Instant::now(),
             }
@@ -92,6 +93,14 @@ fn step(c: &Client, film: &str, stage: Stage) -> Stage {
         Stage::Settling(frames) => Stage::Settling(frames + 1),
         Stage::Watching { since } => watch(c, film, since),
         stage => stage,
+    }
+}
+
+/// The command that starts `film`.
+fn command(film: &str) -> String {
+    match film.strip_prefix("gallery:") {
+        Some(mod_id) => format!("/showcase gallery {mod_id}"),
+        None => format!("/showcase play {film}"),
     }
 }
 

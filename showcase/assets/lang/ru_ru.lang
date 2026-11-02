@@ -3,3 +3,7 @@ mod.showcase.description = Показывает фильмы, которые д�
 showcase.asked = Запрошен фильм {0}
 showcase.only_players = Смотреть фильм может только игрок
 showcase.missing = Ни один мод не прислал фильм {0}: загружен ли он и собран ли с фильмами?
+showcase.camera.marked = Точка {0} отмечена
+showcase.camera.too_few = Сначала отметьте хотя бы две точки командой /camera point
+showcase.camera.cleared = Точки забыты
+showcase.gallery.empty = У {0} нет блоков, которые можно показать

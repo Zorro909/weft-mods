@@ -1,11 +1,14 @@
 //! Showcase: plays the films mods make with `showcase_api`, flying the camera through their
 //! shots, and records them when the game is started with `--showcase <mod:film>`.
 //!
-//! `/showcase play <mod:film>` plays one in a running game. The server half prepares the
-//! player and asks the film's mod to build its set (`server`); the client half receives the
+//! `/showcase play <mod:film>` plays one in a running game, `/showcase gallery <mod>` shows
+//! every block of a mod, and `/camera` makes camera paths by hand. The server half prepares the
+//! player and builds or asks for the set (`server`, `gallery`); the client half receives the
 //! shots and flies the camera (`director`, `playback`, `rig`).
 
+mod camera;
 mod director;
+mod gallery;
 mod launch;
 mod playback;
 mod rig;
@@ -18,5 +21,6 @@ declare_mod!(deps: [], init: init);
 fn init(r: &mut Registry) {
     server::register(r);
     director::register(r);
+    camera::register(r);
     launch::register(r);
 }

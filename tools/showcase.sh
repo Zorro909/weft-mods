@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Records a film a mod here makes with `showcase_api`: builds the engine, the showcase mod and
 # the film's mod with its films (`--features showcase`), plays the film once in a fresh world on
-# a virtual screen, and writes `showcase/out/<mod>-<film>.mp4`.
+# a virtual screen, and writes `showcase/out/<mod>-<film>.mp4`. `gallery:<mod>` films every
+# block of that mod instead, which needs no films.
 #
 #   tools/showcase.sh [--gpu 0000:0f:00.0] [--fps 60] [--with <mod folder>]... [--no-build]
-#                     <mod:film> [-- <more game options>]
+#                     <mod:film | gallery:mod> [-- <more game options>]
 #
 #   --gpu       PCI address of the card to draw on (see /dev/dri/by-path); default: any card.
 #               The other cards are hidden from the game (bubblewrap), as in run-headless.sh.
@@ -30,7 +31,7 @@ while [[ $# -gt 0 ]]; do
         *) break ;;
     esac
 done
-[[ $# -gt 0 && $1 == *:* ]] || { echo "showcase.sh: name a film as <mod:film> (see --help)" >&2; exit 2; }
+[[ $# -gt 0 && $1 == *:* ]] || { echo "showcase.sh: name a film as <mod:film> or gallery:<mod> (see --help)" >&2; exit 2; }
 film=$1; shift
 [[ ${1:-} == -- ]] && shift
 for tool in Xvfb ffmpeg; do
@@ -52,6 +53,11 @@ fi
 source "$root/tools/ci/mods.sh"
 cd "$root"
 mod=${film%%:*}
+features=(--features showcase)
+if [[ $mod == gallery ]]; then
+    mod=${film#gallery:}
+    features=()
+fi
 folder=""
 for candidate in $(all_mods); do
     [[ $(mod_id "$candidate") == "$mod" ]] && folder=$candidate
@@ -82,7 +88,7 @@ if [[ $build == 1 ]]; then
 fi
 install showcase
 for extra in "${with[@]}"; do install "$extra"; done
-[[ $folder == showcase ]] || install "$folder" --features showcase
+[[ $folder == showcase ]] || install "$folder" "${features[@]}"
 
 # A display nobody uses, larger than the game's window so that all of it is on screen.
 Xvfb -displayfd 3 -screen 0 2560x1400x24 -nolisten tcp 3>"$out/display" 2>"$out/xvfb.log" &

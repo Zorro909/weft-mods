@@ -2,6 +2,7 @@
 
 pub mod curve;
 pub mod ease;
+mod turn;
 
 use showcase_api::{Look, Path, Shot};
 
@@ -110,6 +111,13 @@ impl Rig {
             Look::Subject(name) => toward(subjects(name)?),
             Look::Angles { yaw, pitch } => Some((*yaw as f64, *pitch as f64)),
             Look::Ahead => self.ahead(u, subjects),
+            Look::Along(angles) => {
+                let at = match &self.curve {
+                    Some(curve) => curve.progress(u),
+                    None => u * angles.len().saturating_sub(1) as f64,
+                };
+                turn::along(angles, at)
+            }
         }
     }
 
@@ -206,6 +214,25 @@ mod tests {
             plain.pose(0.5, &none, START).fov,
             70.0,
             "a shot without a zoom"
+        );
+    }
+
+    #[test]
+    fn a_marked_path_looks_where_it_was_marked() {
+        let points = [[0.0; 3], [5.0, 0.0, 0.0], [5.0, 0.0, 5.0]];
+        let angles = vec![[0.0, 0.0], [90.0, -30.0], [180.0, 0.0]];
+        let shot = showcase_api::flyby(&points)
+            .look(Look::Along(angles))
+            .ease(showcase_api::Ease::Linear);
+        let rig = Rig::new(shot, [0; 3], 70.0);
+        let middle = rig.pose(2.5, &none, START);
+        assert!(
+            (middle.eye[0] - 5.0).abs() < 1e-3 && middle.eye[2].abs() < 1e-3,
+            "at the second point"
+        );
+        assert!(
+            (middle.yaw - 90.0).abs() < 0.5 && (middle.pitch + 30.0).abs() < 0.5,
+            "{middle:?}"
         );
     }
 

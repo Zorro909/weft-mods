@@ -60,16 +60,34 @@ started; angles are in degrees. A film is a list of steps:
 | `title(key, secs)` | A line from your lang files on screen while the film goes on. |
 | `cue(name)` | Runs your `on_cue(name, ..)` on the server: start the machines, fill a chest. Block entities only exist after the tick their block was placed in, so fill them here. |
 
-Subjects are what `follow` and `Look::Subject` point at: `set.subject(name, entity)` or
-`set.subject_at(name, offset)`.
+Where a shot looks: `Look::At(point)`, `Pan(from, to)`, `Subject(name)`, `Ahead` along the
+path, fixed `Angles`, or `Along(angles)`, a yaw and pitch for each point of a flyby that the
+camera turns through smoothly. Subjects are what `follow` and `Look::Subject` point at:
+`set.subject(name, entity)` or `set.subject_at(name, offset)`.
+
+A mod that starts a film on its own (a command, an item) builds it the same way and plays it
+with `showcase_api::send(world, player, name, origin, &film)`.
 
 ## Playing and recording
 
 `/showcase play <mod:film>` plays a film in a running game, from where you stand. The film makes
 you a spectator, sets noon and clear weather, and gives you back your game mode and place when
-it is over.
+it is over, or after ten seconds if no mod sends the film.
 
-`weft --showcase <mod:film>` makes a fresh world (`base:flatlands`; `--showcase-dim` and
-`--showcase-seed` change that), plays the film once and quits. `tools/showcase.sh <mod:film>`
-in this repository builds everything, runs that on a virtual screen and writes the video to
-`showcase/out/`; `--help` lists its options.
+`/showcase gallery <mod>` needs no film: it puts every block of the mod on a plinth in a row
+from where you stand and shows each in turn under its name.
+
+`weft --showcase <mod:film>` (or `gallery:<mod>`) makes a fresh world (`base:flatlands`;
+`--showcase-dim` and `--showcase-seed` change that), plays the film once and quits.
+`tools/showcase.sh <mod:film>` in this repository builds everything, runs that on a virtual
+screen and writes the video to `showcase/out/`; `--help` lists its options.
+
+## Camera paths by hand
+
+`/camera` makes a path in the game and plays it on your client alone, for animators:
+
+- `/camera point` marks where the camera is and where it looks; `/camera clear` forgets them.
+- `/camera play [secs]` flies through the points, turning to look where each was marked.
+- `/camera orbit <radius> [secs]` circles the point `radius` blocks in front of you once.
+
+It flies through walls only in spectator mode.

@@ -98,6 +98,14 @@ pub fn subject(world: &World, player: u64, name: &str, entity: u64, pos: [f64; 3
     );
 }
 
+/// Plays `steps` on `player`'s camera now, as the film `film` around `origin`: for films a mod
+/// starts on its own (a command, an item). Unlike `/showcase play` it leaves the player's game
+/// mode, time and weather as they are, and cues reach `on_cue` only for a film registered under
+/// that name.
+pub fn send(world: &World, player: u64, film: &str, origin: [i32; 3], steps: &Film) {
+    world.send(player, &TIMELINE, &wire::encode(film, origin, steps));
+}
+
 /// Registers the film `name` of this mod (played as `mymod:name`): `build` puts its set into
 /// the world and returns its steps.
 pub fn film<'a>(
@@ -114,12 +122,7 @@ pub fn film<'a>(
                 player: play.player,
                 origin: play.origin,
             };
-            let film = build(&set);
-            set.world.send(
-                set.player,
-                &TIMELINE,
-                &wire::encode(&mine, set.origin, &film),
-            );
+            send(&set.world, set.player, &mine, set.origin, &build(&set));
         }
     });
     FilmOptions { r, film: full }

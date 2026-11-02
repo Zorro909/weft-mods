@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
-use showcase_api::{SIGNAL, SUBJECT, TIMELINE, decode, name, name_text};
+use showcase_api::{SIGNAL, SUBJECT, TIMELINE, Timeline, decode, name, name_text};
 use weft_sdk::abi::{PlayerControl, control_mask as cm};
 use weft_sdk::client::client_flags as cf;
 use weft_sdk::*;
@@ -103,8 +103,13 @@ fn start(c: &Client, bytes: &[u8]) {
         );
         return;
     };
-    info!("showcase: loading the world along {}", timeline.film);
     c.send(&STARTED, &());
+    play(c, timeline);
+}
+
+/// Plays `timeline` on this client, after loading the world along it.
+pub fn play(c: &Client, timeline: Timeline) {
+    info!("showcase: loading the world along {}", timeline.film);
     let mut from = camera(c);
     // A film started over another keeps the field of view the player had before the first.
     from.fov = with(|d| *d.own_fov.get_or_insert(from.fov));
@@ -219,7 +224,7 @@ fn subject(c: &Client, &(entity, pos): &(u64, [f64; 3])) -> Option<[f64; 3]> {
 }
 
 /// The camera now, from the local player and its settings.
-fn camera(c: &Client) -> Pose {
+pub fn camera(c: &Client) -> Pose {
     let s = c.state();
     let eye = add(s.pos, [0.0, eye_height(c), 0.0]);
     Pose {
@@ -272,12 +277,12 @@ fn notice(c: &Client, d: &Director) {
     }
 }
 
-/// The film's titles, faded in and out, low in the middle of the picture. They are drawn as
+/// The film's titles, faded in and out, in the lower third of the picture. They are drawn as
 /// labels in the world in front of the camera, which stay visible while the HUD is hidden.
 fn titles(c: &Client, playback: &Playback, pose: Pose) {
     const FADE: f32 = 0.6;
     let now = playback.elapsed();
-    let ahead = forward(pose.yaw, pose.pitch - 9.0);
+    let ahead = forward(pose.yaw, pose.pitch - 22.0);
     let at = add(pose.eye, ahead.map(|v| v * 12.0));
     for title in &playback.titles {
         let shown = ((now - title.from) / FADE)

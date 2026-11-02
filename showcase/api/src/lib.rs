@@ -9,14 +9,16 @@
 //! Everything a film says is plain data, so the two mods only meet through the events and
 //! channels below, whose layouts the engine checks when the mods load.
 
+mod decode;
 mod film;
 mod set;
 mod wire;
 
+pub use decode::decode;
 pub use film::{Ease, Film, Look, Path, Shot, Step, crane, dolly, flyby, follow, hold, orbit};
-pub use set::{Set, film, signal, subject};
+pub use set::{Set, film, send, signal, subject};
 use weft_sdk::*;
-pub use wire::{Timeline, VERSION, decode};
+pub use wire::{Timeline, VERSION};
 
 /// A name in an event or packet: UTF-8, padded with zeros.
 pub type Name = [u8; 64];
