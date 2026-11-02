@@ -1,5 +1,6 @@
 //! A film as bytes, the way `TIMELINE` carries it: the version, the film's name and origin,
-//! then its steps. Numbers are little-endian, texts a `u16` length and UTF-8.
+//! then its steps. Numbers are little-endian, texts a `u16` length and UTF-8. Decoding refuses
+//! numbers that aren't finite, which would stop a film or fling the camera.
 
 use crate::film::{Ease, Film, Look, Path, Shot, Step};
 
@@ -52,8 +53,12 @@ impl Out {
         p.iter().for_each(|v| self.0.extend(v.to_le_bytes()));
     }
 
+    /// Cut short at 65535 bytes, on a character.
     fn text(&mut self, t: &str) {
-        let len = t.len().min(u16::MAX as usize);
+        let mut len = t.len().min(u16::MAX as usize);
+        while !t.is_char_boundary(len) {
+            len -= 1;
+        }
         self.0.extend((len as u16).to_le_bytes());
         self.0.extend(&t.as_bytes()[..len]);
     }
@@ -178,11 +183,11 @@ impl In<'_> {
     }
 
     fn f32(&mut self) -> Option<f32> {
-        Some(f32::from_le_bytes(self.take()?))
+        Some(f32::from_le_bytes(self.take()?)).filter(|v| v.is_finite())
     }
 
     fn f64(&mut self) -> Option<f64> {
-        Some(f64::from_le_bytes(self.take()?))
+        Some(f64::from_le_bytes(self.take()?)).filter(|v| v.is_finite())
     }
 
     fn point(&mut self) -> Option<[f64; 3]> {
@@ -317,6 +322,34 @@ mod tests {
         assert!(
             decode(&bytes[..bytes.len() - 1]).is_none(),
             "one byte short"
+        );
+    }
+
+    #[test]
+    fn numbers_that_are_not_finite_are_refused() {
+        let wait = encode("mymod:tour", [0; 3], &Film::new().wait(f32::NAN));
+        assert!(decode(&wait).is_none(), "a wait that never ends");
+        let far = encode(
+            "mymod:tour",
+            [0; 3],
+            &Film::new().shot(hold([f64::INFINITY, 0.0, 0.0])),
+        );
+        assert!(decode(&far).is_none(), "a camera at infinity");
+    }
+
+    #[test]
+    fn long_texts_are_cut_on_a_character() {
+        // 65536 bytes, whose 65535th is the middle of an é.
+        let key = "é".repeat(32768);
+        let bytes = encode("mymod:tour", [0; 3], &Film::new().title(&key, 1.0));
+        let back = decode(&bytes).expect("still a timeline");
+        let Step::Title { key: cut, .. } = &back.steps.steps[0] else {
+            panic!("a title")
+        };
+        assert!(
+            key.starts_with(cut.as_str()) && cut.len() == u16::MAX as usize - 1,
+            "{}",
+            cut.len()
         );
     }
 

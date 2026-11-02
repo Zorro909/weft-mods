@@ -12,12 +12,14 @@ use weft_sdk::*;
 use crate::playback::Playback;
 use crate::rig::Pose;
 use crate::rig::ease::{add, angles_along, forward, sub};
-use crate::server::{FINISHED, REACHED, Reached};
+use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
 const STOP_FRAMES: u32 = 20;
 /// Longest frame the film steps by: a hitch skips ahead instead of jumping.
 const MAX_DT: f32 = 0.1;
+/// Seconds a film that never came is reported on screen.
+const NOTICE_SECS: f32 = 6.0;
 
 #[derive(Default)]
 struct Director {
@@ -25,10 +27,12 @@ struct Director {
     signals: HashSet<String>,
     /// Subjects by name: an entity, or a position where the entity is 0.
     subjects: HashMap<String, (u64, [f64; 3])>,
-    /// The player's own field of view while a film changes it.
+    /// The player's own field of view while a film plays, given back at its end.
     own_fov: Option<f32>,
     /// Films played to the end since the game started.
     finished: u32,
+    /// The last film asked for that never came, and when that was known.
+    missing: Option<(String, std::time::Instant)>,
 }
 
 #[derive(Default)]
@@ -63,7 +67,17 @@ pub fn register(r: &mut Registry) {
                 .insert(name_text(&s.name).to_string(), (s.entity, s.pos))
         });
     });
-    r.client_frame(|c| with(|d| frame(c, d)));
+    r.client_packet(&MISSING, |_, m| {
+        let film = name_text(&m.film).to_string();
+        error!("showcase: no mod sent the film {film}; is it loaded, built with its films?");
+        with(|d| d.missing = Some((film, std::time::Instant::now())));
+    });
+    r.client_frame(|c| {
+        with(|d| {
+            frame(c, d);
+            notice(c, d);
+        })
+    });
 }
 
 /// Whether a film is loading or playing.
@@ -76,6 +90,11 @@ pub fn finished() -> u32 {
     with(|d| d.finished)
 }
 
+/// Whether a film was asked for and never came.
+pub fn missing() -> bool {
+    with(|d| d.missing.is_some())
+}
+
 fn start(c: &Client, bytes: &[u8]) {
     let Some(timeline) = decode(bytes) else {
         error!(
@@ -85,7 +104,11 @@ fn start(c: &Client, bytes: &[u8]) {
         return;
     };
     info!("showcase: loading the world along {}", timeline.film);
-    let playback = Playback::new(timeline, camera(c));
+    c.send(&STARTED, &());
+    let mut from = camera(c);
+    // A film started over another keeps the field of view the player had before the first.
+    from.fov = with(|d| *d.own_fov.get_or_insert(from.fov));
+    let playback = Playback::new(timeline, from);
     let stops = playback.stops();
     with(|d| {
         d.phase = Phase::Loading {
@@ -161,14 +184,16 @@ fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
     }
     let pose = playback.pose();
     put(c, pose);
-    set_fov(d, pose.fov);
+    set_fov(pose.fov);
     titles(c, playback, pose);
 }
 
 fn finish(c: &Client, d: &mut Director, playback: &Playback) -> Phase {
     mark("stop", &playback.film);
     c.send(&FINISHED, &());
-    set_fov(d, 0.0);
+    if let Some(own) = d.own_fov.take() {
+        set_fov(own);
+    }
     d.signals.clear();
     d.subjects.clear();
     d.finished += 1;
@@ -193,7 +218,7 @@ fn subject(c: &Client, &(entity, pos): &(u64, [f64; 3])) -> Option<[f64; 3]> {
     Some(add(e.pos, [0.0, e.size[1] as f64 / 2.0, 0.0]))
 }
 
-/// The camera now, from the local player.
+/// The camera now, from the local player and its settings.
 fn camera(c: &Client) -> Pose {
     let s = c.state();
     let eye = add(s.pos, [0.0, eye_height(c), 0.0]);
@@ -201,7 +226,7 @@ fn camera(c: &Client) -> Pose {
         eye,
         yaw: (s.yaw as f64).to_degrees(),
         pitch: (s.pitch as f64).to_degrees(),
-        fov: 0.0,
+        fov: weft_sdk::settings::FOV.get(),
     }
 }
 
@@ -222,16 +247,28 @@ fn put(c: &Client, pose: Pose) {
     });
 }
 
-/// Sets the field of view a shot asks for (0: the player's own), only when it changes.
-fn set_fov(d: &mut Director, fov: f32) {
+/// Sets the field of view, only when it changes: every change is applied as a new setting.
+fn set_fov(fov: f32) {
     use weft_sdk::settings::FOV;
-    if fov > 0.0 {
-        d.own_fov.get_or_insert_with(|| FOV.get());
-        if (FOV.get() - fov).abs() > 0.05 {
-            FOV.set(fov);
-        }
-    } else if let Some(own) = d.own_fov.take() {
-        FOV.set(own);
+    if (FOV.get() - fov).abs() > 0.05 {
+        FOV.set(fov);
+    }
+}
+
+/// Says on screen for a while that the film asked for never came.
+fn notice(c: &Client, d: &Director) {
+    let Some((film, since)) = &d.missing else {
+        return;
+    };
+    if since.elapsed().as_secs_f32() < NOTICE_SECS {
+        c.screen_text(
+            0.5,
+            0.3,
+            "showcase.missing",
+            &[Arg::Text(film)],
+            0xFF8080FF,
+            1.5,
+        );
     }
 }
 

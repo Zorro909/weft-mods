@@ -10,7 +10,7 @@ use weft_sdk::*;
 
 use crate::director;
 
-/// How long the film's mod has to answer before the run gives up.
+/// How long the run waits when even the server never answers (the mod missing altogether).
 const ANSWER_TIME: Duration = Duration::from_secs(30);
 /// Frames to stand in the new dimension before the film is asked for.
 const SETTLE_FRAMES: u32 = 60;
@@ -111,8 +111,9 @@ fn watch(c: &Client, film: &str, since: Instant) -> Stage {
         c.quit(0);
         return Stage::Done;
     }
-    if !director::busy() && since.elapsed() > ANSWER_TIME {
-        error!("showcase: no film {film} came; is its mod loaded, built with its films?");
+    // The server says so when no mod answers; the time is for a request that never got there.
+    if director::missing() || (!director::busy() && since.elapsed() > ANSWER_TIME) {
+        error!("showcase: {film} never came");
         c.quit(1);
         return Stage::Done;
     }

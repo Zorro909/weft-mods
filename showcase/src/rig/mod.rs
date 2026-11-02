@@ -8,7 +8,7 @@ use showcase_api::{Look, Path, Shot};
 use self::curve::Curve;
 use self::ease::{add, angles_along, eased, lerp, lerp_angle, lerp3, sub};
 
-/// A camera: eye position, yaw and pitch in degrees, field of view (0 for the player's own).
+/// A camera: eye position, and yaw, pitch and field of view in degrees.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pose {
     pub eye: [f64; 3],
@@ -25,10 +25,12 @@ pub struct Rig {
     shot: Shot,
     origin: [f64; 3],
     curve: Option<Curve>,
+    /// The player's field of view, which a shot's 0 stands for.
+    own_fov: f32,
 }
 
 impl Rig {
-    pub fn new(shot: Shot, origin: [i32; 3]) -> Rig {
+    pub fn new(shot: Shot, origin: [i32; 3], own_fov: f32) -> Rig {
         let origin = origin.map(f64::from);
         let curve = match &shot.path {
             Path::Spline(points) => Some(Curve::new(
@@ -40,6 +42,7 @@ impl Rig {
             shot,
             origin,
             curve,
+            own_fov,
         }
     }
 
@@ -55,12 +58,11 @@ impl Rig {
         let (yaw, pitch) = self
             .aim(u, eye, subjects)
             .unwrap_or((before.yaw, before.pitch));
-        let [from, to] = self.shot.fov;
-        let fov = if from == 0.0 && to == 0.0 {
-            0.0
-        } else {
-            lerp(from as f64, to as f64, u) as f32
-        };
+        let fov = self
+            .shot
+            .fov
+            .map(|v| if v == 0.0 { self.own_fov } else { v });
+        let fov = lerp(fov[0] as f64, fov[1] as f64, u) as f32;
         let pose = Pose {
             eye,
             yaw,
@@ -143,7 +145,7 @@ mod tests {
         eye: [0.0; 3],
         yaw: 0.0,
         pitch: 0.0,
-        fov: 0.0,
+        fov: 70.0,
     };
 
     fn none(_: &str) -> Option<[f64; 3]> {
@@ -153,9 +155,7 @@ mod tests {
     #[test]
     fn an_orbit_keeps_its_distance_and_looks_at_the_center() {
         let rig = Rig::new(
-            orbit([0.5, 0.0, 0.5], 8.0).height(0.0, 0.0).secs(4.0),
-            [100, 64, -20],
-        );
+            orbit([0.5, 0.0, 0.5], 8.0).height(0.0, 0.0).secs(4.0), [100, 64, -20], 70.0);
         let center = [100.5, 64.0, -19.5];
         for clock in [0.0, 1.0, 2.5, 4.0] {
             let pose = rig.pose(clock, &none, START);
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn a_dolly_looks_the_way_it_moves() {
-        let rig = Rig::new(dolly([0.0; 3], [0.0, 0.0, -10.0]), [0; 3]);
+        let rig = Rig::new(dolly([0.0; 3], [0.0, 0.0, -10.0]), [0; 3], 70.0);
         let pose = rig.pose(2.0, &none, START);
         assert!(
             pose.yaw.abs() < 1e-6 && pose.pitch.abs() < 1e-6,
@@ -187,16 +187,31 @@ mod tests {
                     yaw: 90.0,
                     pitch: 0.0,
                 })
-                .blend(1.0),
-            [0; 3],
-        );
+                .blend(1.0), [0; 3], 70.0);
         assert_eq!(rig.pose(0.0, &none, START), START, "at the start");
         assert_eq!(rig.pose(1.0, &none, START).eye, [5.0; 3], "after the blend");
     }
 
     #[test]
+    fn a_blend_into_a_zoom_starts_at_the_players_own_view() {
+        let rig = Rig::new(hold([0.0; 3]).fov(40.0, 40.0).blend(1.0), [0; 3], 70.0);
+        assert_eq!(
+            rig.pose(0.0, &none, START).fov,
+            70.0,
+            "where the blend starts"
+        );
+        assert_eq!(rig.pose(1.0, &none, START).fov, 40.0, "after it");
+        let plain = Rig::new(hold([0.0; 3]), [0; 3], 70.0);
+        assert_eq!(
+            plain.pose(0.5, &none, START).fov,
+            70.0,
+            "a shot without a zoom"
+        );
+    }
+
+    #[test]
     fn an_unknown_subject_keeps_the_camera_where_it_was() {
-        let rig = Rig::new(showcase_api::follow("item", [0.0, 1.0, 0.0]), [0; 3]);
+        let rig = Rig::new(showcase_api::follow("item", [0.0, 1.0, 0.0]), [0; 3], 70.0);
         assert_eq!(rig.pose(1.0, &none, START), START);
     }
 }

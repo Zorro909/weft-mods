@@ -27,6 +27,8 @@ pub struct Playback {
     pose: Pose,
     /// Where the camera was when the current step began.
     start: Pose,
+    /// The player's field of view, for shots that keep it.
+    own_fov: f32,
     pub titles: Vec<Title>,
 }
 
@@ -42,6 +44,7 @@ impl Playback {
             rig: None,
             pose: from,
             start: from,
+            own_fov: from.fov,
             titles: Vec::new(),
         }
     }
@@ -114,7 +117,7 @@ impl Playback {
             Step::Shot(shot) => {
                 let rig = self
                     .rig
-                    .get_or_insert_with(|| Rig::new(shot.clone(), self.origin));
+                    .get_or_insert_with(|| Rig::new(shot.clone(), self.origin, self.own_fov));
                 let secs = rig.secs();
                 self.pose = rig.pose(clock.min(secs), subjects, self.start);
                 (clock >= secs).then_some(secs)
@@ -132,7 +135,7 @@ impl Playback {
             if matches!(shot.path, Path::Follow { .. }) {
                 continue;
             }
-            let rig = Rig::new(shot.clone().blend(0.0), self.origin);
+            let rig = Rig::new(shot.clone().blend(0.0), self.origin, self.own_fov);
             out.extend([0.0, 0.5, 1.0].map(|f| rig.pose(rig.secs() * f, &none, self.start).eye));
         }
         out
@@ -149,7 +152,7 @@ mod tests {
         eye: [0.0; 3],
         yaw: 0.0,
         pitch: 0.0,
-        fov: 0.0,
+        fov: 70.0,
     };
 
     fn play(film: Film) -> Playback {
