@@ -62,9 +62,21 @@ pub fn register(r: &mut Registry) {
         ),
     ];
     for (kind, parts, uv) in pieces {
-        crate::owned::kind(r.entity(kind))
+        crate::owned::kind(r.entity(kind), claims)
             .model(Model::from(parts).uv(uv[0], uv[1]))
             .size(0.5, 0.5);
+    }
+}
+
+fn claims(w: &World, owner: u64, id: u64) -> bool {
+    w.component(owner, &RIG).is_some_and(|rig| rig.holds(id))
+}
+
+impl Rig {
+    /// Whether `id` is one of the rig's pieces now. One it lost track of while its cube was
+    /// unloaded was replaced, and is not.
+    fn holds(&self, id: u64) -> bool {
+        self.ids.contains(&id)
     }
 }
 
@@ -131,6 +143,15 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_replaced_piece_is_no_longer_the_rigs() {
+        let mut rig = Rig { ids: [0; SLOTS] };
+        rig.ids[1] = 7;
+        assert!(rig.holds(7), "the bit it placed");
+        rig.ids[1] = 9;
+        assert!(!rig.holds(7), "the bit it lost and replaced");
+    }
 
     #[test]
     fn beam_pieces_cover_the_span_and_end_flush() {

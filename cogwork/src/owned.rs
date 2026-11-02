@@ -1,6 +1,6 @@
 //! Entities that only show what a block entity is doing (an excavator's gantry, an engine's
 //! piston). Each belongs to an owner, moves where its owner puts it, and leaves when the owner
-//! is gone.
+//! is gone or no longer counts it as its own.
 
 use weft_sdk::*;
 
@@ -11,21 +11,28 @@ pub fn register(r: &mut Registry) {
     r.entity_component(&OWNER, 0u64, component_flags::SAVE);
 }
 
+/// Whether the block entity `owner` still counts the entity `id` as its own.
+pub type Claims = fn(w: &World, owner: u64, id: u64) -> bool;
+
 /// Makes `b` an owned entity: moved only by its owner, never hurt or pushed, with no egg.
-pub fn kind<'a>(b: EntityBuilder<'a>) -> EntityBuilder<'a> {
+///
+/// An owner that loads before its entities makes new ones, and the old ones arrive later still
+/// moving as they were when saved. `claims` tells those apart, so they leave instead of
+/// drifting off forever.
+pub fn kind<'a>(b: EntityBuilder<'a>, claims: Claims) -> EntityBuilder<'a> {
     b.kinematic()
         .invulnerable()
         .unpushable()
         .no_egg()
         .attach(&OWNER)
-        .on_tick(leave_without_owner)
+        .on_tick(move |t| leave_unclaimed(t, claims))
 }
 
-fn leave_without_owner(t: &EntityTick) {
+fn leave_unclaimed(t: &EntityTick, claims: Claims) {
     let w = t.world();
     for &id in t.ids() {
         let owner = w.component(id, &OWNER).copied().unwrap_or(0);
-        if owner == 0 || w.entity(owner).is_none() {
+        if owner == 0 || w.entity(owner).is_none() || !claims(&w, owner, id) {
             w.remove(id);
         }
     }
