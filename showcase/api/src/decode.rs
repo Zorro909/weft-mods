@@ -79,6 +79,11 @@ impl In<'_> {
                 secs: self.f32()?,
             },
             4 => Step::Cue(self.text()?),
+            5 => Step::Menu {
+                menu: self.text()?,
+                at: [self.i32()?, self.i32()?, self.i32()?],
+                secs: self.f32()?,
+            },
             _ => return None,
         })
     }

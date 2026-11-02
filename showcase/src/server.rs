@@ -4,7 +4,7 @@
 
 use std::sync::Mutex;
 
-use showcase_api::{CUE, Cue, Name, PLAY, Play, name};
+use showcase_api::{CUE, Cue, Name, PLAY, Play, name, name_text};
 use weft_sdk::abi::game_mode;
 use weft_sdk::*;
 
@@ -17,6 +17,11 @@ pub static REACHED: Channel<Reached> = Channel::named("reached");
 pub static STARTED: Channel<()> = Channel::named("started");
 /// The film is over: the player gets back their game mode and place.
 pub static FINISHED: Channel<()> = Channel::named("finished");
+value! {
+    /// A film's `Film::menu` step: open `menu` on the block at `at` for this player.
+    pub struct OpenMenu { pub menu: Name, pub at: [i32; 3] }
+}
+pub static OPEN_MENU: Channel<OpenMenu> = Channel::named("open_menu");
 value! {
     /// No mod sent `film` in time.
     pub struct Missing { pub film: Name }
@@ -73,7 +78,19 @@ pub fn register(r: &mut Registry) {
         };
         p.world().emit(&CUE, cue);
     });
+    r.packet(&OPEN_MENU, |p, open| {
+        open_menu(&p.world(), p.player(), open)
+    });
     r.packet(&FINISHED, |p, ()| restore(&p.world(), p.player()));
+}
+
+fn open_menu(world: &World, player: u64, open: OpenMenu) {
+    let menu = name_text(&open.menu);
+    let Some(id) = Menu::lookup(menu) else {
+        warn!("showcase: a film opens the menu {menu}, which no mod has");
+        return;
+    };
+    world.open_menu_at(player, Id::<Menu>::from(id), open.at);
 }
 
 /// Makes the player the camera: a spectator at noon in clear weather. Returns the block they

@@ -9,6 +9,7 @@ use weft_sdk::abi::{PlayerControl, control_mask as cm};
 use weft_sdk::client::client_flags as cf;
 use weft_sdk::*;
 
+use crate::menus::Menus;
 use crate::playback::Playback;
 use crate::rig::Pose;
 use crate::rig::ease::{add, angles_along, forward, sub};
@@ -33,6 +34,7 @@ struct Director {
     finished: u32,
     /// The last film asked for that never came, and when that was known.
     missing: Option<(String, std::time::Instant)>,
+    menus: Menus,
 }
 
 #[derive(Default)]
@@ -191,10 +193,12 @@ fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
     put(c, pose);
     set_fov(pose.fov);
     titles(c, playback, pose);
+    d.menus.show(c, playback.menu.as_ref());
 }
 
 fn finish(c: &Client, d: &mut Director, playback: &Playback) -> Phase {
     mark("stop", &playback.film);
+    d.menus.show(c, None);
     c.send(&FINISHED, &());
     if let Some(own) = d.own_fov.take() {
         set_fov(own);

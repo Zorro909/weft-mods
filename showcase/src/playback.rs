@@ -14,6 +14,15 @@ pub struct Title {
     pub until: f32,
 }
 
+/// A block's menu on screen until `until` seconds into the film.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpenMenu {
+    pub menu: String,
+    /// The block, in the world.
+    pub at: [i32; 3],
+    pub until: f32,
+}
+
 pub struct Playback {
     pub film: String,
     pub origin: [i32; 3],
@@ -30,6 +39,7 @@ pub struct Playback {
     /// The player's field of view, for shots that keep it.
     own_fov: f32,
     pub titles: Vec<Title>,
+    pub menu: Option<OpenMenu>,
 }
 
 impl Playback {
@@ -46,6 +56,7 @@ impl Playback {
             start: from,
             own_fov: from.fov,
             titles: Vec::new(),
+            menu: None,
         }
     }
 
@@ -84,6 +95,7 @@ impl Playback {
         }
         let now = self.elapsed;
         self.titles.retain(|t| t.until > now);
+        self.menu = self.menu.take().filter(|m| m.until > now);
         cues
     }
 
@@ -107,6 +119,14 @@ impl Playback {
             }
             Step::Cue(name) => {
                 cues.push(name.clone());
+                Some(0.0)
+            }
+            Step::Menu { menu, at, secs } => {
+                self.menu = Some(OpenMenu {
+                    menu: menu.clone(),
+                    at: std::array::from_fn(|i| self.origin[i] + at[i]),
+                    until: self.elapsed - clock + secs,
+                });
                 Some(0.0)
             }
             Step::Wait(secs) => (clock >= *secs).then_some(*secs),
@@ -156,10 +176,14 @@ mod tests {
     };
 
     fn play(film: Film) -> Playback {
+        play_at([0; 3], film)
+    }
+
+    fn play_at(origin: [i32; 3], film: Film) -> Playback {
         Playback::new(
             Timeline {
                 film: "mymod:tour".into(),
-                origin: [0; 3],
+                origin,
                 steps: film,
             },
             START,
@@ -223,5 +247,20 @@ mod tests {
         assert_eq!(p.titles[0].from, 1.0, "from the end of the first wait");
         p.advance(1.6, &mut signals, &none);
         assert!(p.titles.is_empty(), "gone at three seconds");
+    }
+
+    #[test]
+    fn a_menu_opens_on_the_block_in_the_set_for_its_time() {
+        let film = Film::new()
+            .wait(1.0)
+            .menu("mymod:press", [2, 0, -1], 2.0)
+            .wait(5.0);
+        let mut p = play_at([10, 64, 10], film);
+        let mut signals = HashSet::new();
+        p.advance(1.5, &mut signals, &none);
+        let open = p.menu.clone().expect("open after the first wait");
+        assert_eq!((open.at, open.until), ([12, 64, 9], 3.0));
+        p.advance(1.6, &mut signals, &none);
+        assert_eq!(p.menu, None, "closed at three seconds");
     }
 }

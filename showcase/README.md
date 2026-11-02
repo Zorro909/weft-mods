@@ -62,6 +62,7 @@ that area go, hollows are filled, and the landscape beyond stays as the backdrop
 | `wait_for(name, max)` | The camera stays until your mod calls `signal(world, player, name)` (or `set.signal(name)`), at most `max` seconds. |
 | `title(key, secs)` | A line from your lang files on screen while the film goes on. |
 | `cue(name)` | Runs your `on_cue(name, ..)` on the server: start the machines, fill a chest. Block entities only exist after the tick their block was placed in, so fill them here. |
+| `menu(name, at, secs)` | Opens the menu `name` (`mymod:press`) on the block `at` in the set, as if the camera had used it, and closes it after `secs`, while the film goes on. Shots after it go on behind the menu. |
 
 Where a shot looks: `Look::At(point)`, `Pan(from, to)`, `Subject(name)`, `Ahead` along the
 path, fixed `Angles`, or `Along(angles)`, a yaw and pitch for each point of a flyby that the

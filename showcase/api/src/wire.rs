@@ -70,6 +70,12 @@ impl Out {
                 self.0.push(4);
                 self.text(name);
             }
+            Step::Menu { menu, at, secs } => {
+                self.0.push(5);
+                self.text(menu);
+                at.iter().for_each(|v| self.0.extend(v.to_le_bytes()));
+                self.f32(*secs);
+            }
         }
     }
 
@@ -175,6 +181,7 @@ mod tests {
             .wait(1.5)
             .wait_for("dug", 30.0)
             .cue("start")
+            .menu("mymod:press", [2, 0, -3], 4.0)
     }
 
     #[test]

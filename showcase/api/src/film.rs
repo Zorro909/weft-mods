@@ -24,6 +24,12 @@ pub enum Step {
     },
     /// Fires `CUE` on the server, for the film's mod to start something.
     Cue(String),
+    /// The menu `menu` of the block `at` open on screen for `secs`, while the film goes on.
+    Menu {
+        menu: String,
+        at: [i32; 3],
+        secs: f32,
+    },
 }
 
 /// One camera move: where the eye goes, where it looks, how long it takes.
@@ -126,6 +132,17 @@ impl Film {
 
     pub fn cue(mut self, name: &str) -> Film {
         self.steps.push(Step::Cue(name.into()));
+        self
+    }
+
+    /// Opens the menu `menu` (`mymod:press`) on the block `at` in the set, as if the camera had
+    /// used it, and closes it after `secs`.
+    pub fn menu(mut self, menu: &str, at: [i32; 3], secs: f32) -> Film {
+        self.steps.push(Step::Menu {
+            menu: menu.into(),
+            at,
+            secs,
+        });
         self
     }
 }

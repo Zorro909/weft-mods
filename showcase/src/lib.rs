@@ -10,6 +10,7 @@ mod camera;
 mod director;
 mod gallery;
 mod launch;
+mod menus;
 mod playback;
 mod rig;
 mod server;
