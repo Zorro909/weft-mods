@@ -2,28 +2,37 @@
 
 Reads the releases from stdin, one JSON object per line with `tag`, `url`, `date` and `body`, as
 `update-readme.sh` fetches them. The section between the markers is replaced, or added at the end.
+Run from the repository root, with the history of the Weft submodule fetched.
 Usage: `python3 tools/ci/readme.py README.md < releases`.
 """
 
 import json
 import re
+import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 
 START = "<!-- mod-releases:start -->"
 END = "<!-- mod-releases:end -->"
-# The tags `plan-release.sh` and `plan-experimental.sh` make.
-TAG = re.compile(r"^(?P<mod>.+)-v(?P<version>\d+\.\d+\.\d+)(?:-(?P<kind>rc|experimental)\.\S+)?$")
+# The tags `plan-release.sh` and `plan-experimental.sh` make: `<id>-v<version>`, the version
+# `X.Y.Z` or `X.Y.Z-rc.N`, with a suffix for an experimental build.
+TAG = re.compile(
+    r"^(?P<mod>.+)-v(?P<version>\d+\.\d+\.\d+(?P<rc>-rc\.\d+)?)(?P<experimental>-experimental\.\S+)?$"
+)
 # The line `publish.sh` writes into every release's notes.
-WEFT = re.compile(r"Built against Weft (?P<version>\S+), commit (?P<commit>\[\w+\]\([^)]+\))")
+WEFT = re.compile(
+    r"Built against Weft (?P<version>\S+), commit (?P<link>\[\w+\]\([^)]*/commit/(?P<commit>\w+)\))"
+)
 
 INTRO = """\
 ## Mods
 
 Put a mod's zip as it is into the game's `mods/` folder; each one holds the Windows, Linux and
 macOS builds. A mod loads only into a game with the same mod interface as the Weft it was built
-against. Release candidates are builds of `main` since the release; experimental builds use Weft's
-upstream `master` instead of the Weft this repository pins.
+against. Full releases are built against a released Weft. Release candidates (`X.Y.Z-rc.N`) are builds
+of `main` on the way to the next release, and experimental builds use Weft's upstream `master`
+instead of the Weft this repository pins.
 """
 
 
@@ -32,11 +41,16 @@ class Release:
     mod: str
     version: str
     kind: str
-    label: str
     url: str
     # ISO 8601, so that comparing the strings compares the times.
     published: str
+    # The Weft it was built against, in Markdown, and its full commit ("" when unknown).
     weft: str
+    weft_commit: str
+
+
+# Whether the first Weft commit is the second or one of its ancestors.
+WeftContains = Callable[[str, str], bool]
 
 
 def parse(release: dict) -> Release | None:
@@ -48,12 +62,18 @@ def parse(release: dict) -> Release | None:
     return Release(
         mod=tag["mod"],
         version=tag["version"],
-        kind=tag["kind"] or "release",
-        label=release["tag"].removeprefix(tag["mod"] + "-v"),
+        kind="experimental" if tag["experimental"] else "rc" if tag["rc"] else "release",
         url=release["url"],
         published=release["date"],
-        weft=f"{weft['version']} {weft['commit']}" if weft else "unknown",
+        weft=f"{weft['version']} {weft['link']}" if weft else "unknown",
+        weft_commit=weft["commit"] if weft else "",
     )
+
+
+def weft_contains(older: str, newer: str) -> bool:
+    """Whether the Weft commit `newer` includes `older`, by the submodule's history."""
+    ancestor = ["git", "-C", "Weft", "merge-base", "--is-ancestor", older, newer]
+    return bool(older and newer) and subprocess.run(ancestor, capture_output=True).returncode == 0
 
 
 def newest(releases: list[Release], kind: str, after: str = "") -> Release | None:
@@ -65,18 +85,21 @@ def newest(releases: list[Release], kind: str, after: str = "") -> Release | Non
 def cell(release: Release | None) -> str:
     if release is None:
         return "–"
-    label = release.version if release.kind == "experimental" else release.label
-    return f"[{label}]({release.url}), Weft {release.weft}"
+    return f"[{release.version}]({release.url}), Weft {release.weft}"
 
 
-def latest_table(mods: dict[str, list[Release]]) -> list[str]:
-    """One row per mod: its release, and the candidate and experimental build newer than that."""
+def latest_table(mods: dict[str, list[Release]], contains: WeftContains) -> list[str]:
+    """One row per mod: its release, the candidate newer than that, and the experimental build on
+    a Weft the newest of those two doesn't have yet. The time an experimental build was published
+    says nothing, since it runs beside the release."""
     lines = ["| Mod | Release | Release candidate | Experimental |", "|---|---|---|---|"]
     for mod, releases in mods.items():
         release = newest(releases, "release")
         candidate = newest(releases, "rc", release.published if release else "")
         stable = candidate or release
-        experimental = newest(releases, "experimental", stable.published if stable else "")
+        experimental = newest(releases, "experimental")
+        if experimental and stable and contains(experimental.weft_commit, stable.weft_commit):
+            experimental = None
         lines.append(f"| {mod} | {cell(release)} | {cell(candidate)} | {cell(experimental)} |")
     return lines
 
@@ -91,13 +114,13 @@ def history(mod: str, releases: list[Release]) -> list[str]:
     return lines + [""]
 
 
-def section(releases: list[Release]) -> str:
+def section(releases: list[Release], contains: WeftContains) -> str:
     mods: dict[str, list[Release]] = {}
     for release in sorted(releases, key=lambda r: r.mod):
         mods.setdefault(release.mod, []).append(release)
     if not mods:
         return f"{START}\n{INTRO}\nNo releases yet.\n{END}"
-    lines = [START, INTRO, *latest_table(mods), "", "## Versions", ""]
+    lines = [START, INTRO, *latest_table(mods, contains), "", "## Versions", ""]
     for mod, mod_releases in mods.items():
         lines += history(mod, mod_releases)
     return "\n".join(lines + [END])
@@ -115,7 +138,7 @@ def main() -> None:
     releases = [parse(json.loads(line)) for line in sys.stdin if line.strip()]
     with open(path, encoding="utf-8") as file:
         readme = file.read()
-    readme = replace_section(readme, section([r for r in releases if r]))
+    readme = replace_section(readme, section([r for r in releases if r], weft_contains))
     with open(path, "w", encoding="utf-8", newline="\n") as file:
         file.write(readme)
 

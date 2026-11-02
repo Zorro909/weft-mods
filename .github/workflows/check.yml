@@ -1,5 +1,6 @@
-# Checks a pull request: the Rust lines it changes are formatted, and every mod builds for
-# Windows, Linux and macOS against the Weft the submodule pins.
+# Checks a pull request: the Rust lines it changes are formatted, every mod's version can be
+# released (a full one only on a tagged Weft), the tests of the CI scripts in `tools/ci` pass, and
+# every mod builds for Windows, Linux and macOS against the Weft the submodule pins.
 name: Check
 
 on:
@@ -30,6 +31,28 @@ jobs:
             echo "::error::Unformatted lines; run tools/fmt-changed.sh $GITHUB_BASE_REF and commit the result."
             exit 1
           fi
+
+  # What merging would release, by the planner `release.yml` runs, which refuses what it can't.
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Versions can be released
+        run: |
+          plan=$(tools/ci/plan-release.sh)
+          jq . <<<"$plan"
+
+  ci-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Tests of tools/ci
+        run: python3 -m unittest discover -s tools/ci
 
   build:
     uses: ./.github/workflows/build.yml
