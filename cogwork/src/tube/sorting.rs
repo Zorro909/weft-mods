@@ -12,7 +12,7 @@ use crate::ghost::{self, SLOT};
 static SORTING_MENU: Menu = Menu::named("sorting_tube");
 
 /// Samples per direction.
-const ROW: usize = 6;
+pub(crate) const ROW: usize = 6;
 
 value! {
     /// Each face's row of sample items, 0 where a row has none.

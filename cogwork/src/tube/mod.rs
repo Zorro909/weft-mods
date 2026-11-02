@@ -6,7 +6,7 @@ mod extract;
 mod overflow;
 mod route;
 mod shape;
-mod sorting;
+pub(crate) mod sorting;
 mod travel;
 mod visual;
 

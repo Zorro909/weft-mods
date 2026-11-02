@@ -52,6 +52,14 @@ cp target/release/libcogwork.so ../Weft/run/mods/cogwork/
 cp -r assets ../Weft/run/mods/cogwork/
 ```
 
+## Showcase film
+
+With the `showcase` feature, cogwork brings a film for the [showcase](../showcase) mod: a
+builder excavator that puts up its frame, two others already digging, their output sorted by
+tubes, and a two-bench assembly line. It takes about 1:50. Record it with
+`tools/showcase.sh cogwork:showcase`, or play it in game with `/showcase play cogwork:showcase`.
+Without the feature, none of this is compiled in, and showcase is not a dependency.
+
 ## How items are shown
 
 The SDK has no call to draw an item model, so an item in a tube is drawn by an ordinary dropped

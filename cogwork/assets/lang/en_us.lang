@@ -79,3 +79,12 @@ cogwork.leveler.blocked = Waiting for the area to load
 cogwork.leveler.done = Finished
 cogwork.leveler.area = {color:dim}Area {0} x {1}, flat at height {2}{/}
 cogwork.leveler.stock = Stock
+
+# Film titles (the film itself is only built with the showcase feature)
+cogwork.film.frame = An excavator puts up its own frame
+cogwork.film.dig = and mines its area out, layer by layer
+cogwork.film.tubes = Tubes carry what it digs, in plain sight
+cogwork.film.sorting = A sorting tube sends each kind its own way
+cogwork.film.lever = One lever starts the whole line
+cogwork.film.bench = Assembly benches craft from the patterns laid in them
+cogwork.film.end = Machines that dig, carry and craft
