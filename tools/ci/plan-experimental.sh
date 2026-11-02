@@ -10,9 +10,10 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 source tools/ci/mods.sh
 
 for folder in $(all_mods); do
+    version=$(mod_version "$folder")
     mod_commit=$(git log -1 --format=%h --abbrev=7 -- "$folder")
-    tag="$(mod_id "$folder")-v$(mod_version "$folder")-experimental.${upstream:0:7}.$mod_commit"
+    tag="$(mod_id "$folder")-v$version-experimental.${upstream:0:7}.$mod_commit"
     if ! tag_exists "$tag"; then
-        plan_entry "$folder" "$tag" experimental ""
+        plan_entry "$folder" "$version" "$tag" experimental "" false
     fi
 done | jq -sc .

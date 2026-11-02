@@ -21,6 +21,20 @@ def contains_nothing(older: str, newer: str) -> bool:
     return False
 
 
+class Parse(unittest.TestCase):
+    def test_experimental_build_of_a_candidate(self):
+        parsed = parse(release("cogwork-v0.1.1-rc.2-experimental.ff9c712.abc1234", "2026-11-03T00:00:00Z", MASTER))
+        self.assertEqual((parsed.version, parsed.kind), ("0.1.1-rc.2", "experimental"))
+
+    def test_candidate(self):
+        parsed = parse(release("cogwork-v0.1.1-rc.2", "2026-11-03T00:00:00Z", PINNED))
+        self.assertEqual((parsed.version, parsed.kind), ("0.1.1-rc.2", "rc"))
+
+    def test_full_release(self):
+        parsed = parse(release("cogwork-v0.1.1", "2026-11-03T00:00:00Z", PINNED))
+        self.assertEqual((parsed.version, parsed.kind), ("0.1.1", "release"))
+
+
 class LatestTable(unittest.TestCase):
     def test_experimental_published_before_the_release_is_listed(self):
         releases = [

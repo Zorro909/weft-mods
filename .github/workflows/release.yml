@@ -1,7 +1,9 @@
 # Releases the mods. Each release of a mod holds one `<id>.zip` with its Windows, Linux and macOS
 # builds, and README.md lists the newest of every mod and each version before.
-#   - On every push to main, a mod gets a release when its crate version has none yet, and
-#     otherwise a release candidate if it changed since the last one (`tools/ci/plan-release.sh`).
+#   - On every push to main, a mod whose crate version has no release yet gets one: a full release
+#     for `X.Y.Z`, only on a tagged Weft, and a release candidate for `X.Y.Z-rc.N`. A mod that
+#     changed since its version was released gets the next candidate, which this workflow commits
+#     to `Cargo.toml` before building (`tools/ci/plan-release.sh`).
 #   - When the Weft submodule is behind upstream's master, every mod also gets an experimental
 #     prerelease built against that master, once per pair of commits; daily as well, for upstream
 #     commits that come while this repository doesn't change.
@@ -26,6 +28,7 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     outputs:
+      ref: ${{ steps.bump.outputs.ref }}
       release: ${{ steps.release.outputs.plan }}
       experimental: ${{ steps.experimental.outputs.plan }}
       upstream: ${{ steps.upstream.outputs.commit }}
@@ -35,6 +38,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      # For `cargo update` after a version bump.
+      - uses: dtolnay/rust-toolchain@stable
+
       - name: Mods to release
         id: release
         run: |
@@ -43,6 +49,16 @@ jobs:
             plan=$(tools/ci/plan-release.sh)
           fi
           echo "plan=$plan" | tee -a "$GITHUB_OUTPUT"
+
+      # Before anything builds, since a mod's library carries its version. Every later job checks
+      # out this commit.
+      - name: Commit version bumps
+        id: bump
+        env:
+          PLAN: ${{ steps.release.outputs.plan }}
+        run: |
+          ref=$(tools/ci/commit-bumps.sh "$PLAN" main)
+          echo "ref=$ref" | tee -a "$GITHUB_OUTPUT"
 
       - name: Upstream master
         id: upstream
@@ -66,6 +82,8 @@ jobs:
     needs: plan
     if: needs.plan.outputs.release != '[]'
     uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.plan.outputs.ref }}
 
   publish:
     needs: [plan, build]
@@ -73,6 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ needs.plan.outputs.ref }}
           fetch-depth: 0
           submodules: true
 
@@ -93,6 +112,7 @@ jobs:
     if: needs.plan.outputs.experimental != '[]'
     uses: ./.github/workflows/build.yml
     with:
+      ref: ${{ needs.plan.outputs.ref }}
       weft: ${{ needs.plan.outputs.upstream }}
       artifact: experimental
 
@@ -102,6 +122,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ needs.plan.outputs.ref }}
           fetch-depth: 0
           submodules: true
 

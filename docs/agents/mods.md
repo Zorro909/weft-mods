@@ -33,4 +33,9 @@ Before adding or changing content, read `modding.md` and the topic guide for it.
 
 ## Releasing
 
-`.github/workflows/release.yml` publishes from every push to `main`; the top of the file says how. A mod whose crate version in `Cargo.toml` has no release yet gets one, and otherwise a changed mod gets the next release candidate. So bump the version in the change that should become a release. The workflow keeps the releases section of the root `README.md` up to date: leave what lies between its markers to it. Pull requests are checked by `.github/workflows/check.yml`: `tools/fmt-changed.sh` against the base branch, and a build of every mod on Windows, Linux and macOS.
+`.github/workflows/release.yml` publishes from every push to `main`; the top of the file says how. A mod's crate version is `X.Y.Z` for a full release or `X.Y.Z-rc.N` for a release candidate.
+
+- A version without a release is released as it is when it reaches `main`. A full version only on a Weft release: the submodule has to sit at an upstream tag such as `v26.11.1`, and a pull request that breaks this is refused.
+- A mod that changes without a new version gets the next candidate from CI, which commits it to `main`: `0.1.0` to `0.1.1-rc.1`, `0.1.1-rc.1` to `0.1.1-rc.2`. Set the version yourself only for a full release, or a candidate of another version such as `0.2.0-rc.1`.
+
+The workflow keeps the releases section of the root `README.md` up to date: leave what lies between its markers to it. Pull requests are checked by `.github/workflows/check.yml`: `tools/fmt-changed.sh` against the base branch, the release planner, the tests of `tools/ci`, and a build of every mod on Windows, Linux and macOS.

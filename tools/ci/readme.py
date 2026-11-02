@@ -15,8 +15,11 @@ from dataclasses import dataclass
 
 START = "<!-- mod-releases:start -->"
 END = "<!-- mod-releases:end -->"
-# The tags `plan-release.sh` and `plan-experimental.sh` make.
-TAG = re.compile(r"^(?P<mod>.+)-v(?P<version>\d+\.\d+\.\d+)(?:-(?P<kind>rc|experimental)\.\S+)?$")
+# The tags `plan-release.sh` and `plan-experimental.sh` make: `<id>-v<version>`, the version
+# `X.Y.Z` or `X.Y.Z-rc.N`, with a suffix for an experimental build.
+TAG = re.compile(
+    r"^(?P<mod>.+)-v(?P<version>\d+\.\d+\.\d+(?P<rc>-rc\.\d+)?)(?P<experimental>-experimental\.\S+)?$"
+)
 # The line `publish.sh` writes into every release's notes.
 WEFT = re.compile(
     r"Built against Weft (?P<version>\S+), commit (?P<link>\[\w+\]\([^)]*/commit/(?P<commit>\w+)\))"
@@ -27,8 +30,9 @@ INTRO = """\
 
 Put a mod's zip as it is into the game's `mods/` folder; each one holds the Windows, Linux and
 macOS builds. A mod loads only into a game with the same mod interface as the Weft it was built
-against. Release candidates are builds of `main` since the release; experimental builds use Weft's
-upstream `master` instead of the Weft this repository pins.
+against. Full releases are built against a released Weft. Release candidates (`X.Y.Z-rc.N`) are builds
+of `main` on the way to the next release, and experimental builds use Weft's upstream `master`
+instead of the Weft this repository pins.
 """
 
 
@@ -37,7 +41,6 @@ class Release:
     mod: str
     version: str
     kind: str
-    label: str
     url: str
     # ISO 8601, so that comparing the strings compares the times.
     published: str
@@ -59,8 +62,7 @@ def parse(release: dict) -> Release | None:
     return Release(
         mod=tag["mod"],
         version=tag["version"],
-        kind=tag["kind"] or "release",
-        label=release["tag"].removeprefix(tag["mod"] + "-v"),
+        kind="experimental" if tag["experimental"] else "rc" if tag["rc"] else "release",
         url=release["url"],
         published=release["date"],
         weft=f"{weft['version']} {weft['link']}" if weft else "unknown",
@@ -83,8 +85,7 @@ def newest(releases: list[Release], kind: str, after: str = "") -> Release | Non
 def cell(release: Release | None) -> str:
     if release is None:
         return "–"
-    label = release.version if release.kind == "experimental" else release.label
-    return f"[{label}]({release.url}), Weft {release.weft}"
+    return f"[{release.version}]({release.url}), Weft {release.weft}"
 
 
 def latest_table(mods: dict[str, list[Release]], contains: WeftContains) -> list[str]:
