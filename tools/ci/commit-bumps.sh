@@ -2,7 +2,7 @@
 # Sets the versions the plan PLAN bumps (see `plan-release.sh`) in each mod's `Cargo.toml` and
 # `Cargo.lock`, commits them and pushes the commit to BRANCH, rebased onto it when someone pushed
 # in between. Prints the commit to build the release from: that one, or HEAD with nothing to bump.
-# Pushed with the workflow's own `GITHUB_TOKEN`, which starts no other workflow run.
+# The commit says `[skip ci]`, so it starts no workflow run.
 # Usage: `tools/ci/commit-bumps.sh PLAN BRANCH`; needs cargo and GNU sed.
 set -euo pipefail
 plan=$1

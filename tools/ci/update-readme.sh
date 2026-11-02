@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Rewrites the releases section of README.md from the repository's GitHub releases and pushes it
-# to BRANCH, retrying from the branch's newest commit when someone pushed in between. Pushed with
-# the workflow's own `GITHUB_TOKEN`, which starts no other workflow run; `[skip ci]` in the message
-# says the same to anything else. Usage: `tools/ci/update-readme.sh BRANCH`; needs `GH_TOKEN`.
+# to BRANCH, retrying from the branch's newest commit when someone pushed in between. The commit
+# says `[skip ci]`, so it starts no workflow run.
+# Usage: `tools/ci/update-readme.sh BRANCH`; needs `GH_TOKEN`.
 set -euo pipefail
 branch=$1
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
