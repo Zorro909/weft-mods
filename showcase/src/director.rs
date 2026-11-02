@@ -290,11 +290,22 @@ fn titles(c: &Client, playback: &Playback, pose: Pose) {
         .to_degrees();
     let ahead = forward(pose.yaw, pose.pitch - down);
     let at = add(pose.eye, ahead.map(|v| v * 12.0));
+    let size = title_size(c);
     for title in &playback.titles {
         let shown = ((now - title.from) / FADE)
             .min((title.until - now) / FADE)
             .clamp(0.0, 1.0);
         let alpha = (shown * 255.0) as u32;
-        c.draw_text(None, at, &title.key, &[], 0xFFFFFF00 | alpha, 2.0);
+        c.draw_text(None, at, &title.key, &[], 0xFFFFFF00 | alpha, size);
     }
+}
+
+/// How big titles are drawn, as a multiple of menu text, which grows with the GUI scale: the
+/// same share of the picture's width at any window size and scale, about 70 letters across.
+fn title_size(c: &Client) -> f32 {
+    // A letter of menu text is about this many GUI pixels wide.
+    const LETTER: f32 = 6.4;
+    const LETTERS_ACROSS: f32 = 70.0;
+    let s = c.state();
+    s.window[0] as f32 / LETTERS_ACROSS / (LETTER * s.gui_scale.max(1.0))
 }
