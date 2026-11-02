@@ -3,7 +3,8 @@
 
 use weft_sdk::*;
 
-use super::{DIRECTING_TUBE, NONE, TUBE, kind, step};
+use super::{DIRECTING_TUBE, NONE, TUBE, kind};
+use crate::step;
 
 pub enum Route {
     /// On through this face.

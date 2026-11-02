@@ -13,9 +13,7 @@ pub fn insert(w: &World, id: u64, stack: ItemStack, simulate: bool) -> Option<It
     let mut cells: Vec<ItemStack> = (0..grid.len()).map(|i| grid.get(i)).collect();
     let mut left = stack;
     let cap = max_stack(stack.item);
-    while let Some(i) =
-        cells::free_cell(&pattern, &cells, left.item, cap).filter(|_| !left.is_empty())
-    {
+    while let Some(i) = cells::free_cell(&pattern, &cells, left, cap).filter(|_| !left.is_empty()) {
         cells[i] = ItemStack {
             count: cells[i].count + 1,
             ..left

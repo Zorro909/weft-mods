@@ -5,7 +5,8 @@
 
 use weft_sdk::*;
 
-use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES, step};
+use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
+use crate::step;
 
 /// The tube's walls, in texels: 8 wide in the middle of the block.
 const LO: f32 = 4.0;
@@ -81,7 +82,7 @@ fn side_texture(texture: &'static str, arms: Arms, d: Dir) -> &'static str {
 pub fn arm(d: Dir, lo: f32, hi: f32) -> ([f32; 3], [f32; 3]) {
     let axis = d.face() as usize / 2;
     let (mut min, mut max) = ([lo; 3], [hi; 3]);
-    if d.face() % 2 == 0 {
+    if d.face().is_multiple_of(2) {
         (min[axis], max[axis]) = (0.0, lo);
     } else {
         (min[axis], max[axis]) = (hi, 16.0);
@@ -141,7 +142,7 @@ fn joins(w: &World, pos: [i32; 3], state: u32, d: Dir) -> bool {
     if TUBES.on_block(other) {
         return !(TIMBER_TUBE.is(state) && TIMBER_TUBE.is(other));
     }
-    crate::store::has_inventory(w, at).is_some()
+    crate::store::has_inventory(w, at)
 }
 
 /// Whether the tube at `pos` has its arm toward `face` out, so a neighbor can hand it items.

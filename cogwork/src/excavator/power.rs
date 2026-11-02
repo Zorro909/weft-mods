@@ -39,7 +39,7 @@ pub fn hold(w: &World, id: u64, d: &mut Dig) -> bool {
 /// Puts stored energy into a job of `cost` until `d.spent` covers it; true once it does. The
 /// caller starts `spent` over when the job is done.
 pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
-    let drawn = crate::draw(w, id, &mut d.spent, cost, DRAW_RATE);
+    let drawn = crate::machine::draw(w, id, &mut d.spent, cost, DRAW_RATE);
     if d.spent >= cost {
         return true;
     }

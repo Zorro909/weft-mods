@@ -81,6 +81,24 @@ The library is `libcogwork.so` on Linux; on Windows it is `cogwork.dll`, on macO
 `libcogwork.dylib`. `../start.sh cogwork` builds the engine and the mod, installs it and starts the
 game, on any of the three.
 
+## The code
+
+Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls:
+
+| Module | What it holds |
+|---|---|
+| `tube/` | The tubes: their shape, routing, moving items along, pulling, sorting, jams, the pictures of items |
+| `engines/` | Spring and ember engines: their block, tick, heat and piston |
+| `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
+| `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar |
+| `store.rs` | Putting items into and taking them out of any mod's machines, by slot group |
+| `harvest.rs` | Breaking a block by machine into its output |
+| `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
+| `cogs.rs`, `shaft.rs`, `recipes.rs` | Cogs and the wrench, the torque shaft, every crafting recipe |
+| `films/` | The showcase film, only with `--features showcase` |
+
+Unit tests sit at the end of the files whose logic they check; `cargo test --release` runs them.
+
 ## Showcase film
 
 With the `showcase` feature, cogwork brings a film for the [showcase](../showcase) mod: a

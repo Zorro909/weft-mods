@@ -53,10 +53,11 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&BENCH, craft::tick);
-    // On a block without an item, so no item has it.
+    // A tag has to name something or the game stops at load: the gantry frame has no item, so
+    // the tag is on no item.
     r.tag(NOTHING, &["gantry_frame"]);
     r.machine(&ASSEMBLY_BENCH, &BENCH_MENU)
-        .block(block)
+        .block(|b| crate::machine::block(b, "assembly_bench").hardness(3.5))
         // Filled by tubes only, through `insert`; taken from only by crafting.
         .group("grid", Slots::grid(3, 3).input().accepts(NOTHING))
         .group("output", Slots::row(3).output())
@@ -72,25 +73,6 @@ pub fn register(r: &mut Registry) {
             },
         )
         .screen(screen);
-}
-
-fn block(b: BlockBuilder<'_>) -> BlockBuilder<'_> {
-    b.facing(Facings::HORIZONTAL, Toward::Player)
-        .prop("working", ["false", "true"])
-        .states(|p, s| {
-            let mut faces = ["assembly_bench_side"; 6];
-            faces[3] = "assembly_bench_top";
-            faces[p.facing().face() as usize] = if p.is("working", "true") {
-                "assembly_bench_front_on"
-            } else {
-                "assembly_bench_front"
-            };
-            s.faces(faces)
-        })
-        .hardness(3.5)
-        .mineable("pickaxe")
-        .sound_group("base:block.stone")
-        .tab(&crate::TAB)
 }
 
 fn screen(ui: &mut Ui) {
@@ -112,7 +94,7 @@ fn screen(ui: &mut Ui) {
         });
         // As wide as the inventory whatever it says, so the cells don't move under the cursor.
         ui.column(S::col().gap(3.0).w(INVENTORY_WIDTH), |ui| {
-            crate::power_bar(ui);
+            crate::machine::power_bar(ui);
             ui.text_bind_styled(S::col().no_wrap(), |c, out| {
                 let b = c.menu_component(&BENCH).unwrap_or_default();
                 let name = status::NAMES.get(b.status as usize).unwrap_or(&"no_recipe");
@@ -141,5 +123,18 @@ pub fn set_ghost(w: &World, owner: u64, cell: u32, item: u32) {
         && let Some(ghost) = b.pattern.get_mut(cell as usize)
     {
         *ghost = item;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_status_has_a_name() {
+        for name in status::NAMES {
+            let key = format!("cogwork.bench.{name}");
+            assert!(crate::translated(&key), "{key} in every lang file");
+        }
     }
 }

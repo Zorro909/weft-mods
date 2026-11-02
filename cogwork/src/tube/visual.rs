@@ -48,7 +48,7 @@ fn is_picture(dim: u32, id: u64) -> bool {
 /// Removes the pictures of this region nobody has shown lately.
 fn sweep(w: &World) {
     let now = w.time();
-    if now % STALE != 0 {
+    if !now.is_multiple_of(STALE) {
         return;
     }
     let dim = w.dimension();
@@ -150,5 +150,34 @@ pub fn clear_broken(w: &World, pos: [i32; 3]) {
         if inside {
             remove(w, id);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn at(pos: f32, from: u32, to: u32) -> Motion {
+        Motion {
+            item: 1,
+            pos,
+            speed: 0.05,
+            from,
+            to,
+            ..Motion::default()
+        }
+    }
+
+    #[test]
+    fn an_item_is_drawn_on_its_way_through_the_tube() {
+        let (west, up) = (Dir::West.face(), Dir::Up.face());
+        let (hub, still) = place_of([0, 0, 0], &at(0.5, NONE, NONE));
+        assert_eq!((hub, still), ([0.5; 3], [0.0; 3]), "waiting at the hub");
+        let (start, vel) = place_of([0, 0, 0], &at(0.0, west, NONE));
+        assert_eq!(start, [0.0, 0.5, 0.5], "in at the west face");
+        assert!(vel[0] > 0.0, "heading east, to the hub");
+        let (end, vel) = place_of([0, 0, 0], &at(1.0, west, up));
+        assert_eq!(end, [0.5, 1.0, 0.5], "out at the top");
+        assert!((vel[1] - 1.0).abs() < 1e-6, "a block a second, going up");
     }
 }

@@ -18,14 +18,7 @@ pub fn tick(b: &mut SystemBatch<Bench>) {
         evict_misplaced(&w, id, pos, &bench.pattern);
         bench.status = work(&w, id, pos, bench);
         bench.filled = filled(&grid(&w, id));
-        let working = if bench.status == status::WORKING {
-            "true"
-        } else {
-            "false"
-        };
-        if w.prop(pos, "working").is_some_and(|p| p != working) {
-            w.set_prop(pos, "working", working);
-        }
+        crate::machine::show_working(&w, pos, bench.status == status::WORKING);
     }
 }
 
@@ -75,7 +68,7 @@ fn work(w: &World, id: u64, pos: [i32; 3], bench: &mut Bench) -> u32 {
     if !insert_into(w.inventory(id).group("output"), result, true).is_empty() {
         return status::FULL;
     }
-    let drawn = crate::draw(w, id, &mut bench.spent, CRAFT_COST, DRAW_RATE);
+    let drawn = crate::machine::draw(w, id, &mut bench.spent, CRAFT_COST, DRAW_RATE);
     if bench.spent < CRAFT_COST {
         return if drawn > 0 {
             status::WORKING

@@ -7,7 +7,8 @@ use weft_sdk::*;
 pub static SURVEY_MARKER: Block = Block::named("survey_marker");
 static SURVEY_GLOW: Particle = Particle::named("survey_glow");
 
-/// How far along a line a marker looks for the next one.
+/// How far along a line a marker looks for the next one. It starts 2 blocks away: markers side
+/// by side would leave an excavator's frame nothing inside.
 const REACH: i32 = 64;
 
 pub fn register(r: &mut Registry) {
@@ -114,7 +115,7 @@ fn show(u: &mut Use) -> bool {
     match rectangle(&w, u.pos()) {
         Some((lo, hi)) => outline(&w, lo, hi),
         None => drop(
-            w.spawn_particles(&POOF, u.pos().map(|v| v as f64 + 0.5))
+            w.spawn_particles(&POOF, block_center(u.pos()))
                 .count(6),
         ),
     }

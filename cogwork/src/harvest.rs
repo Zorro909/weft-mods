@@ -64,7 +64,7 @@ pub fn harvest(w: &World, id: u64, c: [i32; 3], state: u32) -> Harvest {
     for s in drops {
         let left = crate::store::insert_into(output(), s, false);
         if !left.is_empty() {
-            w.spawn_item(c.map(|v| v as f64 + 0.5), left);
+            w.spawn_item(block_center(c), left);
         }
     }
     Harvest::Done

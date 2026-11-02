@@ -62,8 +62,8 @@ pub fn drill_to(w: &World, id: u64, d: &mut Dig, goal: [f32; 3]) -> bool {
     } else {
         status::NO_POWER
     };
-    for i in 0..3 {
-        d.head[i] += gap[i] / length * step;
+    for (head, gap) in d.head.iter_mut().zip(gap) {
+        *head += gap / length * step;
     }
     false
 }

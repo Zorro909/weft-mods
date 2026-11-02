@@ -60,7 +60,7 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&LEVEL, work::tick);
     r.machine(&LEVELER, &LEVELER_MENU)
-        .block(block)
+        .block(|b| crate::machine::block(b, "leveler").hardness(4.0))
         .group("input", Slots::grid(9, 2))
         .group("output", Slots::grid(3, 3).output())
         .attach(&LEVEL)
@@ -76,31 +76,12 @@ pub fn register(r: &mut Registry) {
         .screen(screen);
 }
 
-fn block(b: BlockBuilder<'_>) -> BlockBuilder<'_> {
-    b.facing(Facings::HORIZONTAL, Toward::Player)
-        .prop("working", ["false", "true"])
-        .states(|p, s| {
-            let mut faces = ["leveler_side"; 6];
-            faces[3] = "leveler_top";
-            faces[p.facing().face() as usize] = if p.is("working", "true") {
-                "leveler_front_on"
-            } else {
-                "leveler_front"
-            };
-            s.faces(faces)
-        })
-        .hardness(4.0)
-        .mineable("pickaxe")
-        .sound_group("base:block.stone")
-        .tab(&crate::TAB)
-}
-
 fn screen(ui: &mut Ui) {
     ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
         ui.title();
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::col().gap(3.0), |ui| {
-                crate::power_bar(ui);
+                crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let l = c.menu_component(&LEVEL).unwrap_or_default();
                     let name = status::NAMES.get(l.status as usize).unwrap_or(&"idle");
@@ -125,4 +106,17 @@ fn screen(ui: &mut Ui) {
         ui.group("input");
         ui.player_inventory(true);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_status_has_a_name() {
+        for name in status::NAMES {
+            let key = format!("cogwork.leveler.{name}");
+            assert!(crate::translated(&key), "{key} in every lang file");
+        }
+    }
 }

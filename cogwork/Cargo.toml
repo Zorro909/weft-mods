@@ -13,7 +13,7 @@ base_api = { path = "../Weft/mods/base/api" }
 showcase_api = { path = "../showcase/api", optional = true }
 
 [features]
-# Builds the films (`src/films.rs`), played by the showcase mod: `--features showcase`.
+# Builds the films (`src/films/`), played by the showcase mod: `--features showcase`.
 showcase = ["dep:showcase_api"]
 
 [workspace]

@@ -4,7 +4,6 @@
 use weft_sdk::*;
 
 pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
-static CONDUCTOR: Tag = Tag::named("conductor");
 
 /// The rod, in texels: 4 wide in the middle of the block.
 const LO: f32 = 6.0;
@@ -38,7 +37,8 @@ fn model<'s>(p: &Props, s: State<'s>) -> State<'s> {
     s
 }
 
-/// Reaches toward every conductor and every block entity that holds energy.
+/// Reaches toward every conductor and every block entity that holds energy. `CONDUCTOR` is the
+/// engine's own tag.
 fn refresh(w: &World, pos: [i32; 3]) {
     let state = w.get(pos);
     if !TORQUE_SHAFT.is(state) {
@@ -46,7 +46,7 @@ fn refresh(w: &World, pos: [i32; 3]) {
     }
     let mut next = state;
     for d in Dir::ALL {
-        let at = crate::tube::step(pos, d.face());
+        let at = crate::step(pos, d.face());
         let other = w.block_entity(at);
         let joins = CONDUCTOR.on_block(w.get(at)) || (other != 0 && w.energy(other).is_some());
         next = state_with(next, d.name(), if joins { "true" } else { "false" }).unwrap_or(next);

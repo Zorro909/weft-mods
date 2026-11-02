@@ -67,8 +67,9 @@ Holding up the gantry costs a standby draw every tick: 10, and 1 more per 4 bloc
 | 33 by 33 | 282 |
 
 Standby is drawn for as long as it works, also while it waits for room in its output. Short of
-standby, the excavator doesn't run at all, and the energy it had is used up all the same, so a weak supply can't save up to run in bursts. What comes in beyond standby pays for the
-work, up to 120 a tick, so the more engines drive it, the faster it digs. One ember engine (40
+standby, the excavator doesn't run at all, and the energy it had is used up all the same, so a
+weak supply can't save up to run in bursts. What comes in beyond standby pays for the work, up
+to 120 a tick, so the more engines drive it, the faster it digs. One ember engine (40
 a tick) runs a 9 by 9 area slowly; add more to go faster.
 
 It stores up to 20,000 energy and takes in as much as any number of engines give it.

@@ -38,18 +38,12 @@ pub fn tick(b: &mut SystemBatch<Level>) {
             _ => {}
         }
         let working = matches!(l.status, status::CLEARING | status::FILLING);
-        let working = if working { "true" } else { "false" };
-        if w.prop(pos, "working").is_some_and(|p| p != working) {
-            w.set_prop(pos, "working", working);
-        }
+        crate::machine::show_working(&w, pos, working);
     }
 }
 
 fn start(w: &World, pos: [i32; 3], l: &mut Level) {
-    let front = w
-        .prop(pos, "facing")
-        .and_then(Dir::from_name)
-        .unwrap_or(Dir::North);
+    let front = crate::machine::front(w, pos);
     (l.lo, l.hi) = crate::markers::take_area(w, pos)
         .unwrap_or_else(|| crate::markers::square_behind(pos, front, DEFAULT_SIZE, 0));
     l.stage = stage::CLEAR;
@@ -145,7 +139,7 @@ fn find(w: &World, l: &mut Level, wanted: impl Fn(u32) -> bool) -> Option<([i32;
 
 /// Puts stored energy into a job of `cost`; true once it is paid for.
 fn pay(w: &World, id: u64, l: &mut Level, cost: i64) -> bool {
-    let drawn = crate::draw(w, id, &mut l.spent, cost, DRAW_RATE);
+    let drawn = crate::machine::draw(w, id, &mut l.spent, cost, DRAW_RATE);
     if l.spent >= cost {
         return true;
     }

@@ -120,7 +120,6 @@ mod tests {
 
     #[test]
     fn every_side_has_its_own_color_pictures_and_name() {
-        let lang = include_str!("../../assets/lang/en_us.lang");
         for (i, (color, texture)) in SIDES.iter().enumerate() {
             assert!(
                 asset(&format!("textures/block/{texture}.png")),
@@ -131,8 +130,8 @@ mod tests {
                 "{color} swatch"
             );
             assert!(
-                lang.contains(&format!("cogwork.color.{color} =")),
-                "{color} name"
+                crate::translated(&format!("cogwork.color.{color}")),
+                "{color} name in every lang file"
             );
             assert!(
                 SIDES[..i].iter().all(|s| s.0 != *color),

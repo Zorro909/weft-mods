@@ -1,10 +1,11 @@
 //! The engines' tick: make energy, push it out of the trunk, warm up or cool down, and move the
 //! piston while running.
 
+use base_api::FUEL;
 use weft_sdk::*;
 
 use super::piston;
-use super::{Engine, fuel_ticks, kind, model};
+use super::{Engine, kind, model};
 
 /// Energy per tick: a spring engine with a signal, an ember engine burning.
 const SPRING_MAKES: i64 = 10;
@@ -61,6 +62,11 @@ fn burn(w: &World, id: u64, e: &mut Engine, ticks: u32) -> bool {
     true
 }
 
+/// Ticks of burning one item of `stack` gives, if it is fuel.
+fn fuel_ticks(stack: ItemStack) -> Option<u32> {
+    FUEL.on_item(stack.item).filter(|_| !stack.is_empty())
+}
+
 /// Adds what the engine made to its store; true when the store is full.
 fn store(w: &World, id: u64, made: i64) -> bool {
     let Some(energy) = w.energy_mut(id) else {
@@ -75,8 +81,7 @@ fn push(w: &World, id: u64, pos: [i32; 3]) {
     let Some(out) = model::output(w, pos) else {
         return;
     };
-    let o = out.offset();
-    let target = w.block_entity([pos[0] + o[0], pos[1] + o[1], pos[2] + o[2]]);
+    let target = w.block_entity(crate::step(pos, out.face()));
     let stored = w.energy(id).map_or(0, |e| e.stored);
     if target == 0 || target == id || stored == 0 {
         return;

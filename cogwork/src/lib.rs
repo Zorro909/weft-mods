@@ -1,5 +1,6 @@
-//! Cogwork: item tubes that show what they carry, engines that drive them, and an excavator
-//! that digs out an area layer by layer. Everything goes through `weft_sdk` and `base_api`.
+//! Cogwork: item tubes that show what they carry, engines that drive them, and machines for the
+//! big jobs: an excavator, an assembly bench and a leveler. Everything goes through `weft_sdk`
+//! and `base_api`.
 
 mod bench;
 mod cogs;
@@ -10,6 +11,7 @@ mod films;
 mod ghost;
 mod harvest;
 mod leveler;
+mod machine;
 mod markers;
 mod owned;
 mod recipes;
@@ -43,39 +45,20 @@ fn init(r: &mut Registry) {
     films::register(r);
 }
 
-/// `a / b`, 0 for nothing out of nothing.
-pub fn ratio(a: u32, b: u32) -> f32 {
-    if b == 0 { 0.0 } else { a as f32 / b as f32 }
+/// The block one face further.
+pub fn step(pos: [i32; 3], face: u32) -> [i32; 3] {
+    let o = Dir::from_face(face).offset();
+    [pos[0] + o[0], pos[1] + o[1], pos[2] + o[2]]
 }
 
-/// Puts up to `rate` of the machine `id`'s stored energy into a job of `cost`, of which `spent`
-/// is paid already; returns how much it put in.
-pub fn draw(w: &World, id: u64, spent: &mut i64, cost: i64, rate: i64) -> i64 {
-    let Some(e) = w.energy_mut(id) else {
-        return 0;
-    };
-    let drawn = e.stored.min(rate).min((cost - *spent).max(0));
-    e.stored -= drawn;
-    *spent += drawn;
-    drawn
-}
-
-/// The energy of the machine whose menu is open: a bar and the numbers.
-pub fn power_bar(ui: &mut Ui) {
-    ui.progress_bind("cogwork:power", S::default().size(80.0, 8.0), |c| {
-        c.menu_component(&ENERGY).map_or(0.0, |e| {
-            if e.capacity > 0 {
-                e.stored as f32 / e.capacity as f32
-            } else {
-                0.0
-            }
-        })
-    });
-    ui.text_bind(|c, out| {
-        let e = c.menu_component(&ENERGY).unwrap_or_default();
-        out.set(
-            "cogwork.energy",
-            &[Arg::Int(e.stored), Arg::Int(e.capacity)],
-        );
-    });
+/// Whether every language file of the mod has `key`.
+#[cfg(test)]
+fn translated(key: &str) -> bool {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/lang");
+    let files = std::fs::read_dir(&dir).expect("cogwork has no assets/lang folder");
+    files.flatten().all(|file| {
+        let text = std::fs::read_to_string(file.path()).unwrap_or_default();
+        text.lines()
+            .any(|line| line.split(" = ").next() == Some(key))
+    })
 }

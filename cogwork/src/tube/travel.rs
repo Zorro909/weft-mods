@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use weft_sdk::*;
 
 use super::route::{Route, route};
-use super::{BASE_SPEED, GILDED_SPEED, Motion, NONE, SLOTS, TUBE, Tube, kind, step, visual};
+use super::{BASE_SPEED, GILDED_SPEED, Motion, NONE, SLOTS, TUBE, Tube, free_slot, kind, visual};
+use crate::step;
 
 /// An item at the far face of a tube, to go on through it.
 struct Handoff {
@@ -108,7 +109,7 @@ fn decide(w: &World, id: u64, pos: [i32; 3], tube: &mut Tube, slot: usize, stack
 /// Drops `stack` into the world out of the tube's `face` (its hub for `NONE`).
 fn spill(w: &World, pos: [i32; 3], face: u32, stack: ItemStack) {
     let at = if face == NONE { pos } else { step(pos, face) };
-    w.spawn_item(at.map(|v| v as f64 + 0.5), stack);
+    w.spawn_item(block_center(at), stack);
 }
 
 /// Sends an item waiting at its tube's far face on: into the next tube, into a machine, or out.
@@ -174,12 +175,10 @@ fn into_tube(
     if !super::connects_to_tube(w, pos, face) {
         return false;
     }
-    let inv = w.inventory(id);
-    let Some(free) = (0..SLOTS).find(|&k| inv.get(k as u32).is_empty() && tube.moving[k].item == 0)
-    else {
+    let Some(free) = free_slot(w, id, tube) else {
         return false;
     };
-    inv.set(free as u32, stack);
+    w.inventory(id).set(free as u32, stack);
     tube.moving[free] = Motion {
         pos: (m.pos - 1.0).max(0.0),
         from: face,

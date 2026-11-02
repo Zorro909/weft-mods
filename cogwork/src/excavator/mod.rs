@@ -16,7 +16,9 @@ static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
 value! {
     /// An excavator's work. `lo` and `hi` are the corners of its frame; it mines inside it.
-    /// `head` is where the drill's tip is, in the world.
+    /// `step` counts the frame blocks put up, `cursor` is the next block to mine, `spent` the
+    /// energy put into the job under way, and `waited` the ticks the cursor's block has been
+    /// unloaded. `head` is where the drill's tip is, in the world.
     #[derive(Default)]
     pub struct Dig {
         pub stage: u32,
@@ -60,24 +62,7 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&DIG, dig::tick);
     r.machine(&EXCAVATOR, &EXCAVATOR_MENU)
-        .block(|b| {
-            b.facing(Facings::HORIZONTAL, Toward::Player)
-                .prop("working", ["false", "true"])
-                .states(|p, s| {
-                    let mut faces = ["excavator_side"; 6];
-                    faces[3] = "excavator_top";
-                    faces[p.facing().face() as usize] = if p.is("working", "true") {
-                        "excavator_front_on"
-                    } else {
-                        "excavator_front"
-                    };
-                    s.faces(faces)
-                })
-                .hardness(4.0)
-                .mineable("pickaxe")
-                .sound_group("base:block.stone")
-                .tab(&crate::TAB)
-        })
+        .block(|b| crate::machine::block(b, "excavator").hardness(4.0))
         .group("output", Slots::grid(3, 3).output())
         .attach(&DIG)
         .attach_with(
@@ -106,7 +91,7 @@ fn screen(ui: &mut Ui) {
         ui.title();
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::col().gap(3.0), |ui| {
-                crate::power_bar(ui);
+                crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let d = c.menu_component(&DIG).unwrap_or_default();
                     let name = status::NAMES.get(d.status as usize).unwrap_or(&"idle");
@@ -135,4 +120,17 @@ fn screen(ui: &mut Ui) {
         });
         ui.player_inventory(true);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_status_has_a_name() {
+        for name in status::NAMES {
+            let key = format!("cogwork.excavator.{name}");
+            assert!(crate::translated(&key), "{key} in every lang file");
+        }
+    }
 }

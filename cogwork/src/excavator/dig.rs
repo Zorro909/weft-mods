@@ -37,18 +37,12 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
         }
         rig::update(&w, id, d);
         let working = matches!(d.status, status::FRAME | status::MINING);
-        if w.prop(pos, "working") != Some(if working { "true" } else { "false" }) {
-            w.set_prop(pos, "working", if working { "true" } else { "false" });
-        }
+        crate::machine::show_working(&w, pos, working);
     }
 }
 
 fn start(w: &World, pos: [i32; 3], d: &mut Dig) {
-    let front = w
-        .prop(pos, "facing")
-        .and_then(Dir::from_name)
-        .unwrap_or(Dir::North);
-    (d.lo, d.hi) = area::plan(w, pos, front);
+    (d.lo, d.hi) = area::plan(w, pos, crate::machine::front(w, pos));
     d.stage = stage::FRAME;
     d.step = 0;
 }
@@ -61,10 +55,7 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
             d.status = status::BLOCKED;
             return;
         };
-        if GANTRY_FRAME.is(state)
-            || HARDNESS.on_block(state).is_some_and(|h| h < 0.0)
-            || EXCAVATOR.is(state)
-        {
+        if frame_passes_over(state) {
             d.step += 1;
             continue;
         }
@@ -91,6 +82,14 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
     ];
 }
 
+/// Whether the frame leaves a block as it is: frame already, the excavator itself, or what
+/// can't be broken.
+fn frame_passes_over(state: u32) -> bool {
+    GANTRY_FRAME.is(state)
+        || EXCAVATOR.is(state)
+        || HARDNESS.on_block(state).is_some_and(|h| h < 0.0)
+}
+
 /// Mines toward the next block that is there to mine.
 fn mine_next(w: &World, id: u64, d: &mut Dig) {
     let Some(target) = find_target(w, d) else {
@@ -103,15 +102,16 @@ fn mine_next(w: &World, id: u64, d: &mut Dig) {
     if !drill_to(w, id, d, progress_point(d.lo, target, d.spent, cost)) {
         return;
     }
-    let mined = mine_block(w, id, d, target, state);
-    match mined {
-        Mined::Done => d.head = sweep(d.lo, target, 1.0),
-        Mined::Waiting(_) => d.head = progress_point(d.lo, target, d.spent, cost),
-        Mined::Skipped => {}
-    }
-    match mined {
-        Mined::Done | Mined::Skipped => d.cursor = area::next(d.lo, d.hi, target),
-        Mined::Waiting(s) => d.status = s,
+    match mine_block(w, id, d, target, state) {
+        Mined::Done => {
+            d.head = sweep(d.lo, target, 1.0);
+            d.cursor = area::next(d.lo, d.hi, target);
+        }
+        Mined::Skipped => d.cursor = area::next(d.lo, d.hi, target),
+        Mined::Waiting(s) => {
+            d.head = progress_point(d.lo, target, d.spent, cost);
+            d.status = s;
+        }
     }
 }
 

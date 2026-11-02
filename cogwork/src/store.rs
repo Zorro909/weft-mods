@@ -46,10 +46,10 @@ fn takes(inv: Inventory, stack: ItemStack) -> Option<Span> {
     if inv.size() == 0 {
         return None;
     }
-    if FUEL.on_item(stack.item).is_some() {
-        if let Some(g) = inv.find_group("fuel") {
-            return Some(Span::Group(g));
-        }
+    if FUEL.on_item(stack.item).is_some()
+        && let Some(g) = inv.find_group("fuel")
+    {
+        return Some(Span::Group(g));
     }
     for name in ["input", "chest"] {
         if let Some(g) = inv.find_group(name) {
@@ -166,9 +166,9 @@ pub fn extract(w: &World, owner: u64, max: u32) -> ItemStack {
 }
 
 /// Whether the block entity at `pos` holds items at all.
-pub fn has_inventory(w: &World, pos: [i32; 3]) -> Option<u64> {
+pub fn has_inventory(w: &World, pos: [i32; 3]) -> bool {
     let id = w.block_entity(pos);
-    (id != 0 && w.inventory(id).size() > 0).then_some(id)
+    id != 0 && w.inventory(id).size() > 0
 }
 
 /// Hands one stack of the `output` of the machine `id` at `pos` to a tube or machine beside it.
@@ -179,7 +179,7 @@ pub fn eject(w: &World, id: u64, pos: [i32; 3]) {
     };
     let mut stack = out.get(slot);
     for face in 0..6 {
-        let other = w.block_entity(crate::tube::step(pos, face));
+        let other = w.block_entity(crate::step(pos, face));
         if other == 0 || other == id {
             continue;
         }

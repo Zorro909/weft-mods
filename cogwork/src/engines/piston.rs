@@ -66,10 +66,8 @@ fn steps_up(stroke: u32) -> u32 {
         s
     } else if s < TRAVEL + REST {
         TRAVEL
-    } else if s < 2 * TRAVEL + REST {
-        2 * TRAVEL + REST - s
     } else {
-        0
+        (2 * TRAVEL + REST).saturating_sub(s)
     }
 }
 

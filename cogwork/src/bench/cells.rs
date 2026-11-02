@@ -3,11 +3,14 @@
 
 use weft_sdk::*;
 
-/// The cell the next `item` goes into: of those whose ghost it is and that have room (`cap` a
-/// cell), the emptiest, so the cells of one item fill evenly and crafting goes on.
-pub fn free_cell(pattern: &[u32], grid: &[ItemStack], item: u32, cap: u32) -> Option<usize> {
+/// The cell the next item of `stack` goes into: of those whose ghost it is, that it stacks with
+/// and that have room (`cap` a cell), the emptiest, so the cells of one item fill evenly and
+/// crafting goes on.
+pub fn free_cell(pattern: &[u32], grid: &[ItemStack], stack: ItemStack, cap: u32) -> Option<usize> {
+    let fits = |cell: &ItemStack| cell.is_empty() || cell.stacks_with(&stack);
     (0..pattern.len())
-        .filter(|&i| item != 0 && pattern[i] == item && grid[i].count < cap)
+        .filter(|&i| stack.item != 0 && pattern[i] == stack.item)
+        .filter(|&i| fits(&grid[i]) && grid[i].count < cap)
         .min_by_key(|&i| grid[i].count)
 }
 
@@ -38,7 +41,8 @@ mod tests {
     fn items_fill_their_cells_evenly_up_to_a_stack() {
         let pattern = [PLANK, 0, PLANK];
         let mut grid = [NONE; 3];
-        let next = |grid: &[ItemStack], item| free_cell(&pattern, grid, item, 64);
+        let next =
+            |grid: &[ItemStack], item| free_cell(&pattern, grid, ItemStack::new(item, 1), 64);
         assert_eq!(next(&grid, STICK), None, "no cell asks for a stick");
         assert_eq!(next(&grid, PLANK), Some(0), "the first plank cell");
         grid[0] = ItemStack::new(PLANK, 1);
@@ -49,6 +53,33 @@ mod tests {
         assert_eq!(next(&grid, PLANK), Some(0), "and on, a stack each");
         grid = [ItemStack::new(PLANK, 64), NONE, ItemStack::new(PLANK, 64)];
         assert_eq!(next(&grid, PLANK), None, "till both are full");
+    }
+
+    #[test]
+    fn an_item_with_other_data_does_not_join_a_cell() {
+        let named = ItemStack {
+            data: 3,
+            ..ItemStack::new(PLANK, 1)
+        };
+        let pattern = [PLANK, PLANK];
+        let grid = [named, NONE];
+        let plain = ItemStack::new(PLANK, 1);
+        assert_eq!(
+            free_cell(&pattern, &grid, plain, 64),
+            Some(1),
+            "the empty cell"
+        );
+        let grid = [named, named];
+        assert_eq!(
+            free_cell(&pattern, &grid, plain, 64),
+            None,
+            "not onto the named ones"
+        );
+        assert_eq!(
+            free_cell(&pattern, &grid, named, 64),
+            Some(0),
+            "named onto named"
+        );
     }
 
     #[test]

@@ -3,7 +3,8 @@
 
 use weft_sdk::*;
 
-use super::{BASE_SPEED, Motion, NONE, SLOTS, TUBE, Tube, step};
+use super::{BASE_SPEED, Motion, NONE, TUBE, Tube, free_slot};
+use crate::step;
 
 /// Ticks between two pulls of a timber tube: an engine's stroke.
 const PULL_EVERY: u32 = 18;
@@ -63,11 +64,6 @@ fn source(w: &World, pos: [i32; 3], face: u32) -> Option<u64> {
     }
     let other = w.block_entity(step(pos, face));
     (other != 0 && w.component(other, &TUBE).is_none()).then_some(other)
-}
-
-fn free_slot(w: &World, id: u64, tube: &Tube) -> Option<usize> {
-    let inv = w.inventory(id);
-    (0..SLOTS).find(|&k| inv.get(k as u32).is_empty() && tube.moving[k].item == 0)
 }
 
 /// Puts `stack` into the tube `id` at its hub, as much as it has room for; returns the rest.

@@ -170,4 +170,20 @@ mod tests {
             "back and forth, then down"
         );
     }
+
+    #[test]
+    fn every_block_of_a_layer_is_mined_once_before_the_next() {
+        // An even and an odd number of rows, 5 blocks long.
+        for hi in [[6, 4, 5], [6, 4, 4]] {
+            let lo = [0, 0, 0];
+            let mut c = first(lo, hi);
+            let mut layer = HashSet::new();
+            while c[1] == hi[1] {
+                assert!(layer.insert(c), "{c:?} only once");
+                c = next(lo, hi, c);
+            }
+            assert_eq!(layer.len() as i32, 5 * (hi[2] - 1), "the whole inside");
+            assert_eq!(c, [1, hi[1] - 1, 1], "then the same corner one down");
+        }
+    }
 }

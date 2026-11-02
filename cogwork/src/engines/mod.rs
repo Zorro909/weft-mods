@@ -7,7 +7,6 @@ mod model;
 mod piston;
 mod run;
 
-use base_api::FUEL;
 use weft_sdk::*;
 
 pub static SPRING_ENGINE: Block = Block::named("spring_engine");
@@ -15,8 +14,9 @@ pub static EMBER_ENGINE: Block = Block::named("ember_engine");
 static EMBER_MENU: Menu = Menu::named("ember_engine");
 
 value! {
-    /// An engine's state: `heat` 0..1000, fuel burning, ticks into the piston's stroke, and
-    /// the piston entity.
+    /// An engine's state: its `kind`, `heat` 0..1000, `overheated` (1 while it cools down), the
+    /// ticks of fuel left burning out of `burn_max`, ticks into the piston's stroke, and the
+    /// piston entity.
     #[derive(Default)]
     pub struct Engine { pub kind: u32, pub heat: u32, pub overheated: u32, pub burn: u32, pub burn_max: u32, pub stroke: u32, pub piston: u64 }
 }
@@ -35,6 +35,12 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&ENGINE, run::tick_engines);
     piston::register(r);
+    spring_engine(r);
+    ember_engine(r);
+}
+
+/// A block entity without slots or a screen: there is nothing to put in it.
+fn spring_engine(r: &mut Registry) {
     model::engine(r.block(&SPRING_ENGINE), "spring")
         .hardness(1.5)
         .mineable("axe")
@@ -62,6 +68,9 @@ pub fn register(r: &mut Registry) {
             max_out: 50,
         },
     );
+}
+
+fn ember_engine(r: &mut Registry) {
     r.machine(&EMBER_ENGINE, &EMBER_MENU)
         .block(|b| {
             model::engine(b, "ember")
@@ -100,13 +109,13 @@ fn ember_screen(ui: &mut Ui) {
                     abi::ui_dir::UP,
                     |c| {
                         c.menu_component(&ENGINE)
-                            .map_or(0.0, |e| crate::ratio(e.burn, e.burn_max))
+                            .map_or(0.0, |e| ratio(e.burn, e.burn_max))
                     },
                 );
                 ui.group("fuel");
             });
             ui.column(S::col().gap(3.0), |ui| {
-                crate::power_bar(ui);
+                crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let e = c.menu_component(&ENGINE).unwrap_or_default();
                     let key = if e.overheated != 0 {
@@ -120,9 +129,4 @@ fn ember_screen(ui: &mut Ui) {
         });
         ui.player_inventory(true);
     });
-}
-
-/// Ticks of burning one item of `stack` gives, if it is fuel.
-fn fuel_ticks(stack: ItemStack) -> Option<u32> {
-    FUEL.on_item(stack.item).filter(|_| !stack.is_empty())
 }
