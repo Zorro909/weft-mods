@@ -59,17 +59,13 @@ notes() {
 # Publishes one plan entry, whose zip `pack` made.
 publish() {
     local folder=$1 id=$2 version=$3 tag=$4 kind=$5 since=$6 title flags=()
-    case $kind in
-        release) title="$id $version" ;;
-        rc)
-            title="$id ${tag#"$id-v"}"
-            flags=(--prerelease --latest=false)
-            ;;
-        experimental)
-            title="$id $version experimental (Weft master ${weft_commit:0:7})"
-            flags=(--prerelease --latest=false)
-            ;;
-    esac
+    title="$id $version"
+    if [ "$kind" = experimental ]; then
+        title+=" experimental (Weft master ${weft_commit:0:7})"
+    fi
+    if [ "$kind" != release ]; then
+        flags=(--prerelease --latest=false)
+    fi
     gh release create "$tag" "$dist/$tag/$id.zip" --target "$(git rev-parse HEAD)" \
         --title "$title" --notes "$(notes "$folder" "$id" "$kind" "$since")" "${flags[@]}"
 }

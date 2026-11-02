@@ -6,6 +6,10 @@ name: Build
 on:
   workflow_call:
     inputs:
+      ref:
+        description: Commit to build, when not the one the workflow runs for
+        type: string
+        default: ""
       weft:
         description: Weft commit to build against instead of the one the submodule pins
         type: string
@@ -35,6 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.ref }}
           submodules: true
 
       - name: Weft at ${{ inputs.weft }}
