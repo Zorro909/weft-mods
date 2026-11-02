@@ -26,7 +26,7 @@ WEFT = re.compile(
 )
 
 INTRO = """\
-## Mods
+## Downloads
 
 Put a mod's zip as it is into the game's `mods/` folder; each one holds the Windows, Linux and
 macOS builds. A mod loads only into a game with the same mod interface as the Weft it was built
