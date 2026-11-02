@@ -1,3 +1,5 @@
+<img src="assets/textures/gui/icon.png" width="64" height="64" alt="">
+
 # Structures
 
 A Weft mod that fills the overworld with buildings, and gives players and mod authors the tools

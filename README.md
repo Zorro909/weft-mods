@@ -8,13 +8,14 @@ ships as its own mod.
 
 ## The mods
 
-| Mod | What it adds |
-|---|---|
-| [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
-| [Structures](structures/README.md) | Buildings and hamlets across the overworld, a wand and `/structure` command to save and place structures in the game, and `structures_api` for other mods to place their own. |
+| | Mod | What it adds |
+|---|---|---|
+| <img src="cogwork/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
+| <img src="structures/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structures](structures/README.md) | Buildings and hamlets across the overworld, a wand and `/structure` command to save and place structures in the game, and `structures_api` for other mods to place their own. |
+| | [Showcase](showcase/README.md) | A tool for mod makers: plays films that mods make of their content in code, and records them to video. |
 
-Each mod's README gives an overview; its `docs/` folder describes every feature, block and item
-in detail.
+Each mod's README gives an overview; Cogwork's and Structures' `docs/` folders describe every
+feature, block and item in detail.
 
 ## Playing
 
@@ -22,7 +23,8 @@ in detail.
 2. Download a mod's zip from the [downloads](#downloads) below, built against the same Weft.
 3. Put the zip as it is into the game's `mods/` folder and start the game.
 
-Both mods need the base game, which every Weft has. They don't need each other.
+Every mod here needs the base game, which every Weft has, and none needs another. Showcase is
+only needed to play a film.
 
 ## Building from source
 
@@ -43,10 +45,10 @@ and check steps one by one.
 
 | Path | What it holds |
 |---|---|
-| `cogwork/`, `structures/` | One mod each: its crate, `assets/`, `docs/` and README |
+| `cogwork/`, `structures/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
 | `Weft/` | The engine, as a submodule |
 | `docs/agents/` | Guides for working on this repository: mods, code style, engine, testing |
-| `tools/` | Formatting, the headless test run and CI scripts |
+| `tools/` | Formatting, the headless test run, film recording (`showcase.sh`) and CI scripts |
 | `start.sh` | Builds, installs and starts everything |
 
 ## Contributing

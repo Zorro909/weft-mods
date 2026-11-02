@@ -1,3 +1,5 @@
+<img src="assets/textures/gui/icon.png" width="64" height="64" alt="">
+
 # Cogwork
 
 A Weft mod about moving items, digging and making things by machine. Items travel through
