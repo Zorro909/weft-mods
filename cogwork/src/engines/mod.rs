@@ -106,6 +106,16 @@ fn ember_engine(r: &mut Registry) {
         .screen(ember_screen);
 }
 
+/// The ember engine's screen, above the player's inventory:
+///
+/// ```text
+/// +-------------------------------------+
+/// | Ember Engine                        |
+/// |  /\    [#####.....]                 |  fuel left burning, stored energy
+/// | [ ]    5000 / 10000 energy          |  fuel
+/// |        Heat 40%                     |  or "Overheated: cooling down"
+/// +-------------------------------------+
+/// ```
 fn ember_screen(ui: &mut Ui) {
     ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
         ui.title();

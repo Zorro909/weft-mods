@@ -15,18 +15,20 @@ pub static EXCAVATOR: Block = Block::named("excavator");
 pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
+pub use area::Frame;
+
 value! {
-    /// An excavator's work. `lo` and `hi` are the corners of its frame; it mines inside it.
-    /// `step` counts the frame blocks put up, `cursor` is the next block to mine, `spent` the
-    /// energy put into the job under way, and `waited` the ticks the cursor's block has been
-    /// unloaded. `head` is where the drill's tip is, in the world. `refused` counts the tries
-    /// running at breaking what stands where the next frame block goes that were refused.
+    /// An excavator's work. It puts up `frame`, then mines inside it. `step` counts the frame
+    /// blocks put up, `cursor` is the next block to mine, `spent` the energy put into the job
+    /// under way, and `waited` the ticks the cursor's block has been unloaded. `head` is where
+    /// the drill's tip is, in the world. `refused` counts the tries running at breaking what
+    /// stands where the next frame block goes that were refused.
     #[derive(Default)]
     pub struct Dig {
         pub stage: u32,
         pub status: u32,
-        pub lo: [i32; 3],
-        pub hi: [i32; 3],
+        // Laid out as the `lo` and `hi` it replaced, so saved excavators keep their frame.
+        pub frame: Frame,
         pub cursor: [i32; 3],
         pub step: u32,
         pub spent: i64,
@@ -38,11 +40,17 @@ value! {
 }
 pub static DIG: Component<Dig> = Component::named("cogwork:dig");
 
-pub mod stage {
-    pub const NEW: u32 = 0;
-    pub const FRAME: u32 = 1;
-    pub const MINE: u32 = 2;
-    pub const DONE: u32 = 3;
+/// How far an excavator has got. Kept in `Dig::stage` as its number, so the order is part of
+/// the save format.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr)]
+#[repr(u32)]
+pub enum Stage {
+    /// Placed, its area not planned yet.
+    #[default]
+    New,
+    Frame,
+    Mine,
+    Done,
 }
 
 /// What the excavator is doing; its screen says `cogwork.excavator.<name>`. Kept in
@@ -60,6 +68,31 @@ pub enum Status {
     Done,
     Blocked,
     Jammed,
+}
+
+impl Status {
+    /// Whether the excavator shows it is at work: building its frame or mining.
+    pub fn is_working(self) -> bool {
+        matches!(self, Status::Frame | Status::Mining)
+    }
+}
+
+impl Dig {
+    pub fn stage(&self) -> Stage {
+        Stage::from_repr(self.stage).unwrap_or_default()
+    }
+
+    pub fn set_stage(&mut self, stage: Stage) {
+        self.stage = stage as u32;
+    }
+
+    pub fn status(&self) -> Status {
+        Status::from_repr(self.status).unwrap_or_default()
+    }
+
+    pub fn set_status(&mut self, status: Status) {
+        self.status = status as u32;
+    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -94,6 +127,17 @@ pub fn register(r: &mut Registry) {
     rig::register(r);
 }
 
+/// The excavator's screen, above the player's inventory:
+///
+/// ```text
+/// +-----------------------------------------------------------------+
+/// | Excavator                                                       |
+/// | [#####.....]                              [ ][ ][ ]             |  stored energy, output
+/// | 12000 / 20000 energy                      [ ][ ][ ]             |
+/// | Mining layer 42                           [ ][ ][ ]             |  status
+/// | Area 9 x 9, standby 30 energy per tick                          |
+/// +-----------------------------------------------------------------+
+/// ```
 fn screen(ui: &mut Ui) {
     ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
         ui.title();
@@ -102,24 +146,21 @@ fn screen(ui: &mut Ui) {
                 crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let d = c.menu_component(&DIG).unwrap_or_default();
-                    let status: &str = Status::from_repr(d.status).unwrap_or_default().into();
+                    let status: &str = d.status().into();
                     out.set(
                         &format!("cogwork.excavator.{status}"),
-                        &[
-                            Arg::Int(d.cursor[1] as i64),
-                            Arg::Int(power::standby(d.lo, d.hi)),
-                        ],
+                        &[Arg::Int(d.cursor[1] as i64), Arg::Int(d.frame.standby())],
                     );
                 });
                 ui.text_bind(|c, out| {
                     let d = c.menu_component(&DIG).unwrap_or_default();
-                    let (x, z) = (d.hi[0] - d.lo[0] - 1, d.hi[2] - d.lo[2] - 1);
+                    let [x, z] = d.frame.inside();
                     out.set(
                         "cogwork.excavator.area",
                         &[
-                            Arg::Int(x.max(0) as i64),
-                            Arg::Int(z.max(0) as i64),
-                            Arg::Int(power::standby(d.lo, d.hi)),
+                            Arg::Int(x as i64),
+                            Arg::Int(z as i64),
+                            Arg::Int(d.frame.standby()),
                         ],
                     );
                 });
@@ -140,5 +181,27 @@ mod tests {
             let key = format!("cogwork.excavator.{}", <&str>::from(status));
             assert!(crate::translated(&key), "{key} in every lang file");
         }
+    }
+
+    #[test]
+    fn an_unknown_saved_number_reads_as_the_default() {
+        let d = Dig {
+            stage: 99,
+            status: 99,
+            ..Dig::default()
+        };
+        assert_eq!(d.stage(), Stage::New, "a stage from a newer cogwork");
+        assert_eq!(d.status(), Status::Idle, "a status from a newer cogwork");
+    }
+
+    #[test]
+    fn the_frame_lies_where_the_old_corners_were_saved() {
+        use std::mem::offset_of;
+        assert_eq!(
+            offset_of!(Dig, frame),
+            8,
+            "after stage and status, as `lo` was"
+        );
+        assert_eq!(offset_of!(Dig, cursor), 32, "after `lo` and `hi`");
     }
 }

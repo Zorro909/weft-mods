@@ -16,14 +16,85 @@ const DEFAULT_INSIDE: i32 = 9;
 const MAX_RING: usize = 4 * 66;
 const SIDES: [Dir; 4] = [Dir::West, Dir::East, Dir::North, Dir::South];
 
-/// The frame's lowest and highest corner for an excavator at `pos` facing `front`: on the
-/// rectangle of the survey markers next to it, else on a frame already standing beside it (one
-/// put back by its old frame carries on there), else around a 9 by 9 area behind it.
-pub fn plan(w: &World, pos: [i32; 3], front: Dir) -> ([i32; 3], [i32; 3]) {
-    let (lo, hi) = crate::markers::take_area(w, pos)
-        .or_else(|| standing_frame(w, pos))
-        .unwrap_or_else(|| crate::markers::square_behind(pos, front, DEFAULT_INSIDE, 1));
-    ([lo[0], pos[1], lo[2]], [hi[0], pos[1] + FRAME_RISE, hi[2]])
+value! {
+    /// An excavator's frame, by its lowest and highest corner. It mines the blocks inside.
+    #[derive(Default)]
+    pub struct Frame {
+        pub lo: [i32; 3],
+        pub hi: [i32; 3],
+    }
+}
+
+impl Frame {
+    /// The frame for an excavator at `pos` facing `front`: on the rectangle of the survey
+    /// markers next to it, else on a frame already standing beside it (one put back by its old
+    /// frame carries on there), else around a 9 by 9 area behind it.
+    pub fn plan(w: &World, pos: [i32; 3], front: Dir) -> Frame {
+        let (lo, hi) = crate::markers::take_area(w, pos)
+            .or_else(|| standing_frame(w, pos))
+            .unwrap_or_else(|| crate::markers::square_behind(pos, front, DEFAULT_INSIDE, 1));
+        Frame {
+            lo: [lo[0], pos[1], lo[2]],
+            hi: [hi[0], pos[1] + FRAME_RISE, hi[2]],
+        }
+    }
+
+    /// Blocks across the inside, along x and along z.
+    pub fn inside(&self) -> [i32; 2] {
+        let across = |axis: usize| (self.hi[axis] - self.lo[axis] - 1).max(0);
+        [across(0), across(2)]
+    }
+
+    /// The frame's blocks: every edge of the box, from the bottom up.
+    pub fn cells(&self) -> Vec<[i32; 3]> {
+        let (lo, hi) = (self.lo, self.hi);
+        let mut cells = Vec::new();
+        for y in lo[1]..=hi[1] {
+            for z in lo[2]..=hi[2] {
+                for x in lo[0]..=hi[0] {
+                    let on = [
+                        x == lo[0] || x == hi[0],
+                        y == lo[1] || y == hi[1],
+                        z == lo[2] || z == hi[2],
+                    ];
+                    if on.iter().filter(|&&b| b).count() >= 2 {
+                        cells.push([x, y, z]);
+                    }
+                }
+            }
+        }
+        cells
+    }
+
+    /// The first block to mine: a corner of the inside, at the top of the frame.
+    pub fn first(&self) -> [i32; 3] {
+        [self.lo[0] + 1, self.hi[1], self.lo[2] + 1]
+    }
+
+    /// Which way along x the row of `c` is mined: 1 on the first row of a layer, then -1, 1 ...
+    pub fn row_dir(&self, c: [i32; 3]) -> i32 {
+        if (c[2] - (self.lo[2] + 1)) % 2 == 0 {
+            1
+        } else {
+            -1
+        }
+    }
+
+    /// The block mined after `c`: along the row, back the other way on the next row, then the
+    /// next layer down.
+    pub fn next(&self, c: [i32; 3]) -> [i32; 3] {
+        let (x0, x1) = (self.lo[0] + 1, self.hi[0] - 1);
+        let (z0, z1) = (self.lo[2] + 1, self.hi[2] - 1);
+        let x = c[0] + self.row_dir(c);
+        if (x0..=x1).contains(&x) {
+            return [x, c[1], c[2]];
+        }
+        if c[2] < z1 {
+            let z = c[2] + 1;
+            return [if (z - z0) % 2 == 0 { x0 } else { x1 }, c[1], z];
+        }
+        [x0, c[1] - 1, z0]
+    }
 }
 
 /// The bottom ring of a frame beside `pos` at its height, with `pos` outside it: its lowest and
@@ -57,7 +128,8 @@ fn ring_bounds(pos: [i32; 3], is_frame: impl Fn([i32; 3]) -> bool) -> Option<([i
             hi = std::array::from_fn(|i| hi[i].max(n[i]));
         }
     }
-    let missing = frame_cells(lo, hi)
+    let missing = Frame { lo, hi }
+        .cells()
         .into_iter()
         .filter(|&c| !is_frame(c))
         .count();
@@ -69,65 +141,36 @@ fn beside(p: [i32; 3], d: Dir) -> [i32; 3] {
     [p[0] + o[0], p[1], p[2] + o[2]]
 }
 
-/// The frame's blocks: every edge of the box, from the bottom up.
-pub fn frame_cells(lo: [i32; 3], hi: [i32; 3]) -> Vec<[i32; 3]> {
-    let mut cells = Vec::new();
-    for y in lo[1]..=hi[1] {
-        for z in lo[2]..=hi[2] {
-            for x in lo[0]..=hi[0] {
-                let on = [
-                    x == lo[0] || x == hi[0],
-                    y == lo[1] || y == hi[1],
-                    z == lo[2] || z == hi[2],
-                ];
-                if on.iter().filter(|&&b| b).count() >= 2 {
-                    cells.push([x, y, z]);
-                }
-            }
-        }
-    }
-    cells
-}
-
-/// The first block to mine: a corner of the inside, at the top of the frame.
-pub fn first(lo: [i32; 3], hi: [i32; 3]) -> [i32; 3] {
-    [lo[0] + 1, hi[1], lo[2] + 1]
-}
-
-/// Which way along x the row of `c` is mined: 1 on the first row of a layer, then -1, 1 ...
-pub fn row_dir(lo: [i32; 3], c: [i32; 3]) -> i32 {
-    if (c[2] - (lo[2] + 1)) % 2 == 0 { 1 } else { -1 }
-}
-
-/// The block mined after `c`: along the row, back the other way on the next row, then the
-/// next layer down.
-pub fn next(lo: [i32; 3], hi: [i32; 3], c: [i32; 3]) -> [i32; 3] {
-    let (x0, x1, z0, z1) = (lo[0] + 1, hi[0] - 1, lo[2] + 1, hi[2] - 1);
-    let x = c[0] + row_dir(lo, c);
-    if (x0..=x1).contains(&x) {
-        return [x, c[1], c[2]];
-    }
-    if c[2] < z1 {
-        let z = c[2] + 1;
-        return [if (z - z0) % 2 == 0 { x0 } else { x1 }, c[1], z];
-    }
-    [x0, c[1] - 1, z0]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn frame_has_twelve_edges() {
-        let cells = frame_cells([0, 0, 0], [10, 4, 10]);
+        let frame = Frame {
+            lo: [0, 0, 0],
+            hi: [10, 4, 10],
+        };
+        let cells = frame.cells();
         // Two rings of 40 and four posts of 3 between them.
         assert_eq!(cells.len(), 40 * 2 + 4 * 3, "rings and posts");
     }
 
+    #[test]
+    fn the_inside_is_the_frame_less_its_edges() {
+        let frame = Frame {
+            lo: [0, 0, 0],
+            hi: [10, 4, 6],
+        };
+        assert_eq!(frame.inside(), [9, 5], "across x and z");
+        let unplanned = Frame::default();
+        assert_eq!(unplanned.inside(), [0, 0], "nothing yet, not -1");
+    }
+
     /// The bottom ring of a frame from `lo` to `hi`, less the blocks in `gaps`.
     fn ring(lo: [i32; 3], hi: [i32; 3], gaps: &[[i32; 3]]) -> HashSet<[i32; 3]> {
-        frame_cells(lo, hi)
+        Frame { lo, hi }
+            .cells()
             .into_iter()
             .filter(|c| c[1] == lo[1] && !gaps.contains(c))
             .collect()
@@ -157,11 +200,14 @@ mod tests {
 
     #[test]
     fn mining_order_snakes_through_a_layer() {
-        let (lo, hi) = ([0, 0, 0], [3, 4, 3]);
-        let mut c = first(lo, hi);
+        let frame = Frame {
+            lo: [0, 0, 0],
+            hi: [3, 4, 3],
+        };
+        let mut c = frame.first();
         let mut seen = vec![c];
         for _ in 0..4 {
-            c = next(lo, hi, c);
+            c = frame.next(c);
             seen.push(c);
         }
         assert_eq!(
@@ -175,12 +221,12 @@ mod tests {
     fn every_block_of_a_layer_is_mined_once_before_the_next() {
         // An even and an odd number of rows, 5 blocks long.
         for hi in [[6, 4, 5], [6, 4, 4]] {
-            let lo = [0, 0, 0];
-            let mut c = first(lo, hi);
+            let frame = Frame { lo: [0, 0, 0], hi };
+            let mut c = frame.first();
             let mut layer = HashSet::new();
             while c[1] == hi[1] {
                 assert!(layer.insert(c), "{c:?} only once");
-                c = next(lo, hi, c);
+                c = frame.next(c);
             }
             assert_eq!(layer.len() as i32, 5 * (hi[2] - 1), "the whole inside");
             assert_eq!(c, [1, hi[1] - 1, 1], "then the same corner one down");

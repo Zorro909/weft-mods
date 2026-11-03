@@ -5,7 +5,7 @@
 
 use weft_sdk::*;
 
-use super::{Dig, stage};
+use super::{Dig, Frame, Stage};
 
 static CARRIAGE: Entity = Entity::named("drill_carriage");
 static BIT: Entity = Entity::named("drill_bit");
@@ -83,7 +83,8 @@ impl Rig {
 /// Where each piece goes now: by slot, its kind, place and turn.
 fn layout(d: &Dig) -> Vec<(usize, &'static Entity, [f64; 3], f32)> {
     let [x, y, z] = d.head.map(|v| v as f64);
-    let top = d.hi[1] as f64 + 0.25;
+    let Frame { lo, hi } = d.frame;
+    let top = hi[1] as f64 + 0.25;
     // On top of the block it drills, only its tip in it; never above the carriage.
     let bit = (y + 1.0).min(top - BIT_HEIGHT);
     let mut out = vec![
@@ -95,8 +96,8 @@ fn layout(d: &Dig) -> Vec<(usize, &'static Entity, [f64; 3], f32)> {
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
     out.extend((0..shafts).map(|k| (2 + k, &SHAFT, [x, top - PIECE * (k + 1) as f64, z], 0.0)));
     let beam_y = top + 0.125;
-    let (x0, x1) = (d.lo[0] as f64 + 0.5, d.hi[0] as f64 + 0.5);
-    let (z0, z1) = (d.lo[2] as f64 + 0.5, d.hi[2] as f64 + 0.5);
+    let (x0, x1) = (lo[0] as f64 + 0.5, hi[0] as f64 + 0.5);
+    let (z0, z1) = (lo[2] as f64 + 0.5, hi[2] as f64 + 0.5);
     for (k, c) in spans(x0, x1).into_iter().enumerate() {
         out.push((2 + SHAFTS + k, &BEAM, [c, beam_y, z], 0.0));
     }
@@ -119,7 +120,7 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
     let Some(mut rig) = w.component(owner, &RIG).copied() else {
         return;
     };
-    let wanted = if d.stage == stage::MINE {
+    let wanted = if d.stage() == Stage::Mine {
         layout(d)
     } else {
         Vec::new()
@@ -144,6 +145,19 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
 mod tests {
     use super::*;
 
+    /// An excavator mining with its drill at `head`, under a frame whose top is at 8.
+    fn mining_at(head: [f32; 3]) -> Dig {
+        Dig {
+            stage: Stage::Mine as u32,
+            frame: Frame {
+                lo: [0, 0, 0],
+                hi: [10, 8, 10],
+            },
+            head,
+            ..Dig::default()
+        }
+    }
+
     #[test]
     fn a_replaced_piece_is_no_longer_the_rigs() {
         let mut rig = Rig { ids: [0; SLOTS] };
@@ -163,12 +177,7 @@ mod tests {
 
     #[test]
     fn shafts_reach_from_the_carriage_down_to_the_bit() {
-        let d = Dig {
-            stage: stage::MINE,
-            hi: [10, 8, 10],
-            head: [5.5, -3.0, 5.5],
-            ..Dig::default()
-        };
+        let d = mining_at([5.5, -3.0, 5.5]);
         let shafts: Vec<f64> = layout(&d)
             .into_iter()
             .filter(|p| std::ptr::eq(p.1, &SHAFT))
@@ -184,12 +193,7 @@ mod tests {
 
     #[test]
     fn the_bit_stands_on_the_block_it_drills() {
-        let d = Dig {
-            stage: stage::MINE,
-            hi: [10, 8, 10],
-            head: [5.5, -3.0, 5.5],
-            ..Dig::default()
-        };
+        let d = mining_at([5.5, -3.0, 5.5]);
         let bit = layout(&d)
             .into_iter()
             .find(|p| std::ptr::eq(p.1, &BIT))

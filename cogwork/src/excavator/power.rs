@@ -4,7 +4,7 @@
 
 use weft_sdk::*;
 
-use super::{Dig, Status};
+use super::{Dig, Frame, Status};
 
 /// Standby energy per tick: a base, and one more per four blocks of area (9 by 9: 30).
 const STANDBY_BASE: i64 = 10;
@@ -14,23 +14,25 @@ const DRAW_RATE: i64 = 120;
 /// Energy per block the drill travels.
 const TRAVEL_COST: i64 = 80;
 
-/// Standby energy per tick for the frame from `lo` to `hi`.
-pub fn standby(lo: [i32; 3], hi: [i32; 3]) -> i64 {
-    let inside = |axis: usize| (hi[axis] - lo[axis] - 1).max(0) as i64;
-    STANDBY_BASE + inside(0) * inside(2) / CELLS_PER_STANDBY
+impl Frame {
+    /// Standby energy per tick to hold up this frame's gantry.
+    pub fn standby(&self) -> i64 {
+        let [x, z] = self.inside();
+        STANDBY_BASE + x as i64 * z as i64 / CELLS_PER_STANDBY
+    }
 }
 
 /// Draws this tick's standby; false when there isn't enough. What there was is used up all the
 /// same, so a weak supply can't save up to run in bursts.
 pub fn hold(w: &World, id: u64, d: &mut Dig) -> bool {
-    let need = standby(d.lo, d.hi);
+    let need = d.frame.standby();
     let Some(e) = w.energy_mut(id) else {
         return false;
     };
     let drawn = e.stored.min(need);
     e.stored -= drawn;
     if drawn < need {
-        d.status = Status::NoPower as u32;
+        d.set_status(Status::NoPower);
         return false;
     }
     true
@@ -44,7 +46,7 @@ pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
         return true;
     }
     if drawn == 0 {
-        d.status = Status::NoPower as u32;
+        d.set_status(Status::NoPower);
     }
     false
 }
@@ -65,8 +67,9 @@ mod tests {
 
     #[test]
     fn standby_grows_with_the_area() {
-        let small = standby([0, 0, 0], [10, 4, 10]);
-        let large = standby([0, 0, 0], [34, 4, 34]);
+        let frame = |hi| Frame { lo: [0, 0, 0], hi };
+        let small = frame([10, 4, 10]).standby();
+        let large = frame([34, 4, 34]).standby();
         assert_eq!(small, 30, "9 by 9 needs one ember engine");
         assert_eq!(large, 10 + 33 * 33 / 4, "33 by 33 needs many more");
     }
