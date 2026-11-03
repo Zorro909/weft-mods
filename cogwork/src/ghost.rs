@@ -2,9 +2,14 @@
 //! sets it to what the cursor holds, and an empty hand clears it; nothing leaves the player's
 //! hands. The assembly bench's pattern and the sorting tube's samples are made of them.
 //!
-//! Machines keep ghosts by item name: items are numbered anew when mods are added or removed, so
-//! a number saved with the world could later name another item.
+//! Machines keep ghosts by a hash of the item's name: items are numbered anew when mods are
+//! added or removed, so a number saved with the world could later name another item, and a
+//! hash keeps a name of any length in 8 bytes.
 
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
+use twox_hash::XxHash3_64;
 use weft_sdk::*;
 
 /// Side of a cell in GUI pixels, the same as a slot.
@@ -12,37 +17,44 @@ pub const SLOT: f32 = 18.0;
 /// How far from a machine a player may set its ghosts, in blocks.
 const REACH: f64 = 8.0;
 
-/// An item's full name (`base:stick`) as a component keeps it: UTF-8, padded with zeros. All
-/// zeros for no item.
-pub type ItemName = [u8; 64];
-pub const NO_ITEM: ItemName = [0; 64];
+/// An item as a machine keeps it: the hash of its full name (`base:stick`), `NO_ITEM` for none.
+pub type ItemKey = u64;
+pub const NO_ITEM: ItemKey = 0;
 
-/// The name to keep for `item` (0 for none); `None` if it is too long to keep.
-pub fn name_of(item: u32) -> Option<ItemName> {
+/// The key to keep for `item` (0 for none).
+pub fn key_of(item: u32) -> ItemKey {
     if item == 0 {
-        return Some(NO_ITEM);
+        return NO_ITEM;
     }
-    keep(item_name(item))
+    hash(item_name(item))
 }
 
-/// The item `name` names, 0 for none or for one no loaded mod has.
-pub fn item_of(name: &ItemName) -> u32 {
-    let text = text_of(name);
-    if text.is_empty() {
-        return 0;
-    }
-    Item::lookup(text).unwrap_or(0)
+/// The item `key` stands for, 0 for none or for one no loaded mod has.
+pub fn item_of(key: ItemKey) -> u32 {
+    items_by_key().get(&key).copied().unwrap_or(0)
 }
 
-fn keep(text: &str) -> Option<ItemName> {
-    let mut name = NO_ITEM;
-    name.get_mut(..text.len())?.copy_from_slice(text.as_bytes());
-    Some(name)
+/// XXH3, whose values are fixed by its specification, so keys saved with a world stay right.
+fn hash(name: &str) -> ItemKey {
+    // 0 is no item.
+    XxHash3_64::oneshot(name.as_bytes()).max(1)
 }
 
-fn text_of(name: &ItemName) -> &str {
-    let len = name.iter().position(|&b| b == 0).unwrap_or(name.len());
-    std::str::from_utf8(&name[..len]).unwrap_or("")
+/// Every loaded item by its key, made the first time it is needed: the items don't change while
+/// the game runs.
+fn items_by_key() -> &'static HashMap<ItemKey, u32> {
+    static TABLE: OnceLock<HashMap<ItemKey, u32>> = OnceLock::new();
+    TABLE.get_or_init(|| {
+        let mut table = HashMap::new();
+        let names = (1..).map(|item| (item, item_name(item)));
+        for (item, name) in names.take_while(|(_, name)| !name.is_empty()) {
+            if let Some(other) = table.insert(hash(name), item) {
+                let other = item_name(other);
+                error!("cogwork: {other} and {name} share a ghost key; ghosts show {name}");
+            }
+        }
+        table
+    })
 }
 
 value! {
@@ -113,17 +125,17 @@ fn set(p: &Packet, g: SetGhost) {
 mod tests {
     use super::*;
 
+    /// XXH3 of `base:stick`.
+    const STICK_KEY: ItemKey = 0x64bb_9627_730c_0234;
+
     #[test]
-    fn a_name_is_kept_and_read_back() {
-        let name = keep("base:stick").expect("short enough");
-        assert_eq!(text_of(&name), "base:stick");
-        assert_eq!(text_of(&NO_ITEM), "", "no item");
-        let longest = "a".repeat(64);
-        assert_eq!(
-            text_of(&keep(&longest).expect("fits")),
-            longest,
-            "all 64 bytes"
+    fn the_keys_never_change() {
+        // Ghosts saved with worlds hold these: a change would empty them all.
+        assert_eq!(hash("base:stick"), STICK_KEY, "base:stick");
+        assert_ne!(
+            hash("cogwork:stone_tube"),
+            hash("cogwork:stone_cog"),
+            "like names differ"
         );
-        assert_eq!(keep(&"a".repeat(65)), None, "too long to keep");
     }
 }

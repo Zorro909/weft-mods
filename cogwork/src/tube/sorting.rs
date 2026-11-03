@@ -7,7 +7,7 @@ use weft_sdk::*;
 
 use super::shape::Arms;
 use super::{SLOTS, SORTING_TUBE, TUBE, Tube, kind};
-use crate::ghost::{self, ItemName, NO_ITEM, SLOT};
+use crate::ghost::{self, ItemKey, SLOT};
 
 static SORTING_MENU: Menu = Menu::named("sorting_tube");
 
@@ -15,20 +15,13 @@ static SORTING_MENU: Menu = Menu::named("sorting_tube");
 pub(crate) const ROW: usize = 6;
 
 value! {
-    /// Each face's row of sample items by name, `NO_ITEM` where a row has none.
-    pub struct Samples { pub rows: [[ItemName; ROW]; 6] }
+    /// Each face's row of sample items, `ghost::NO_ITEM` where a row has none.
+    #[derive(Default)]
+    pub struct Samples { pub rows: [[ItemKey; ROW]; 6] }
 }
 
-impl Default for Samples {
-    fn default() -> Samples {
-        Samples {
-            rows: [[NO_ITEM; ROW]; 6],
-        }
-    }
-}
-
-/// Named anew when samples became item names, so a tube saved before starts without samples
-/// rather than reading item numbers as names.
+/// Named anew when samples became item keys, so a tube saved before starts without samples
+/// rather than reading item numbers as keys.
 static SAMPLES: Component<Samples> = Component::named("cogwork:sorting_rows");
 
 /// Each face's color and arm texture.
@@ -87,32 +80,28 @@ fn screen(ui: &mut Ui) {
 fn sample(ui: &mut Ui, face: usize, i: usize) {
     let under = |ui: &mut Ui| ui.image("base:gui/slot", SLOT, SLOT);
     ghost::cell(ui, under, (face * ROW + i) as u32, move |c| {
-        ghost::item_of(&c.menu_component(&SAMPLES).unwrap_or_default().rows[face][i])
+        ghost::item_of(c.menu_component(&SAMPLES).unwrap_or_default().rows[face][i])
     });
 }
 
 /// Sets sample `cell`, counted along the rows, to `item` (0 clears it) when `owner` is a
 /// sorting tube.
 pub fn set_sample(w: &World, owner: u64, cell: u32, item: u32) {
-    let Some(name) = ghost::name_of(item) else {
-        return;
-    };
     let Some(s) = w.component_mut(owner, &SAMPLES) else {
         return;
     };
     let Some(sample) = s.rows.as_flattened_mut().get_mut(cell as usize) else {
         return;
     };
-    *sample = name;
+    *sample = ghost::key_of(item);
 }
 
 /// Whether the row of `face` names the item.
 pub fn passes(w: &World, id: u64, face: u32, stack: ItemStack) -> bool {
-    let (Some(samples), Some(name)) = (w.component(id, &SAMPLES), ghost::name_of(stack.item))
-    else {
+    let Some(samples) = w.component(id, &SAMPLES) else {
         return false;
     };
-    samples.rows[face as usize].contains(&name)
+    samples.rows[face as usize].contains(&ghost::key_of(stack.item))
 }
 
 /// The faces whose rows are empty, or name only items no loaded mod has: they take whatever no
@@ -122,7 +111,7 @@ pub fn unfiltered(w: &World, id: u64) -> Vec<u32> {
         return (0..6).collect();
     };
     (0..6)
-        .filter(|&f| samples.rows[f as usize].iter().all(|n| ghost::item_of(n) == 0))
+        .filter(|&f| samples.rows[f as usize].iter().all(|&key| ghost::item_of(key) == 0))
         .collect()
 }
 

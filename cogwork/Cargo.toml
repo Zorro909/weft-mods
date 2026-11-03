@@ -10,6 +10,8 @@ crate-type = ["cdylib"]
 weft_sdk = { path = "../Weft/crates/sdk" }
 base_api = { path = "../Weft/mods/base/api" }
 strum = { version = "0.28", features = ["derive"] }
+# XXH3 alone, for ghost keys.
+twox-hash = { version = "2.1", default-features = false, features = ["xxhash3_64"] }
 # Only for the films, which releases leave out.
 showcase_api = { path = "../showcase/api", optional = true }
 
