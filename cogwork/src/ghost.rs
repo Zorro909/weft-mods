@@ -1,6 +1,9 @@
 //! Ghost cells: places on a machine's screen that show an item without holding it. Clicking one
 //! sets it to what the cursor holds, and an empty hand clears it; nothing leaves the player's
 //! hands. The assembly bench's pattern and the sorting tube's samples are made of them.
+//!
+//! Machines keep ghosts by item name: items are numbered anew when mods are added or removed, so
+//! a number saved with the world could later name another item.
 
 use weft_sdk::*;
 
@@ -8,6 +11,39 @@ use weft_sdk::*;
 pub const SLOT: f32 = 18.0;
 /// How far from a machine a player may set its ghosts, in blocks.
 const REACH: f64 = 8.0;
+
+/// An item's full name (`base:stick`) as a component keeps it: UTF-8, padded with zeros. All
+/// zeros for no item.
+pub type ItemName = [u8; 64];
+pub const NO_ITEM: ItemName = [0; 64];
+
+/// The name to keep for `item` (0 for none); `None` if it is too long to keep.
+pub fn name_of(item: u32) -> Option<ItemName> {
+    if item == 0 {
+        return Some(NO_ITEM);
+    }
+    keep(item_name(item))
+}
+
+/// The item `name` names, 0 for none or for one no loaded mod has.
+pub fn item_of(name: &ItemName) -> u32 {
+    let text = text_of(name);
+    if text.is_empty() {
+        return 0;
+    }
+    Item::lookup(text).unwrap_or(0)
+}
+
+fn keep(text: &str) -> Option<ItemName> {
+    let mut name = NO_ITEM;
+    name.get_mut(..text.len())?.copy_from_slice(text.as_bytes());
+    Some(name)
+}
+
+fn text_of(name: &ItemName) -> &str {
+    let len = name.iter().position(|&b| b == 0).unwrap_or(name.len());
+    std::str::from_utf8(&name[..len]).unwrap_or("")
+}
 
 value! {
     /// The ghost of `cell` of the machine `owner` is to be `item` (0 clears it).
@@ -70,5 +106,24 @@ fn set(p: &Packet, g: SetGhost) {
     if near && known {
         crate::bench::set_ghost(&w, g.owner, g.cell, g.item);
         crate::tube::set_sample(&w, g.owner, g.cell, g.item);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_name_is_kept_and_read_back() {
+        let name = keep("base:stick").expect("short enough");
+        assert_eq!(text_of(&name), "base:stick");
+        assert_eq!(text_of(&NO_ITEM), "", "no item");
+        let longest = "a".repeat(64);
+        assert_eq!(
+            text_of(&keep(&longest).expect("fits")),
+            longest,
+            "all 64 bytes"
+        );
+        assert_eq!(keep(&"a".repeat(65)), None, "too long to keep");
     }
 }

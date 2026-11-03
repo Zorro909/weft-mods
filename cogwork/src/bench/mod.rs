@@ -11,24 +11,37 @@ pub use fill::insert;
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
 
-use crate::ghost::{self, SLOT};
+use crate::ghost::{self, ItemName, NO_ITEM, SLOT};
 
 pub static ASSEMBLY_BENCH: Block = Block::named("assembly_bench");
 static BENCH_MENU: Menu = Menu::named("assembly_bench");
 
 value! {
-    /// The pattern's ghost items (0 for an empty cell), energy put into the craft under way,
-    /// what the screen says, and which cells hold items (a bit each) for the screen. New fields
-    /// go last: a saved bench loads with them 0.
-    #[derive(Default)]
+    /// The pattern's ghost items by name (`NO_ITEM` for an empty cell), energy put into the
+    /// craft under way, what the screen says, and which cells hold items (a bit each) for the
+    /// screen. New fields go last: a saved bench loads with them 0.
     pub struct Bench {
-        pub pattern: [u32; 9],
+        pub pattern: [ItemName; 9],
         pub spent: i64,
         pub status: u32,
         pub filled: u32,
     }
 }
-static BENCH: Component<Bench> = Component::named("cogwork:bench");
+
+impl Default for Bench {
+    fn default() -> Bench {
+        Bench {
+            pattern: [NO_ITEM; 9],
+            spent: 0,
+            status: 0,
+            filled: 0,
+        }
+    }
+}
+
+/// Named anew when the pattern became item names, so a bench saved before starts with an empty
+/// pattern rather than reading item numbers as names.
+static BENCH: Component<Bench> = Component::named("cogwork:assembly_bench");
 
 /// Energy one craft takes.
 const CRAFT_COST: i64 = 240;
@@ -138,19 +151,31 @@ fn cell(ui: &mut Ui, i: u32) {
     ghost::cell(ui, under, i, move |c| {
         let b = c.menu_component(&BENCH).unwrap_or_default();
         let filled = b.filled & (1 << i) != 0;
-        if filled { 0 } else { b.pattern[i as usize] }
+        if filled {
+            0
+        } else {
+            ghost::item_of(&b.pattern[i as usize])
+        }
     });
 }
 
-/// Sets the ghost of `cell` when `owner` is a bench.
+/// The items of the bench's pattern, 0 for an empty cell.
+fn pattern(bench: &Bench) -> [u32; 9] {
+    bench.pattern.map(|name| ghost::item_of(&name))
+}
+
+/// Sets the ghost of `cell` to `item` (0 clears it) when `owner` is a bench.
 pub fn set_ghost(w: &World, owner: u64, cell: u32, item: u32) {
+    let Some(name) = ghost::name_of(item) else {
+        return;
+    };
     let Some(b) = w.component_mut(owner, &BENCH) else {
         return;
     };
     let Some(ghost) = b.pattern.get_mut(cell as usize) else {
         return;
     };
-    *ghost = item;
+    *ghost = name;
 }
 
 #[cfg(test)]

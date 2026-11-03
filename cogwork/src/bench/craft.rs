@@ -7,7 +7,7 @@ use std::sync::{LazyLock, Mutex};
 use base_api::CRAFTING;
 use weft_sdk::*;
 
-use super::{Bench, CRAFT_COST, Status, cells};
+use super::{Bench, CRAFT_COST, Status, cells, pattern};
 use crate::store::{insert_all, insert_into};
 
 /// The most energy a bench puts into a craft per tick: one takes at least 8 ticks.
@@ -21,8 +21,9 @@ pub fn tick(b: &mut SystemBatch<Bench>) {
     let w = b.world();
     for (id, bench, _) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
-        let status = if evict_misplaced(&w, id, &bench.pattern) {
-            work(&w, id, bench)
+        let pattern = pattern(bench);
+        let status = if evict_misplaced(&w, id, &pattern) {
+            work(&w, id, bench, &pattern)
         } else {
             Status::Full
         };
@@ -57,15 +58,15 @@ fn evict_misplaced(w: &World, id: u64, pattern: &[u32; 9]) -> bool {
     all_out
 }
 
-/// Works on the next craft: pays for it, then makes it once the output has room.
-fn work(w: &World, id: u64, bench: &mut Bench) -> Status {
-    let result = made_by(&bench.pattern);
+/// Works on the next craft of `pattern`: pays for it, then makes it once the output has room.
+fn work(w: &World, id: u64, bench: &mut Bench, pattern: &[u32; 9]) -> Status {
+    let result = made_by(pattern);
     if result.is_empty() {
         bench.spent = 0;
         return Status::NoRecipe;
     }
     let cells = grid(w, id);
-    if !cells::complete(&bench.pattern, &cells) {
+    if !cells::complete(pattern, &cells) {
         return Status::Missing;
     }
     let drawn = crate::machine::draw(w, id, &mut bench.spent, CRAFT_COST, DRAW_RATE);
