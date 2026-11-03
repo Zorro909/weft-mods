@@ -8,6 +8,7 @@ mod fill;
 
 use base_api::CRAFTING;
 pub use fill::insert;
+use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
 
 use crate::ghost::{self, SLOT};
@@ -36,43 +37,18 @@ const NOTHING: &str = "cogwork:nothing";
 /// The player's inventory width in GUI pixels.
 const INVENTORY_WIDTH: f32 = 9.0 * SLOT;
 
-/// What the bench is doing, as its screen says. Kept in `Bench::status` as its number, so the
-/// order is part of the save format: new ones go last.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// What the bench is doing; its screen says `cogwork.bench.<name>`. Kept in
+/// `Bench::status` as its number, so the order is part of the save format: new ones go last.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr, IntoStaticStr, VariantArray)]
+#[strum(serialize_all = "snake_case")]
+#[repr(u32)]
 enum Status {
+    #[default]
     NoRecipe,
     Missing,
     Full,
     NoPower,
     Working,
-}
-
-impl Status {
-    const ALL: [Status; 5] = [
-        Status::NoRecipe,
-        Status::Missing,
-        Status::Full,
-        Status::NoPower,
-        Status::Working,
-    ];
-
-    /// The status kept as `raw`; one this version doesn't know reads as `NoRecipe`.
-    fn from_raw(raw: u32) -> Status {
-        Status::ALL
-            .get(raw as usize)
-            .copied()
-            .unwrap_or(Status::NoRecipe)
-    }
-
-    fn key(self) -> &'static str {
-        match self {
-            Status::NoRecipe => "cogwork.bench.no_recipe",
-            Status::Missing => "cogwork.bench.missing",
-            Status::Full => "cogwork.bench.full",
-            Status::NoPower => "cogwork.bench.no_power",
-            Status::Working => "cogwork.bench.working",
-        }
-    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -146,7 +122,8 @@ fn screen(ui: &mut Ui) {
             crate::machine::power_bar(ui);
             ui.text_bind_styled(S::col().no_wrap(), |c, out| {
                 let b = c.menu_component(&BENCH).unwrap_or_default();
-                out.set(Status::from_raw(b.status).key(), &[]);
+                let status: &str = Status::from_repr(b.status).unwrap_or_default().into();
+                out.set(&format!("cogwork.bench.{status}"), &[]);
             });
         });
         ui.player_inventory(true);
@@ -181,19 +158,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_status_is_kept_as_its_place_and_has_a_name() {
-        for (i, status) in Status::ALL.into_iter().enumerate() {
-            assert_eq!(Status::from_raw(i as u32), status, "{status:?} read back");
-            assert_eq!(status as usize, i, "{status:?} in order");
-            assert!(
-                crate::translated(status.key()),
-                "{status:?} in every lang file"
-            );
+    fn every_status_has_a_name() {
+        for &status in Status::VARIANTS {
+            let key = format!("cogwork.bench.{}", <&str>::from(status));
+            assert!(crate::translated(&key), "{key} in every lang file");
         }
-        assert_eq!(
-            Status::from_raw(99),
-            Status::NoRecipe,
-            "unknown is no recipe"
-        );
     }
 }

@@ -37,7 +37,7 @@ pub fn tick(b: &mut SystemBatch<Level>) {
             stage::FILL => fill_next(&w, id, l),
             _ => {}
         }
-        let working = matches!(Status::from_raw(l.status), Status::Clearing | Status::Filling);
+        let working = matches!(Status::from_repr(l.status), Some(Status::Clearing | Status::Filling));
         crate::machine::show_working(&w, pos, working);
     }
 }

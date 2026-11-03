@@ -40,7 +40,7 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
             _ => {}
         }
         rig::update(&w, id, d);
-        let working = matches!(Status::from_raw(d.status), Status::Frame | Status::Mining);
+        let working = matches!(Status::from_repr(d.status), Some(Status::Frame | Status::Mining));
         crate::machine::show_working(&w, pos, working);
     }
 }

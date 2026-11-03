@@ -76,7 +76,7 @@ pub fn mine_block(w: &World, id: u64, d: &mut Dig, c: [i32; 3], state: u32) -> M
     }
     d.status = Status::Mining as u32;
     if !pay(w, id, d, block_cost(state)) {
-        return Mined::Waiting(Status::from_raw(d.status));
+        return Mined::Waiting(Status::from_repr(d.status).unwrap_or_default());
     }
     match harvest(w, id, c, state) {
         // Paid for already: it stays paid until there is room.

@@ -4,6 +4,7 @@
 
 mod work;
 
+use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
 
 pub static LEVELER: Block = Block::named("leveler");
@@ -31,10 +32,13 @@ mod stage {
     pub const DONE: u32 = 3;
 }
 
-/// What the leveler is doing, as its screen says. Kept in `Level::status` as its number, so
-/// the order is part of the save format: new ones go last, in `ALL` too.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// What the leveler is doing; its screen says `cogwork.leveler.<name>`. Kept in
+/// `Level::status` as its number, so the order is part of the save format: new ones go last.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr, IntoStaticStr, VariantArray)]
+#[strum(serialize_all = "snake_case")]
+#[repr(u32)]
 pub enum Status {
+    #[default]
     Idle,
     NoPower,
     Clearing,
@@ -43,40 +47,6 @@ pub enum Status {
     NoBlocks,
     Blocked,
     Done,
-}
-
-impl Status {
-    const ALL: [Status; 8] = [
-        Status::Idle,
-        Status::NoPower,
-        Status::Clearing,
-        Status::Filling,
-        Status::Full,
-        Status::NoBlocks,
-        Status::Blocked,
-        Status::Done,
-    ];
-
-    /// The status kept as `raw`; one this version doesn't know reads as `Idle`.
-    pub fn from_raw(raw: u32) -> Status {
-        Status::ALL
-            .get(raw as usize)
-            .copied()
-            .unwrap_or(Status::Idle)
-    }
-
-    fn key(self) -> &'static str {
-        match self {
-            Status::Idle => "cogwork.leveler.idle",
-            Status::NoPower => "cogwork.leveler.no_power",
-            Status::Clearing => "cogwork.leveler.clearing",
-            Status::Filling => "cogwork.leveler.filling",
-            Status::Full => "cogwork.leveler.full",
-            Status::NoBlocks => "cogwork.leveler.no_blocks",
-            Status::Blocked => "cogwork.leveler.blocked",
-            Status::Done => "cogwork.leveler.done",
-        }
-    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -111,8 +81,9 @@ fn screen(ui: &mut Ui) {
                 crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let l = c.menu_component(&LEVEL).unwrap_or_default();
+                    let status: &str = Status::from_repr(l.status).unwrap_or_default().into();
                     out.set(
-                        Status::from_raw(l.status).key(),
+                        &format!("cogwork.leveler.{status}"),
                         &[Arg::Int(l.cursor[1] as i64)],
                     );
                 });
@@ -139,15 +110,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_status_is_kept_as_its_place_and_has_a_name() {
-        for (i, status) in Status::ALL.into_iter().enumerate() {
-            assert_eq!(Status::from_raw(i as u32), status, "{status:?} read back");
-            assert_eq!(status as usize, i, "{status:?} in order");
-            assert!(
-                crate::translated(status.key()),
-                "{status:?} in every lang file"
-            );
+    fn every_status_has_a_name() {
+        for &status in Status::VARIANTS {
+            let key = format!("cogwork.leveler.{}", <&str>::from(status));
+            assert!(crate::translated(&key), "{key} in every lang file");
         }
-        assert_eq!(Status::from_raw(99), Status::Idle, "unknown is idle");
     }
 }
