@@ -4,7 +4,8 @@
 //!
 //! Pictures are saved with the world like any dropped item, and their tube keeps their id, so
 //! after loading each tube takes its pictures back. One no tube has shown for a while (its tube
-//! was taken away by a command) is removed.
+//! was taken away by a command) is removed. Entity ids start over in every world, so whether an
+//! item is a picture is asked of the entity (`IS_PICTURE`), never of the id alone.
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -18,7 +19,10 @@ static ITEM_ENTITY: Entity = Entity::named("core:item");
 /// Marks a picture's stack, a different value for neighbors, so two pictures of the same item
 /// never merge into one the way dropped items do.
 static PICTURE: Component<u32> = Component::named("cogwork:tube_picture");
-/// The pictures in the world, by dimension and entity: the tick a tube last showed each.
+/// 1 on the dropped items that are pictures, saved with them.
+static IS_PICTURE: Component<u32> = Component::named("cogwork:is_picture");
+/// The pictures shown lately, by dimension and entity: the tick a tube last showed each. It
+/// outlives the world, so an entry may name an entity of another world.
 static PICTURES: Mutex<Option<HashMap<(u32, u64), u64>>> = Mutex::new(None);
 static NEXT_MARK: AtomicU32 = AtomicU32::new(0);
 /// Ticks a picture may go unshown before it is taken away.
@@ -26,8 +30,10 @@ const STALE: u64 = 40;
 
 pub fn register(r: &mut Registry) {
     r.stack_component(&PICTURE, 0);
+    r.entity_component(&IS_PICTURE, 0, component_flags::SAVE);
+    r.attach(&ITEM_ENTITY, &IS_PICTURE);
     r.intercept(&question::PICKUP_ITEM, |q| {
-        if is_picture(q.world().dimension(), q.query().other) {
+        if is_picture(&q.world(), q.query().other) {
             Verdict::Deny
         } else {
             Verdict::Abstain
@@ -41,8 +47,20 @@ fn pictures<R>(f: impl FnOnce(&mut HashMap<(u32, u64), u64>) -> R) -> R {
     f(guard.get_or_insert_with(HashMap::new))
 }
 
-fn is_picture(dim: u32, id: u64) -> bool {
-    pictures(|p| p.contains_key(&(dim, id)))
+fn is_picture(w: &World, id: u64) -> bool {
+    w.component(id, &IS_PICTURE).is_some_and(|&mark| mark != 0)
+}
+
+fn mark_picture(w: &World, id: u64) {
+    if let Some(mark) = w.component_mut(id, &IS_PICTURE) {
+        *mark = 1;
+    }
+}
+
+/// Whether a picture last shown at the tick `shown` is left over at `now`: unshown for `STALE`
+/// ticks, or shown at a time this world hasn't reached, so in another world.
+fn is_stale(shown: u64, now: u64) -> bool {
+    shown + STALE < now || shown > now
 }
 
 /// Removes the pictures of this region nobody has shown lately.
@@ -54,14 +72,16 @@ fn sweep(w: &World) {
     let dim = w.dimension();
     let stale: Vec<u64> = pictures(|p| {
         p.iter()
-            .filter(|((d, _), shown)| *d == dim && **shown + STALE < now)
+            .filter(|((d, _), shown)| *d == dim && is_stale(**shown, now))
             .map(|((_, id), _)| *id)
             .collect()
     });
     for id in stale {
         // Only what this region holds; another region sweeps its own.
         if w.entity(id).is_some() {
-            w.remove(id);
+            if is_picture(w, id) {
+                w.remove(id);
+            }
             pictures(|p| p.remove(&(dim, id)));
         }
     }
@@ -105,6 +125,8 @@ pub fn show(w: &World, pos: [i32; 3], m: &mut Motion, stack: ItemStack) {
         state = w.entity(m.visual);
     }
     let Some(mut st) = state else { return };
+    // Again on every show, for pictures saved before they were marked.
+    mark_picture(w, m.visual);
     pictures(|p| p.insert((w.dimension(), m.visual), w.time()));
     st.pos = at;
     st.vel = vel;
@@ -122,6 +144,7 @@ fn spawn(w: &World, at: [f64; 3], stack: ItemStack) -> u64 {
         .find(|id| !before.contains(id))
         .unwrap_or(0);
     if id != 0 {
+        mark_picture(w, id);
         pictures(|p| p.insert((w.dimension(), id), w.time()));
     }
     id
@@ -129,10 +152,10 @@ fn spawn(w: &World, at: [f64; 3], stack: ItemStack) -> u64 {
 
 /// Takes the picture `id` out of the world.
 pub fn remove(w: &World, id: u64) {
-    if id != 0 && is_picture(w.dimension(), id) {
+    if id != 0 && is_picture(w, id) {
         w.remove(id);
-        pictures(|p| p.remove(&(w.dimension(), id)));
     }
+    pictures(|p| p.remove(&(w.dimension(), id)));
 }
 
 /// Removes the pictures left where a tube was broken; the spilled stacks stay.
@@ -166,6 +189,13 @@ mod tests {
             to,
             ..Motion::default()
         }
+    }
+
+    #[test]
+    fn a_picture_unshown_or_from_another_world_is_stale() {
+        assert!(!is_stale(100, 100 + STALE), "shown lately");
+        assert!(is_stale(100, 101 + STALE), "unshown too long");
+        assert!(is_stale(5000, 20), "shown in a world further on in time");
     }
 
     #[test]

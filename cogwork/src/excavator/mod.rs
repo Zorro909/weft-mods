@@ -18,7 +18,8 @@ value! {
     /// An excavator's work. `lo` and `hi` are the corners of its frame; it mines inside it.
     /// `step` counts the frame blocks put up, `cursor` is the next block to mine, `spent` the
     /// energy put into the job under way, and `waited` the ticks the cursor's block has been
-    /// unloaded. `head` is where the drill's tip is, in the world.
+    /// unloaded. `head` is where the drill's tip is, in the world. `refused` counts the tries
+    /// running at breaking what stands where the next frame block goes that were refused.
     #[derive(Default)]
     pub struct Dig {
         pub stage: u32,
@@ -30,6 +31,8 @@ value! {
         pub spent: i64,
         pub head: [f32; 3],
         pub waited: u32,
+        // Last, so excavators saved before it load with it 0.
+        pub refused: u32,
     }
 }
 pub static DIG: Component<Dig> = Component::named("cogwork:dig");
@@ -49,8 +52,9 @@ pub mod status {
     pub const FULL: u32 = 4;
     pub const DONE: u32 = 5;
     pub const BLOCKED: u32 = 6;
-    pub const NAMES: [&str; 7] = [
-        "idle", "no_power", "frame", "mining", "full", "done", "blocked",
+    pub const JAMMED: u32 = 7;
+    pub const NAMES: [&str; 8] = [
+        "idle", "no_power", "frame", "mining", "full", "done", "blocked", "jammed",
     ];
 }
 

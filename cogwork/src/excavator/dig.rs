@@ -15,6 +15,10 @@ const SCAN: u32 = 512;
 const FLOOR_WAIT: u32 = 200;
 /// The deepest layer it mines, like the floor of vanilla's worlds.
 const FLOOR_Y: i32 = -64;
+/// Refused tries in a row at clearing the frame's way before the excavator is jammed, and the
+/// ticks between its tries while it is.
+const JAM_AFTER: u32 = 3;
+const JAM_RETRY: u64 = 100;
 
 pub fn tick(b: &mut SystemBatch<Dig>) {
     let w = b.world();
@@ -60,12 +64,11 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
             continue;
         }
         if !opens_into(state) {
-            if let Mined::Waiting(s) = mine_block(w, id, d, c, state) {
-                d.status = s;
-            }
+            clear_for_frame(w, id, d, c, state);
             return;
         }
         d.status = status::FRAME;
+        d.refused = 0;
         if pay(w, id, d, FRAME_COST) {
             w.set(c, GANTRY_FRAME.id());
             d.spent = 0;
@@ -80,6 +83,40 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
         d.hi[1] as f32,
         d.cursor[2] as f32 + 0.5,
     ];
+}
+
+/// Mines the block `state` at `c` out of the frame's way. While breaking it is refused (a
+/// protected area), the excavator is jammed and tries only now and then, rather than paying for
+/// the block every tick.
+fn clear_for_frame(w: &World, id: u64, d: &mut Dig, c: [i32; 3], state: u32) {
+    if !try_now(d.refused, d.spent, w.time()) {
+        d.status = status::JAMMED;
+        return;
+    }
+    d.status = match mine_block(w, id, d, c, state) {
+        Mined::Done => {
+            d.refused = 0;
+            status::FRAME
+        }
+        Mined::Skipped => {
+            d.refused += 1;
+            if d.refused >= JAM_AFTER {
+                status::JAMMED
+            } else {
+                status::FRAME
+            }
+        }
+        // Mining for the frame is still building it.
+        Mined::Waiting(status::MINING) => status::FRAME,
+        Mined::Waiting(s) => s,
+    };
+}
+
+/// Whether to try clearing the frame's way this tick, after `refused` refusals in a row and with
+/// `spent` paid into the try under way: always until it is jammed, then once every `JAM_RETRY`
+/// ticks, carrying a try on until it is paid for.
+fn try_now(refused: u32, spent: i64, now: u64) -> bool {
+    refused < JAM_AFTER || spent > 0 || now.is_multiple_of(JAM_RETRY)
 }
 
 /// Whether the frame leaves a block as it is: frame already, the excavator itself, or what
@@ -145,4 +182,25 @@ fn find_target(w: &World, d: &mut Dig) -> Option<[i32; 3]> {
 fn finish(d: &mut Dig) {
     d.stage = stage::DONE;
     d.status = status::DONE;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_frame_refused_again_and_again_is_tried_only_now_and_then() {
+        let tried = |refused| {
+            (1..=JAM_RETRY)
+                .filter(|&now| try_now(refused, 0, now))
+                .count()
+        };
+        assert_eq!(
+            tried(JAM_AFTER - 1),
+            JAM_RETRY as usize,
+            "every tick until jammed"
+        );
+        assert_eq!(tried(JAM_AFTER), 1, "then once a while");
+        assert!(try_now(JAM_AFTER, 300, 1), "a try under way goes on");
+    }
 }

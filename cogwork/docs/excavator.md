@@ -41,8 +41,10 @@ area.
 ## Building the frame
 
 The excavator puts up the frame one block a tick, from the bottom up, for 100 energy a block.
-Whatever stands in the way is mined first, like any other block. Gantry frame blocks drop
-nothing when broken, and can't be had as items.
+Whatever stands in the way is mined first, like any other block. When breaking it is refused
+three times in a row (a protected area, say), the excavator is jammed: it tries again only every
+5 seconds, so it doesn't pay for the block over and over, and goes on once the block is gone.
+Gantry frame blocks drop nothing when broken, and can't be had as items.
 
 ## Mining
 
@@ -86,6 +88,7 @@ The screen shows the stored energy, the area and its standby, and what it is doi
 | Mining layer *y* | |
 | Output full | Nothing beside it takes what it mined: connect a tube or a chest. |
 | Waiting for the area to load | Part of the area is not loaded. |
+| Jammed | Something where the frame goes may not be broken; clear it by hand. |
 | Finished | It reached the bottom. |
 
 The front of the block lights up while it builds or mines.
