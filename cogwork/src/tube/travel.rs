@@ -8,7 +8,7 @@ use weft_sdk::*;
 
 use super::route::{Route, route};
 use super::{BASE_SPEED, GILDED_SPEED, Motion, NONE, SLOTS, TUBE, Tube, free_slot, kind, visual};
-use crate::step;
+use crate::neighbor;
 
 /// An item at the far face of a tube, to go on through it.
 struct Handoff {
@@ -108,7 +108,11 @@ fn decide(w: &World, id: u64, pos: [i32; 3], tube: &mut Tube, slot: usize, stack
 
 /// Drops `stack` into the world out of the tube's `face` (its hub for `NONE`).
 fn spill(w: &World, pos: [i32; 3], face: u32, stack: ItemStack) {
-    let at = if face == NONE { pos } else { step(pos, face) };
+    let at = if face == NONE {
+        pos
+    } else {
+        neighbor(pos, face)
+    };
     w.spawn_item(block_center(at), stack);
 }
 
@@ -127,7 +131,7 @@ fn hand_on(
     };
     let m = tubes[h.tube].moving[h.slot];
     let stack = w.inventory(id).get(h.slot as u32);
-    let next = step(pos, m.to);
+    let next = neighbor(pos, m.to);
     let other = w.block_entity(next);
     if let Some(&j) = index.get(&other) {
         let moved = into_tube(w, next, other, &mut tubes[j], m, stack);

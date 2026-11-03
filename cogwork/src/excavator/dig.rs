@@ -4,7 +4,7 @@ use weft_sdk::*;
 
 use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
 use super::power::{hold, pay};
-use super::{Dig, EXCAVATOR, GANTRY_FRAME, area, rig, stage, status};
+use super::{Dig, EXCAVATOR, GANTRY_FRAME, Status, area, rig, stage};
 use crate::harvest::opens_into;
 
 /// Energy to put up one block of frame.
@@ -40,7 +40,7 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
             _ => {}
         }
         rig::update(&w, id, d);
-        let working = matches!(d.status, status::FRAME | status::MINING);
+        let working = matches!(Status::from_raw(d.status), Status::Frame | Status::Mining);
         crate::machine::show_working(&w, pos, working);
     }
 }
@@ -56,7 +56,7 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
     let cells = area::frame_cells(d.lo, d.hi);
     while let Some(&c) = cells.get(d.step as usize) {
         let Some(state) = w.get_loaded(c) else {
-            d.status = status::BLOCKED;
+            d.status = Status::Blocked as u32;
             return;
         };
         if frame_passes_over(state) {
@@ -67,7 +67,7 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
             clear_for_frame(w, id, d, c, state);
             return;
         }
-        d.status = status::FRAME;
+        d.status = Status::Frame as u32;
         d.refused = 0;
         if pay(w, id, d, FRAME_COST) {
             w.set(c, GANTRY_FRAME.id());
@@ -90,26 +90,27 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
 /// the block every tick.
 fn clear_for_frame(w: &World, id: u64, d: &mut Dig, c: [i32; 3], state: u32) {
     if !try_now(d.refused, d.spent, w.time()) {
-        d.status = status::JAMMED;
+        d.status = Status::Jammed as u32;
         return;
     }
-    d.status = match mine_block(w, id, d, c, state) {
+    let status = match mine_block(w, id, d, c, state) {
         Mined::Done => {
             d.refused = 0;
-            status::FRAME
+            Status::Frame
         }
         Mined::Skipped => {
             d.refused += 1;
             if d.refused >= JAM_AFTER {
-                status::JAMMED
+                Status::Jammed
             } else {
-                status::FRAME
+                Status::Frame
             }
         }
         // Mining for the frame is still building it.
-        Mined::Waiting(status::MINING) => status::FRAME,
+        Mined::Waiting(Status::Mining) => Status::Frame,
         Mined::Waiting(s) => s,
     };
+    d.status = status as u32;
 }
 
 /// Whether to try clearing the frame's way this tick, after `refused` refusals in a row and with
@@ -147,7 +148,7 @@ fn mine_next(w: &World, id: u64, d: &mut Dig) {
         Mined::Skipped => d.cursor = area::next(d.lo, d.hi, target),
         Mined::Waiting(s) => {
             d.head = progress_point(d.lo, target, d.spent, cost);
-            d.status = s;
+            d.status = s as u32;
         }
     }
 }
@@ -162,7 +163,7 @@ fn find_target(w: &World, d: &mut Dig) -> Option<[i32; 3]> {
             return None;
         }
         let Some(state) = w.get_loaded(c) else {
-            d.status = status::BLOCKED;
+            d.status = Status::Blocked as u32;
             d.waited += 1;
             if d.waited > FLOOR_WAIT {
                 finish(d);
@@ -175,13 +176,13 @@ fn find_target(w: &World, d: &mut Dig) -> Option<[i32; 3]> {
         }
         d.cursor = area::next(d.lo, d.hi, c);
     }
-    d.status = status::MINING;
+    d.status = Status::Mining as u32;
     None
 }
 
 fn finish(d: &mut Dig) {
     d.stage = stage::DONE;
-    d.status = status::DONE;
+    d.status = Status::Done as u32;
 }
 
 #[cfg(test)]

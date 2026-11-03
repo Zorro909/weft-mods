@@ -44,18 +44,52 @@ pub mod stage {
     pub const DONE: u32 = 3;
 }
 
-/// What the screen says, by `cogwork.excavator.<name>`; 0 is idle, before it starts.
-pub mod status {
-    pub const NO_POWER: u32 = 1;
-    pub const FRAME: u32 = 2;
-    pub const MINING: u32 = 3;
-    pub const FULL: u32 = 4;
-    pub const DONE: u32 = 5;
-    pub const BLOCKED: u32 = 6;
-    pub const JAMMED: u32 = 7;
-    pub const NAMES: [&str; 8] = [
-        "idle", "no_power", "frame", "mining", "full", "done", "blocked", "jammed",
+/// What the excavator is doing, as its screen says. Kept in `Dig::status` as its number, so
+/// the order is part of the save format: new ones go last, in `ALL` too.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Status {
+    Idle,
+    NoPower,
+    Frame,
+    Mining,
+    Full,
+    Done,
+    Blocked,
+    Jammed,
+}
+
+impl Status {
+    const ALL: [Status; 8] = [
+        Status::Idle,
+        Status::NoPower,
+        Status::Frame,
+        Status::Mining,
+        Status::Full,
+        Status::Done,
+        Status::Blocked,
+        Status::Jammed,
     ];
+
+    /// The status kept as `raw`; one this version doesn't know reads as `Idle`.
+    pub fn from_raw(raw: u32) -> Status {
+        Status::ALL
+            .get(raw as usize)
+            .copied()
+            .unwrap_or(Status::Idle)
+    }
+
+    fn key(self) -> &'static str {
+        match self {
+            Status::Idle => "cogwork.excavator.idle",
+            Status::NoPower => "cogwork.excavator.no_power",
+            Status::Frame => "cogwork.excavator.frame",
+            Status::Mining => "cogwork.excavator.mining",
+            Status::Full => "cogwork.excavator.full",
+            Status::Done => "cogwork.excavator.done",
+            Status::Blocked => "cogwork.excavator.blocked",
+            Status::Jammed => "cogwork.excavator.jammed",
+        }
+    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -98,9 +132,8 @@ fn screen(ui: &mut Ui) {
                 crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let d = c.menu_component(&DIG).unwrap_or_default();
-                    let name = status::NAMES.get(d.status as usize).unwrap_or(&"idle");
                     out.set(
-                        &format!("cogwork.excavator.{name}"),
+                        Status::from_raw(d.status).key(),
                         &[
                             Arg::Int(d.cursor[1] as i64),
                             Arg::Int(power::standby(d.lo, d.hi)),
@@ -131,10 +164,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_status_has_a_name() {
-        for name in status::NAMES {
-            let key = format!("cogwork.excavator.{name}");
-            assert!(crate::translated(&key), "{key} in every lang file");
+    fn every_status_is_kept_as_its_place_and_has_a_name() {
+        for (i, status) in Status::ALL.into_iter().enumerate() {
+            assert_eq!(Status::from_raw(i as u32), status, "{status:?} read back");
+            assert_eq!(status as usize, i, "{status:?} in order");
+            assert!(
+                crate::translated(status.key()),
+                "{status:?} in every lang file"
+            );
         }
+        assert_eq!(Status::from_raw(99), Status::Idle, "unknown is idle");
     }
 }

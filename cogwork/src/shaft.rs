@@ -46,7 +46,7 @@ fn refresh(w: &World, pos: [i32; 3]) {
     }
     let mut next = state;
     for d in Dir::ALL {
-        let at = crate::step(pos, d.face());
+        let at = crate::neighbor(pos, d.face());
         let other = w.block_entity(at);
         let joins = CONDUCTOR.on_block(w.get(at)) || (other != 0 && w.energy(other).is_some());
         next = state_with(next, d.name(), if joins { "true" } else { "false" }).unwrap_or(next);

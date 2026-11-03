@@ -4,7 +4,7 @@
 
 use weft_sdk::*;
 
-use super::{Dig, status};
+use super::{Dig, Status};
 
 /// Standby energy per tick: a base, and one more per four blocks of area (9 by 9: 30).
 const STANDBY_BASE: i64 = 10;
@@ -30,7 +30,7 @@ pub fn hold(w: &World, id: u64, d: &mut Dig) -> bool {
     let drawn = e.stored.min(need);
     e.stored -= drawn;
     if drawn < need {
-        d.status = status::NO_POWER;
+        d.status = Status::NoPower as u32;
         return false;
     }
     true
@@ -44,7 +44,7 @@ pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
         return true;
     }
     if drawn == 0 {
-        d.status = status::NO_POWER;
+        d.status = Status::NoPower as u32;
     }
     false
 }

@@ -18,7 +18,15 @@ value! {
     /// ticks of fuel left burning out of `burn_max`, ticks into the piston's stroke, and the
     /// piston entity.
     #[derive(Default)]
-    pub struct Engine { pub kind: u32, pub heat: u32, pub overheated: u32, pub burn: u32, pub burn_max: u32, pub stroke: u32, pub piston: u64 }
+    pub struct Engine {
+        pub kind: u32,
+        pub heat: u32,
+        pub overheated: u32,
+        pub burn: u32,
+        pub burn_max: u32,
+        pub stroke: u32,
+        pub piston: u64
+    }
 }
 pub static ENGINE: Component<Engine> = Component::named("cogwork:engine");
 

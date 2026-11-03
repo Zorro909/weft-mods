@@ -45,8 +45,9 @@ fn init(r: &mut Registry) {
     films::register(r);
 }
 
-/// The block one face further.
-pub fn step(pos: [i32; 3], face: u32) -> [i32; 3] {
+/// The position of the block next to `pos` across its face `face` (in `Dir` order). Tubes,
+/// engines, shafts and machines all hand things to their neighbors through it.
+pub fn neighbor(pos: [i32; 3], face: u32) -> [i32; 3] {
     let o = Dir::from_face(face).offset();
     [pos[0] + o[0], pos[1] + o[1], pos[2] + o[2]]
 }

@@ -36,14 +36,43 @@ const NOTHING: &str = "cogwork:nothing";
 /// The player's inventory width in GUI pixels.
 const INVENTORY_WIDTH: f32 = 9.0 * SLOT;
 
-/// What the screen says, by `cogwork.bench.<name>`.
-mod status {
-    pub const NO_RECIPE: u32 = 0;
-    pub const MISSING: u32 = 1;
-    pub const FULL: u32 = 2;
-    pub const NO_POWER: u32 = 3;
-    pub const WORKING: u32 = 4;
-    pub const NAMES: [&str; 5] = ["no_recipe", "missing", "full", "no_power", "working"];
+/// What the bench is doing, as its screen says. Kept in `Bench::status` as its number, so the
+/// order is part of the save format: new ones go last.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Status {
+    NoRecipe,
+    Missing,
+    Full,
+    NoPower,
+    Working,
+}
+
+impl Status {
+    const ALL: [Status; 5] = [
+        Status::NoRecipe,
+        Status::Missing,
+        Status::Full,
+        Status::NoPower,
+        Status::Working,
+    ];
+
+    /// The status kept as `raw`; one this version doesn't know reads as `NoRecipe`.
+    fn from_raw(raw: u32) -> Status {
+        Status::ALL
+            .get(raw as usize)
+            .copied()
+            .unwrap_or(Status::NoRecipe)
+    }
+
+    fn key(self) -> &'static str {
+        match self {
+            Status::NoRecipe => "cogwork.bench.no_recipe",
+            Status::Missing => "cogwork.bench.missing",
+            Status::Full => "cogwork.bench.full",
+            Status::NoPower => "cogwork.bench.no_power",
+            Status::Working => "cogwork.bench.working",
+        }
+    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -75,6 +104,26 @@ pub fn register(r: &mut Registry) {
         .screen(screen);
 }
 
+/// The bench's screen:
+///
+/// ```text
+/// +--------------------------------------+
+/// | Assembly Bench                       |
+/// | [ ][ ][ ]                            |
+/// | [ ][ ][ ]  ==>  [ ][ ][ ]            |  pattern, craft progress, output
+/// | [ ][ ][ ]                            |
+/// | [#####.....]                         |  stored energy
+/// | 1200 / 4000 energy                   |
+/// | Crafting                             |  status
+/// |                                      |
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |  the player's inventory
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |
+/// +--------------------------------------+
+/// ```
+///
+/// A pattern cell shows its ghost item until it holds items.
 fn screen(ui: &mut Ui) {
     ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
         ui.title();
@@ -97,8 +146,7 @@ fn screen(ui: &mut Ui) {
             crate::machine::power_bar(ui);
             ui.text_bind_styled(S::col().no_wrap(), |c, out| {
                 let b = c.menu_component(&BENCH).unwrap_or_default();
-                let name = status::NAMES.get(b.status as usize).unwrap_or(&"no_recipe");
-                out.set(&format!("cogwork.bench.{name}"), &[]);
+                out.set(Status::from_raw(b.status).key(), &[]);
             });
         });
         ui.player_inventory(true);
@@ -119,11 +167,13 @@ fn cell(ui: &mut Ui, i: u32) {
 
 /// Sets the ghost of `cell` when `owner` is a bench.
 pub fn set_ghost(w: &World, owner: u64, cell: u32, item: u32) {
-    if let Some(b) = w.component_mut(owner, &BENCH)
-        && let Some(ghost) = b.pattern.get_mut(cell as usize)
-    {
-        *ghost = item;
-    }
+    let Some(b) = w.component_mut(owner, &BENCH) else {
+        return;
+    };
+    let Some(ghost) = b.pattern.get_mut(cell as usize) else {
+        return;
+    };
+    *ghost = item;
 }
 
 #[cfg(test)]
@@ -131,10 +181,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_status_has_a_name() {
-        for name in status::NAMES {
-            let key = format!("cogwork.bench.{name}");
-            assert!(crate::translated(&key), "{key} in every lang file");
+    fn every_status_is_kept_as_its_place_and_has_a_name() {
+        for (i, status) in Status::ALL.into_iter().enumerate() {
+            assert_eq!(Status::from_raw(i as u32), status, "{status:?} read back");
+            assert_eq!(status as usize, i, "{status:?} in order");
+            assert!(
+                crate::translated(status.key()),
+                "{status:?} in every lang file"
+            );
         }
+        assert_eq!(
+            Status::from_raw(99),
+            Status::NoRecipe,
+            "unknown is no recipe"
+        );
     }
 }

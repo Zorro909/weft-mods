@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::power::{pay, travel};
-use super::{Dig, EXCAVATOR, GANTRY_FRAME, status};
+use super::{Dig, EXCAVATOR, GANTRY_FRAME, Status};
 use crate::harvest::{Harvest, breakable, cost, harvest};
 
 /// Energy per block: a base and as much again per point of hardness (stone 1.5: 1000).
@@ -18,7 +18,7 @@ pub enum Mined {
     /// Nothing to mine there after all, or someone wouldn't let it.
     Skipped,
     /// Not yet: the status says why.
-    Waiting(u32),
+    Waiting(Status),
 }
 
 /// Whether the drill stops for a block: not air or liquid, breakable, and not its own frame.
@@ -57,11 +57,12 @@ pub fn drill_to(w: &World, id: u64, d: &mut Dig, goal: [f32; 3]) -> bool {
         d.head = goal;
         return true;
     }
-    d.status = if step > 0.0 {
-        status::MINING
+    let status = if step > 0.0 {
+        Status::Mining
     } else {
-        status::NO_POWER
+        Status::NoPower
     };
+    d.status = status as u32;
     for (head, gap) in d.head.iter_mut().zip(gap) {
         *head += gap / length * step;
     }
@@ -73,13 +74,13 @@ pub fn mine_block(w: &World, id: u64, d: &mut Dig, c: [i32; 3], state: u32) -> M
     if !worth_mining(state) {
         return Mined::Skipped;
     }
-    d.status = status::MINING;
+    d.status = Status::Mining as u32;
     if !pay(w, id, d, block_cost(state)) {
-        return Mined::Waiting(d.status);
+        return Mined::Waiting(Status::from_raw(d.status));
     }
     match harvest(w, id, c, state) {
         // Paid for already: it stays paid until there is room.
-        Harvest::Full => Mined::Waiting(status::FULL),
+        Harvest::Full => Mined::Waiting(Status::Full),
         Harvest::Refused => {
             d.spent = 0;
             Mined::Skipped

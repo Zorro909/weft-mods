@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, NONE, TUBE, kind};
-use crate::step;
+use crate::neighbor;
 
 pub enum Route {
     /// On through this face.
@@ -85,7 +85,7 @@ fn kind_allows(
 /// Whether the neighbor through `face` takes the item: any tube (a full one makes it wait at
 /// the face), or a machine with room. Timber tubes only feed tubes, never back into machines.
 fn takes(w: &World, pos: [i32; 3], face: u32, tube_kind: u32, stack: ItemStack) -> bool {
-    let other = w.block_entity(step(pos, face));
+    let other = w.block_entity(neighbor(pos, face));
     if other == 0 {
         return false;
     }

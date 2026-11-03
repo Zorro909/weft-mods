@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{BASE_SPEED, Motion, NONE, TUBE, Tube, free_slot};
-use crate::step;
+use crate::neighbor;
 
 /// Ticks between two pulls of a timber tube: an engine's stroke.
 const PULL_EVERY: u32 = 18;
@@ -62,7 +62,7 @@ fn source(w: &World, pos: [i32; 3], face: u32) -> Option<u64> {
     if !super::connects_to_tube(w, pos, face) {
         return None;
     }
-    let other = w.block_entity(step(pos, face));
+    let other = w.block_entity(neighbor(pos, face));
     (other != 0 && w.component(other, &TUBE).is_none()).then_some(other)
 }
 

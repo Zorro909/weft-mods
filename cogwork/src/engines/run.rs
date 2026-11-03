@@ -81,7 +81,7 @@ fn push(w: &World, id: u64, pos: [i32; 3]) {
     let Some(out) = model::output(w, pos) else {
         return;
     };
-    let target = w.block_entity(crate::step(pos, out.face()));
+    let target = w.block_entity(crate::neighbor(pos, out.face()));
     let stored = w.energy(id).map_or(0, |e| e.stored);
     if target == 0 || target == id || stored == 0 {
         return;

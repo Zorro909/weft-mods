@@ -1,24 +1,34 @@
 //! A bench's tick: what its pattern makes, paid for with energy once every cell holds its item,
-//! one item of each cell used up into the result.
+//! then made, one item of each cell used up, as soon as the output has room for all of it.
+
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
 
 use base_api::CRAFTING;
 use weft_sdk::*;
 
-use super::{Bench, CRAFT_COST, cells, status};
-use crate::store::insert_into;
+use super::{Bench, CRAFT_COST, Status, cells};
+use crate::store::{insert_all, insert_into};
 
 /// The most energy a bench puts into a craft per tick: one takes at least 8 ticks.
 const DRAW_RATE: i64 = 30;
+
+/// What each pattern of ghosts makes, worked out the first time a bench has it: recipes don't
+/// change while the game runs.
+static MADE_BY: LazyLock<Mutex<HashMap<[u32; 9], ItemStack>>> = LazyLock::new(Default::default);
 
 pub fn tick(b: &mut SystemBatch<Bench>) {
     let w = b.world();
     for (id, bench, _) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
-        let pos = st.block_pos();
-        evict_misplaced(&w, id, pos, &bench.pattern);
-        bench.status = work(&w, id, pos, bench);
+        let status = if evict_misplaced(&w, id, &bench.pattern) {
+            work(&w, id, bench)
+        } else {
+            Status::Full
+        };
+        bench.status = status as u32;
         bench.filled = filled(&grid(&w, id));
-        crate::machine::show_working(&w, pos, bench.status == status::WORKING);
+        crate::machine::show_working(&w, st.block_pos(), status == Status::Working);
     }
 }
 
@@ -34,70 +44,73 @@ fn filled(cells: &[ItemStack]) -> u32 {
         .fold(0, |bits, i| bits | 1 << i)
 }
 
-/// Moves what the pattern no longer asks for out of its cells, into the output.
-fn evict_misplaced(w: &World, id: u64, pos: [i32; 3], pattern: &[u32; 9]) {
+/// Moves what the pattern no longer asks for out of its cells, into the output; false while
+/// some of it has no room there and stays in its cell.
+fn evict_misplaced(w: &World, id: u64, pattern: &[u32; 9]) -> bool {
+    let g = w.inventory(id).group("grid");
+    let mut all_out = true;
     for i in cells::misplaced(pattern, &grid(w, id)) {
-        let g = w.inventory(id).group("grid");
-        put_out(w, id, pos, g.get(i as u32));
-        g.set(i as u32, ItemStack::EMPTY);
+        let left = insert_into(w.inventory(id).group("output"), g.get(i as u32), false);
+        g.set(i as u32, left);
+        all_out &= left.is_empty();
     }
+    all_out
 }
 
-/// Works on the next craft; returns the bench's status.
-fn work(w: &World, id: u64, pos: [i32; 3], bench: &mut Bench) -> u32 {
-    let pattern: Vec<ItemStack> = bench
-        .pattern
-        .iter()
-        .map(|&item| {
-            if item == 0 {
-                ItemStack::EMPTY
-            } else {
-                ItemStack::new(item, 1)
-            }
-        })
-        .collect();
-    let result = recipe_match(&CRAFTING, &pattern, 3, 3);
+/// Works on the next craft: pays for it, then makes it once the output has room.
+fn work(w: &World, id: u64, bench: &mut Bench) -> Status {
+    let result = made_by(&bench.pattern);
     if result.is_empty() {
         bench.spent = 0;
-        return status::NO_RECIPE;
+        return Status::NoRecipe;
     }
     let cells = grid(w, id);
     if !cells::complete(&bench.pattern, &cells) {
-        return status::MISSING;
-    }
-    if !insert_into(w.inventory(id).group("output"), result, true).is_empty() {
-        return status::FULL;
+        return Status::Missing;
     }
     let drawn = crate::machine::draw(w, id, &mut bench.spent, CRAFT_COST, DRAW_RATE);
     if bench.spent < CRAFT_COST {
         return if drawn > 0 {
-            status::WORKING
+            Status::Working
         } else {
-            status::NO_POWER
+            Status::NoPower
         };
     }
-    let g = w.inventory(id).group("grid");
-    for (i, used) in cells.iter().enumerate().filter(|(_, s)| !s.is_empty()) {
-        g.set(i as u32, used.shrink(1));
-        // What a used-up ingredient leaves behind (a bucket of a water bucket).
-        if let Some(left) = REMAINDER.on_item(used.item) {
-            put_out(w, id, pos, ItemStack::new(left.0, 1));
-        }
+    // Paid for: it waits with its arrow full until the output has room.
+    let mut made = vec![result];
+    made.extend(cells.iter().filter_map(|&used| left_behind(used)));
+    if !insert_all(w.inventory(id).group("output"), &made) {
+        return Status::Full;
     }
-    put_out(w, id, pos, result);
+    use_up(w, id, &cells);
     bench.spent = 0;
-    status::WORKING
+    Status::Working
 }
 
-/// Puts `stack` into the output or, with no room there, onto the bench.
-fn put_out(w: &World, id: u64, pos: [i32; 3], stack: ItemStack) {
-    let rest = insert_into(w.inventory(id).group("output"), stack, false);
-    if !rest.is_empty() {
-        let top = [
-            pos[0] as f64 + 0.5,
-            pos[1] as f64 + 1.1,
-            pos[2] as f64 + 0.5,
-        ];
-        w.spawn_item(top, rest);
+/// What the pattern of ghosts `pattern` makes; empty for no recipe.
+fn made_by(pattern: &[u32; 9]) -> ItemStack {
+    let mut known = MADE_BY.lock().unwrap_or_else(|e| e.into_inner());
+    *known.entry(*pattern).or_insert_with(|| {
+        let grid = pattern.map(|item| match item {
+            0 => ItemStack::EMPTY,
+            _ => ItemStack::new(item, 1),
+        });
+        recipe_match(&CRAFTING, &grid, 3, 3)
+    })
+}
+
+/// What an ingredient leaves behind when used up: a bucket of a water bucket.
+fn left_behind(used: ItemStack) -> Option<ItemStack> {
+    let left = REMAINDER.on_item(used.item).filter(|_| !used.is_empty())?;
+    Some(ItemStack::new(left.0, 1))
+}
+
+/// Takes one item out of every cell.
+fn use_up(w: &World, id: u64, cells: &[ItemStack]) {
+    let g = w.inventory(id).group("grid");
+    for (i, used) in (0..).zip(cells) {
+        if !used.is_empty() {
+            g.set(i, used.shrink(1));
+        }
     }
 }

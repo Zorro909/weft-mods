@@ -85,59 +85,77 @@ pub fn insert(w: &World, owner: u64, stack: ItemStack, simulate: bool) -> ItemSt
 }
 
 fn fill_span(span: &Span, stack: ItemStack, simulate: bool) -> ItemStack {
-    let mut left = stack.count;
-    // Onto stacks of the same item first, then into empty slots.
-    for into_empty in [false, true] {
-        for i in 0..span.len() {
-            if left > 0 {
-                left -= fill(
-                    span,
-                    i,
-                    ItemStack {
-                        count: left,
-                        ..stack
-                    },
-                    into_empty,
-                    simulate,
-                );
-            }
-        }
+    let mut slots = read(span);
+    let left = fill_slots(&mut slots, stack, max_stack);
+    if !simulate {
+        write(span, &slots);
     }
-    if left == 0 {
-        ItemStack::EMPTY
-    } else {
-        ItemStack {
-            count: left,
-            ..stack
+    left
+}
+
+fn read(span: &Span) -> Vec<ItemStack> {
+    (0..span.len()).map(|i| span.get(i)).collect()
+}
+
+/// Sets the slots of `span` that `slots` changed.
+fn write(span: &Span, slots: &[ItemStack]) {
+    for (i, &slot) in (0..).zip(slots) {
+        if span.get(i) != slot {
+            span.set(i, slot);
         }
     }
 }
 
-/// How many of `stack` slot `i` takes on this pass.
-fn fill(span: &Span, i: u32, stack: ItemStack, into_empty: bool, simulate: bool) -> u32 {
-    let have = span.get(i);
-    let held = match (have.is_empty(), into_empty) {
-        (true, true) => 0,
-        (false, false) if have.stacks_with(&stack) => have.count,
-        _ => return 0,
-    };
-    let moved = max_stack(stack.item).saturating_sub(held).min(stack.count);
-    if moved > 0 && !simulate {
-        span.set(
-            i,
-            ItemStack {
-                count: held + moved,
-                ..stack
-            },
-        );
+/// Puts `stack` into `slots`, onto stacks it joins first and then into empty ones, at most
+/// `cap(item)` to a slot; returns what didn't fit.
+fn fill_slots(slots: &mut [ItemStack], stack: ItemStack, cap: impl Fn(u32) -> u32) -> ItemStack {
+    let mut left = stack;
+    for into_empty in [false, true] {
+        for slot in slots.iter_mut() {
+            let takes = match into_empty {
+                true => slot.is_empty(),
+                false => !slot.is_empty() && slot.stacks_with(&left),
+            };
+            if left.is_empty() || !takes {
+                continue;
+            }
+            let held = if slot.is_empty() { 0 } else { slot.count };
+            let moved = cap(left.item).saturating_sub(held).min(left.count);
+            if moved > 0 {
+                *slot = ItemStack {
+                    count: held + moved,
+                    ..left
+                };
+                left = left.shrink(moved);
+            }
+        }
     }
-    moved
+    left
 }
 
 /// Puts `stack` into the slots of `group` and returns what didn't fit; with `simulate` nothing
 /// changes.
 pub fn insert_into(group: InventoryGroup, stack: ItemStack, simulate: bool) -> ItemStack {
     fill_span(&Span::Group(group), stack, simulate)
+}
+
+/// Puts every one of `stacks` into `group`, or none of them when they don't all fit together;
+/// returns whether they went in.
+pub fn insert_all(group: InventoryGroup, stacks: &[ItemStack]) -> bool {
+    let span = Span::Group(group);
+    let mut slots = read(&span);
+    let all_fit = fill_all(&mut slots, stacks, max_stack);
+    if all_fit {
+        write(&span, &slots);
+    }
+    all_fit
+}
+
+/// Puts `stacks` into `slots` one after another; false when they don't all fit.
+fn fill_all(slots: &mut [ItemStack], stacks: &[ItemStack], cap: impl Fn(u32) -> u32) -> bool {
+    stacks
+        .iter()
+        .all(|&stack| fill_slots(slots, stack, &cap).is_empty())
 }
 
 /// Whether any of `stack` would go into `owner`.
@@ -179,7 +197,7 @@ pub fn eject(w: &World, id: u64, pos: [i32; 3]) {
     };
     let mut stack = out.get(slot);
     for face in 0..6 {
-        let other = w.block_entity(crate::step(pos, face));
+        let other = w.block_entity(crate::neighbor(pos, face));
         if other == 0 || other == id {
             continue;
         }
@@ -193,4 +211,53 @@ pub fn eject(w: &World, id: u64, pos: [i32; 3]) {
         }
     }
     out.set(slot, stack);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PLANK: u32 = 7;
+    const BUCKET: u32 = 9;
+
+    /// Planks stack to 64, buckets not at all.
+    fn cap(item: u32) -> u32 {
+        if item == BUCKET { 1 } else { 64 }
+    }
+
+    #[test]
+    fn items_join_their_stacks_before_taking_empty_slots() {
+        let mut slots = [ItemStack::EMPTY, ItemStack::new(PLANK, 60)];
+        let left = fill_slots(&mut slots, ItemStack::new(PLANK, 10), cap);
+        assert_eq!(slots[1].count, 64, "the stack filled up first");
+        assert_eq!(
+            slots[0],
+            ItemStack::new(PLANK, 6),
+            "the rest in the empty slot"
+        );
+        assert!(left.is_empty(), "all of it went in");
+    }
+
+    #[test]
+    fn what_has_no_room_is_handed_back() {
+        let mut slots = [ItemStack::new(BUCKET, 1), ItemStack::EMPTY];
+        let left = fill_slots(&mut slots, ItemStack::new(BUCKET, 3), cap);
+        assert_eq!(
+            slots[1],
+            ItemStack::new(BUCKET, 1),
+            "one into the empty slot"
+        );
+        assert_eq!(left, ItemStack::new(BUCKET, 2), "two left over");
+    }
+
+    #[test]
+    fn stacks_that_each_fit_alone_may_not_fit_together() {
+        let output = [ItemStack::new(PLANK, 1), ItemStack::EMPTY];
+        let made = [ItemStack::new(BUCKET, 1), ItemStack::new(BUCKET, 1)];
+        assert!(
+            fill_all(&mut output.clone(), &made[..1], cap),
+            "one bucket fits"
+        );
+        assert!(!fill_all(&mut output.clone(), &made, cap), "two don't");
+    }
 }

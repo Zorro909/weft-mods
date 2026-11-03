@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use super::{LEVELER, Level, stage, status};
+use super::{LEVELER, Level, Status, stage};
 use crate::harvest::{Harvest, breakable, cost, harvest, opens_into};
 
 /// Layers cleared from the leveler's height up, and filled below it.
@@ -37,7 +37,7 @@ pub fn tick(b: &mut SystemBatch<Level>) {
             stage::FILL => fill_next(&w, id, l),
             _ => {}
         }
-        let working = matches!(l.status, status::CLEARING | status::FILLING);
+        let working = matches!(Status::from_raw(l.status), Status::Clearing | Status::Filling);
         crate::machine::show_working(&w, pos, working);
     }
 }
@@ -66,13 +66,13 @@ fn clear_next(w: &World, id: u64, l: &mut Level) {
     let Some((c, state)) = find(w, l, |s| breakable(s) && !LEVELER.is(s)) else {
         return;
     };
-    l.status = status::CLEARING;
+    l.status = Status::Clearing as u32;
     if !pay(w, id, l, cost(state, CLEAR_BASE, CLEAR_PER_HARDNESS)) {
         return;
     }
     match harvest(w, id, c, state) {
         // Paid for already: it stays paid until there is room.
-        Harvest::Full => l.status = status::FULL,
+        Harvest::Full => l.status = Status::Full as u32,
         Harvest::Done | Harvest::Refused => {
             l.spent = 0;
             l.cursor = next(l.lo, l.hi, c, -1);
@@ -89,10 +89,10 @@ fn fill_next(w: &World, id: u64, l: &mut Level) {
     let Some((slot, block)) =
         (0..stock.len()).find_map(|i| fill_block(stock.get(i)).map(|b| (i, b)))
     else {
-        l.status = status::NO_BLOCKS;
+        l.status = Status::NoBlocks as u32;
         return;
     };
-    l.status = status::FILLING;
+    l.status = Status::Filling as u32;
     if !pay(w, id, l, FILL_COST) {
         return;
     }
@@ -122,11 +122,11 @@ fn find(w: &World, l: &mut Level, wanted: impl Fn(u32) -> bool) -> Option<([i32;
         }
         if l.stage == stage::FILL && c[1] >= level {
             l.stage = stage::DONE;
-            l.status = status::DONE;
+            l.status = Status::Done as u32;
             return None;
         }
         let Some(state) = w.get_loaded(c) else {
-            l.status = status::BLOCKED;
+            l.status = Status::Blocked as u32;
             return None;
         };
         if wanted(state) {
@@ -144,7 +144,7 @@ fn pay(w: &World, id: u64, l: &mut Level, cost: i64) -> bool {
         return true;
     }
     if drawn == 0 {
-        l.status = status::NO_POWER;
+        l.status = Status::NoPower as u32;
     }
     false
 }

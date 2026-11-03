@@ -6,7 +6,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
-use crate::step;
+use crate::neighbor;
 
 /// The tube's walls, in texels: 8 wide in the middle of the block.
 const LO: f32 = 4.0;
@@ -137,7 +137,7 @@ fn joined(w: &World, pos: [i32; 3], state: u32) -> u32 {
 /// Whether the tube `state` at `pos` reaches toward `d`: to any other tube but two timber tubes,
 /// and to anything holding items.
 fn joins(w: &World, pos: [i32; 3], state: u32, d: Dir) -> bool {
-    let at = step(pos, d.face());
+    let at = neighbor(pos, d.face());
     let other = w.get(at);
     if TUBES.on_block(other) {
         return !(TIMBER_TUBE.is(state) && TIMBER_TUBE.is(other));
