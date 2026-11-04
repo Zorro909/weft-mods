@@ -47,6 +47,7 @@ cogwork.ghost = {0}
 cogwork.energy = {color:dim}{0} / {1} energy{/}
 cogwork.engine.heat = Heat {0}%
 cogwork.engine.overheated = {#ff5040}Overheated: cooling down{/}
+cogwork.engine.no_signal = Needs a redstone signal
 cogwork.color.green = Green
 cogwork.color.yellow = Yellow
 cogwork.color.black = Black

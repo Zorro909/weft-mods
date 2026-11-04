@@ -26,7 +26,7 @@ pub fn block<'a>(b: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<'a> {
 
 /// The way the front of the machine at `pos` faces.
 pub fn front(w: &World, pos: Pos) -> Dir {
-    w.prop(pos.into(), "facing")
+    w.prop(pos, "facing")
         .and_then(Dir::from_name)
         .unwrap_or(Dir::North)
 }
@@ -34,17 +34,15 @@ pub fn front(w: &World, pos: Pos) -> Dir {
 /// Lights the front of the machine at `pos` while it works.
 pub fn show_working(w: &World, pos: Pos, working: bool) {
     let value = if working { "true" } else { "false" };
-    if w.prop(pos.into(), "working")
-        .is_some_and(|now| now != value)
-    {
-        w.set_prop(pos.into(), "working", value);
+    if w.prop(pos, "working").is_some_and(|now| now != value) {
+        w.prop_set(pos, "working", value);
     }
 }
 
 /// Puts up to `rate` of the machine `id`'s stored energy into a job of `cost`, of which `spent`
 /// is paid already; returns how much it put in.
 pub fn draw(w: &World, id: u64, spent: &mut i64, cost: i64, rate: i64) -> i64 {
-    let Some(e) = w.energy_mut(id) else {
+    let Some(e) = w.component_mut(id, &ENERGY) else {
         return 0;
     };
     let drawn = e.stored.min(rate).min((cost - *spent).max(0));

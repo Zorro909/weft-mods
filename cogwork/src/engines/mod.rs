@@ -13,12 +13,14 @@ use weft_sdk::*;
 
 pub static SPRING_ENGINE: Block = Block::named("spring_engine");
 pub static EMBER_ENGINE: Block = Block::named("ember_engine");
+static SPRING_MENU: Menu = Menu::named("spring_engine");
 static EMBER_MENU: Menu = Menu::named("ember_engine");
 
 value! {
     /// An engine's state: its `kind`, `heat` 0..1000, `overheated` (1 while it cools down), the
-    /// ticks of fuel left burning out of `burn_max`, ticks into the piston's stroke, and the
-    /// piston entity.
+    /// ticks of fuel left burning out of `burn_max`, ticks into the piston's stroke, the piston
+    /// entity, and `running` (1 while it makes energy). New fields go last: a saved engine
+    /// loads with them 0.
     #[derive(Default)]
     pub struct Engine {
         pub kind: u32,
@@ -27,7 +29,8 @@ value! {
         pub burn: u32,
         pub burn_max: u32,
         pub stroke: u32,
-        pub piston: u64
+        pub piston: u64,
+        pub running: u32,
     }
 }
 pub static ENGINE: Component<Engine> = Component::named("cogwork:engine");
@@ -49,35 +52,38 @@ pub fn register(r: &mut Registry) {
     ember_engine(r);
 }
 
-/// A block entity without slots or a screen: there is nothing to put in it.
+/// A machine with no slots, its screen showing how it runs.
 fn spring_engine(r: &mut Registry) {
-    model::engine(r.block(&SPRING_ENGINE), "spring")
-        .hardness(1.5)
-        .mineable("axe")
-        .tab(&crate::TAB);
-    static SPRING: Entity = Entity::named("spring_engine");
-    r.entity(&SPRING)
-        .no_egg()
-        .flags(abi::entity_flags::NO_GRAVITY | abi::entity_flags::INVULNERABLE);
-    r.block_entity(&SPRING_ENGINE, &SPRING, 0);
-    r.attach_with(
-        &SPRING,
-        &ENGINE,
-        Engine {
-            kind: kind::SPRING,
-            ..Engine::default()
-        },
-    );
-    r.attach_with(
-        &SPRING,
-        &ENERGY,
-        Energy {
-            stored: 0,
-            capacity: 1_000,
-            max_in: 0,
-            max_out: 50,
-        },
-    );
+    // Its block entity keeps its `Engine` state and energy, but it holds no items, and the SDK
+    // offers no public block entity without slots: `inventory` adds one only for slots. So it
+    // is a machine without slot groups, which tubes and other mods' item movers can put nothing
+    // into; the screen is an interim choice that comes with being one. Upstream has been asked
+    // how a block should get a block entity. The machine's kind is named like the block, as the
+    // block entity before it was, so saved engines keep their state.
+    r.machine(&SPRING_ENGINE, &SPRING_MENU)
+        .block(|b| {
+            model::engine(b, "spring")
+                .hardness(1.5)
+                .mineable("axe")
+                .tab(&crate::TAB)
+        })
+        .attach_with(
+            &ENGINE,
+            Engine {
+                kind: kind::SPRING,
+                ..Engine::default()
+            },
+        )
+        .attach_with(
+            &ENERGY,
+            Energy {
+                stored: 0,
+                capacity: 1_000,
+                max_in: 0,
+                max_out: 50,
+            },
+        )
+        .screen(spring_screen);
 }
 
 fn ember_engine(r: &mut Registry) {
@@ -119,10 +125,10 @@ fn ember_engine(r: &mut Registry) {
 /// +-------------------------------------+
 /// ```
 fn ember_screen(ui: &mut Ui) {
-    ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
+    ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
         ui.title();
         ui.row(S::row().gap(10.0), |ui| {
-            ui.column(S::col().gap(2.0).center(), |ui| {
+            ui.column(S::column().gap(2.0).center(), |ui| {
                 ui.progress_bind_dir(
                     "flame",
                     S::default().size(14.0, 14.0),
@@ -134,19 +140,66 @@ fn ember_screen(ui: &mut Ui) {
                 );
                 ui.group("fuel");
             });
-            ui.column(S::col().gap(3.0), |ui| {
+            ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
-                ui.text_bind(|c, out| {
-                    let e = c.menu_component(&ENGINE).unwrap_or_default();
-                    let key = if e.overheated != 0 {
-                        "cogwork.engine.overheated"
-                    } else {
-                        "cogwork.engine.heat"
-                    };
-                    out.set(key, &[Arg::Int(e.heat as i64 / 10)]);
-                });
+                heat_text(ui);
             });
         });
         ui.player_inventory(true);
     });
+}
+
+/// The spring engine's screen; it has no slots, so no inventory either:
+///
+/// ```text
+/// +-----------------------------+
+/// | Spring Engine               |
+/// | [#####.....]                |  stored energy
+/// | 500 / 1000 energy           |
+/// | Heat 45%                    |
+/// | Needs a redstone signal     |  only while it has none
+/// +-----------------------------+
+/// ```
+fn spring_screen(ui: &mut Ui) {
+    ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
+        ui.title();
+        ui.column(S::column().gap(3.0), |ui| {
+            crate::machine::power_bar(ui);
+            heat_text(ui);
+            ui.text_bind(|c, out| {
+                let e = c.menu_component(&ENGINE).unwrap_or_default();
+                if e.running == 0 {
+                    out.set("cogwork.engine.no_signal", &[]);
+                }
+            });
+        });
+    });
+}
+
+/// How hot the engine whose menu is open is, or that it is cooling down.
+fn heat_text(ui: &mut Ui) {
+    ui.text_bind(|c, out| {
+        let e = c.menu_component(&ENGINE).unwrap_or_default();
+        let key = if e.overheated != 0 {
+            "cogwork.engine.overheated"
+        } else {
+            "cogwork.engine.heat"
+        };
+        out.set(key, &[Arg::Int(e.heat as i64 / 10)]);
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn every_line_of_the_screens_has_a_name() {
+        let keys = [
+            "cogwork.engine.heat",
+            "cogwork.engine.overheated",
+            "cogwork.engine.no_signal",
+        ];
+        for key in keys {
+            assert!(crate::translated(key), "{key} in every lang file");
+        }
+    }
 }

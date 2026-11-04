@@ -1,7 +1,7 @@
 //! Putting items into and taking them out of any mod's machines, by the names of their slot
 //! groups: `fuel` and `input` take, `output` gives, a chest's `chest` does both. An inventory
 //! without any of these names is one big chest. An assembly bench takes what its pattern asks
-//! for.
+//! for. Liquid groups are left alone both ways: these are item tubes.
 
 use base_api::FUEL;
 use weft_sdk::*;
@@ -13,7 +13,7 @@ const KNOWN: [&str; 4] = ["fuel", "input", "output", "chest"];
 
 /// A run of slots: one group, or the whole inventory.
 enum Span {
-    Group(InventoryGroup),
+    Group(SlotGroup<'static>),
     All(Inventory),
 }
 
@@ -21,7 +21,7 @@ impl Span {
     fn len(&self) -> u32 {
         match self {
             Span::Group(g) => g.len(),
-            Span::All(inv) => inv.size(),
+            Span::All(inv) => inv.len(),
         }
     }
     fn get(&self, i: u32) -> ItemStack {
@@ -43,40 +43,65 @@ fn plain(inv: &Inventory) -> bool {
     !KNOWN.iter().any(|name| inv.find_group(name).is_some())
 }
 
+/// The group `name` of `inv`, if it has one for items.
+fn item_group(inv: &Inventory, name: &str) -> Option<Span> {
+    items_only(Span::Group(inv.find_group(name)?))
+}
+
+/// The whole of `inv` as one big chest, if it is plain and holds items.
+fn whole(inv: Inventory) -> Option<Span> {
+    if !plain(&inv) {
+        return None;
+    }
+    items_only(Span::All(inv))
+}
+
+/// `span`, unless it is a liquid group, which item tubes neither fill nor empty.
+fn items_only(span: Span) -> Option<Span> {
+    for_items(&read(&span), |item| FLUID.on_item(item).is_some()).then_some(span)
+}
+
+/// Whether slots holding `slots` are for items: nothing but a liquid (`is_liquid`) goes into a
+/// liquid group. The SDK doesn't say which groups those are, so an empty one looks like this.
+fn for_items(slots: &[ItemStack], is_liquid: impl Fn(u32) -> bool) -> bool {
+    !slots.iter().any(|s| !s.is_empty() && is_liquid(s.item))
+}
+
 /// The slots `stack` may go into: fuel into a fuel slot, anything into an input or a chest.
 fn takes(inv: Inventory, stack: ItemStack) -> Option<Span> {
-    if inv.size() == 0 {
+    if inv.is_empty() {
         return None;
     }
     if FUEL.on_item(stack.item).is_some()
-        && let Some(g) = inv.find_group("fuel")
+        && let Some(span) = item_group(&inv, "fuel")
     {
-        return Some(Span::Group(g));
+        return Some(span);
     }
     for name in ["input", "chest"] {
-        if let Some(g) = inv.find_group(name) {
-            return Some(Span::Group(g));
+        if let Some(span) = item_group(&inv, name) {
+            return Some(span);
         }
     }
-    plain(&inv).then_some(Span::All(inv))
+    whole(inv)
 }
 
 /// The slots items may be taken from: results, or a chest's contents.
 fn gives(inv: Inventory) -> Option<Span> {
-    if inv.size() == 0 {
+    if inv.is_empty() {
         return None;
     }
     for name in ["output", "chest"] {
-        if let Some(g) = inv.find_group(name) {
-            return Some(Span::Group(g));
+        if let Some(span) = item_group(&inv, name) {
+            return Some(span);
         }
     }
-    plain(&inv).then_some(Span::All(inv))
+    whole(inv)
 }
 
-/// Puts `stack` into the machine `owner` and returns what didn't fit. With `simulate` nothing
-/// changes.
-pub fn insert(w: &World, owner: u64, stack: ItemStack, simulate: bool) -> ItemStack {
+/// Puts `stack` into the machine `owner` (its entity, or its block) and returns what didn't
+/// fit. With `simulate` nothing changes.
+pub fn insert(w: &World, owner: impl Into<Holder>, stack: ItemStack, simulate: bool) -> ItemStack {
+    let owner = owner.into();
     if let Some(left) = crate::bench::insert(w, owner, stack, simulate) {
         return left;
     }
@@ -137,13 +162,13 @@ fn fill_slots(slots: &mut [ItemStack], stack: ItemStack, cap: impl Fn(u32) -> u3
 
 /// Puts `stack` into the slots of `group` and returns what didn't fit; with `simulate` nothing
 /// changes.
-pub fn insert_into(group: InventoryGroup, stack: ItemStack, simulate: bool) -> ItemStack {
+pub fn insert_into(group: SlotGroup<'static>, stack: ItemStack, simulate: bool) -> ItemStack {
     fill_span(&Span::Group(group), stack, simulate)
 }
 
 /// Puts every one of `stacks` into `group`, or none of them when they don't all fit together;
 /// returns whether they went in.
-pub fn insert_all(group: InventoryGroup, stacks: &[ItemStack]) -> bool {
+pub fn insert_all(group: SlotGroup<'static>, stacks: &[ItemStack]) -> bool {
     let span = Span::Group(group);
     let mut slots = read(&span);
     let all_fit = fill_all(&mut slots, stacks, max_stack);
@@ -161,12 +186,12 @@ fn fill_all(slots: &mut [ItemStack], stacks: &[ItemStack], cap: impl Fn(u32) -> 
 }
 
 /// Whether any of `stack` would go into `owner`.
-pub fn accepts(w: &World, owner: u64, stack: ItemStack) -> bool {
+pub fn accepts(w: &World, owner: impl Into<Holder>, stack: ItemStack) -> bool {
     insert(w, owner, stack, true).count < stack.count
 }
 
-/// Takes up to `max` items of the first stack the machine gives out.
-pub fn extract(w: &World, owner: u64, max: u32) -> ItemStack {
+/// Takes up to `max` items of the first stack the machine `owner` gives out.
+pub fn extract(w: &World, owner: impl Into<Holder>, max: u32) -> ItemStack {
     let Some(span) = gives(w.inventory(owner)) else {
         return ItemStack::EMPTY;
     };
@@ -185,25 +210,21 @@ pub fn extract(w: &World, owner: u64, max: u32) -> ItemStack {
     ItemStack::EMPTY
 }
 
-/// Whether the block entity at `pos` holds items at all.
+/// Whether the block at `pos` holds items at all.
 pub fn has_inventory(w: &World, pos: Pos) -> bool {
-    let id = w.block_entity(pos.into());
-    id != 0 && w.inventory(id).size() > 0
+    !w.inventory(pos).is_empty()
 }
 
-/// Hands one stack of the `output` of the machine `id` at `pos` to a tube or machine beside it.
-pub fn eject(w: &World, id: u64, pos: Pos) {
-    let out = w.inventory(id).group("output");
+/// Hands one stack of the `output` of the machine at `pos` to a tube or machine beside it.
+pub fn eject(w: &World, pos: Pos) {
+    let out = w.inventory(pos).group("output");
     let Some(slot) = (0..out.len()).find(|&i| !out.get(i).is_empty()) else {
         return;
     };
     let mut stack = out.get(slot);
     for face in 0..6 {
-        let other = w.block_entity(pos.neighbor(face).into());
-        if other == 0 || other == id {
-            continue;
-        }
-        stack = if w.component(other, &crate::tube::TUBE).is_some() {
+        let other = pos.neighbor(face);
+        stack = if crate::tube::is_tube(w, other) {
             crate::tube::inject(w, other, stack)
         } else {
             insert(w, other, stack, false)
@@ -250,6 +271,20 @@ mod tests {
             "one into the empty slot"
         );
         assert_eq!(left, ItemStack::new(BUCKET, 2), "two left over");
+    }
+
+    #[test]
+    fn a_group_holding_a_liquid_is_no_place_for_items() {
+        const WATER: u32 = 11;
+        let is_liquid = |item| item == WATER;
+        let tank = [ItemStack::new(WATER, 4000), ItemStack::EMPTY];
+        assert!(!for_items(&tank, is_liquid), "water in it: a liquid group");
+        let chest = [ItemStack::new(PLANK, 3), ItemStack::new(BUCKET, 1)];
+        assert!(for_items(&chest, is_liquid), "items: an item group");
+        assert!(
+            for_items(&[ItemStack::EMPTY; 2], is_liquid),
+            "empty: taken for items"
+        );
     }
 
     #[test]

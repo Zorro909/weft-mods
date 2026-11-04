@@ -66,7 +66,7 @@ pub fn register(r: &mut Registry) {
 fn step(c: &Client, film: &str, stage: Stage) -> Stage {
     match stage {
         Stage::Start => {
-            c.new_world(&format!("showcase-{}", film.replace(':', "-")), seed());
+            c.world_create(&format!("showcase-{}", film.replace(':', "-")), seed());
             Stage::Joining
         }
         Stage::Joining if c.state().flags & cf::JOINED != 0 => Stage::Setup {

@@ -53,7 +53,7 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
         return cmd.reply("structures.no_player", &[]);
     };
     let size = turn.size(structure.size());
-    let corner = in_front(me.pos.map(|v| v.floor() as i32), facing(me.yaw), size);
+    let corner = in_front(me.pos.block().into(), facing(me.yaw), size);
     let blocks = match structure.place_in(&world, corner, turn) {
         Ok(blocks) => blocks,
         Err(PlaceError::UnknownBlock(block)) => {
@@ -75,7 +75,7 @@ pub fn undo(cmd: &mut ServerCommand) {
         return cmd.reply("structures.nothing_to_undo", &[]);
     };
     for &(pos, state) in &replaced.blocks {
-        world.set(pos, state);
+        world.set_block(pos, state);
     }
     let count = Arg::Int(replaced.blocks.len() as i64);
     cmd.reply("structures.undone", &[count]);

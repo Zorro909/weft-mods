@@ -24,7 +24,7 @@ pub fn run(cmd: &mut ServerCommand) {
     // From the world's middle when no player ran it.
     let from = world
         .entity(cmd.player())
-        .map_or([0; 3], |player| player.pos.map(|v| v.floor() as i32));
+        .map_or([0; 3], |player| player.pos.block().into());
     match structures_api::locate(&world, &name, from, radius as i32) {
         Some(found) => {
             let [x, y, z] = found.map(|v| Arg::Int(v as i64));

@@ -5,11 +5,11 @@ use weft_sdk::*;
 
 use super::{BENCH, cells, pattern};
 
-/// Puts what of `stack` the pattern of the bench `id` has room for into its cells, one item at a
-/// time into the emptiest; returns the rest. `None` when `id` is no bench.
-pub fn insert(w: &World, id: u64, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
-    let pattern = pattern(w.component(id, &BENCH)?);
-    let grid = w.inventory(id).group("grid");
+/// Puts what of `stack` the pattern of the bench `at` has room for into its cells, one item at a
+/// time into the emptiest; returns the rest. `None` when `at` is no bench.
+pub fn insert(w: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
+    let pattern = pattern(&w.component(at, &BENCH)?);
+    let grid = w.inventory(at).group("grid");
     let mut cells: Vec<ItemStack> = (0..grid.len()).map(|i| grid.get(i)).collect();
     let mut left = stack;
     let cap = max_stack(stack.item);

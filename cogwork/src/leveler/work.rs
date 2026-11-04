@@ -43,7 +43,7 @@ fn work(w: &World, id: u64, pos: Pos, l: &mut Level) {
     if l.stage() == Stage::New {
         start(w, pos, l);
     }
-    crate::store::eject(w, id, pos);
+    crate::store::eject(w, pos);
     match l.stage() {
         Stage::Clear => clear_next(w, id, l),
         Stage::Fill => fill_next(w, id, l),
@@ -118,13 +118,13 @@ fn fill_next(w: &World, id: u64, l: &mut Level) {
 
 /// Plays `sound` at the block `c` worked on, now and then.
 fn sound(w: &World, sound: &Sound, c: Pos) {
-    if w.time().is_multiple_of(SOUND_EVERY) {
-        w.play_sound(sound, c.center().into(), 1.0);
+    if w.game_time().is_multiple_of(SOUND_EVERY) {
+        w.play_sound(sound, c.center(), 1.0);
     }
 }
 
 /// The first stack in `stock` that can fill a hole: its slot, and the block it places.
-fn first_filler(stock: &InventoryGroup) -> Option<(u32, BlockState)> {
+fn first_filler(stock: &SlotGroup) -> Option<(u32, BlockState)> {
     (0..stock.len()).find_map(|slot| fill_block(stock.get(slot)).map(|block| (slot, block)))
 }
 

@@ -4,17 +4,17 @@
 use weft_sdk::*;
 
 use super::{ENGINE, Engine, kind, model};
-use crate::lib::{ModelBox, Pos};
+use crate::lib::{ModelBox, Pos, point};
 
 /// The pistons lying flat (engines facing up or down), then standing (facing sideways), by
 /// engine kind.
-static FLAT: [Entity; 2] = [
-    Entity::named("spring_piston"),
-    Entity::named("ember_piston"),
+static FLAT: [EntityKind; 2] = [
+    EntityKind::named("spring_piston"),
+    EntityKind::named("ember_piston"),
 ];
-static STANDING: [Entity; 2] = [
-    Entity::named("spring_piston_standing"),
-    Entity::named("ember_piston_standing"),
+static STANDING: [EntityKind; 2] = [
+    EntityKind::named("spring_piston_standing"),
+    EntityKind::named("ember_piston_standing"),
 ];
 const TEXTURES: [&str; 2] = ["spring_piston", "ember_piston"];
 
@@ -33,7 +33,7 @@ pub fn register(r: &mut Registry) {
         for (entity, part) in models {
             // Small enough to stay inside the engine, so aiming at it aims at the block.
             crate::owned::kind(r.entity(entity), claims)
-                .model(Model::from(vec![part]).uv(64, 20))
+                .model(Model::from(vec![part]).uv_size(64, 20))
                 .texture(TEXTURES[k])
                 .size(0.25, 0.25);
         }
@@ -45,13 +45,13 @@ fn claims(w: &World, owner: u64, id: u64) -> bool {
 }
 
 /// A 16 by 4 by 16 plate centered on the pivot, which is 2 texels above the entity's feet.
-fn plate() -> Part {
+fn plate() -> ModelPart {
     let plate = ModelBox::sized([-8.0, -2.0, -8.0], [16.0, 4.0, 16.0]);
-    Part::new("plate", [0.0, 2.0, 0.0]).cube(plate.lo, plate.size(), [0.0, 0.0])
+    ModelPart::new("plate", [0.0, 2.0, 0.0]).cuboid(plate.lo, plate.size(), [0.0, 0.0])
 }
 
 /// The plate stood on its edge, a quarter turn about x: thin along z.
-fn standing_plate() -> Part {
+fn standing_plate() -> ModelPart {
     plate().rotation(90.0, 0.0, 0.0)
 }
 
@@ -108,7 +108,7 @@ pub fn show(w: &World, id: u64, pos: Pos, e: &mut Engine) {
     // At rest the piston's middle is 2 texels from the block's toward the base plate; the
     // stroke lifts it toward the trunk's end.
     let along = (lift(e.stroke) - 2.0) / 16.0;
-    let feet = pos.center().toward_by(out, along).add_y(-2.0 / 16.0);
+    let feet = point::toward(pos.center(), out, along).offset(0.0, -2.0 / 16.0, 0.0);
     e.piston = crate::owned::place(w, id, e.piston, entity, feet, yaw);
 }
 

@@ -87,7 +87,7 @@ fn work(w: &World, id: u64, pos: Pos, bench: &mut Bench, pattern: &[u32; 9]) -> 
         return Status::Full;
     }
     use_up(w, id, &cells);
-    w.play_sound(&crate::sounds::CRAFT, pos.center().into(), 1.0);
+    w.play_sound(&crate::sounds::CRAFT, pos.center(), 1.0);
     bench.spent = 0;
     Status::Working
 }
@@ -100,7 +100,7 @@ fn made_by(pattern: &[u32; 9]) -> ItemStack {
             0 => ItemStack::EMPTY,
             _ => ItemStack::new(item, 1),
         });
-        recipe_match(&CRAFTING, &grid, 3, 3)
+        recipe_grid_output(&CRAFTING, &grid, 3, 3)
     })
 }
 

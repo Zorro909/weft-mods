@@ -1,12 +1,13 @@
-//! A block position with named axes. The SDK takes and gives `[i32; 3]`; `Pos` turns into one and
-//! back with `into` and `from`.
+//! A block position with named axes, laid out on the wire as `[i32; 3]`. It turns into the SDK's
+//! `BlockPos` and `Vec3` and arrays, and back, with `into` and `from`; the SDK's calls take a
+//! `Pos` as it is.
 
 use std::ops::Add;
 
 use weft_sdk::*;
 
 value! {
-    /// A block's position, or an offset from one. Laid out as the `[i32; 3]` the SDK uses.
+    /// A block's position, or an offset from one. Laid out as the SDK's `BlockPos`.
     #[derive(Default, Eq, Hash)]
     pub struct Pos {
         pub x: i32,
@@ -41,10 +42,29 @@ impl From<Pos> for [i32; 3] {
     }
 }
 
+impl From<BlockPos> for Pos {
+    fn from(p: BlockPos) -> Pos {
+        Pos::new(p.x, p.y, p.z)
+    }
+}
+
+impl From<Pos> for BlockPos {
+    fn from(p: Pos) -> BlockPos {
+        BlockPos::new(p.x, p.y, p.z)
+    }
+}
+
 /// The block's lowest corner, as a point.
 impl From<Pos> for [f64; 3] {
     fn from(p: Pos) -> [f64; 3] {
         [p.x, p.y, p.z].map(f64::from)
+    }
+}
+
+/// The block's lowest corner, as a point.
+impl From<Pos> for Vec3 {
+    fn from(p: Pos) -> Vec3 {
+        <[f64; 3]>::from(p).into()
     }
 }
 
@@ -59,6 +79,14 @@ mod tests {
         assert_eq!(array, [4, -5, 6], "x, y, z in order");
         assert_eq!(Pos::from(array), p, "and back");
         assert_eq!(<[f64; 3]>::from(p), [4.0, -5.0, 6.0], "as a point");
+    }
+
+    #[test]
+    fn it_turns_into_the_sdks_types_and_back() {
+        let p = Pos::new(4, -5, 6);
+        assert_eq!(BlockPos::from(p), BlockPos::new(4, -5, 6), "a block");
+        assert_eq!(Pos::from(BlockPos::from(p)), p, "and back");
+        assert_eq!(Vec3::from(p), Vec3::new(4.0, -5.0, 6.0), "its corner");
     }
 
     #[test]

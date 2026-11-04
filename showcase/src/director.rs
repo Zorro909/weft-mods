@@ -15,7 +15,7 @@ use crate::playback::Playback;
 use crate::rig::Pose;
 use crate::rig::math::{add, angles_along, sub};
 use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
-use crate::view::{camera, missing_notice, put, set_fov, titles};
+use crate::view::{camera, missing_notice, put, titles};
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
 const STOP_FRAMES: u32 = 20;
@@ -30,8 +30,6 @@ struct Director {
     phase: Phase,
     signals: HashSet<String>,
     subjects: HashMap<String, Subject>,
-    /// The player's own field of view while a film plays, given back at its end.
-    own_fov: Option<f32>,
     /// Films played to the end since the game started.
     finished: u32,
     /// The last film asked for that never came, and when that was known.
@@ -75,7 +73,6 @@ pub fn register(r: &mut Registry) {
             error!("showcase: a film arrived that this version can't read ({len} bytes)");
             return;
         };
-        c.send(&STARTED, &());
         play(c, timeline);
     });
     r.client_packet(&SIGNAL, |_, signal| {
@@ -120,13 +117,12 @@ pub fn missing() -> bool {
     with(|d| d.missing.is_some())
 }
 
-/// Plays `timeline` on this client, after loading the world along it.
+/// Plays `timeline` on this client, after loading the world along it; the server puts the
+/// player in the film camera meanwhile.
 pub fn play(c: &Client, timeline: Timeline) {
     info!("showcase: loading the world along {}", timeline.film);
-    let mut from = camera(c);
-    // A film started over another keeps the field of view the player had before the first.
-    from.fov = with(|d| *d.own_fov.get_or_insert(from.fov));
-    let playback = Playback::new(timeline, from);
+    c.send(&STARTED, &());
+    let playback = Playback::new(timeline, camera(c));
     let stops = playback.stops();
     let loading = Loading {
         playback,
@@ -158,16 +154,17 @@ fn load(c: &Client, mut loading: Loading) -> Phase {
         mark("start", &loading.playback.film);
         return Phase::Rolling(loading.playback);
     };
-    let origin = block_center(loading.playback.origin.into());
+    let origin = block_center(loading.playback.origin).into();
     let (yaw, pitch) = angles_along(sub(origin, stop)).unwrap_or_default();
-    // The field of view is left alone until the film rolls.
+    // The player's own field of view until the film rolls.
+    let fov = loading.playback.pose().fov;
     put(
         c,
         Pose {
             eye: stop,
             yaw,
             pitch,
-            fov: 0.0,
+            fov,
         },
     );
     if loading.frames >= STOP_FRAMES && c.state().flags & cf::LOADED != 0 {
@@ -194,7 +191,6 @@ fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
     }
     let pose = playback.pose();
     put(c, pose);
-    set_fov(pose.fov);
     titles(c, &playback.titles, playback.elapsed(), pose);
     d.menus.show(c, playback.menu.as_ref());
 }
@@ -203,9 +199,6 @@ fn finish(c: &Client, d: &mut Director, playback: &Playback) -> Phase {
     mark("stop", &playback.film);
     d.menus.show(c, None);
     c.send(&FINISHED, &());
-    if let Some(own) = d.own_fov.take() {
-        set_fov(own);
-    }
     d.signals.clear();
     d.subjects.clear();
     d.finished += 1;
@@ -227,7 +220,7 @@ fn locate(c: &Client, subject: &Subject) -> Option<[f64; 3]> {
         Subject::Place(pos) => Some(pos),
         Subject::Entity(entity) => {
             let e = c.entity(entity)?;
-            Some(add(e.pos, [0.0, e.size[1] as f64 / 2.0, 0.0]))
+            Some(add(e.pos.into(), [0.0, e.size.height as f64 / 2.0, 0.0]))
         }
     }
 }

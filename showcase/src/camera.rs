@@ -1,8 +1,8 @@
 //! `/camera`, for animators: camera paths made in the game and played on this client alone.
 //! `/camera point` marks where the camera is and where it looks, `/camera play` flies through
 //! the points looking the way each was marked, `/camera orbit` circles a point in front of
-//! the camera, `/camera clear` forgets the points. Spectators fly through walls; anyone else
-//! is stopped by them.
+//! the camera, `/camera clear` forgets the points. The camera flies through walls; the player,
+//! moved along for the world to load around, is stopped by them unless a spectator.
 
 use std::sync::Mutex;
 
@@ -30,21 +30,21 @@ pub fn register(r: &mut Registry) {
     let usage = "point | play [secs:float] | orbit [radius:float] [secs:float] | clear";
     r.client_command("camera", usage, |cmd| {
         let c = cmd.client();
-        if cmd.has("point") {
+        if cmd.given("point") {
             let count = {
                 let mut points = lock(&POINTS);
                 points.push(camera(&c));
                 points.len()
             };
             cmd.reply("showcase.camera.marked", &[Arg::Int(count as i64)]);
-        } else if cmd.has("play") {
+        } else if cmd.given("play") {
             play_points(&c, cmd);
-        } else if cmd.has("orbit") {
+        } else if cmd.given("orbit") {
             let radius = cmd.float("radius").unwrap_or(ORBIT_RADIUS);
             let radius = radius.max(MIN_ORBIT_RADIUS);
             let secs = cmd.float("secs").unwrap_or(ORBIT_SECS);
             play(&c, local(orbit_ahead(camera(&c), radius, secs)));
-        } else if cmd.has("clear") {
+        } else if cmd.given("clear") {
             lock(&POINTS).clear();
             cmd.reply("showcase.camera.cleared", &[]);
         }

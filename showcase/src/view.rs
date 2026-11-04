@@ -1,13 +1,23 @@
-//! What the player sees while a film plays: their own player moved and turned to be the camera,
-//! the field of view, and the film's text on screen.
+//! What the player sees while a film plays: the film camera, their own player moved along with
+//! it, and the film's text on screen.
 
-use weft_sdk::abi::{PlayerControl, control_mask as cm};
+use std::sync::Mutex;
+
+use weft_sdk::abi::{CameraArgs, CameraPose, PlayerControl, control_mask as cm};
 use weft_sdk::settings::FOV;
 use weft_sdk::*;
 
+use crate::lock;
 use crate::playback::Title;
 use crate::rig::Pose;
 use crate::rig::math::{add, forward, sub};
+
+/// The camera mode a film is seen through; the server holds the player in it while one plays.
+pub static FILM: CameraMode = CameraMode::named("film");
+
+/// Where the film puts the camera this frame. The last one stays after the film, for the
+/// camera to ease out from until the server lets go of it; `None` before the first film.
+static SHOWN: Mutex<Option<Pose>> = Mutex::new(None);
 
 /// Seconds a title takes to fade in, and to fade out.
 const FADE: f32 = 0.6;
@@ -16,23 +26,51 @@ const TITLE_DISTANCE: f64 = 12.0;
 /// Where titles sit, as a share of the half picture below the middle.
 const TITLE_LOW: f64 = 0.78;
 
+pub fn register(r: &mut Registry) {
+    // No body, hand, HUD or effects: what is seen is the film's alone, its field of view too.
+    r.camera(&FILM).shot(Shot::new(0, film_shot));
+}
+
+/// The film camera's frame: what `put` showed last, or the player's eyes before any film. Frame
+/// hooks run before the camera moves, so a film's pose shows the same frame, not the next.
+fn film_shot(args: &mut CameraArgs) {
+    args.out = match *lock(&SHOWN) {
+        Some(pose) => CameraPose {
+            pos: pose.eye.into(),
+            yaw: pose.yaw.to_radians() as f32,
+            pitch: pose.pitch.to_radians() as f32,
+            // The camera's field of view is a multiple of the player's.
+            fov: pose.fov / FOV.get(),
+            ..CameraPose::DEFAULT
+        },
+        None => CameraPose {
+            pos: args.eye,
+            yaw: args.eye_yaw,
+            pitch: args.eye_pitch,
+            ..CameraPose::DEFAULT
+        },
+    };
+}
+
 /// The camera now, from the local player and its settings.
 pub fn camera(c: &Client) -> Pose {
     let s = c.state();
     Pose {
-        eye: add(s.pos, [0.0, eye_height(c), 0.0]),
+        eye: add(s.pos.into(), [0.0, eye_height(c), 0.0]),
         yaw: (s.yaw as f64).to_degrees(),
         pitch: (s.pitch as f64).to_degrees(),
         fov: FOV.get(),
     }
 }
 
-/// Moves the local player so that its eyes are the camera.
+/// Shows `pose` through the film camera, and moves the local player's eyes there: the world loads
+/// around the player, not the camera.
 pub fn put(c: &Client, pose: Pose) {
+    *lock(&SHOWN) = Some(pose);
     c.control(&PlayerControl {
         mask: cm::POS | cm::VEL | cm::LOOK | cm::FLYING,
-        pos: sub(pose.eye, [0.0, eye_height(c), 0.0]),
-        vel: [0.0; 3],
+        pos: sub(pose.eye, [0.0, eye_height(c), 0.0]).into(),
+        vel: Vec3::ZERO,
         yaw: pose.yaw.to_radians() as f32,
         pitch: pose.pitch.to_radians() as f32,
         flying: 1,
@@ -41,14 +79,7 @@ pub fn put(c: &Client, pose: Pose) {
 }
 
 fn eye_height(c: &Client) -> f64 {
-    c.entity(0).map_or(1.62, |e| e.size[2] as f64)
-}
-
-/// Sets the field of view, only when it changes: every change is applied as a new setting.
-pub fn set_fov(fov: f32) {
-    if (FOV.get() - fov).abs() > 0.05 {
-        FOV.set(fov);
-    }
+    c.entity(0).map_or(1.62, |e| e.size.eye as f64)
 }
 
 /// The film's titles at `now` seconds into it, faded in and out, near the bottom of the picture.
@@ -87,7 +118,7 @@ fn title_size(c: &Client) -> f32 {
 
 /// Says on screen that the film `film` was asked for and never came.
 pub fn missing_notice(c: &Client, film: &str) {
-    c.screen_text(
+    c.draw_screen_text(
         0.5,
         0.3,
         "showcase.missing",

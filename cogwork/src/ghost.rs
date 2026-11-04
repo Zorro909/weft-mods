@@ -12,14 +12,13 @@ use std::sync::OnceLock;
 use twox_hash::XxHash3_64;
 use weft_sdk::*;
 
-use crate::lib::FloatPos;
+use crate::lib::point;
 
 /// Side of a cell in GUI pixels, the same as a slot.
 pub const SLOT: f32 = 18.0;
 /// How far from a machine a player may set its ghosts, in blocks: as far as the engine keeps a
-/// machine's menu open (`menu::out_of_reach`).
-// TODO: accept ghosts exactly while the player has the machine's menu open, once the SDK can
-// say which menu a player has open; this copy of the engine's distance can then go.
+/// machine's menu open (`menu::out_of_reach`). A copy of the engine's distance, as the server
+/// side of the SDK can't say which menu a player has open.
 const REACH: f64 = 8.5;
 
 /// An item as a machine keeps it: the hash of its full name (`base:stick`), `NO_ITEM` for none.
@@ -51,8 +50,9 @@ fn items_by_key() -> &'static HashMap<ItemKey, u32> {
     static TABLE: OnceLock<HashMap<ItemKey, u32>> = OnceLock::new();
     TABLE.get_or_init(|| {
         let mut table = HashMap::new();
-        let names = (1..).map(|item| (item, item_name(item)));
-        for (item, name) in names.take_while(|(_, name)| !name.is_empty()) {
+        // Item 0 is no item.
+        for item in 1..entry_count(abi::entry_kind::ITEM) {
+            let name = item_name(item);
             if let Some(other) = table.insert(hash(name), item) {
                 let other = item_name(other);
                 error!("cogwork: {other} and {name} share a ghost key; ghosts show {name}");
@@ -90,8 +90,8 @@ pub fn cell(
         let size = S::default().class("cogwork:ghost_cell").size(SLOT, SLOT);
         ui.button("", size, move |c| click(c, cell));
         // Text pixels are half a GUI pixel: 1.5 draws the ghost 12 wide, 3 in from the edges.
-        ui.column(S::col().size(SLOT, SLOT).pad(3.0), |ui| {
-            ui.text_bind_styled(S::col().scale(1.5), move |c, out| {
+        ui.column(S::column().size(SLOT, SLOT).pad(3.0), |ui| {
+            ui.text_bind_styled(S::column().scale(1.5), move |c, out| {
                 let ghost = match shown(c) {
                     0 => Arg::Text(""),
                     item => Arg::Item(item),
@@ -119,7 +119,7 @@ fn set(p: &Packet, g: SetGhost) {
     let (Some(machine), Some(player)) = (w.entity(g.owner), w.entity(p.player())) else {
         return;
     };
-    let near = within_reach(machine.pos.into(), player.pos.into());
+    let near = within_reach(machine.pos, player.pos);
     let known = g.item == 0 || !item_name(g.item).is_empty();
     if near && known {
         crate::bench::set_ghost(&w, g.owner, g.cell, g.item);
@@ -128,8 +128,8 @@ fn set(p: &Packet, g: SetGhost) {
 }
 
 /// Whether a player at `player` may set the ghosts of the machine at `machine`.
-fn within_reach(machine: FloatPos, player: FloatPos) -> bool {
-    machine.distance_to(player) <= REACH
+fn within_reach(machine: Vec3, player: Vec3) -> bool {
+    point::distance(machine, player) <= REACH
 }
 
 #[cfg(test)]
@@ -163,12 +163,13 @@ mod tests {
 
     #[test]
     fn ghosts_are_set_only_from_near_the_machine() {
-        let machine = FloatPos::new(0.5, 64.0, 0.5);
-        let beside = machine.add_x(REACH);
+        let machine = Vec3::new(0.5, 64.0, 0.5);
+        let beside = machine.offset(REACH, 0.0, 0.0);
         assert!(within_reach(machine, beside), "at the edge of reach");
-        assert!(!within_reach(machine, beside.add_x(0.1)), "just past it");
+        let past = beside.offset(0.1, 0.0, 0.0);
+        assert!(!within_reach(machine, past), "just past it");
         assert!(
-            !within_reach(machine, machine.add_y(-REACH - 1.0)),
+            !within_reach(machine, machine.offset(0.0, -REACH - 1.0, 0.0)),
             "below it too"
         );
     }

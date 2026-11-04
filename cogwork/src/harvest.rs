@@ -36,7 +36,7 @@ pub fn harvest(w: &World, id: u64, c: Pos, block_state: BlockState) -> Harvest {
     let output = || w.inventory(id).group("output");
     let tool = ItemStack::new(TOOL.id(), 1);
     // The loot table is the block's, whatever its properties.
-    let name = block_state.name().split('[').next().unwrap_or("");
+    let name = block_state.block_name();
     let ctx = LootCtx {
         tool,
         mined: block_state.id(),
@@ -49,13 +49,13 @@ pub fn harvest(w: &World, id: u64, c: Pos, block_state: BlockState) -> Harvest {
     {
         return Harvest::Full;
     }
-    if !w.break_block(c.into(), tool, 0, false) {
+    if !w.break_block(c, tool, 0, false) {
         return Harvest::Refused;
     }
     for s in drops {
         let left = crate::store::insert_into(output(), s, false);
         if !left.is_empty() {
-            w.spawn_item(c.center().into(), left);
+            w.spawn_item(c.center(), left);
         }
     }
     Harvest::Done

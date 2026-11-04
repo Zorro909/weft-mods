@@ -6,12 +6,12 @@
 use weft_sdk::*;
 
 use super::{Dig, Frame, Stage};
-use crate::lib::{FloatPos, ModelBox};
+use crate::lib::ModelBox;
 
-static CARRIAGE: Entity = Entity::named("drill_carriage");
-static BIT: Entity = Entity::named("drill_bit");
-static SHAFT: Entity = Entity::named("drill_shaft");
-static BEAM: Entity = Entity::named("gantry_beam");
+static CARRIAGE: EntityKind = EntityKind::named("drill_carriage");
+static BIT: EntityKind = EntityKind::named("drill_bit");
+static SHAFT: EntityKind = EntityKind::named("drill_shaft");
+static BEAM: EntityKind = EntityKind::named("gantry_beam");
 
 value! {
     /// The rig's entities: carriage, bit, then shaft pieces, then beams along x and along z.
@@ -29,9 +29,9 @@ const BIT_HEIGHT: f64 = 0.75;
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
-    r.attach(&Entity::named("excavator"), &RIG);
+    r.attach(&EntityKind::named("excavator"), &RIG);
     let body = |lo, size| ModelBox::sized(lo, size).part("body", [0.0, 0.0]);
-    let pieces: [(&'static Entity, Vec<Part>, [u32; 2]); 4] = [
+    let pieces: [(&'static EntityKind, Vec<ModelPart>, [u32; 2]); 4] = [
         (
             &CARRIAGE,
             vec![body([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0])],
@@ -62,7 +62,7 @@ pub fn register(r: &mut Registry) {
     ];
     for (kind, parts, uv) in pieces {
         crate::owned::kind(r.entity(kind), claims)
-            .model(Model::from(parts).uv(uv[0], uv[1]))
+            .model(Model::from(parts).uv_size(uv[0], uv[1]))
             .size(0.5, 0.5);
     }
 }
@@ -80,13 +80,13 @@ impl Rig {
 }
 
 /// Where each piece goes now: by slot, its kind, place and turn.
-fn layout(d: &Dig) -> Vec<(usize, &'static Entity, FloatPos, f32)> {
+fn layout(d: &Dig) -> Vec<(usize, &'static EntityKind, Vec3, f32)> {
     let head = d.head();
     let Frame { lo, hi } = d.frame;
     let top = hi.y as f64 + 0.25;
-    let carriage = FloatPos { y: top, ..head };
+    let carriage = Vec3 { y: top, ..head };
     // On top of the block it drills, only its tip in it; never above the carriage.
-    let bit = FloatPos {
+    let bit = Vec3 {
         y: (head.y + 1.0).min(top - BIT_HEIGHT),
         ..head
     };
@@ -94,14 +94,15 @@ fn layout(d: &Dig) -> Vec<(usize, &'static Entity, FloatPos, f32)> {
     // Shaft pieces hang from the carriage down to the bit; the lowest reaches into the ground.
     let reach = top - (bit.y + BIT_HEIGHT);
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
-    out.extend((0..shafts).map(|k| (2 + k, &SHAFT, carriage.add_y(-PIECE * (k + 1) as f64), 0.0)));
-    let beams = carriage.add_y(0.125);
+    let below_carriage = |k: usize| carriage.offset(0.0, -PIECE * (k + 1) as f64, 0.0);
+    out.extend((0..shafts).map(|k| (2 + k, &SHAFT, below_carriage(k), 0.0)));
+    let beams = carriage.offset(0.0, 0.125, 0.0);
     let (lo, hi) = (lo.center(), hi.center());
     for (k, x) in spans(lo.x, hi.x).into_iter().enumerate() {
-        out.push((2 + SHAFTS + k, &BEAM, FloatPos { x, ..beams }, 0.0));
+        out.push((2 + SHAFTS + k, &BEAM, Vec3 { x, ..beams }, 0.0));
     }
     for (k, z) in spans(lo.z, hi.z).into_iter().enumerate() {
-        out.push((2 + SHAFTS + BEAMS + k, &BEAM, FloatPos { z, ..beams }, 90.0));
+        out.push((2 + SHAFTS + BEAMS + k, &BEAM, Vec3 { z, ..beams }, 90.0));
     }
     out
 }
@@ -116,7 +117,7 @@ fn spans(a: f64, b: f64) -> Vec<f64> {
 
 /// Puts the rig where the drill is, while the excavator mines; takes it away otherwise.
 pub fn update(w: &World, owner: u64, d: &Dig) {
-    let Some(mut rig) = w.component(owner, &RIG).copied() else {
+    let Some(mut rig) = w.component(owner, &RIG) else {
         return;
     };
     let wanted = if d.stage() == Stage::Mine {
@@ -131,13 +132,11 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
     }
     for (slot, id) in rig.ids.iter_mut().enumerate() {
         if !used[slot] && *id != 0 {
-            w.remove(*id);
+            w.despawn(*id);
             *id = 0;
         }
     }
-    if let Some(r) = w.component_mut(owner, &RIG) {
-        *r = rig;
-    }
+    w.set_component(owner, &RIG, rig);
 }
 
 #[cfg(test)]
@@ -145,7 +144,7 @@ mod tests {
     use super::*;
 
     /// An excavator mining with its drill at `head`, under a frame whose top is at 8.
-    fn mining_at(head: FloatPos) -> Dig {
+    fn mining_at(head: Vec3) -> Dig {
         let mut d = Dig {
             stage: Stage::Mine as u32,
             frame: Frame::from(([0, 0, 0], [10, 8, 10])),
@@ -174,7 +173,7 @@ mod tests {
 
     #[test]
     fn shafts_reach_from_the_carriage_down_to_the_bit() {
-        let d = mining_at(FloatPos::new(5.5, -3.0, 5.5));
+        let d = mining_at(Vec3::new(5.5, -3.0, 5.5));
         let shafts: Vec<f64> = layout(&d)
             .into_iter()
             .filter(|p| std::ptr::eq(p.1, &SHAFT))
@@ -190,7 +189,7 @@ mod tests {
 
     #[test]
     fn the_bit_stands_on_the_block_it_drills() {
-        let d = mining_at(FloatPos::new(5.5, -3.0, 5.5));
+        let d = mining_at(Vec3::new(5.5, -3.0, 5.5));
         let bit = layout(&d)
             .into_iter()
             .find(|p| std::ptr::eq(p.1, &BIT))

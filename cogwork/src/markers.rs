@@ -4,7 +4,7 @@
 
 use weft_sdk::*;
 
-use crate::lib::{Area, BlockState, FloatPos, ModelBox, Pos};
+use crate::lib::{Area, BlockState, ModelBox, Pos};
 
 pub static SURVEY_MARKER: Block = Block::named("survey_marker");
 static SURVEY_GLOW: Particle = Particle::named("survey_glow");
@@ -63,7 +63,7 @@ pub fn take_area(w: &World, pos: Pos) -> Option<Area> {
     }
     for corner in area.corners() {
         if BlockState::at(w, corner).is(&SURVEY_MARKER) {
-            w.break_block(corner.into(), ItemStack::EMPTY, 0, true);
+            w.break_block(corner, ItemStack::EMPTY, 0, true);
         }
     }
     Some(area)
@@ -104,26 +104,31 @@ pub fn survey(w: &World, pos: Pos) {
     match rectangle(w, pos) {
         Some(area) => {
             outline(w, &area);
-            w.play_sound(&crate::sounds::SURVEY, pos.center().into(), 1.0);
+            w.play_sound(&crate::sounds::SURVEY, pos.center(), 1.0);
         }
-        None => drop(w.spawn_particles(&POOF, pos.center().into()).count(6)),
+        None => drop(w.spawn_particles(&POOF, pos.center()).count(6)),
     }
 }
 
 /// Glowing points along the edges of the rectangle, every half block.
 fn outline(w: &World, area: &Area) {
     // A little above the middle of the markers.
-    let (lo, hi) = (area.lo.center().add_y(0.1), area.hi.center().add_y(0.1));
+    let (lo, hi) = (
+        area.lo.center().offset(0.0, 0.1, 0.0),
+        area.hi.center().offset(0.0, 0.1, 0.0),
+    );
     let mut points = Vec::new();
     let steps = |a: f64, b: f64| (0..=((b - a) * 2.0) as i32).map(move |i| i as f64 * 0.5);
     for along in steps(lo.x, hi.x) {
-        points.extend([lo.add_x(along), FloatPos { z: hi.z, ..lo }.add_x(along)]);
+        let x = lo.x + along;
+        points.extend([Vec3 { x, ..lo }, Vec3 { x, z: hi.z, ..lo }]);
     }
     for along in steps(lo.z, hi.z) {
-        points.extend([lo.add_z(along), FloatPos { x: hi.x, ..lo }.add_z(along)]);
+        let z = lo.z + along;
+        points.extend([Vec3 { z, ..lo }, Vec3 { z, x: hi.x, ..lo }]);
     }
     for p in points {
-        drop(w.spawn_particles(&SURVEY_GLOW, p.into()).count(1));
+        drop(w.spawn_particles(&SURVEY_GLOW, p).count(1));
     }
 }
 

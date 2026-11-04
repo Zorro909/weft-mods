@@ -42,7 +42,7 @@ fn work(w: &World, id: u64, pos: Pos, d: &mut Dig) {
     if d.stage() == Stage::New {
         start(w, pos, d);
     }
-    crate::store::eject(w, id, pos);
+    crate::store::eject(w, pos);
     match d.stage() {
         Stage::Frame | Stage::Mine if !hold(w, id, d) => {}
         Stage::Frame => build_frame(w, id, d),
@@ -78,7 +78,7 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
         if pay(w, id, d, FRAME_COST) {
             BlockState::of(&GANTRY_FRAME).place(w, c);
             if d.step.is_multiple_of(FRAME_SOUND_EVERY) {
-                w.play_sound(&sounds::FRAME_PLACE, c.center().into(), 1.0);
+                w.play_sound(&sounds::FRAME_PLACE, c.center(), 1.0);
             }
             d.spent = 0;
             d.step += 1;
@@ -99,7 +99,7 @@ fn begin_mining(d: &mut Dig) {
 /// protected area), the excavator is jammed and tries only now and then, rather than paying for
 /// the block every tick.
 fn clear_for_frame(w: &World, id: u64, d: &mut Dig, c: Pos, block_state: BlockState) {
-    if !try_now(d.refused, d.spent, w.time()) {
+    if !try_now(d.refused, d.spent, w.game_time()) {
         d.set_status(Status::Jammed);
         return;
     }
@@ -149,7 +149,7 @@ fn frame_passes_over(block_state: BlockState) -> bool {
 fn mine_next(w: &World, id: u64, pos: Pos, d: &mut Dig) {
     let Some(target) = find_target(w, d) else {
         if d.stage() == Stage::Done {
-            w.play_sound(&sounds::EXCAVATOR_DONE, pos.center().into(), 1.0);
+            w.play_sound(&sounds::EXCAVATOR_DONE, pos.center(), 1.0);
         }
         return;
     };
@@ -162,7 +162,7 @@ fn mine_next(w: &World, id: u64, pos: Pos, d: &mut Dig) {
     }
     match mine_block(w, id, d, target, block_state) {
         Mined::Done => {
-            w.play_sound(&sounds::DRILL, target.center().into(), 1.0);
+            w.play_sound(&sounds::DRILL, target.center(), 1.0);
             d.set_head(sweep(&d.frame, target, 1.0));
             d.cursor = d.frame.next(target);
         }
@@ -215,7 +215,6 @@ fn finish(d: &mut Dig) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lib::FloatPos;
 
     #[test]
     fn a_frame_refused_again_and_again_is_tried_only_now_and_then() {
@@ -288,7 +287,7 @@ mod tests {
             Pos::new(1, 8, 1),
             "a corner of the inside, at the top"
         );
-        let middle = FloatPos::new(1.5, 8.0, 1.5);
+        let middle = Vec3::new(1.5, 8.0, 1.5);
         assert_eq!(d.head(), middle, "the drill over its middle");
     }
 

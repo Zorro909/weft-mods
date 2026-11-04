@@ -102,7 +102,7 @@ fn excavating(film: Film) -> Film {
 /// Up out of the pit and out past the excavator's front, along the tubes to the sorting tube,
 /// and a look into its menu.
 fn sorting(film: Film) -> Film {
-    let sorter: [f64; 3] = SORTER.center().into();
+    let sorter = SORTER.center().to_array();
     let deep = area(DEEP, DEEP_DEPTH as f64);
     let first_tube = [16.5, 0.5, 6.5];
     // Out through the frame's south side west of the excavator's engines.
@@ -141,8 +141,8 @@ fn sorting(film: Film) -> Film {
 /// Round the end of the wall to the lever, which starts the row; along the row while it gets
 /// going, then down to the second bench and into its menu.
 fn autocrafting(film: Film) -> Film {
-    let lever: [f64; 3] = crafting::LEVER.center().into();
-    let bench: [f64; 3] = crafting::STONE_COGS.center().into();
+    let lever = crafting::LEVER.center().to_array();
+    let bench = crafting::STONE_COGS.center().to_array();
     let at_lever = [-12.8, 2.2, 18.9];
     let to_lever = [
         [-9.4, 2.0, 9.75],
@@ -172,7 +172,7 @@ fn autocrafting(film: Film) -> Film {
 /// Halfway round, the excavator further east is started: the floor of the world is too deep
 /// to be loaded, so it waits out its ten seconds for it and is done as the camera gets there.
 fn surveying(film: Film) -> Film {
-    let bench: [f64; 3] = crafting::STONE_COGS.center().into();
+    let bench = crafting::STONE_COGS.center().to_array();
     let site = [13.0, 0.0, 19.5];
     let over = [[-1.5, 2.0, 20.5], [3.5, 3.5, 25.5], [9.0, 4.0, 29.0]];
     film.shot(

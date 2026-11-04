@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use weft_sdk::*;
 
 use super::route::{Route, route};
-use super::{BASE_SPEED, GILDED_SPEED, Motion, NONE, SLOTS, TUBE, Tube, free_slot, kind, visual};
+use super::{BASE_SPEED, GILDED_SPEED, Motion, NONE, SLOTS, Tube, free_slot, kind, visual};
 use crate::lib::Pos;
 
 /// An item at the far face of a tube, to go on through it.
@@ -93,7 +93,7 @@ fn decide(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize, stack: Ite
         Route::Out(face) => m.to = face,
         Route::Wait => {}
         Route::Destroy => {
-            w.play_sound(&crate::sounds::TUBE_VOID, pos.center().into(), 1.0);
+            w.play_sound(&crate::sounds::TUBE_VOID, pos.center(), 1.0);
             w.inventory(id).set(slot as u32, ItemStack::EMPTY);
             visual::remove(w, m.visual);
             *m = Motion::default();
@@ -114,7 +114,7 @@ fn spill(w: &World, pos: Pos, face: u32, stack: ItemStack) {
     } else {
         pos.neighbor(face)
     };
-    w.spawn_item(at.center().into(), stack);
+    w.spawn_item(at.center(), stack);
 }
 
 /// Sends an item waiting at its tube's far face on: into the next tube, into a machine, or out.
@@ -133,7 +133,7 @@ fn hand_on(
     let m = tubes[h.tube].moving[h.slot];
     let stack = w.inventory(id).get(h.slot as u32);
     let next = pos.neighbor(m.to);
-    let other = w.block_entity(next.into());
+    let other = w.block_entity(next);
     if let Some(&j) = index.get(&other) {
         let moved = into_tube(w, next, other, &mut tubes[j], m, stack);
         if moved {
@@ -142,7 +142,7 @@ fn hand_on(
         }
         return moved;
     }
-    if other != 0 && w.component(other, &TUBE).is_some() {
+    if other != 0 && super::is_tube(w, next) {
         // A tube outside this batch (another region): the item waits.
         return false;
     }

@@ -14,9 +14,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use weft_sdk::*;
 
 use super::{Motion, NONE, TUBES};
-use crate::lib::{BlockState, FloatPos, Pos};
+use crate::lib::{BlockState, Pos, point};
 
-static ITEM_ENTITY: Entity = Entity::named("core:item");
 /// Marks a picture's stack, a different value for neighbors, so two pictures of the same item
 /// never merge into one the way dropped items do.
 static PICTURE: Component<u32> = Component::named("cogwork:tube_picture");
@@ -32,8 +31,9 @@ const STALE: u64 = 40;
 pub fn register(r: &mut Registry) {
     r.stack_component(&PICTURE, 0);
     r.entity_component(&IS_PICTURE, 0, component_flags::SAVE);
-    r.attach(&ITEM_ENTITY, &IS_PICTURE);
-    r.intercept(&question::PICKUP_ITEM, |q| {
+    r.attach(&ITEM, &IS_PICTURE);
+    // A picture's pickup delay (`spawn`) isn't saved: this keeps loaded ones out of hands too.
+    r.intercept(&actions::PICKUP_ITEM, |q| {
         if is_picture(&q.world(), q.query().other) {
             Verdict::Deny
         } else {
@@ -49,13 +49,7 @@ fn pictures<R>(f: impl FnOnce(&mut HashMap<(u32, u64), u64>) -> R) -> R {
 }
 
 fn is_picture(w: &World, id: u64) -> bool {
-    w.component(id, &IS_PICTURE).is_some_and(|&mark| mark != 0)
-}
-
-fn mark_picture(w: &World, id: u64) {
-    if let Some(mark) = w.component_mut(id, &IS_PICTURE) {
-        *mark = 1;
-    }
+    w.component(id, &IS_PICTURE).is_some_and(|mark| mark != 0)
 }
 
 /// Whether a picture last shown at the tick `shown` is left over at `now`: unshown for `STALE`
@@ -66,7 +60,7 @@ fn is_stale(shown: u64, now: u64) -> bool {
 
 /// Removes the pictures of this region nobody has shown lately.
 fn sweep(w: &World) {
-    let now = w.time();
+    let now = w.game_time();
     if !now.is_multiple_of(STALE) {
         return;
     }
@@ -81,7 +75,7 @@ fn sweep(w: &World) {
         // Only what this region holds; another region sweeps its own.
         if w.entity(id).is_some() {
             if is_picture(w, id) {
-                w.remove(id);
+                w.despawn(id);
             }
             pictures(|p| p.remove(&(dim, id)));
         }
@@ -90,21 +84,19 @@ fn sweep(w: &World) {
 
 /// Where in the world an item at `m` in the tube at `pos` is, and how fast it goes there
 /// (blocks per second).
-fn place_of(pos: Pos, m: &Motion) -> (FloatPos, [f64; 3]) {
+fn place_of(pos: Pos, m: &Motion) -> (Vec3, Vec3) {
     let (face, along, sign) = if m.pos < 0.5 {
         (m.from, 0.5 - m.pos, -1.0)
     } else {
         (m.to, m.pos - 0.5, 1.0)
     };
     if face == NONE {
-        return (pos.center(), [0.0; 3]);
+        return (pos.center(), Vec3::ZERO);
     }
     let dir = Dir::from_face(face);
-    let at = pos.center().toward_by(dir, along as f64);
+    let at = point::toward(pos.center(), dir, along as f64);
     // Ticks are a twentieth of a second.
-    let vel = dir
-        .offset()
-        .map(|o| o as f64 * sign * m.speed as f64 * 20.0);
+    let vel = point::toward(Vec3::ZERO, dir, sign * m.speed as f64 * 20.0);
     (at, vel)
 }
 
@@ -118,47 +110,37 @@ pub fn show(w: &World, pos: Pos, m: &mut Motion, stack: ItemStack) {
     } else {
         0.4
     };
-    let at = at.add_y(-bob);
-    let mut picture = w
+    let at = at.offset(0.0, -bob, 0.0);
+    let shown = w
         .entity(m.visual)
-        .filter(|st| m.visual != 0 && st.kind == ITEM_ENTITY.id());
-    if picture.is_none() {
-        m.visual = spawn(w, at, stack);
-        picture = w.entity(m.visual);
+        .is_some_and(|st| m.visual != 0 && st.kind == ITEM.id());
+    if shown {
+        w.entity_edit(m.visual).pos(at).velocity(vel);
+    } else {
+        m.visual = spawn(w, at, vel, stack);
     }
-    let Some(mut st) = picture else { return };
-    // Again on every show, for pictures saved before they were marked.
-    mark_picture(w, m.visual);
-    pictures(|p| p.insert((w.dimension(), m.visual), w.time()));
-    st.pos = at.into();
-    st.vel = vel;
-    w.set_entity(m.visual, &st);
+    if m.visual != 0 {
+        // Again on every show, for pictures saved before they were marked.
+        w.set_component(m.visual, &IS_PICTURE, 1);
+        pictures(|p| p.insert((w.dimension(), m.visual), w.game_time()));
+    }
 }
 
-/// A new picture of `stack` at `at`, or 0 if it couldn't be found after spawning.
-fn spawn(w: &World, at: FloatPos, stack: ItemStack) -> u64 {
+/// A new picture of `stack` at `at` going at `vel`, 0 if none could be made.
+fn spawn(w: &World, at: Vec3, vel: Vec3, stack: ItemStack) -> u64 {
     let mark = NEXT_MARK.fetch_add(1, Ordering::Relaxed) % 64;
-    let before = w.near(at.into(), 0.5, Some(&ITEM_ENTITY));
-    w.spawn_item(
-        at.into(),
-        ItemStack { count: 1, ..stack }.with(&PICTURE, mark),
-    );
-    let id = w
-        .near(at.into(), 0.5, Some(&ITEM_ENTITY))
-        .into_iter()
-        .find(|id| !before.contains(id))
-        .unwrap_or(0);
-    if id != 0 {
-        mark_picture(w, id);
-        pictures(|p| p.insert((w.dimension(), id), w.time()));
-    }
-    id
+    let picture = ItemStack { count: 1, ..stack }.with(&PICTURE, mark);
+    let how = Spawn::new()
+        .stack(picture)
+        .velocity(vel)
+        .pickup_delay(u32::MAX);
+    w.spawn_with(&ITEM, at, &how)
 }
 
 /// Takes the picture `id` out of the world.
 pub fn remove(w: &World, id: u64) {
     if id != 0 && is_picture(w, id) {
-        w.remove(id);
+        w.despawn(id);
     }
     pictures(|p| p.remove(&(w.dimension(), id)));
 }
@@ -168,11 +150,11 @@ pub fn clear_broken(w: &World, pos: Pos) {
     if BlockState::at(w, pos).has(&TUBES) {
         return;
     }
-    for id in w.near(pos.center().into(), 1.5, Some(&ITEM_ENTITY)) {
+    for id in w.entities_near(pos.center(), 1.5, Some(&ITEM)) {
         // Back up by the bob `show` takes off, to find the cell it was drawn for.
         let inside = w
             .entity(id)
-            .is_some_and(|st| Pos::containing(FloatPos::from(st.pos).add_y(0.4)) == pos);
+            .is_some_and(|st| Pos::from(st.pos.offset(0.0, 0.4, 0.0).block()) == pos);
         if inside {
             remove(w, id);
         }
@@ -206,13 +188,13 @@ mod tests {
         let (west, up) = (Dir::West.face(), Dir::Up.face());
         let tube = Pos::new(0, 0, 0);
         let (hub, still) = place_of(tube, &at(0.5, NONE, NONE));
-        let middle = FloatPos::new(0.5, 0.5, 0.5);
-        assert_eq!((hub, still), (middle, [0.0; 3]), "waiting at the hub");
+        let middle = Vec3::new(0.5, 0.5, 0.5);
+        assert_eq!((hub, still), (middle, Vec3::ZERO), "waiting at the hub");
         let (start, vel) = place_of(tube, &at(0.0, west, NONE));
-        assert_eq!(start, FloatPos::new(0.0, 0.5, 0.5), "in at the west face");
-        assert!(vel[0] > 0.0, "heading east, to the hub");
+        assert_eq!(start, Vec3::new(0.0, 0.5, 0.5), "in at the west face");
+        assert!(vel.x > 0.0, "heading east, to the hub");
         let (end, vel) = place_of(tube, &at(1.0, west, up));
-        assert_eq!(end, FloatPos::new(0.5, 1.0, 0.5), "out at the top");
-        assert!((vel[1] - 1.0).abs() < 1e-6, "a block a second, going up");
+        assert_eq!(end, Vec3::new(0.5, 1.0, 0.5), "out at the top");
+        assert!((vel.y - 1.0).abs() < 1e-6, "a block a second, going up");
     }
 }

@@ -35,7 +35,7 @@ pub fn area(a: Pos, b: Pos) -> Area {
 pub fn fuel(set: &Set, at: Pos) {
     let world = set.world();
     if let Some(coal) = Item::lookup("base:coal") {
-        let engine = world.inventory(world.block_entity(in_world(set, at).into()));
+        let engine = world.inventory(in_world(set, at));
         engine.group("fuel").set(0, ItemStack::new(coal, 64));
     }
 }
@@ -43,7 +43,7 @@ pub fn fuel(set: &Set, at: Pos) {
 /// `stacks` full stacks of each item into the chest or machine at `at`.
 pub fn stock(set: &Set, at: Pos, items: &[&str], stacks: u32) {
     let world = set.world();
-    let chest = world.inventory(world.block_entity(in_world(set, at).into()));
+    let chest = world.inventory(in_world(set, at));
     for item in items.iter().filter_map(|name| Item::lookup(name)) {
         for _ in 0..stacks {
             chest.insert(ItemStack::new(item, 64));

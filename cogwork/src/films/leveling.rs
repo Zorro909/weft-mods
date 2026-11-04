@@ -54,9 +54,8 @@ pub fn place_leveler(set: &Set) {
 /// Fills the leveler's stock and lights the engine, which the wrench then turns into it.
 pub fn turn_engine(set: &Set) {
     let world = set.world();
-    let leveler = world.block_entity(in_world(set, LEVELER_AT).into());
     if let Some(dirt) = Item::lookup("base:dirt") {
-        let stock = world.inventory(leveler).group("input");
+        let stock = world.inventory(in_world(set, LEVELER_AT)).group("input");
         stock.set(0, ItemStack::new(dirt, 64));
     }
     fuel(set, ENGINE);

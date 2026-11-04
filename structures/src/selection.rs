@@ -84,18 +84,18 @@ fn set(cmd: &mut ServerCommand, corner: usize) {
     let (world, player) = (cmd.world(), cmd.player());
     let at = cmd
         .pos("at")
-        .map(|pos| pos.map(|v| v.floor() as i32))
-        .or_else(|| world.look_at(player, REACH, false).map(|look| look.pos))
+        .map(Vec3::block)
         .or_else(|| {
             world
-                .entity(player)
-                .map(|me| me.pos.map(|v| v.floor() as i32))
-        });
+                .target_block(player, REACH, false)
+                .map(|look| look.pos)
+        })
+        .or_else(|| world.entity(player).map(|me| me.pos.block()));
     let Some(at) = at else {
         return cmd.reply("structures.no_player", &[]);
     };
     set_corner(&world, player, corner, at);
-    let [x, y, z] = at.map(|v| Arg::Int(v as i64));
+    let [x, y, z] = at.to_array().map(|v| Arg::Int(v as i64));
     cmd.reply(
         "structures.corner_set",
         &[Arg::Int(corner as i64 + 1), x, y, z],
@@ -104,7 +104,7 @@ fn set(cmd: &mut ServerCommand, corner: usize) {
 
 /// Corner `corner` (0 or 1) of `player`'s selection at `at`, shown to them. Corners chosen in
 /// another dimension are forgotten.
-pub fn set_corner(world: &World, player: u64, corner: usize, at: [i32; 3]) {
+pub fn set_corner(world: &World, player: u64, corner: usize, at: BlockPos) {
     let selection = {
         let mut selections = lock(&SELECTIONS);
         let selection = selections.entry(player).or_default();
@@ -114,7 +114,7 @@ pub fn set_corner(world: &World, player: u64, corner: usize, at: [i32; 3]) {
                 ..Selection::default()
             };
         }
-        selection.corners[corner] = Some(at);
+        selection.corners[corner] = Some(at.to_array());
         *selection
     };
     if let Some(shown) = selection.shown() {
