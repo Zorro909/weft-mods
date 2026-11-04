@@ -14,7 +14,10 @@ mod menus;
 mod playback;
 mod rig;
 mod server;
+mod timeline;
 mod view;
+
+use std::sync::{Mutex, MutexGuard};
 
 use weft_sdk::*;
 
@@ -25,4 +28,9 @@ fn init(r: &mut Registry) {
     director::register(r);
     camera::register(r);
     launch::register(r);
+}
+
+/// `mutex` locked, even if a panic left it poisoned: the state stays usable.
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
 }

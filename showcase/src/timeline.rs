@@ -1,14 +1,13 @@
-//! Reading a film back from the bytes `wire` writes. Anything cut short, unknown or of another
-//! version is refused, and so are numbers that aren't finite, which would stop a film or fling
-//! the camera.
+//! Reading a film back from the bytes `TIMELINE` carries, as `showcase_api` writes them
+//! (`api/src/wire.rs`). Anything cut short, unknown or of another version is refused, and so are
+//! numbers that aren't finite, which would stop a film or fling the camera.
 
-use crate::film::{Ease, Look, Path, Shot, Step};
-use crate::wire::{Timeline, VERSION};
+use showcase_api::{Ease, Look, Path, Pos, Shot, Step, TIMELINE_VERSION, Timeline};
 
 /// The timeline in `bytes`; `None` if it is cut short, malformed or of another version.
-pub(crate) fn decode(bytes: &[u8]) -> Option<Timeline> {
+pub fn decode(bytes: &[u8]) -> Option<Timeline> {
     let mut read = Reader(bytes);
-    if u16::from_le_bytes(read.take()?) != VERSION {
+    if u16::from_le_bytes(read.take()?) != TIMELINE_VERSION {
         return None;
     }
     let film = read.text()?;
@@ -54,8 +53,8 @@ impl Reader<'_> {
         Some([self.f64()?, self.f64()?, self.f64()?])
     }
 
-    fn block(&mut self) -> Option<[i32; 3]> {
-        Some([self.i32()?, self.i32()?, self.i32()?])
+    fn block(&mut self) -> Option<Pos> {
+        Some(Pos::new(self.i32()?, self.i32()?, self.i32()?))
     }
 
     fn text(&mut self) -> Option<String> {
@@ -131,5 +130,85 @@ impl Reader<'_> {
             5 => Look::Along(self.list(|read| Some([read.f32()?, read.f32()?]))?),
             _ => return None,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use showcase_api::*;
+
+    use super::*;
+
+    fn timeline(film: Film) -> Timeline {
+        Timeline {
+            film: "mymod:tour".into(),
+            origin: Pos::new(10, -64, 3),
+            steps: film.steps,
+        }
+    }
+
+    fn bytes(film: Film) -> Vec<u8> {
+        timeline(film).encode()
+    }
+
+    fn every_kind() -> Film {
+        Film::new()
+            .title("mymod.film.title", 3.0)
+            .shot(orbit([1.0, 2.0, 3.0], 8.0).arc(10.0, 200.0).fov(70.0, 50.0))
+            .shot(flyby(&[[0.0; 3], [4.0, 5.0, 6.0], [9.0, 1.0, 2.0]]).ease(Ease::In).blend(1.0))
+            .shot(dolly([0.0; 3], [1.0; 3]).look(Look::Pan([0.0; 3], [2.0; 3])))
+            .shot(hold([1.0; 3]).look(Look::Angles { yaw: 90.0, pitch: -10.0 }))
+            .shot(crane([0.0; 3], 6.0, 45.0, [1.0, 9.0]).ease(Ease::Linear))
+            .shot(flyby(&[[0.0; 3], [1.0; 3]]).look(Look::Along(vec![[10.0, 0.0], [-170.0, 20.0]])))
+            .shot(follow("item", [0.0, 1.0, -2.0]).ease(Ease::Out))
+            .wait(1.5)
+            .wait_for("dug", 30.0)
+            .cue("start")
+            .menu("mymod:press", Pos::new(2, 0, -3), 4.0)
+    }
+
+    #[test]
+    fn every_step_survives_the_round_trip() {
+        let sent = timeline(every_kind());
+        assert_eq!(decode(&sent.encode()), Some(sent));
+    }
+
+    #[test]
+    fn a_timeline_cut_short_anywhere_is_refused() {
+        let bytes = bytes(every_kind());
+        for len in 0..bytes.len() {
+            assert!(
+                decode(&bytes[..len]).is_none(),
+                "cut at {len} of {}",
+                bytes.len()
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_tags_are_refused() {
+        let mut bytes = bytes(Film::new().wait(1.0));
+        // The version, the name's length and text, the origin, the count: then the step's tag.
+        let tag = 2 + 2 + "mymod:tour".len() + 12 + 4;
+        assert_eq!(bytes[tag], 1, "the wait's tag");
+        bytes[tag] = 6;
+        assert!(decode(&bytes).is_none(), "a step this version doesn't know");
+    }
+
+    #[test]
+    fn numbers_that_are_not_finite_are_refused() {
+        let wait = bytes(Film::new().wait(f32::NAN));
+        assert!(decode(&wait).is_none(), "a wait that never ends");
+        let far = bytes(Film::new().shot(hold([f64::INFINITY, 0.0, 0.0])));
+        assert!(decode(&far).is_none(), "a camera at infinity");
+    }
+
+    #[test]
+    fn a_timeline_of_another_version_is_refused() {
+        let mut bytes = bytes(every_kind());
+        for version in [TIMELINE_VERSION - 1, TIMELINE_VERSION + 1] {
+            bytes[..2].copy_from_slice(&version.to_le_bytes());
+            assert!(decode(&bytes).is_none(), "version {version}");
+        }
     }
 }

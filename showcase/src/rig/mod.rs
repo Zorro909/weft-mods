@@ -4,7 +4,7 @@ mod curve;
 pub mod math;
 mod turn;
 
-use showcase_api::{Look, Path, Shot};
+use showcase_api::{Ease, Look, Path, Pos, Shot};
 
 use self::curve::Curve;
 use self::math::{add, angles_along, eased, lerp, lerp_angle, lerp3, sub};
@@ -31,8 +31,8 @@ pub struct Rig {
 }
 
 impl Rig {
-    pub fn new(shot: Shot, origin: [i32; 3], own_fov: f32) -> Rig {
-        let origin = origin.map(f64::from);
+    pub fn new(shot: Shot, origin: Pos, own_fov: f32) -> Rig {
+        let origin: [f64; 3] = origin.into();
         let curve = match &shot.path {
             Path::Spline(points) => Some(Curve::new(
                 &points.iter().map(|p| add(origin, *p)).collect::<Vec<_>>(),
@@ -76,7 +76,7 @@ impl Rig {
         blend(
             before,
             pose,
-            eased(showcase_api::Ease::Smooth, (clock / self.shot.blend) as f64),
+            eased(Ease::Smooth, (clock / self.shot.blend) as f64),
         )
     }
 
@@ -146,7 +146,7 @@ pub fn blend(from: Pose, to: Pose, u: f64) -> Pose {
 
 #[cfg(test)]
 mod tests {
-    use showcase_api::{Look, dolly, hold, orbit};
+    use showcase_api::{dolly, flyby, follow, hold, orbit};
 
     use super::*;
 
@@ -165,7 +165,7 @@ mod tests {
     fn an_orbit_keeps_its_distance_and_looks_at_the_center() {
         let rig = Rig::new(
             orbit([0.5, 0.0, 0.5], 8.0).height(0.0, 0.0).secs(4.0),
-            [100, 64, -20],
+            Pos::new(100, 64, -20),
             70.0,
         );
         let center = [100.5, 64.0, -19.5];
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn a_dolly_looks_the_way_it_moves() {
-        let rig = Rig::new(dolly([0.0; 3], [0.0, 0.0, -10.0]), [0; 3], 70.0);
+        let rig = Rig::new(dolly([0.0; 3], [0.0, 0.0, -10.0]), Pos::default(), 70.0);
         let pose = rig.pose(2.0, &none, START);
         assert!(
             pose.yaw.abs() < 1e-6 && pose.pitch.abs() < 1e-6,
@@ -200,7 +200,7 @@ mod tests {
                     pitch: 0.0,
                 })
                 .blend(1.0),
-            [0; 3],
+            Pos::default(),
             70.0,
         );
         assert_eq!(rig.pose(0.0, &none, START), START, "at the start");
@@ -209,14 +209,18 @@ mod tests {
 
     #[test]
     fn a_blend_into_a_zoom_starts_at_the_players_own_view() {
-        let rig = Rig::new(hold([0.0; 3]).fov(40.0, 40.0).blend(1.0), [0; 3], 70.0);
+        let rig = Rig::new(
+            hold([0.0; 3]).fov(40.0, 40.0).blend(1.0),
+            Pos::default(),
+            70.0,
+        );
         assert_eq!(
             rig.pose(0.0, &none, START).fov,
             70.0,
             "where the blend starts"
         );
         assert_eq!(rig.pose(1.0, &none, START).fov, 40.0, "after it");
-        let plain = Rig::new(hold([0.0; 3]), [0; 3], 70.0);
+        let plain = Rig::new(hold([0.0; 3]), Pos::default(), 70.0);
         assert_eq!(
             plain.pose(0.5, &none, START).fov,
             70.0,
@@ -228,10 +232,10 @@ mod tests {
     fn a_marked_path_looks_where_it_was_marked() {
         let points = [[0.0; 3], [5.0, 0.0, 0.0], [5.0, 0.0, 5.0]];
         let angles = vec![[0.0, 0.0], [90.0, -30.0], [180.0, 0.0]];
-        let shot = showcase_api::flyby(&points)
+        let shot = flyby(&points)
             .look(Look::Along(angles))
-            .ease(showcase_api::Ease::Linear);
-        let rig = Rig::new(shot, [0; 3], 70.0);
+            .ease(Ease::Linear);
+        let rig = Rig::new(shot, Pos::default(), 70.0);
         let middle = rig.pose(2.5, &none, START);
         assert!(
             (middle.eye[0] - 5.0).abs() < 1e-3 && middle.eye[2].abs() < 1e-3,
@@ -246,10 +250,10 @@ mod tests {
     #[test]
     fn a_path_marked_on_the_spot_still_turns() {
         let angles = vec![[0.0, 0.0], [90.0, 0.0]];
-        let shot = showcase_api::flyby(&[[1.0; 3], [1.0; 3]])
+        let shot = flyby(&[[1.0; 3], [1.0; 3]])
             .look(Look::Along(angles))
-            .ease(showcase_api::Ease::Linear);
-        let rig = Rig::new(shot, [0; 3], 70.0);
+            .ease(Ease::Linear);
+        let rig = Rig::new(shot, Pos::default(), 70.0);
         let yaw = rig.pose(2.5, &none, START).yaw;
         assert!((yaw - 45.0).abs() < 1e-6, "halfway through the turn: {yaw}");
     }
@@ -260,13 +264,13 @@ mod tests {
             eye: [3.0, 70.0, -8.0],
             ..START
         };
-        let rig = Rig::new(showcase_api::flyby(&[]), [100, 64, -20], 70.0);
+        let rig = Rig::new(flyby(&[]), Pos::new(100, 64, -20), 70.0);
         assert_eq!(rig.pose(1.0, &none, before), before);
     }
 
     #[test]
     fn an_unknown_subject_keeps_the_camera_where_it_was() {
-        let rig = Rig::new(showcase_api::follow("item", [0.0, 1.0, 0.0]), [0; 3], 70.0);
+        let rig = Rig::new(follow("item", [0.0, 1.0, 0.0]), Pos::default(), 70.0);
         assert_eq!(rig.pose(1.0, &none, START), START);
     }
 }

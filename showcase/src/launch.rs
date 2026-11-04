@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use weft_sdk::client::client_flags as cf;
 use weft_sdk::*;
 
-use crate::director;
+use crate::{director, lock};
 
 /// How long the run waits when even the server never answers (the mod missing altogether).
 const ANSWER_TIME: Duration = Duration::from_secs(30);
@@ -47,12 +47,12 @@ pub fn register(r: &mut Registry) {
     let Some(film) = launch_option("showcase") else {
         return;
     };
-    *LAUNCH.lock().unwrap_or_else(|e| e.into_inner()) = Some(Launch {
+    *lock(&LAUNCH) = Some(Launch {
         film,
         stage: Stage::Start,
     });
     r.client_frame(|c| {
-        let mut guard = LAUNCH.lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = lock(&LAUNCH);
         if let Some(launch) = guard.as_mut() {
             launch.stage = step(
                 c,

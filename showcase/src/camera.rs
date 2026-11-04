@@ -6,10 +6,11 @@
 
 use std::sync::Mutex;
 
-use showcase_api::{Film, Look, Timeline, flyby, orbit};
+use showcase_api::{Film, Look, Pos, Timeline, flyby, orbit};
 use weft_sdk::*;
 
 use crate::director::play;
+use crate::lock;
 use crate::rig::Pose;
 use crate::rig::math::{add, forward, sub};
 use crate::view::camera;
@@ -26,10 +27,11 @@ pub fn register(r: &mut Registry) {
     r.client_command("camera", usage, |cmd| {
         let c = cmd.client();
         if cmd.has("point") {
-            let count = with_points(|points| {
+            let count = {
+                let mut points = lock(&POINTS);
                 points.push(camera(&c));
                 points.len()
-            });
+            };
             cmd.reply("showcase.camera.marked", &[Arg::Int(count as i64)]);
         } else if cmd.has("play") {
             play_points(&c, cmd);
@@ -38,18 +40,14 @@ pub fn register(r: &mut Registry) {
             let secs = cmd.float("secs").unwrap_or(ORBIT_SECS);
             play(&c, local(orbit_ahead(camera(&c), radius, secs)));
         } else if cmd.has("clear") {
-            with_points(Vec::clear);
+            lock(&POINTS).clear();
             cmd.reply("showcase.camera.cleared", &[]);
         }
     });
 }
 
-fn with_points<R>(f: impl FnOnce(&mut Vec<Pose>) -> R) -> R {
-    f(&mut POINTS.lock().unwrap_or_else(|e| e.into_inner()))
-}
-
 fn play_points(c: &Client, cmd: &mut ClientCommand) {
-    let points = with_points(|points| points.clone());
+    let points = lock(&POINTS).clone();
     if points.len() < 2 {
         cmd.reply("showcase.camera.too_few", &[]);
         return;
@@ -82,7 +80,7 @@ fn orbit_ahead(from: Pose, radius: f64, secs: f64) -> Film {
 fn local(film: Film) -> Timeline {
     Timeline {
         film: "showcase:camera".into(),
-        origin: [0; 3],
+        origin: Pos::default(),
         steps: film.steps,
     }
 }

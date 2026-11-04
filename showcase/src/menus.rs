@@ -1,7 +1,7 @@
 //! A film's menu on screen: the server opens it on its block, as if the camera had used it, and
 //! the client closes it once its time is up or the film ends.
 
-use showcase_api::name;
+use showcase_api::{Name, Pos};
 use weft_sdk::*;
 
 use crate::playback::ShownMenu;
@@ -10,7 +10,7 @@ use crate::server::{OPEN_MENU, OpenMenu};
 /// The menu this client asked for and hasn't closed yet: its name and block.
 #[derive(Default)]
 pub struct Menus {
-    open: Option<(String, [i32; 3])>,
+    open: Option<(String, Pos)>,
 }
 
 impl Menus {
@@ -24,13 +24,8 @@ impl Menus {
             c.close_screen();
         }
         if let Some((menu, at)) = &wanted {
-            c.send(
-                &OPEN_MENU,
-                &OpenMenu {
-                    menu: name(menu),
-                    at: *at,
-                },
-            );
+            let menu = Name::from(menu.as_str());
+            c.send(&OPEN_MENU, &OpenMenu { menu, at: *at });
         }
         self.open = wanted;
     }

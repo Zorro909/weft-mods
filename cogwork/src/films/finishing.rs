@@ -8,7 +8,7 @@ use std::sync::{Mutex, PoisonError};
 use showcase_api::{Set, signal};
 use weft_sdk::*;
 
-use super::parts::{engine, fuel};
+use super::parts::{engine, fuel, in_world};
 use crate::excavator::{DIG, EXCAVATOR, FLOOR_Y, Frame, GANTRY_FRAME, Stage, Status};
 use crate::lib::{BlockState, Pos};
 
@@ -29,12 +29,15 @@ pub fn register(r: &mut Registry) {
 
 /// The excavator, its engines, its frame and its pit.
 pub fn build(set: &Set) {
-    set.place(FINISHER.into(), EXCAVATOR.with(&[("facing", "south")]));
+    set.place(
+        FINISHER.into(),
+        EXCAVATOR.with(&[("facing", "south")]).into(),
+    );
     for (at, toward) in engines() {
         engine(set, at, toward);
     }
     let world = set.world();
-    let pos = Pos::from(set.at(FINISHER.into()));
+    let pos = in_world(set, FINISHER);
     let frame = Frame::plan(&world, pos, Dir::South);
     for cell in frame.cells().into_iter().filter(|&c| c != pos) {
         BlockState::of(&GANTRY_FRAME).place(&world, cell);
@@ -52,7 +55,7 @@ pub fn build(set: &Set) {
 /// Puts the excavator to mining its last few blocks, frame built and drill down at them.
 pub fn start(set: &Set) {
     let world = set.world();
-    let pos = Pos::from(set.at(FINISHER.into()));
+    let pos = in_world(set, FINISHER);
     let frame = Frame::plan(&world, pos, Dir::South);
     let Some(d) = world.component_mut(world.block_entity(pos.into()), &DIG) else {
         return;
@@ -70,7 +73,7 @@ pub fn power(set: &Set) {
     for (at, _) in engines() {
         fuel(set, at);
     }
-    let pos = Pos::from(set.at(FINISHER.into()));
+    let pos = in_world(set, FINISHER);
     *WATCHED.lock().unwrap_or_else(PoisonError::into_inner) = Some((set.player(), pos));
 }
 

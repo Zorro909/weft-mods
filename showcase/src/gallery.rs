@@ -2,7 +2,7 @@
 //! little around each in turn under its name, after a look at the whole row and before rising
 //! over it. Works for any mod, with films or without.
 
-use showcase_api::{Film, Set, crane, flyby, orbit, send};
+use showcase_api::{Area, BlockState, Film, Pos, Set, crane, flyby, orbit, send};
 use weft_sdk::*;
 
 /// Blocks between two plinths' middles.
@@ -13,7 +13,7 @@ const TURN_SECS: f32 = 2.6;
 const PLINTHS: [&str; 2] = ["base:stone_bricks", "base:stone"];
 
 /// Builds the gallery of `mod_id` at `origin` and plays it for `player`; how many blocks it shows.
-pub fn show(world: &World, player: u64, origin: [i32; 3], mod_id: &str) -> usize {
+pub fn show(world: &World, player: u64, origin: Pos, mod_id: &str) -> usize {
     let blocks = blocks_of(mod_id);
     if !blocks.is_empty() {
         build(&Set::new(*world, player, origin), &blocks);
@@ -29,7 +29,7 @@ pub fn show(world: &World, player: u64, origin: [i32; 3], mod_id: &str) -> usize
 }
 
 /// The first state of every block of `mod_id`, and the block's name.
-fn blocks_of(mod_id: &str) -> Vec<(u32, &'static str)> {
+fn blocks_of(mod_id: &str) -> Vec<(BlockState, &'static str)> {
     let prefix = format!("{mod_id}:");
     let mut out = Vec::new();
     let mut last = u32::MAX;
@@ -40,7 +40,7 @@ fn blocks_of(mod_id: &str) -> Vec<(u32, &'static str)> {
         }
         let block = block_of(state);
         if block != last && name.starts_with(&prefix) {
-            out.push((state, name.split('[').next().unwrap_or(name)));
+            out.push((state.into(), name.split('[').next().unwrap_or(name)));
         }
         last = block;
     }
@@ -48,16 +48,17 @@ fn blocks_of(mod_id: &str) -> Vec<(u32, &'static str)> {
 }
 
 /// The row on flat ground, with room in front for the camera.
-fn build(set: &Set, blocks: &[(u32, &str)]) {
+fn build(set: &Set, blocks: &[(BlockState, &str)]) {
     let length = row_length(blocks.len());
-    set.level([-6, -4], [length as i32 + 6, wide(length) as i32 + 3], 16);
-    let plinth = PLINTHS.iter().find_map(|name| Block::lookup(name));
+    let far = Pos::new(length as i32 + 6, 16, wide(length) as i32 + 3);
+    set.level(Area::between(Pos::new(-6, 0, -4), far));
+    let plinth = PLINTHS.iter().find_map(|name| BlockState::named(name));
     for (i, (state, _)) in blocks.iter().enumerate() {
         let x = i as i32 * SPACING;
         if let Some(plinth) = plinth {
-            set.place([x, 0, 0], plinth);
+            set.place(Pos::new(x, 0, 0), plinth);
         }
-        set.place([x, 1, 0], *state);
+        set.place(Pos::new(x, 1, 0), *state);
     }
 }
 
@@ -77,7 +78,7 @@ fn wide(length: f64) -> f64 {
 }
 
 /// The whole row from in front, each block in turn, then up and away.
-fn film(mod_id: &str, blocks: &[(u32, &str)]) -> Film {
+fn film(mod_id: &str, blocks: &[(BlockState, &str)]) -> Film {
     let length = row_length(blocks.len());
     let row = shown_at(length / 2.0);
     let wide = wide(length);

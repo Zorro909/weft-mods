@@ -9,34 +9,39 @@
 //! Everything a film says is plain data, so the two mods only meet through the events and
 //! channels below, whose layouts the engine checks when the mods load.
 
-mod decode;
+mod area;
+mod block_state;
 mod film;
+mod name;
+mod pos;
 mod set;
 mod wire;
 
+pub use area::Area;
+pub use block_state::BlockState;
 pub use film::{Ease, Film, Look, Path, Shot, Step, crane, dolly, flyby, follow, hold, orbit};
-pub use set::{Set, film, send, signal, subject};
+pub use name::Name;
+pub use pos::Pos;
+pub use set::{FilmOptions, Set, film, send, signal, subject};
 use weft_sdk::*;
-pub use wire::Timeline;
-
-/// A name in an event or packet: UTF-8, padded with zeros.
-pub type Name = [u8; 64];
+pub use wire::{TIMELINE_VERSION, Timeline};
 
 value! {
     /// Asks the mod that owns `film` (`mymod:tour`) to build its set at `origin` for `player`
     /// and send the shots.
-    pub struct Play { pub film: Name, pub player: u64, pub origin: [i32; 3] }
+    pub struct Play { pub film: Name, pub player: u64, pub origin: Pos }
 }
 pub static PLAY: Event<Play> = Event::named("showcase:play");
 
 value! {
     /// Fired on the server when a film reaches `Film::cue(name)`, for the mod that owns `film`.
-    pub struct Cue { pub film: Name, pub player: u64, pub origin: [i32; 3], pub name: Name }
+    pub struct Cue { pub film: Name, pub player: u64, pub origin: Pos, pub name: Name }
 }
 pub static CUE: Event<Cue> = Event::named("showcase:cue");
 
-/// A film, from the mod that built it to the player's client.
-pub static TIMELINE: Channel<Timeline> = Channel::named("showcase:timeline");
+/// A film, from the mod that built it to the player's client: a `Timeline` as `Timeline::encode`
+/// writes it. Only the showcase mod reads it, so the reading is there.
+pub static TIMELINE: Channel<Vec<u8>> = Channel::named("showcase:timeline");
 
 value! {
     /// Lets a waiting film go on (`Film::wait_for`).
@@ -50,36 +55,3 @@ value! {
     pub struct Subject { pub name: Name, pub entity: u64, pub pos: [f64; 3] }
 }
 pub static SUBJECT: Channel<Subject> = Channel::named("showcase:subject");
-
-/// `text` as a `Name`, cut short at 64 bytes.
-pub fn name(text: &str) -> Name {
-    let mut out = [0; 64];
-    let mut len = text.len().min(64);
-    while !text.is_char_boundary(len) {
-        len -= 1;
-    }
-    out[..len].copy_from_slice(&text.as_bytes()[..len]);
-    out
-}
-
-/// The text of a `Name`.
-pub fn name_text(name: &Name) -> &str {
-    let len = name.iter().position(|b| *b == 0).unwrap_or(name.len());
-    std::str::from_utf8(&name[..len]).unwrap_or("")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn names_survive_the_round_trip() {
-        assert_eq!(name_text(&name("cogwork:tubes")), "cogwork:tubes");
-    }
-
-    #[test]
-    fn long_names_are_cut_on_a_character() {
-        let long = "é".repeat(40);
-        assert_eq!(name_text(&name(&long)), "é".repeat(32));
-    }
-}

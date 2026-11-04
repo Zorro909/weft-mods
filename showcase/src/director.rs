@@ -5,15 +5,17 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 use std::time::Instant;
 
-use showcase_api::{SIGNAL, SUBJECT, TIMELINE, Timeline, name, name_text};
+use showcase_api::{Name, SIGNAL, SUBJECT, TIMELINE, Timeline};
 use weft_sdk::client::client_flags as cf;
 use weft_sdk::*;
 
+use crate::lock;
 use crate::menus::Menus;
 use crate::playback::Playback;
 use crate::rig::Pose;
 use crate::rig::math::{add, angles_along, sub};
 use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
+use crate::timeline::decode;
 use crate::view::{camera, missing_notice, put, set_fov, titles};
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
@@ -27,8 +29,7 @@ const NOTICE_SECS: f32 = 6.0;
 struct Director {
     phase: Phase,
     signals: HashSet<String>,
-    /// Subjects by name: an entity, or a position where the entity is 0.
-    subjects: HashMap<String, (u64, [f64; 3])>,
+    subjects: HashMap<String, Subject>,
     /// The player's own field of view while a film plays, given back at its end.
     own_fov: Option<f32>,
     /// Films played to the end since the game started.
@@ -42,39 +43,53 @@ struct Director {
 enum Phase {
     #[default]
     Idle,
-    /// Visiting `stops[at]` for `frames` frames so far.
-    Loading {
-        playback: Playback,
-        stops: Vec<[f64; 3]>,
-        at: usize,
-        frames: u32,
-    },
+    Loading(Loading),
     Rolling(Playback),
+}
+
+/// A film waiting for the world along it to load: the camera visits each stop in turn.
+struct Loading {
+    playback: Playback,
+    stops: Vec<[f64; 3]>,
+    /// The stop the camera is at, and for how many frames so far.
+    at: usize,
+    frames: u32,
+}
+
+/// What a film's shots follow or look at.
+enum Subject {
+    Entity(u64),
+    Place([f64; 3]),
 }
 
 static DIRECTOR: Mutex<Option<Director>> = Mutex::new(None);
 
 fn with<R>(f: impl FnOnce(&mut Director) -> R) -> R {
-    let mut guard = DIRECTOR.lock().unwrap_or_else(|e| e.into_inner());
-    f(guard.get_or_insert_with(Director::default))
+    f(lock(&DIRECTOR).get_or_insert_with(Director::default))
 }
 
 pub fn register(r: &mut Registry) {
-    r.client_packet(&TIMELINE, |c, timeline| {
+    r.client_packet(&TIMELINE, |c, bytes| {
+        let Some(timeline) = decode(&bytes) else {
+            let len = bytes.len();
+            error!("showcase: a film arrived that this version can't read ({len} bytes)");
+            return;
+        };
         c.send(&STARTED, &());
         play(c, timeline);
     });
-    r.client_packet(&SIGNAL, |_, s| {
-        with(|d| d.signals.insert(name_text(&s.name).to_string()));
+    r.client_packet(&SIGNAL, |_, signal| {
+        with(|d| d.signals.insert(text(&signal.name)));
     });
-    r.client_packet(&SUBJECT, |_, s| {
-        with(|d| {
-            d.subjects
-                .insert(name_text(&s.name).to_string(), (s.entity, s.pos))
-        });
+    r.client_packet(&SUBJECT, |_, subject| {
+        let tracked = match subject.entity {
+            0 => Subject::Place(subject.pos),
+            entity => Subject::Entity(entity),
+        };
+        with(|d| d.subjects.insert(text(&subject.name), tracked));
     });
-    r.client_packet(&MISSING, |_, m| {
-        let film = name_text(&m.film).to_string();
+    r.client_packet(&MISSING, |_, missing| {
+        let film = text(&missing.film);
         error!("showcase: no mod sent the film {film}; is it loaded, built with its films?");
         with(|d| d.missing = Some((film, Instant::now())));
     });
@@ -84,6 +99,10 @@ pub fn register(r: &mut Registry) {
             notice(c, d);
         })
     });
+}
+
+fn text(name: &Name) -> String {
+    <&str>::from(name).to_string()
 }
 
 /// Whether a film is loading or playing.
@@ -109,25 +128,19 @@ pub fn play(c: &Client, timeline: Timeline) {
     from.fov = with(|d| *d.own_fov.get_or_insert(from.fov));
     let playback = Playback::new(timeline, from);
     let stops = playback.stops();
-    with(|d| {
-        d.phase = Phase::Loading {
-            playback,
-            stops,
-            at: 0,
-            frames: 0,
-        }
-    });
+    let loading = Loading {
+        playback,
+        stops,
+        at: 0,
+        frames: 0,
+    };
+    with(|d| d.phase = Phase::Loading(loading));
 }
 
 fn frame(c: &Client, d: &mut Director) {
     match std::mem::take(&mut d.phase) {
         Phase::Idle => {}
-        Phase::Loading {
-            playback,
-            stops,
-            at,
-            frames,
-        } => d.phase = load(c, playback, stops, at, frames),
+        Phase::Loading(loading) => d.phase = load(c, loading),
         Phase::Rolling(mut playback) => {
             roll(c, d, &mut playback);
             d.phase = if playback.done() {
@@ -140,12 +153,13 @@ fn frame(c: &Client, d: &mut Director) {
 }
 
 /// One frame at a stop: on to the next once the world there is loaded, rolling after the last.
-fn load(c: &Client, playback: Playback, stops: Vec<[f64; 3]>, at: usize, frames: u32) -> Phase {
-    let Some(&stop) = stops.get(at) else {
-        mark("start", &playback.film);
-        return Phase::Rolling(playback);
+fn load(c: &Client, mut loading: Loading) -> Phase {
+    let Some(&stop) = loading.stops.get(loading.at) else {
+        mark("start", &loading.playback.film);
+        return Phase::Rolling(loading.playback);
     };
-    let (yaw, pitch) = angles_along(sub(block_center(playback.origin), stop)).unwrap_or_default();
+    let origin = block_center(loading.playback.origin.into());
+    let (yaw, pitch) = angles_along(sub(origin, stop)).unwrap_or_default();
     // The field of view is left alone until the film rolls.
     put(
         c,
@@ -156,30 +170,27 @@ fn load(c: &Client, playback: Playback, stops: Vec<[f64; 3]>, at: usize, frames:
             fov: 0.0,
         },
     );
-    let ready = frames >= STOP_FRAMES && c.state().flags & cf::LOADED != 0;
-    let (at, frames) = if ready { (at + 1, 0) } else { (at, frames + 1) };
-    Phase::Loading {
-        playback,
-        stops,
-        at,
-        frames,
+    if loading.frames >= STOP_FRAMES && c.state().flags & cf::LOADED != 0 {
+        loading.at += 1;
+        loading.frames = 0;
+    } else {
+        loading.frames += 1;
     }
+    Phase::Loading(loading)
 }
 
 fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
     let dt = c.state().dt.min(MAX_DT);
     let subjects = &d.subjects;
-    let find = |n: &str| subject(c, subjects.get(n)?);
+    let find = |name: &str| locate(c, subjects.get(name)?);
     let cues = playback.advance(dt, &mut d.signals, &find);
     for cue in cues {
-        c.send(
-            &REACHED,
-            &Reached {
-                film: name(&playback.film),
-                origin: playback.origin,
-                name: name(&cue),
-            },
-        );
+        let reached = Reached {
+            film: Name::from(playback.film.as_str()),
+            origin: playback.origin,
+            name: Name::from(cue.as_str()),
+        };
+        c.send(&REACHED, &reached);
     }
     let pose = playback.pose();
     put(c, pose);
@@ -211,12 +222,14 @@ fn mark(what: &str, film: &str) {
 }
 
 /// Where a subject is now: the middle of its entity, or its place.
-fn subject(c: &Client, &(entity, pos): &(u64, [f64; 3])) -> Option<[f64; 3]> {
-    if entity == 0 {
-        return Some(pos);
+fn locate(c: &Client, subject: &Subject) -> Option<[f64; 3]> {
+    match *subject {
+        Subject::Place(pos) => Some(pos),
+        Subject::Entity(entity) => {
+            let e = c.entity(entity)?;
+            Some(add(e.pos, [0.0, e.size[1] as f64 / 2.0, 0.0]))
+        }
     }
-    let e = c.entity(entity)?;
-    Some(add(e.pos, [0.0, e.size[1] as f64 / 2.0, 0.0]))
 }
 
 /// Says on screen for a while that the film asked for never came.

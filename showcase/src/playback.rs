@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use showcase_api::{Path, Step, Timeline};
+use showcase_api::{Path, Pos, Step, Timeline};
 
 use crate::rig::{Pose, Rig, Subjects};
 
@@ -19,13 +19,13 @@ pub struct Title {
 pub struct ShownMenu {
     pub menu: String,
     /// The block, in the world.
-    pub at: [i32; 3],
+    pub at: Pos,
     pub until: f32,
 }
 
 pub struct Playback {
     pub film: String,
-    pub origin: [i32; 3],
+    pub origin: Pos,
     steps: Vec<Step>,
     index: usize,
     /// Seconds into the current step.
@@ -122,7 +122,7 @@ impl Playback {
             Step::Menu { menu, at, secs } => {
                 self.menu = Some(ShownMenu {
                     menu: menu.clone(),
-                    at: std::array::from_fn(|i| self.origin[i] + at[i]),
+                    at: self.origin + *at,
                     until: self.elapsed - clock + secs,
                 });
                 Some(0.0)
@@ -177,10 +177,10 @@ mod tests {
     };
 
     fn play(film: Film) -> Playback {
-        play_at([0; 3], film)
+        play_at(Pos::default(), film)
     }
 
-    fn play_at(origin: [i32; 3], film: Film) -> Playback {
+    fn play_at(origin: Pos, film: Film) -> Playback {
         Playback::new(
             Timeline {
                 film: "mymod:tour".into(),
@@ -254,13 +254,13 @@ mod tests {
     fn a_menu_opens_on_the_block_in_the_set_for_its_time() {
         let film = Film::new()
             .wait(1.0)
-            .menu("mymod:press", [2, 0, -1], 2.0)
+            .menu("mymod:press", Pos::new(2, 0, -1), 2.0)
             .wait(5.0);
-        let mut p = play_at([10, 64, 10], film);
+        let mut p = play_at(Pos::new(10, 64, 10), film);
         let mut signals = HashSet::new();
         p.advance(1.5, &mut signals, &none);
         let open = p.menu.clone().expect("open after the first wait");
-        assert_eq!((open.at, open.until), ([12, 64, 9], 3.0));
+        assert_eq!((open.at, open.until), (Pos::new(12, 64, 9), 3.0));
         p.advance(1.6, &mut signals, &none);
         assert_eq!(p.menu, None, "closed at three seconds");
     }
@@ -270,7 +270,7 @@ mod tests {
         let film = Film::new()
             .shot(dolly([0.0; 3], [10.0, 0.0, 0.0]))
             .shot(follow("item", [0.0, 1.0, 0.0]));
-        let p = play_at([100, 64, 0], film);
+        let p = play_at(Pos::new(100, 64, 0), film);
         let stops = [[100.0, 64.0, 0.0], [105.0, 64.0, 0.0], [110.0, 64.0, 0.0]];
         assert_eq!(
             p.stops(),

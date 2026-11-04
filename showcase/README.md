@@ -33,15 +33,16 @@ mod films;
 
 ```rust
 // films.rs
-use showcase_api::{Film, Look, Set, dolly, film, orbit};
+use showcase_api::{Area, Film, Look, Pos, Set, dolly, film, orbit};
 
 pub fn register(r: &mut Registry) {
     film(r, "tour", tour).on_cue("start", |set| start_machines(set));
 }
 
 fn tour(set: &Set) -> Film {
-    set.level([-12, -12], [12, 12], 16); // flat ground as far as the camera goes
-    build(set); // `set.place(offset, state)`, `set.fill(..)`, `set.world()`
+    // Flat ground as far as the camera goes, and 16 blocks of room above it.
+    set.level(Area::between(Pos::new(-12, 0, -12), Pos::new(12, 16, 12)));
+    build(set); // `set.place(offset, state)`, `set.fill(area, state)`, `set.world()`
     Film::new()
         .cue("start")
         .title("mymod.film.tour", 4.0)
@@ -51,9 +52,12 @@ fn tour(set: &Set) -> Film {
 ```
 
 Positions are in blocks from the set's origin, the block the player stood in when the film
-started; angles are in degrees. Films are made in a natural world, so `set.level(from, to,
-clear)` first makes the ground flat at the origin's height around the set: hills and trees in
-that area go, hollows are filled, and the landscape beyond stays as the backdrop. A film is a list of steps:
+started; angles are in degrees. Blocks go by `Pos`, boxes of them by `Area::between(a, b)` (both
+corners included) and blocks with their properties by `BlockState` (`BlockState::of(&MY_BLOCK)`,
+or `.into()` from the SDK's `u32`). Films are made in a natural world, so `set.level(area)` first
+makes the ground flat under the area around the set and clears the area: hills and trees there
+go, hollows are filled, and the landscape beyond stays as the backdrop. A film is a list of
+steps:
 
 | Step | |
 |---|---|

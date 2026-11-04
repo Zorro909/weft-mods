@@ -1,6 +1,8 @@
 //! What a film says: its steps and camera shots, as plain data built with the functions here.
 //! Positions are in blocks from the set's origin (`Set::origin`), angles in degrees.
 
+use crate::Pos;
+
 /// A film's steps, in the order they play.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Film {
@@ -28,7 +30,7 @@ pub enum Step {
     /// The menu `menu` of the block `at` open on screen for `secs`, while the film goes on.
     Menu {
         menu: String,
-        at: [i32; 3],
+        at: Pos,
         secs: f32,
     },
 }
@@ -140,7 +142,7 @@ impl Film {
 
     /// Opens the menu `menu` (`mymod:press`) on the block `at` in the set, as if the camera had
     /// used it, and closes it after `secs`.
-    pub fn menu(mut self, menu: &str, at: [i32; 3], secs: f32) -> Film {
+    pub fn menu(mut self, menu: &str, at: Pos, secs: f32) -> Film {
         self.steps.push(Step::Menu {
             menu: menu.into(),
             at,
