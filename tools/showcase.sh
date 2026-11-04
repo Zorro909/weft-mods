@@ -14,10 +14,13 @@
 #   --with      Another mod folder of this repository to load too (built without films).
 #   --no-build  Use what was built last.
 #
-# The game runs in its own folder, `showcase/out/run`, on Xvfb (`MESA_VK_WSI_DEBUG=sw` lets the
-# GPU draw there), with `--record nohud`: a 2560x1360 window at (0, 30). ffmpeg grabs that part
-# of the screen the whole time, and the film's `REC start` and `REC stop` log lines, which carry
-# the wall clock, say what part of it goes into the video. Needs Xvfb and ffmpeg.
+# The game runs in its own folder, `showcase/out/run`, with `--record nohud`: a 2560x1360 window,
+# shown by a headless weston (kiosk shell) on an output just as large. Weston publishes that output
+# as a PipeWire video stream, and the game's sound goes through ALSA to a null sink of a private
+# PipeWire, so one GStreamer pipeline records picture and sound on one clock. It records the whole
+# time; the film's `REC start` and `REC stop` log lines, which carry the wall clock, say what part
+# of it goes into the video. Needs weston, pipewire, wireplumber, pipewire-alsa,
+# gstreamer1.0-pipewire, gstreamer1.0-tools, gstreamer1.0-plugins-ugly, ffmpeg and jq.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -35,7 +38,7 @@ done
 [[ $# -gt 0 && $1 == *:* ]] || { echo "showcase.sh: name a film as <mod:film> or gallery:<mod> (see --help)" >&2; exit 2; }
 film=$1; shift
 [[ ${1:-} == -- ]] && shift
-for tool in Xvfb ffmpeg; do
+for tool in weston pipewire wireplumber pw-cli pw-dump gst-launch-1.0 ffmpeg jq; do
     command -v "$tool" >/dev/null || { echo "showcase.sh: $tool is not installed" >&2; exit 2; }
 done
 
@@ -91,36 +94,102 @@ install showcase
 for extra in "${with[@]}"; do install "$extra"; done
 [[ $folder == showcase ]] || install "$folder" "${features[@]}"
 
-# A display nobody uses, larger than the game's window so that all of it is on screen.
-Xvfb -displayfd 3 -screen 0 2560x1400x24 -nolisten tcp 3>"$out/display" 2>"$out/xvfb.log" &
-xvfb=$!
-trap 'kill $xvfb 2>/dev/null' EXIT
-for _ in $(seq 50); do [[ -s $out/display ]] && break; sleep 0.1; done
-display=":$(cat "$out/display")"
+# Waits up to ten seconds for the command `$@` to succeed.
+wait_for() {
+    for _ in $(seq 100); do
+        "$@" >/dev/null 2>&1 && return 0
+        sleep 0.1
+    done
+    return 1
+}
+
+fail() {
+    echo "showcase.sh: $1" >&2
+    exit 1
+}
+
+: "${XDG_RUNTIME_DIR:?showcase.sh: XDG_RUNTIME_DIR is not set}"
+media="$out/media"
+rm -rf "$media"
+mkdir -p "$media/wireplumber/wireplumber.conf.d"
+export PIPEWIRE_RUNTIME_DIR=$media
+pids=()
+trap 'kill "${pids[@]}" 2>/dev/null; wait 2>/dev/null' EXIT
+
+# A PipeWire of our own whose only output is the null sink `showcase`: no sound cards, so
+# nothing is heard and everything keeps the null sink's real-time pace.
+start_sound() {
+    pipewire >"$out/pipewire.log" 2>&1 &
+    pids+=($!)
+    wait_for test -S "$media/pipewire-0" || fail "PipeWire did not start; see $out/pipewire.log"
+    cat >"$media/wireplumber/wireplumber.conf.d/showcase.conf" <<'EOF'
+wireplumber.profiles = {
+  main = {
+    monitor.alsa = disabled
+    monitor.alsa-midi = disabled
+    monitor.bluez = disabled
+    monitor.v4l2 = disabled
+    monitor.libcamera = disabled
+  }
+}
+EOF
+    XDG_CONFIG_HOME=$media wireplumber >"$out/wireplumber.log" 2>&1 &
+    pids+=($!)
+    pw-cli create-node adapter '{ factory.name = support.null-audio-sink node.name = showcase
+        media.class = Audio/Sink object.linger = true audio.position = [ FL FR ] }' >/dev/null
+}
+
+# Weston on a virtual output the size of the game's window, published as a PipeWire stream; sets
+# `screen` to the stream's node name.
+start_screen() {
+    weston --backend=pipewire --renderer=gl --width=2560 --height=1360 --shell=kiosk-shell.so \
+        --no-config --idle-time=0 --socket="$socket" >"$out/weston.log" 2>&1 &
+    pids+=($!)
+    wait_for test -S "$XDG_RUNTIME_DIR/$socket" || fail "weston did not start; see $out/weston.log"
+    screen=""
+    for _ in $(seq 100); do
+        screen=$(pw-dump | jq -r '.[] | .info.props? // {} | select(."media.class" == "Stream/Output/Video") | ."node.name"' | head -n 1)
+        [[ -n $screen ]] && break
+        sleep 0.1
+    done
+    [[ -n $screen ]] || fail "weston published no screen to PipeWire; see $out/weston.log"
+}
+
+# Records the screen and the null sink to $raw; sets `recorder` and `began`, the epoch second the
+# recording's time starts at.
+start_recording() {
+    gst-launch-1.0 -e \
+        pipewiresrc target-object="$screen" do-timestamp=true ! videoconvert ! videorate \
+        ! "video/x-raw,format=I420,framerate=$fps/1" ! x264enc speed-preset=ultrafast pass=quant quantizer=0 \
+        ! queue ! mux. \
+        pipewiresrc target-object=showcase stream-properties="props,stream.capture.sink=true" do-timestamp=true \
+        ! audioconvert ! "audio/x-raw,channels=2" ! flacenc ! queue ! mux. \
+        matroskamux name=mux ! filesink location="$raw" </dev/null >"$out/gst.log" 2>&1 &
+    recorder=$!
+    pids+=($recorder)
+    wait_for grep -q "Setting pipeline to PLAYING" "$out/gst.log" || fail "GStreamer did not start; see $out/gst.log"
+    began=$(date +%s.%N)
+}
 
 raw="$out/raw.mkv"
-ffmpeg -y -loglevel info -f x11grab -framerate "$fps" -video_size 2560x1360 -i "$display+0,30" \
-    -c:v libx264 -preset ultrafast -qp 0 "$raw" </dev/null 2>"$out/ffmpeg.log" &
-grab=$!
-trap 'kill $grab $xvfb 2>/dev/null' EXIT
+socket="showcase-$$"
+start_sound
+start_screen
+start_recording
 
 status=0
-(cd "$root/Weft" && DISPLAY=$display MESA_VK_WSI_DEBUG=sw target/release/weft --run-dir "$run" \
+(cd "$root/Weft" && env -u DISPLAY WAYLAND_DISPLAY="$socket" target/release/weft --run-dir "$run" \
     --record nohud --showcase "$film" "$@") || status=$?
-kill -INT $grab
-wait $grab || true
-if [[ $status != 0 ]]; then
-    echo "showcase.sh: the game stopped with $status; see $run/logs/latest.log" >&2
-    exit 1
-fi
+kill -INT $recorder
+wait $recorder || true
+[[ $status == 0 ]] || fail "the game stopped with $status; see $run/logs/latest.log"
 
-# The epoch second ffmpeg's first frame was grabbed at, and the film's marks in the log.
-began=$(sed -n 's/.*start: \([0-9.]*\).*/\1/p' "$out/ffmpeg.log" | head -n 1)
 from=$(sed -n "s/.*REC start $film \([0-9.]*\).*/\1/p" "$run/logs/latest.log" | tail -n 1)
 to=$(sed -n "s/.*REC stop $film \([0-9.]*\).*/\1/p" "$run/logs/latest.log" | tail -n 1)
-[[ -n $began && -n $from && -n $to ]] || { echo "showcase.sh: no start or stop mark found" >&2; exit 1; }
+[[ -n $from && -n $to ]] || fail "no start or stop mark found"
 video="$out/${film/:/-}.mp4"
 ffmpeg -y -loglevel error -ss "$(echo "$from - $began" | bc)" -to "$(echo "$to - $began" | bc)" \
-    -i "$raw" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart "$video"
+    -i "$raw" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k \
+    -movflags +faststart "$video"
 rm -f "$raw"
 echo "showcase.sh: $video"
