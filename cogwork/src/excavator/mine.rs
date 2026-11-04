@@ -6,6 +6,7 @@ use weft_sdk::*;
 use super::power::{pay, travel};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Status};
 use crate::harvest::{Harvest, breakable, cost, harvest};
+use crate::pos::Pos;
 
 /// Energy per block: a base and as much again per point of hardness (stone 1.5: 1000).
 const BASE_COST: f32 = 400.0;
@@ -32,14 +33,14 @@ pub fn block_cost(state: u32) -> i64 {
 }
 
 /// The middle of the floor of the block `c`: where the drill is half way through it.
-pub fn floor_middle(c: [i32; 3]) -> [f32; 3] {
-    block_floor(c).map(|v| v as f32)
+pub fn floor_middle(c: Pos) -> [f32; 3] {
+    block_floor(c.into()).map(|v| v as f32)
 }
 
 /// Where the drill is while it mines the block `c` inside `frame`, `done` of the way through (0
 /// to 1): it crosses the block along its row, from the edge it comes in by to the far one, which
 /// is where the next block of the row starts.
-pub fn sweep(frame: &Frame, c: [i32; 3], done: f32) -> [f32; 3] {
+pub fn sweep(frame: &Frame, c: Pos, done: f32) -> [f32; 3] {
     let [x, y, z] = floor_middle(c);
     // Half a block before the middle at 0, half a block past it at 1.
     let along_row = frame.row_dir(c) as f32 * (done - 0.5);
@@ -47,7 +48,7 @@ pub fn sweep(frame: &Frame, c: [i32; 3], done: f32) -> [f32; 3] {
 }
 
 /// Where the drill is in the block `c` with `spent` of its `cost` paid: past it once paid.
-pub fn progress_point(frame: &Frame, c: [i32; 3], spent: i64, cost: i64) -> [f32; 3] {
+pub fn progress_point(frame: &Frame, c: Pos, spent: i64, cost: i64) -> [f32; 3] {
     sweep(frame, c, (spent as f32 / cost.max(1) as f32).min(1.0))
 }
 
@@ -72,7 +73,7 @@ pub fn drill_to(w: &World, id: u64, d: &mut Dig, goal: [f32; 3]) -> bool {
 }
 
 /// Pays for and mines the block `state` at `c` into the excavator `id`'s output.
-pub fn mine_block(w: &World, id: u64, d: &mut Dig, c: [i32; 3], state: u32) -> Mined {
+pub fn mine_block(w: &World, id: u64, d: &mut Dig, c: Pos, state: u32) -> Mined {
     if !worth_mining(state) {
         return Mined::Skipped;
     }
@@ -80,7 +81,7 @@ pub fn mine_block(w: &World, id: u64, d: &mut Dig, c: [i32; 3], state: u32) -> M
     if !pay(w, id, d, block_cost(state)) {
         return Mined::Waiting(d.status());
     }
-    match harvest(w, id, c, state) {
+    match harvest(w, id, c.into(), state) {
         // Paid for already: it stays paid until there is room.
         Harvest::Full => Mined::Waiting(Status::Full),
         Harvest::Refused => {
@@ -99,29 +100,29 @@ mod tests {
     use super::*;
 
     const FRAME: Frame = Frame {
-        lo: [0, 0, 0],
-        hi: [10, 8, 10],
+        lo: Pos::new(0, 0, 0),
+        hi: Pos::new(10, 8, 10),
     };
 
     #[test]
     fn the_drill_crosses_the_block_along_its_row() {
         assert_eq!(
-            sweep(&FRAME, [3, 5, 1], 0.0),
+            sweep(&FRAME, Pos::new(3, 5, 1), 0.0),
             [3.0, 5.0, 1.5],
             "in at the near edge"
         );
         assert_eq!(
-            sweep(&FRAME, [3, 5, 1], 0.5),
-            floor_middle([3, 5, 1]),
+            sweep(&FRAME, Pos::new(3, 5, 1), 0.5),
+            floor_middle(Pos::new(3, 5, 1)),
             "the middle half way"
         );
         assert_eq!(
-            sweep(&FRAME, [3, 5, 1], 1.0),
-            sweep(&FRAME, [4, 5, 1], 0.0),
+            sweep(&FRAME, Pos::new(3, 5, 1), 1.0),
+            sweep(&FRAME, Pos::new(4, 5, 1), 0.0),
             "out where the next starts"
         );
         assert_eq!(
-            sweep(&FRAME, [3, 5, 2], 0.25),
+            sweep(&FRAME, Pos::new(3, 5, 2), 0.25),
             [3.75, 5.0, 2.5],
             "the other way on the next row"
         );
@@ -129,7 +130,7 @@ mod tests {
 
     #[test]
     fn a_block_under_way_is_carried_on_from_where_the_drill_got_to() {
-        let c = [3, 5, 1];
+        let c = Pos::new(3, 5, 1);
         assert_eq!(
             progress_point(&FRAME, c, 500, 1000),
             [3.5, 5.0, 1.5],

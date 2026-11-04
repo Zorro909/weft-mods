@@ -14,6 +14,7 @@ mod leveler;
 mod machine;
 mod markers;
 mod owned;
+mod pos;
 mod recipes;
 mod shaft;
 mod store;

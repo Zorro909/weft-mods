@@ -17,6 +17,8 @@ static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
 pub use area::Frame;
 
+use crate::pos::Pos;
+
 value! {
     /// An excavator's work. It puts up `frame`, then mines inside it. `step` counts the frame
     /// blocks put up, `cursor` is the next block to mine, `spent` the energy put into the job
@@ -29,7 +31,7 @@ value! {
         pub status: u32,
         // Laid out as the `lo` and `hi` it replaced, so saved excavators keep their frame.
         pub frame: Frame,
-        pub cursor: [i32; 3],
+        pub cursor: Pos,
         pub step: u32,
         pub spent: i64,
         pub head: [f32; 3],
@@ -147,9 +149,10 @@ fn screen(ui: &mut Ui) {
                 ui.text_bind(|c, out| {
                     let d = c.menu_component(&DIG).unwrap_or_default();
                     let status: &str = d.status().into();
+                    let layer = d.cursor.y;
                     out.set(
                         &format!("cogwork.excavator.{status}"),
-                        &[Arg::Int(d.cursor[1] as i64), Arg::Int(d.frame.standby())],
+                        &[Arg::Int(layer as i64), Arg::Int(d.frame.standby())],
                     );
                 });
                 ui.text_bind(|c, out| {

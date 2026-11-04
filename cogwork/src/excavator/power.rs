@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn standby_grows_with_the_area() {
-        let frame = |hi| Frame { lo: [0, 0, 0], hi };
+        let frame = |hi| Frame::from(([0, 0, 0], hi));
         let small = frame([10, 4, 10]).standby();
         let large = frame([34, 4, 34]).standby();
         assert_eq!(small, 30, "9 by 9 needs one ember engine");

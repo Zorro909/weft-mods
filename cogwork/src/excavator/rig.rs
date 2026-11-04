@@ -84,7 +84,7 @@ impl Rig {
 fn layout(d: &Dig) -> Vec<(usize, &'static Entity, [f64; 3], f32)> {
     let [x, y, z] = d.head.map(|v| v as f64);
     let Frame { lo, hi } = d.frame;
-    let top = hi[1] as f64 + 0.25;
+    let top = hi.y as f64 + 0.25;
     // On top of the block it drills, only its tip in it; never above the carriage.
     let bit = (y + 1.0).min(top - BIT_HEIGHT);
     let mut out = vec![
@@ -96,8 +96,8 @@ fn layout(d: &Dig) -> Vec<(usize, &'static Entity, [f64; 3], f32)> {
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
     out.extend((0..shafts).map(|k| (2 + k, &SHAFT, [x, top - PIECE * (k + 1) as f64, z], 0.0)));
     let beam_y = top + 0.125;
-    let (x0, x1) = (lo[0] as f64 + 0.5, hi[0] as f64 + 0.5);
-    let (z0, z1) = (lo[2] as f64 + 0.5, hi[2] as f64 + 0.5);
+    let (x0, x1) = (lo.x as f64 + 0.5, hi.x as f64 + 0.5);
+    let (z0, z1) = (lo.z as f64 + 0.5, hi.z as f64 + 0.5);
     for (k, c) in spans(x0, x1).into_iter().enumerate() {
         out.push((2 + SHAFTS + k, &BEAM, [c, beam_y, z], 0.0));
     }
@@ -149,10 +149,7 @@ mod tests {
     fn mining_at(head: [f32; 3]) -> Dig {
         Dig {
             stage: Stage::Mine as u32,
-            frame: Frame {
-                lo: [0, 0, 0],
-                hi: [10, 8, 10],
-            },
+            frame: Frame::from(([0, 0, 0], [10, 8, 10])),
             head,
             ..Dig::default()
         }

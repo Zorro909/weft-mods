@@ -6,6 +6,7 @@ use super::mine::{Mined, block_cost, drill_to, floor_middle, mine_block, progres
 use super::power::{hold, pay};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status, rig};
 use crate::harvest::opens_into;
+use crate::pos::Pos;
 
 /// Energy to put up one block of frame.
 const FRAME_COST: i64 = 100;
@@ -49,7 +50,7 @@ fn work(w: &World, id: u64, pos: [i32; 3], d: &mut Dig) {
 }
 
 fn start(w: &World, pos: [i32; 3], d: &mut Dig) {
-    d.frame = Frame::plan(w, pos, crate::machine::front(w, pos));
+    d.frame = Frame::plan(w, pos.into(), crate::machine::front(w, pos));
     d.set_stage(Stage::Frame);
     d.step = 0;
 }
@@ -58,7 +59,7 @@ fn start(w: &World, pos: [i32; 3], d: &mut Dig) {
 fn build_frame(w: &World, id: u64, d: &mut Dig) {
     let cells = d.frame.cells();
     while let Some(&c) = cells.get(d.step as usize) {
-        let Some(block_state) = w.get_loaded(c) else {
+        let Some(block_state) = w.get_loaded(c.into()) else {
             d.set_status(Status::Blocked);
             return;
         };
@@ -73,7 +74,7 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
         d.set_status(Status::Frame);
         d.refused = 0;
         if pay(w, id, d, FRAME_COST) {
-            w.set(c, GANTRY_FRAME.id());
+            w.set(c.into(), GANTRY_FRAME.id());
             d.spent = 0;
             d.step += 1;
         }
@@ -92,7 +93,7 @@ fn begin_mining(d: &mut Dig) {
 /// Mines the block `block_state` at `c` out of the frame's way. While breaking it is refused (a
 /// protected area), the excavator is jammed and tries only now and then, rather than paying for
 /// the block every tick.
-fn clear_for_frame(w: &World, id: u64, d: &mut Dig, c: [i32; 3], block_state: u32) {
+fn clear_for_frame(w: &World, id: u64, d: &mut Dig, c: Pos, block_state: u32) {
     if !try_now(d.refused, d.spent, w.time()) {
         d.set_status(Status::Jammed);
         return;
@@ -144,7 +145,7 @@ fn mine_next(w: &World, id: u64, d: &mut Dig) {
     let Some(target) = find_target(w, d) else {
         return;
     };
-    let block_state = w.get(target);
+    let block_state = w.get(target.into());
     let cost = block_cost(block_state);
     // Where the energy paid so far has the drill: into a block it has begun, it carries on from
     // there instead of going back to its edge.
@@ -166,14 +167,14 @@ fn mine_next(w: &World, id: u64, d: &mut Dig) {
 
 /// The next block worth mining from the cursor on, skipping air, liquids and what can't be
 /// broken; `None` while waiting or once finished.
-fn find_target(w: &World, d: &mut Dig) -> Option<[i32; 3]> {
+fn find_target(w: &World, d: &mut Dig) -> Option<Pos> {
     for _ in 0..SCAN {
         let c = d.cursor;
-        if c[1] < FLOOR_Y {
+        if c.y < FLOOR_Y {
             finish(d);
             return None;
         }
-        let Some(block_state) = w.get_loaded(c) else {
+        let Some(block_state) = w.get_loaded(c.into()) else {
             wait_for_load(d);
             return None;
         };
@@ -267,15 +268,16 @@ mod tests {
     #[test]
     fn mining_starts_in_the_middle_of_the_first_block() {
         let mut d = Dig {
-            frame: Frame {
-                lo: [0, 4, 0],
-                hi: [10, 8, 10],
-            },
+            frame: Frame::from(([0, 4, 0], [10, 8, 10])),
             ..Dig::default()
         };
         begin_mining(&mut d);
         assert_eq!(d.stage(), Stage::Mine, "mining");
-        assert_eq!(d.cursor, [1, 8, 1], "a corner of the inside, at the top");
+        assert_eq!(
+            d.cursor,
+            Pos::new(1, 8, 1),
+            "a corner of the inside, at the top"
+        );
         assert_eq!(d.head, [1.5, 8.0, 1.5], "the drill over its middle");
     }
 
