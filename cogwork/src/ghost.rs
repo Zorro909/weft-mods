@@ -16,8 +16,11 @@ use crate::float_pos::FloatPos;
 
 /// Side of a cell in GUI pixels, the same as a slot.
 pub const SLOT: f32 = 18.0;
-/// How far from a machine a player may set its ghosts, in blocks.
-const REACH: f64 = 8.0;
+/// How far from a machine a player may set its ghosts, in blocks: as far as the engine keeps a
+/// machine's menu open (`menu::out_of_reach`).
+// TODO: accept ghosts exactly while the player has the machine's menu open, once the SDK can
+// say which menu a player has open; this copy of the engine's distance can then go.
+const REACH: f64 = 8.5;
 
 /// An item as a machine keeps it: the hash of its full name (`base:stick`), `NO_ITEM` for none.
 pub type ItemKey = u64;
