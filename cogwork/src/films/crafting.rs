@@ -9,7 +9,7 @@
 use showcase_api::Set;
 use weft_sdk::*;
 
-use super::parts::{CHEST, line, spring, stock};
+use super::parts::{CHEST, in_world, line, spring, stock};
 use crate::bench::{ASSEMBLY_BENCH, set_ghost};
 use crate::lib::Pos;
 use crate::tube::TIMBER_TUBE;
@@ -47,13 +47,16 @@ static LEVER_BLOCK: Block = Block::named("base:lever");
 
 pub fn build(set: &Set) {
     for chest in [STICKS, COBBLE, OUTPUT] {
-        set.place(chest.into(), CHEST.id());
+        set.place(chest.into(), CHEST.id().into());
     }
     for bench in [COGS, STONE_COGS] {
-        set.place(bench.into(), ASSEMBLY_BENCH.with(&[("facing", "south")]));
+        set.place(
+            bench.into(),
+            ASSEMBLY_BENCH.with(&[("facing", "south")]).into(),
+        );
     }
     for pull in PULLS {
-        set.place(pull.into(), TIMBER_TUBE.id());
+        set.place(pull.into(), TIMBER_TUBE.id().into());
     }
     for machine in [COGS, STONE_COGS].into_iter().chain(PULLS) {
         spring(set, machine.toward(Dir::Up), Dir::Down);
@@ -69,18 +72,18 @@ pub fn build(set: &Set) {
 /// The wall, redstone along its top, and the lever on its face. The wire powers the wall's top
 /// blocks, and so every engine touching them.
 fn power_line(set: &Set) {
-    let floor_wire = REDSTONE.with(&[("faces", "4")]);
+    let floor_wire = REDSTONE.with(&[("faces", "4")]).into();
     for x in WALL_X[0]..=WALL_X[1] {
         // The cobblestone's tube runs under the wall.
         let ground = Pos::new(x, 0, WALL_Z);
         if x != COBBLE.x {
-            set.place(ground.into(), STONE_BRICKS.id());
+            set.place(ground.into(), STONE_BRICKS.id().into());
         }
-        set.place(ground.add_y(1).into(), STONE_BRICKS.id());
+        set.place(ground.add_y(1).into(), STONE_BRICKS.id().into());
         set.place(ground.add_y(2).into(), floor_wire);
     }
     let lever = [("attach", "north"), ("front", "down"), ("power", "off")];
-    set.place(LEVER.into(), LEVER_BLOCK.with(&lever));
+    set.place(LEVER.into(), LEVER_BLOCK.with(&lever).into());
 }
 
 /// Fills the supply chests and lays out both patterns; the machines wait for the lever.
@@ -90,8 +93,8 @@ pub fn start(set: &Set) {
     let world = set.world();
     let item = |name: &str| Item::lookup(name).unwrap_or(0);
     let (cogs, stone_cogs) = (
-        world.block_entity(set.at(COGS.into())),
-        world.block_entity(set.at(STONE_COGS.into())),
+        world.block_entity(in_world(set, COGS).into()),
+        world.block_entity(in_world(set, STONE_COGS).into()),
     );
     for cell in ROUND {
         set_ghost(&world, cogs, cell, item("base:stick"));
@@ -102,5 +105,6 @@ pub fn start(set: &Set) {
 
 /// Throws the lever: the whole row starts.
 pub fn switch_on(set: &Set) {
-    set.world().set_prop(set.at(LEVER.into()), "power", "on");
+    set.world()
+        .set_prop(in_world(set, LEVER).into(), "power", "on");
 }

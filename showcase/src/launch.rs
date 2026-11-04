@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use weft_sdk::client::client_flags as cf;
 use weft_sdk::*;
 
-use crate::director;
+use crate::{director, lock};
 
 /// How long the run waits when even the server never answers (the mod missing altogether).
 const ANSWER_TIME: Duration = Duration::from_secs(30);
@@ -47,12 +47,12 @@ pub fn register(r: &mut Registry) {
     let Some(film) = launch_option("showcase") else {
         return;
     };
-    *LAUNCH.lock().unwrap_or_else(|e| e.into_inner()) = Some(Launch {
+    *lock(&LAUNCH) = Some(Launch {
         film,
         stage: Stage::Start,
     });
     r.client_frame(|c| {
-        let mut guard = LAUNCH.lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = lock(&LAUNCH);
         if let Some(launch) = guard.as_mut() {
             launch.stage = step(
                 c,
@@ -66,10 +66,7 @@ pub fn register(r: &mut Registry) {
 fn step(c: &Client, film: &str, stage: Stage) -> Stage {
     match stage {
         Stage::Start => {
-            let seed = launch_option("showcase-seed")
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(SEED);
-            c.new_world(&format!("showcase-{}", film.replace(':', "-")), seed);
+            c.new_world(&format!("showcase-{}", film.replace(':', "-")), seed());
             Stage::Joining
         }
         Stage::Joining if c.state().flags & cf::JOINED != 0 => Stage::Setup {
@@ -99,6 +96,17 @@ fn step(c: &Client, film: &str, stage: Stage) -> Stage {
         Stage::Watching { since } => watch(c, film, since),
         stage => stage,
     }
+}
+
+/// The world's seed: `--showcase-seed`, or `SEED` without it.
+fn seed() -> u64 {
+    let Some(given) = launch_option("showcase-seed") else {
+        return SEED;
+    };
+    given.parse().unwrap_or_else(|_| {
+        warn!("showcase: --showcase-seed {given} is not a whole number from 0 up; using {SEED}");
+        SEED
+    })
 }
 
 /// Whether the world around is ready for the film: loaded, and done generating as far as the

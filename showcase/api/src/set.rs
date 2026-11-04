@@ -1,22 +1,28 @@
 //! The film mod's side: registering films, building their sets and talking to the camera while
 //! they play.
 
+use weft_sdk::abi::block_flags::{LIQUID, REPLACEABLE};
 use weft_sdk::*;
 
 use crate::film::Film;
-use crate::{CUE, PLAY, SIGNAL, SUBJECT, Signal, Subject, TIMELINE, Timeline, name, name_text};
+use crate::{
+    Area, BlockState, CUE, Name, PLAY, Pos, SIGNAL, SUBJECT, Signal, Subject, TIMELINE, Timeline,
+};
+
+/// How deep `Set::level` fills hollows under the ground.
+const HOLLOW_DEPTH: i32 = 8;
 
 /// Where a film is being built and for whom; positions given to it are from its origin.
 pub struct Set {
     world: World,
     player: u64,
-    origin: [i32; 3],
+    origin: Pos,
 }
 
 impl Set {
     /// A set around `origin` for `player`, for a mod that builds and sends a film on its own
     /// (`send`); `film` makes them for registered films.
-    pub fn new(world: World, player: u64, origin: [i32; 3]) -> Set {
+    pub fn new(world: World, player: u64, origin: Pos) -> Set {
         Set {
             world,
             player,
@@ -34,65 +40,53 @@ impl Set {
     }
 
     /// The block the film is built around, on top of the ground.
-    pub fn origin(&self) -> [i32; 3] {
+    pub fn origin(&self) -> Pos {
         self.origin
     }
 
     /// `offset` from the origin, in the world.
-    pub fn at(&self, offset: [i32; 3]) -> [i32; 3] {
-        [
-            self.origin[0] + offset[0],
-            self.origin[1] + offset[1],
-            self.origin[2] + offset[2],
-        ]
+    pub fn at(&self, offset: Pos) -> Pos {
+        self.origin + offset
     }
 
     /// Sets the block `offset` from the origin; false if it is not loaded.
-    pub fn place(&self, offset: [i32; 3], state: u32) -> bool {
-        self.world.set(self.at(offset), state)
+    pub fn place(&self, offset: Pos, state: BlockState) -> bool {
+        self.world.set(self.at(offset).into(), state.id())
     }
 
-    /// Fills the box between two offsets, both included.
-    pub fn fill(&self, from: [i32; 3], to: [i32; 3], state: u32) {
-        let lo = [0, 1, 2].map(|i| from[i].min(to[i]));
-        let hi = [0, 1, 2].map(|i| from[i].max(to[i]));
-        for x in lo[0]..=hi[0] {
-            for y in lo[1]..=hi[1] {
-                for z in lo[2]..=hi[2] {
-                    self.place([x, y, z], state);
-                }
-            }
+    /// Sets every block in `area`, in offsets from the origin.
+    pub fn fill(&self, area: Area, state: BlockState) {
+        area.blocks().for_each(|offset| {
+            self.place(offset, state);
+        });
+    }
+
+    /// Makes the ground flat under `area` (offsets from the origin), for a set in a natural
+    /// world: clears `area`, tops the ground right under it with the block under the origin, and
+    /// fills hollows below that, up to 8 deep, with the block under that one.
+    pub fn level(&self, area: Area) {
+        let top = self.get(Pos::new(0, -1, 0));
+        let below = self.get(Pos::new(0, -2, 0));
+        self.fill(area, BlockState::AIR);
+        let ground = area.lo.y - 1;
+        for (x, z) in area.columns() {
+            self.place(Pos::new(x, ground, z), top);
+            self.fill_hollow(Pos::new(x, ground - 1, z), below);
         }
     }
 
-    /// Makes the ground flat at the origin's height between two corners (x and z offsets, both
-    /// included), for a set in a natural world: clears everything up to `clear` blocks above it,
-    /// tops it with the block under the origin, and fills hollows below, up to 8 deep, with the
-    /// block under that.
-    pub fn level(&self, from: [i32; 2], to: [i32; 2], clear: i32) {
-        let air = Block::lookup("core:air").unwrap_or(0);
-        let top = self.world.get(self.at([0, -1, 0]));
-        let below = self.world.get(self.at([0, -2, 0]));
-        for x in from[0].min(to[0])..=from[0].max(to[0]) {
-            for z in from[1].min(to[1])..=from[1].max(to[1]) {
-                for y in 0..=clear {
-                    self.place([x, y, z], air);
-                }
-                self.place([x, -1, z], top);
-                self.fill_hollow([x, z], below);
-            }
-        }
+    fn get(&self, offset: Pos) -> BlockState {
+        self.world.get(self.at(offset).into()).into()
     }
 
-    /// Fills the column at `x, z` from 2 below the origin down to the first block that isn't
-    /// air, a plant or a liquid.
-    fn fill_hollow(&self, [x, z]: [i32; 2], state: u32) {
-        for y in (-9..=-2).rev() {
-            let flags = self.world.flags(self.at([x, y, z]));
-            if flags & (abi::block_flags::REPLACEABLE | abi::block_flags::LIQUID) == 0 {
+    /// Fills the column down from `top` to the first block that isn't air, a plant or a liquid.
+    fn fill_hollow(&self, top: Pos, state: BlockState) {
+        for y in (top.y - HOLLOW_DEPTH + 1..=top.y).rev() {
+            let offset = Pos { y, ..top };
+            if self.world.flags(self.at(offset).into()) & (REPLACEABLE | LIQUID) == 0 {
                 return;
             }
-            self.place([x, y, z], state);
+            self.place(offset, state);
         }
     }
 
@@ -108,7 +102,8 @@ impl Set {
 
     /// A subject that is a place, `offset` from the origin.
     pub fn subject_at(&self, name: &str, offset: [f64; 3]) {
-        let pos = [0, 1, 2].map(|i| self.origin[i] as f64 + offset[i]);
+        let origin: [f64; 3] = self.origin.into();
+        let pos = [0, 1, 2].map(|i| origin[i] + offset[i]);
         subject(&self.world, self.player, name, 0, pos);
     }
 }
@@ -116,71 +111,59 @@ impl Set {
 /// Lets `player`'s film go on past `Film::wait_for(name)`. A signal sent before the film gets
 /// there is kept.
 pub fn signal(world: &World, player: u64, name: &str) {
-    world.send(
-        player,
-        &SIGNAL,
-        &Signal {
-            name: crate::name(name),
-        },
-    );
+    let name = Name::from(name);
+    world.send(player, &SIGNAL, &Signal { name });
 }
 
 /// Tells `player`'s camera what the shots that name `name` follow or look at: `entity`, or
 /// the world position `pos` where `entity` is 0.
 pub fn subject(world: &World, player: u64, name: &str, entity: u64, pos: [f64; 3]) {
-    world.send(
-        player,
-        &SUBJECT,
-        &Subject {
-            name: crate::name(name),
-            entity,
-            pos,
-        },
-    );
+    let name = Name::from(name);
+    world.send(player, &SUBJECT, &Subject { name, entity, pos });
 }
 
 /// Plays `steps` on `player`'s camera now, as the film `film` around `origin`: for films a mod
 /// starts on its own (a command, an item). Unlike `/showcase play` it leaves the player's game
 /// mode, time and weather as they are, and cues reach `on_cue` only for a film registered under
 /// that name.
-pub fn send(world: &World, player: u64, film: &str, origin: [i32; 3], steps: &Film) {
+pub fn send(world: &World, player: u64, film: &str, origin: Pos, steps: &Film) {
     let timeline = Timeline {
         film: film.into(),
         origin,
         steps: steps.steps.clone(),
     };
-    world.send(player, &TIMELINE, &timeline);
+    world.send(player, &TIMELINE, &timeline.encode());
 }
 
 /// Registers the film `name` of this mod (played as `mymod:name`): `build` puts its set into
 /// the world and returns its steps.
 pub fn film<'a>(
-    r: &'a mut Registry,
+    registry: &'a mut Registry,
     name: &str,
     build: impl Fn(&Set) -> Film + Send + Sync + 'static,
 ) -> FilmOptions<'a> {
-    let full = format!("{}:{name}", mod_id());
-    let mine = full.clone();
-    r.on(&PLAY, move |batch| {
-        for play in batch.iter().filter(|p| name_text(&p.film) == mine) {
+    let film = format!("{}:{name}", mod_id());
+    let (full, wanted) = (film.clone(), Name::from(film.as_str()));
+    registry.on(&PLAY, move |batch| {
+        for play in batch.iter().filter(|play| play.film == wanted) {
             let set = Set::new(batch.world(), play.player, play.origin);
-            send(&set.world, set.player, &mine, set.origin, &build(&set));
+            send(&set.world, set.player, &full, set.origin, &build(&set));
         }
     });
-    FilmOptions { r, film: full }
+    FilmOptions { registry, film }
 }
 
 /// More of a film registered with `film`.
 pub struct FilmOptions<'a> {
-    r: &'a mut Registry,
+    registry: &'a mut Registry,
     film: String,
 }
 
 impl FilmOptions<'_> {
     /// Runs `f` on the server when the film reaches `Film::cue(name)`.
     pub fn on_cue(self, cue: &str, f: impl Fn(&Set) + Send + Sync + 'static) -> Self {
-        let (film, cue) = (name(&self.film), name(cue));
-        self.r.on(&CUE, move |batch| {
+        let (film, cue) = (Name::from(self.film.as_str()), Name::from(cue));
+        self.registry.on(&CUE, move |batch| {
             for reached in batch.iter().filter(|c| c.film == film && c.name == cue) {
                 f(&Set::new(batch.world(), reached.player, reached.origin));
             }

@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use showcase_api::{Path, Step, Timeline};
+use showcase_api::{Path, Pos, Step, Timeline};
 
 use crate::rig::{Pose, Rig, Subjects};
 
@@ -19,13 +19,13 @@ pub struct Title {
 pub struct ShownMenu {
     pub menu: String,
     /// The block, in the world.
-    pub at: [i32; 3],
+    pub at: Pos,
     pub until: f32,
 }
 
 pub struct Playback {
     pub film: String,
-    pub origin: [i32; 3],
+    pub origin: Pos,
     steps: Vec<Step>,
     index: usize,
     /// Seconds into the current step.
@@ -122,7 +122,7 @@ impl Playback {
             Step::Menu { menu, at, secs } => {
                 self.menu = Some(ShownMenu {
                     menu: menu.clone(),
-                    at: std::array::from_fn(|i| self.origin[i] + at[i]),
+                    at: self.origin + *at,
                     until: self.elapsed - clock + secs,
                 });
                 Some(0.0)
@@ -130,20 +130,28 @@ impl Playback {
             Step::Wait(secs) => (clock >= *secs).then_some(*secs),
             Step::WaitFor { name, max } => {
                 if signals.remove(name) {
+                    // The signal came at some point in this frame: the next step starts afresh.
                     Some(clock)
                 } else {
                     (clock >= *max).then_some(*max)
                 }
             }
-            Step::Shot(shot) => {
-                let rig = self
-                    .rig
-                    .get_or_insert_with(|| Rig::new(shot.clone(), self.origin, self.own_fov));
-                let secs = rig.secs();
-                self.pose = rig.pose(clock.min(secs), subjects, self.start);
-                (clock >= secs).then_some(secs)
-            }
+            Step::Shot(_) => self.advance_shot(subjects),
         }
+    }
+
+    /// Moves the camera along the current shot for the clock, setting up its rig on its first
+    /// frame; `Some(its length)` once the clock is past its end.
+    fn advance_shot(&mut self, subjects: Subjects) -> Option<f32> {
+        let Some(Step::Shot(shot)) = self.steps.get(self.index) else {
+            return None;
+        };
+        let rig = self
+            .rig
+            .get_or_insert_with(|| Rig::new(shot.clone(), self.origin, self.own_fov));
+        let secs = rig.secs();
+        self.pose = rig.pose(self.clock.min(secs), subjects, self.start);
+        (self.clock >= secs).then_some(secs)
     }
 
     /// Eye positions the film's shots pass, to load the world around before it starts: the
@@ -177,10 +185,10 @@ mod tests {
     };
 
     fn play(film: Film) -> Playback {
-        play_at([0; 3], film)
+        play_at(Pos::default(), film)
     }
 
-    fn play_at(origin: [i32; 3], film: Film) -> Playback {
+    fn play_at(origin: Pos, film: Film) -> Playback {
         Playback::new(
             Timeline {
                 film: "mymod:tour".into(),
@@ -233,6 +241,53 @@ mod tests {
     }
 
     #[test]
+    fn a_signal_sent_before_its_wait_is_kept() {
+        let mut p = play(Film::new().wait(1.0).wait_for("dug", 60.0).cue("after"));
+        let mut signals = HashSet::from(["dug".to_string()]);
+        assert!(
+            p.advance(0.5, &mut signals, &none).is_empty(),
+            "still in the first wait"
+        );
+        assert!(signals.contains("dug"), "kept for the wait_for");
+        assert_eq!(
+            p.advance(0.6, &mut signals, &none),
+            vec!["after".to_string()]
+        );
+        assert!(signals.is_empty(), "used up there");
+    }
+
+    #[test]
+    fn a_signal_ends_its_wait_with_no_time_over() {
+        let mut p = play(Film::new().wait_for("dug", 60.0).wait(1.0).cue("after"));
+        let mut signals = HashSet::new();
+        p.advance(5.0, &mut signals, &none);
+        signals.insert("dug".to_string());
+        p.advance(0.5, &mut signals, &none);
+        assert!(
+            p.advance(0.9, &mut signals, &none).is_empty(),
+            "the next wait started at the signal"
+        );
+        assert_eq!(
+            p.advance(0.1, &mut signals, &none),
+            vec!["after".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_timed_out_wait_carries_its_extra_time_on() {
+        let mut p = play(Film::new().wait_for("never", 2.0).wait(1.0).cue("after"));
+        let mut signals = HashSet::new();
+        assert!(
+            p.advance(2.5, &mut signals, &none).is_empty(),
+            "half a second into the next wait"
+        );
+        assert_eq!(
+            p.advance(0.5, &mut signals, &none),
+            vec!["after".to_string()]
+        );
+    }
+
+    #[test]
     fn a_wait_for_gives_up_after_its_longest_wait() {
         let mut p = play(Film::new().wait_for("never", 2.0));
         p.advance(2.5, &mut HashSet::new(), &none);
@@ -254,13 +309,13 @@ mod tests {
     fn a_menu_opens_on_the_block_in_the_set_for_its_time() {
         let film = Film::new()
             .wait(1.0)
-            .menu("mymod:press", [2, 0, -1], 2.0)
+            .menu("mymod:press", Pos::new(2, 0, -1), 2.0)
             .wait(5.0);
-        let mut p = play_at([10, 64, 10], film);
+        let mut p = play_at(Pos::new(10, 64, 10), film);
         let mut signals = HashSet::new();
         p.advance(1.5, &mut signals, &none);
         let open = p.menu.clone().expect("open after the first wait");
-        assert_eq!((open.at, open.until), ([12, 64, 9], 3.0));
+        assert_eq!((open.at, open.until), (Pos::new(12, 64, 9), 3.0));
         p.advance(1.6, &mut signals, &none);
         assert_eq!(p.menu, None, "closed at three seconds");
     }
@@ -270,7 +325,7 @@ mod tests {
         let film = Film::new()
             .shot(dolly([0.0; 3], [10.0, 0.0, 0.0]))
             .shot(follow("item", [0.0, 1.0, 0.0]));
-        let p = play_at([100, 64, 0], film);
+        let p = play_at(Pos::new(100, 64, 0), film);
         let stops = [[100.0, 64.0, 0.0], [105.0, 64.0, 0.0], [110.0, 64.0, 0.0]];
         assert_eq!(
             p.stops(),

@@ -30,7 +30,9 @@ pub fn embedded_names() -> Vec<&'static str> {
 pub fn register(r: &mut Registry) {
     for (name, file) in EMBEDDED {
         let Some(structure) = Structure::decode(file) else {
-            error!("assets/structures/{name}.wst is not a structure file of this version, left out");
+            error!(
+                "assets/structures/{name}.wst is not a structure file of this version, left out"
+            );
             continue;
         };
         structures_api::place(r, name, structure)

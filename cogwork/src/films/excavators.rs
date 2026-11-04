@@ -6,7 +6,7 @@
 use showcase_api::Set;
 use weft_sdk::*;
 
-use super::parts::{CHEST, engine, fuel, line, line_of};
+use super::parts::{CHEST, area, engine, fuel, in_world, line, line_of};
 use crate::excavator::EXCAVATOR;
 use crate::lib::{BlockState, Pos};
 use crate::tube::{DIRECTING_TUBE, GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
@@ -26,14 +26,14 @@ const ROW_Z: i32 = 7;
 
 pub fn build(set: &Set) {
     for at in [BUILDER, SHALLOW, DEEP] {
-        set.place(at.into(), EXCAVATOR.with(&[("facing", "south")]));
+        set.place(at.into(), EXCAVATOR.with(&[("facing", "south")]).into());
         for (place, toward) in engines(at) {
             engine(set, place, toward);
         }
     }
     pit(set, SHALLOW, SHALLOW_DEPTH);
     pit(set, DEEP, DEEP_DEPTH);
-    set.place(BUILDER.toward(Dir::South).into(), CHEST.id());
+    set.place(BUILDER.toward(Dir::South).into(), CHEST.id().into());
     output_lines(set);
     sorting_station(set);
 }
@@ -49,7 +49,7 @@ pub fn start(set: &Set) {
         (Dir::East, "base:obsidian"),
     ];
     let world = set.world();
-    let sorter = world.block_entity(set.at(SORTER.into()));
+    let sorter = world.block_entity(in_world(set, SORTER).into());
     for (side, item) in samples {
         if let Some(item) = Item::lookup(item) {
             set_sample(&world, sorter, side.face() * ROW as u32, item);
@@ -80,10 +80,9 @@ fn engines(at: Pos) -> Vec<(Pos, Dir)> {
 /// The 9 by 9 area behind the excavator at `at` dug out `depth` blocks, as if it had been
 /// working a while.
 fn pit(set: &Set, at: Pos, depth: i32) {
-    let air = Block::lookup("core:air").unwrap_or(0);
     let near_corner = at.add_x(-4).add_z(-10).with_y(-depth);
     let far_corner = at.add_x(4).add_z(-2).with_y(-1);
-    set.fill(near_corner.into(), far_corner.into(), air);
+    set.fill(area(near_corner, far_corner), BlockState::AIR.into());
 }
 
 /// From each digging excavator's front south to the row, then west along it to the sorter; a
@@ -96,14 +95,14 @@ fn output_lines(set: &Set) {
     line(set, on_row(DEEP.x - 1), on_row(11));
     line_of(set, on_row(10), on_row(6), BlockState::of(&GILDED_TUBE));
     line(set, on_row(5), meet.add_x(1));
-    set.place(meet.into(), DIRECTING_TUBE.with(&[("out", "west")]));
+    set.place(meet.into(), DIRECTING_TUBE.with(&[("out", "west")]).into());
     line(set, meet.add_x(-1), SORTER.toward(Dir::East));
 }
 
 /// The sorting tube with a chest on three sides: cobblestone north, dirt south, the rest west.
 fn sorting_station(set: &Set) {
-    set.place(SORTER.into(), SORTING_TUBE.id());
+    set.place(SORTER.into(), SORTING_TUBE.id().into());
     for side in [Dir::North, Dir::South, Dir::West] {
-        set.place(SORTER.toward(side).into(), CHEST.id());
+        set.place(SORTER.toward(side).into(), CHEST.id().into());
     }
 }

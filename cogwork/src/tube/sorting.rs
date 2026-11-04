@@ -111,7 +111,11 @@ pub fn unfiltered(w: &World, id: u64) -> Vec<u32> {
         return (0..6).collect();
     };
     (0..6)
-        .filter(|&f| samples.rows[f as usize].iter().all(|&key| ghost::item_of(key) == 0))
+        .filter(|&f| {
+            samples.rows[f as usize]
+                .iter()
+                .all(|&key| ghost::item_of(key) == 0)
+        })
         .collect()
 }
 

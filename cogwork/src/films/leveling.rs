@@ -6,9 +6,9 @@
 use showcase_api::Set;
 use weft_sdk::*;
 
-use super::parts::{engine, fuel};
+use super::parts::{area, engine, fuel, in_world};
 use crate::leveler::LEVELER;
-use crate::lib::Pos;
+use crate::lib::{BlockState, Pos};
 use crate::markers::SURVEY_MARKER;
 
 /// The marked rectangle, x 10 to 18 and z 14 to 22: its corner marker, and the two along it.
@@ -25,35 +25,40 @@ static GRASS: Block = Block::named("base:grass");
 
 pub fn build(set: &Set) {
     for marker in MARKERS {
-        set.place(marker.into(), SURVEY_MARKER.id());
+        set.place(marker.into(), SURVEY_MARKER.id().into());
     }
-    set.fill([13, 0, 16], [16, 0, 19], DIRT.id());
-    set.fill([14, 1, 17], [15, 1, 18], GRASS.id());
-    let air = Block::lookup("core:air").unwrap_or(0);
-    set.fill([11, -2, 15], [12, -1, 16], air);
-    set.fill([16, -1, 20], [17, -1, 21], air);
+    let hill = area(Pos::new(13, 0, 16), Pos::new(16, 0, 19));
+    set.fill(hill, BlockState::of(&DIRT).into());
+    let top = area(Pos::new(14, 1, 17), Pos::new(15, 1, 18));
+    set.fill(top, BlockState::of(&GRASS).into());
+    let air = BlockState::AIR.into();
+    set.fill(area(Pos::new(11, -2, 15), Pos::new(12, -1, 16)), air);
+    set.fill(area(Pos::new(16, -1, 20), Pos::new(17, -1, 21)), air);
     // Pointing away from where the leveler goes, until the wrench turns it.
     engine(set, ENGINE, Dir::East);
 }
 
 /// The camera uses the corner marker: the rectangle shows.
 pub fn survey(set: &Set) {
-    crate::markers::survey(&set.world(), Pos::from(set.at(CORNER.into())));
+    crate::markers::survey(&set.world(), in_world(set, CORNER));
 }
 
 /// The leveler goes down next to the corner marker and takes the markers' rectangle.
 pub fn place_leveler(set: &Set) {
-    set.place(LEVELER_AT.into(), LEVELER.with(&[("facing", "south")]));
+    set.place(
+        LEVELER_AT.into(),
+        LEVELER.with(&[("facing", "south")]).into(),
+    );
 }
 
 /// Fills the leveler's stock and lights the engine, which the wrench then turns into it.
 pub fn turn_engine(set: &Set) {
     let world = set.world();
-    let leveler = world.block_entity(set.at(LEVELER_AT.into()));
+    let leveler = world.block_entity(in_world(set, LEVELER_AT).into());
     if let Some(dirt) = Item::lookup("base:dirt") {
         let stock = world.inventory(leveler).group("input");
         stock.set(0, ItemStack::new(dirt, 64));
     }
     fuel(set, ENGINE);
-    crate::engines::turn(&world, Pos::from(set.at(ENGINE.into())));
+    crate::engines::turn(&world, in_world(set, ENGINE));
 }

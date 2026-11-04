@@ -16,8 +16,9 @@ impl Curve {
     pub fn new(through: &[[f64; 3]]) -> Curve {
         let points = sample(through);
         let mut distance = vec![0.0; points.len()];
-        for i in 1..points.len() {
-            distance[i] = distance[i - 1] + length(sub(points[i], points[i - 1]));
+        for sample in 1..points.len() {
+            let chord = length(sub(points[sample], points[sample - 1]));
+            distance[sample] = distance[sample - 1] + chord;
         }
         Curve { points, distance }
     }
@@ -28,10 +29,10 @@ impl Curve {
 
     /// Where the curve is after `u` of its length (0 to 1); `None` for a curve through no points.
     pub fn at(&self, u: f64) -> Option<[f64; 3]> {
-        let (i, f) = self.locate(u);
-        let here = *self.points.get(i)?;
-        Some(match self.points.get(i + 1) {
-            Some(&next) => lerp3(here, next, f),
+        let (sample, fraction) = self.locate(u);
+        let here = *self.points.get(sample)?;
+        Some(match self.points.get(sample + 1) {
+            Some(&next) => lerp3(here, next, fraction),
             None => here,
         })
     }
@@ -39,8 +40,8 @@ impl Curve {
     /// How far along the points it was made through the curve is after `u` of its length:
     /// 1.5 is halfway between the second and the third.
     pub fn progress(&self, u: f64) -> f64 {
-        let (i, f) = self.locate(u);
-        (i as f64 + f) / SAMPLES as f64
+        let (sample, fraction) = self.locate(u);
+        (sample as f64 + fraction) / SAMPLES as f64
     }
 
     /// The sample at or before `u` of the length, and how far it is from there to the next.
@@ -55,12 +56,12 @@ impl Curve {
             return (start, 0.0);
         };
         let from = self.distance[start];
-        let f = if to > from {
+        let fraction = if to > from {
             (want - from) / (to - from)
         } else {
             1.0
         };
-        (start, f)
+        (start, fraction)
     }
 }
 
@@ -70,12 +71,14 @@ fn sample(through: &[[f64; 3]]) -> Vec<[f64; 3]> {
         return Vec::new();
     };
     let mut points = Vec::with_capacity((through.len() - 1) * SAMPLES + 1);
-    for i in 0..through.len() - 1 {
+    let last_index = through.len() as isize - 1;
+    for stretch in 0..through.len() - 1 {
         // The stretch's ends and their neighbours, the first and last points standing in for
         // the neighbours beyond the ends.
-        let at = |k: isize| through[(i as isize + k).clamp(0, through.len() as isize - 1) as usize];
+        let at = |offset: isize| through[(stretch as isize + offset).clamp(0, last_index) as usize];
         let ends = [at(-1), at(0), at(1), at(2)];
-        points.extend((0..SAMPLES).map(|s| catmull_rom(ends, s as f64 / SAMPLES as f64)));
+        let along = |step: usize| step as f64 / SAMPLES as f64;
+        points.extend((0..SAMPLES).map(|step| catmull_rom(ends, along(step))));
     }
     points.push(last);
     points
@@ -126,7 +129,7 @@ mod tests {
         let hits = curve
             .points
             .iter()
-            .filter(|p| through.iter().any(|t| close(**p, *t)))
+            .filter(|point| through.iter().any(|marked| close(**point, *marked)))
             .count();
         assert_eq!(hits, 4, "goes through the middle ones");
     }

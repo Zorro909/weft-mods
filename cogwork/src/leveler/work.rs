@@ -215,11 +215,7 @@ mod tests {
             seen.push(c);
         }
         let expected = [[0, 5, 0], [1, 5, 0], [0, 5, 1], [1, 5, 1], [0, 4, 0]];
-        assert_eq!(
-            seen,
-            expected.map(Pos::from),
-            "along x, then z, then down"
-        );
+        assert_eq!(seen, expected.map(Pos::from), "along x, then z, then down");
         assert_eq!(
             next(&area, Pos::new(1, 5, 1), 1),
             Pos::new(0, 6, 0),

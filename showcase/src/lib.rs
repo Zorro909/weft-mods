@@ -16,6 +16,8 @@ mod rig;
 mod server;
 mod view;
 
+use std::sync::{Mutex, MutexGuard};
+
 use weft_sdk::*;
 
 declare_mod!(deps: [], init: init);
@@ -25,4 +27,9 @@ fn init(r: &mut Registry) {
     director::register(r);
     camera::register(r);
     launch::register(r);
+}
+
+/// `mutex` locked, even if a panic left it poisoned: the state stays usable.
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
 }

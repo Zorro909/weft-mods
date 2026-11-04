@@ -219,11 +219,7 @@ mod tests {
             seen.push(c);
         }
         let expected = [[1, 4, 1], [2, 4, 1], [2, 4, 2], [1, 4, 2], [1, 3, 1]];
-        assert_eq!(
-            seen,
-            expected.map(Pos::from),
-            "back and forth, then down"
-        );
+        assert_eq!(seen, expected.map(Pos::from), "back and forth, then down");
     }
 
     #[test]
