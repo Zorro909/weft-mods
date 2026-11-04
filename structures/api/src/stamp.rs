@@ -151,7 +151,9 @@ mod tests {
             .collect();
         assert_eq!(pillar, [2, 3, 4], "from above the ground up to the floor");
         assert!(
-            !blocks.iter().any(|(p, s)| p[0] == 4 && p[2] == 4 && *s == STONE),
+            !blocks
+                .iter()
+                .any(|(p, s)| p[0] == 4 && p[2] == 4 && *s == STONE),
             "none under a gap in the floor"
         );
     }
