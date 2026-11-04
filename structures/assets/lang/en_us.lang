@@ -5,6 +5,7 @@ structures.bad_name = A structure's name is lowercase letters, digits and unders
 structures.too_big = A structure is at most {0} blocks along each side
 structures.not_loaded = Part of that box isn't loaded
 structures.write_failed = Could not save {0}: {1}
+structures.too_many_states = A structure holds at most 65535 different block states
 structures.located = {0} is at {1} {2} {3}, {4} blocks away
 structures.not_found = No {0} within {1} blocks
 structures.unknown = There is no structure {0}. This mod has: {1}

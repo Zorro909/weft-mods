@@ -9,14 +9,17 @@ use std::sync::Mutex;
 use showcase_api::{Film, Look, Timeline, flyby, orbit};
 use weft_sdk::*;
 
-use crate::director::{camera, play};
+use crate::director::play;
 use crate::rig::Pose;
-use crate::rig::ease::{add, forward, sub};
+use crate::rig::math::{add, forward, sub};
+use crate::view::camera;
 
 /// The points marked, in order.
 static POINTS: Mutex<Vec<Pose>> = Mutex::new(Vec::new());
 /// Seconds per point when `/camera play` isn't told how long.
 const SECS_PER_POINT: f64 = 2.5;
+/// Seconds of `/camera orbit` when it isn't told how long.
+const ORBIT_SECS: f64 = 12.0;
 
 pub fn register(r: &mut Registry) {
     let usage = "point | play [secs:float] | orbit <radius:float> [secs:float] | clear";
@@ -32,14 +35,8 @@ pub fn register(r: &mut Registry) {
             play_points(&c, cmd);
         } else if cmd.has("orbit") {
             let radius = cmd.float("radius").unwrap_or(8.0).max(0.5);
-            play(
-                &c,
-                local(orbit_ahead(
-                    camera(&c),
-                    radius,
-                    cmd.float("secs").unwrap_or(12.0),
-                )),
-            );
+            let secs = cmd.float("secs").unwrap_or(ORBIT_SECS);
+            play(&c, local(orbit_ahead(camera(&c), radius, secs)));
         } else if cmd.has("clear") {
             with_points(Vec::clear);
             cmd.reply("showcase.camera.cleared", &[]);
@@ -82,11 +79,11 @@ fn orbit_ahead(from: Pose, radius: f64, secs: f64) -> Film {
 }
 
 /// A film of this client's own, around the world's origin so that its positions are the world's.
-fn local(steps: Film) -> Timeline {
+fn local(film: Film) -> Timeline {
     Timeline {
         film: "showcase:camera".into(),
         origin: [0; 3],
-        steps,
+        steps: film.steps,
     }
 }
 
@@ -95,7 +92,7 @@ mod tests {
     use showcase_api::{Path, Step};
 
     use super::*;
-    use crate::rig::ease::length;
+    use crate::rig::math::length;
 
     #[test]
     fn an_orbit_starts_where_the_camera_is() {

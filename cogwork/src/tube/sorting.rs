@@ -7,7 +7,7 @@ use weft_sdk::*;
 
 use super::shape::Arms;
 use super::{SLOTS, SORTING_TUBE, TUBE, Tube, kind};
-use crate::ghost::{self, SLOT};
+use crate::ghost::{self, ItemKey, SLOT};
 
 static SORTING_MENU: Menu = Menu::named("sorting_tube");
 
@@ -15,11 +15,14 @@ static SORTING_MENU: Menu = Menu::named("sorting_tube");
 pub(crate) const ROW: usize = 6;
 
 value! {
-    /// Each face's row of sample items, 0 where a row has none.
+    /// Each face's row of sample items, `ghost::NO_ITEM` where a row has none.
     #[derive(Default)]
-    pub struct Samples { pub rows: [[u32; ROW]; 6] }
+    pub struct Samples { pub rows: [[ItemKey; ROW]; 6] }
 }
-static SAMPLES: Component<Samples> = Component::named("cogwork:sorting_samples");
+
+/// Named anew when samples became item keys, so a tube saved before starts without samples
+/// rather than reading item numbers as keys.
+static SAMPLES: Component<Samples> = Component::named("cogwork:sorting_rows");
 
 /// Each face's color and arm texture.
 const SIDES: [(&str, &str); 6] = [
@@ -77,33 +80,38 @@ fn screen(ui: &mut Ui) {
 fn sample(ui: &mut Ui, face: usize, i: usize) {
     let under = |ui: &mut Ui| ui.image("base:gui/slot", SLOT, SLOT);
     ghost::cell(ui, under, (face * ROW + i) as u32, move |c| {
-        c.menu_component(&SAMPLES).unwrap_or_default().rows[face][i]
+        ghost::item_of(c.menu_component(&SAMPLES).unwrap_or_default().rows[face][i])
     });
 }
 
-/// Sets sample `cell`, counted along the rows, when `owner` is a sorting tube.
+/// Sets sample `cell`, counted along the rows, to `item` (0 clears it) when `owner` is a
+/// sorting tube.
 pub fn set_sample(w: &World, owner: u64, cell: u32, item: u32) {
-    if let Some(s) = w.component_mut(owner, &SAMPLES)
-        && let Some(sample) = s.rows.as_flattened_mut().get_mut(cell as usize)
-    {
-        *sample = item;
-    }
-}
-
-fn rows(w: &World, id: u64) -> [[u32; ROW]; 6] {
-    w.component(id, &SAMPLES).map_or([[0; ROW]; 6], |s| s.rows)
+    let Some(s) = w.component_mut(owner, &SAMPLES) else {
+        return;
+    };
+    let Some(sample) = s.rows.as_flattened_mut().get_mut(cell as usize) else {
+        return;
+    };
+    *sample = ghost::key_of(item);
 }
 
 /// Whether the row of `face` names the item.
 pub fn passes(w: &World, id: u64, face: u32, stack: ItemStack) -> bool {
-    rows(w, id)[face as usize].contains(&stack.item)
+    let Some(samples) = w.component(id, &SAMPLES) else {
+        return false;
+    };
+    samples.rows[face as usize].contains(&ghost::key_of(stack.item))
 }
 
-/// The faces whose rows are empty: they take whatever no row names.
+/// The faces whose rows are empty, or name only items no loaded mod has: they take whatever no
+/// row names.
 pub fn unfiltered(w: &World, id: u64) -> Vec<u32> {
-    let rows = rows(w, id);
+    let Some(samples) = w.component(id, &SAMPLES) else {
+        return (0..6).collect();
+    };
     (0..6)
-        .filter(|&f| rows[f as usize].iter().all(|&item| item == 0))
+        .filter(|&f| samples.rows[f as usize].iter().all(|&key| ghost::item_of(key) == 0))
         .collect()
 }
 
@@ -120,7 +128,6 @@ mod tests {
 
     #[test]
     fn every_side_has_its_own_color_pictures_and_name() {
-        let lang = include_str!("../../assets/lang/en_us.lang");
         for (i, (color, texture)) in SIDES.iter().enumerate() {
             assert!(
                 asset(&format!("textures/block/{texture}.png")),
@@ -131,8 +138,8 @@ mod tests {
                 "{color} swatch"
             );
             assert!(
-                lang.contains(&format!("cogwork.color.{color} =")),
-                "{color} name"
+                crate::translated(&format!("cogwork.color.{color}")),
+                "{color} name in every lang file"
             );
             assert!(
                 SIDES[..i].iter().all(|s| s.0 != *color),

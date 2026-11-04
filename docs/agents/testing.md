@@ -8,7 +8,7 @@ Testkit is part of the engine, so these tests cover engine and base changes. A m
 
 ## Pure logic
 
-`#[cfg(test)] mod tests { use super::*; .. }` at the end of the file. Tests are named as sentences (`truncated_messages_fail`), and assert messages are short prose ("letting go ends it"). Run them with `cargo test --release` in a mod's folder, or `cargo test --release --workspace` in `Weft/`.
+`#[cfg(test)] mod tests { use super::*; .. }` at the end of the file. Tests are named as sentences (`truncated_messages_fail`), and assert messages are short prose ("letting go ends it"). Run them with `tools/check-mods.sh <folder>` for a mod, or `cargo test --release --workspace` in `Weft/`.
 
 ## Running
 

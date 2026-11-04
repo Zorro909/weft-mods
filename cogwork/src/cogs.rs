@@ -10,22 +10,24 @@ pub static DIAMOND_COG: Item = Item::named("diamond_cog");
 pub static TUNING_WRENCH: Item = Item::named("tuning_wrench");
 
 pub fn register(r: &mut Registry) {
-    for (cog, material) in [
-        (&WOODEN_COG, "wood"),
-        (&STONE_COG, "stone"),
-        (&IRON_COG, "iron"),
-        (&GOLD_COG, "gold"),
-        (&DIAMOND_COG, "diamond"),
-    ] {
-        r.item(cog)
-            .tag("cogs")
-            .tag(&format!("cogs/{material}"))
-            .tab(&crate::TAB);
-    }
+    cog(r, &WOODEN_COG, "wood");
+    cog(r, &STONE_COG, "stone");
+    cog(r, &IRON_COG, "iron");
+    cog(r, &GOLD_COG, "gold");
+    cog(r, &DIAMOND_COG, "diamond");
     r.item(&TUNING_WRENCH)
         .max_stack(1)
         .handheld()
         .tag("wrenches")
+        .tab(&crate::TAB);
+}
+
+/// A cog, tagged `cogs` and `cogs/<material>` so recipes of any mod can ask for one or the
+/// other.
+fn cog(r: &mut Registry, cog: &'static Item, material: &str) {
+    r.item(cog)
+        .tag("cogs")
+        .tag(&format!("cogs/{material}"))
         .tab(&crate::TAB);
 }
 

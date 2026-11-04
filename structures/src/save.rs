@@ -28,8 +28,11 @@ pub fn run(cmd: &mut ServerCommand) {
     if size.iter().any(|&side| side > MAX_SIDE) {
         return cmd.reply("structures.too_big", &[Arg::Int(MAX_SIDE as i64)]);
     }
-    let Some(structure) = read_box(&cmd.world(), lo, size) else {
+    let Some(names) = read_box(&cmd.world(), lo, size) else {
         return cmd.reply("structures.not_loaded", &[]);
+    };
+    let Some(structure) = Structure::from_names(size.map(|side| side as u16), names) else {
+        return cmd.reply("structures.too_many_states", &[]);
     };
     match write_file(&name, &structure) {
         Ok(path) => {
@@ -82,8 +85,8 @@ fn block_box(from: [f64; 3], to: [f64; 3]) -> ([i32; 3], [i32; 3]) {
     (lo, size)
 }
 
-/// `None` if any of it isn't loaded.
-fn read_box(world: &World, lo: [i32; 3], size: [i32; 3]) -> Option<Structure> {
+/// Each block's state name, in `Structure::blocks` order; `None` if any of it isn't loaded.
+fn read_box(world: &World, lo: [i32; 3], size: [i32; 3]) -> Option<Vec<&'static str>> {
     let mut names = Vec::with_capacity(size.iter().product::<i32>() as usize);
     for y in 0..size[1] {
         for z in 0..size[2] {
@@ -93,7 +96,7 @@ fn read_box(world: &World, lo: [i32; 3], size: [i32; 3]) -> Option<Structure> {
             }
         }
     }
-    Some(Structure::from_names(size.map(|side| side as u16), names))
+    Some(names)
 }
 
 fn write_file(name: &str, structure: &Structure) -> std::io::Result<PathBuf> {

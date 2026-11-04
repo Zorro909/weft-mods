@@ -61,8 +61,8 @@ its standby, so an ember engine on either of those stops and starts with its hea
 ## Torque Shaft
 
 A thin rod that carries energy between engines and machines. It reaches toward every block
-tagged `conductor` (other shafts, other mods' cables) and every block that holds energy. It is tagged `conductor`, so the engine's energy
-networks join it with any mod's cables and machines.
+tagged `conductor` (other shafts, other mods' cables) and every block that holds energy. It is
+tagged `conductor`, so the engine's energy networks join it with any mod's cables and machines.
 
 ```
 grg       g = #ingots/gold     r = base:redstone      (makes 8)

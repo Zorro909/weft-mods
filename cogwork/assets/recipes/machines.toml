@@ -1,0 +1,32 @@
+# Engines, machines and the survey marker.
+
+[[shaped]]
+result = "spring_engine"
+pattern = ["ppp", " g ", "cPc"]
+key = { p = "#planks", g = "base:glass", c = "#cogs/wood", P = "base:piston" }
+
+[[shaped]]
+result = "ember_engine"
+pattern = ["sss", " g ", "cPc"]
+key = { s = "#cobblestone", g = "base:glass", c = "#cogs/stone", P = "base:piston" }
+
+[[shaped]]
+result = "excavator"
+pattern = ["iri", "gPg", "dcd"]
+key = { i = "#cogs/iron", r = "base:redstone", g = "#cogs/gold", P = "base:diamond_pickaxe", d = "#cogs/diamond", c = "base:chest" }
+
+[[shaped]]
+result = "assembly_bench"
+pattern = ["iTi", "cCc", "iri"]
+key = { i = "#ingots/iron", T = "base:crafting_table", c = "#cogs/iron", C = "base:chest", r = "base:redstone" }
+
+[[shaped]]
+result = "leveler"
+pattern = ["iri", "gSg", "iCi"]
+key = { i = "#ingots/iron", r = "base:redstone", g = "#cogs/gold", S = "#shovels/diamond", C = "base:chest" }
+
+[[shaped]]
+result = "survey_marker"
+count = 4
+pattern = ["t", "s"]
+key = { t = "base:redstone_torch", s = "#stick" }

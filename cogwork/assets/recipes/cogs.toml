@@ -1,0 +1,43 @@
+# Cogs, each tier round the one below, and the tuning wrench.
+#
+# Every file here holds crafting recipes for the base game's crafting table, built into the mod
+# by `build.rs`:
+#
+#   [[shaped]]                          [[shapeless]]
+#   result = "wooden_cog"               result = "..."
+#   count = 1        # 1 if left out    count = 1        # 1 if left out
+#   pattern = [" s ", "s s", " s "]     inputs = ["#planks", "base:stick"]
+#   key = { s = "#stick" }
+#
+# A result without a mod in front is one of cogwork's. Ingredients are item names or `#tags`;
+# a tag where the base game has one, so other mods' planks, ingots and gems work too.
+
+[[shaped]]
+result = "wooden_cog"
+pattern = [" s ", "s s", " s "]
+key = { s = "#stick" }
+
+[[shaped]]
+result = "stone_cog"
+pattern = [" m ", "mcm", " m "]
+key = { m = "#cobblestone", c = "#cogs/wood" }
+
+[[shaped]]
+result = "iron_cog"
+pattern = [" m ", "mcm", " m "]
+key = { m = "#ingots/iron", c = "#cogs/stone" }
+
+[[shaped]]
+result = "gold_cog"
+pattern = [" m ", "mcm", " m "]
+key = { m = "#ingots/gold", c = "#cogs/iron" }
+
+[[shaped]]
+result = "diamond_cog"
+pattern = [" m ", "mcm", " m "]
+key = { m = "#gems/diamond", c = "#cogs/gold" }
+
+[[shaped]]
+result = "tuning_wrench"
+pattern = ["i i", " c ", " i "]
+key = { i = "#ingots/iron", c = "#cogs/stone" }

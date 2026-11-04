@@ -52,17 +52,10 @@ fn stamp_piece(
                 continue;
             };
             let floor = resolved.state(piece.turn, [dx, 0, dz]);
-            let pillar = overlap(ground + 1, cy - ground - 1, origin[1]);
-            if let Some(foundation) = piece.foundation.filter(|_| floor != resolved.air) {
-                let (wx, wz) = (origin[0] + x as i32, origin[2] + z as i32);
-                let state = match foundation {
-                    Foundation::Ground => surface(wx, wz),
-                    Foundation::Block(block) => block.id(),
-                };
-                if state != 0 && state != u32::MAX {
-                    for (_, y) in pillar {
-                        set([x, y, z], state);
-                    }
+            let world = [origin[0] + x as i32, origin[2] + z as i32];
+            if let Some(state) = foundation(piece, resolved, floor, surface, world) {
+                for (_, y) in overlap(ground + 1, cy - ground - 1, origin[1]) {
+                    set([x, y, z], state);
                 }
             }
             if piece.clear_above {
@@ -72,6 +65,22 @@ fn stamp_piece(
             }
         }
     }
+}
+
+/// What fills under `floor`, the bottom block of world column (`x`, `z`): nothing under air,
+/// and nothing where the ground has no top block or the block is unknown.
+fn foundation(
+    piece: &Piece,
+    resolved: &Resolved,
+    floor: u32,
+    surface: Surface,
+    [x, z]: [i32; 2],
+) -> Option<u32> {
+    let state = match piece.foundation.filter(|_| floor != resolved.air)? {
+        Foundation::Ground => surface(x, z),
+        Foundation::Block(block) => block.id(),
+    };
+    (state != 0 && state != u32::MAX).then_some(state)
 }
 
 /// Where `len` blocks from `start` meet the cube starting at `origin`, along one axis: each
@@ -105,7 +114,7 @@ mod tests {
     }
 
     fn piece(corner: [i32; 3], ground: Vec<i32>) -> Piece {
-        let template = Structure::from_names([2, 2, 2], ["core:air"; 8]);
+        let template = Structure::from_names([2, 2, 2], ["core:air"; 8]).expect("8 names");
         Piece {
             template: templates::add("test:stamp", template),
             corner,

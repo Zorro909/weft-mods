@@ -13,7 +13,8 @@ s         s = #stick
 
 Three markers in an L, all at the same height, are enough: a corner, one along the x axis and
 one along the z axis. A fourth at the opposite corner is allowed but not needed. A marker looks
-up to 64 blocks along each line for the next one.
+for the next one from 2 up to 64 blocks along each line: two markers side by side don't make a
+rectangle.
 
 Use the corner marker to check: its rectangle is drawn in the air with glowing points for a few
 seconds. A marker that isn't the corner of a rectangle puffs instead.

@@ -4,8 +4,8 @@
 use showcase_api::name;
 use weft_sdk::*;
 
-use crate::playback::OpenMenu;
-use crate::server::{OPEN_MENU, OpenMenu as Open};
+use crate::playback::ShownMenu;
+use crate::server::{OPEN_MENU, OpenMenu};
 
 /// The menu this client asked for and hasn't closed yet: its name and block.
 #[derive(Default)]
@@ -15,7 +15,7 @@ pub struct Menus {
 
 impl Menus {
     /// Opens `wanted` if it isn't open yet, closing the one before; `None` closes it.
-    pub fn show(&mut self, c: &Client, wanted: Option<&OpenMenu>) {
+    pub fn show(&mut self, c: &Client, wanted: Option<&ShownMenu>) {
         let wanted = wanted.map(|m| (m.menu.clone(), m.at));
         if self.open == wanted {
             return;
@@ -26,7 +26,7 @@ impl Menus {
         if let Some((menu, at)) = &wanted {
             c.send(
                 &OPEN_MENU,
-                &Open {
+                &OpenMenu {
                     menu: name(menu),
                     at: *at,
                 },

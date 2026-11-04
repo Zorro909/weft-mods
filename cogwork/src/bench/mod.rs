@@ -8,26 +8,30 @@ mod fill;
 
 use base_api::CRAFTING;
 pub use fill::insert;
+use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
 
-use crate::ghost::{self, SLOT};
+use crate::ghost::{self, ItemKey, SLOT};
 
 pub static ASSEMBLY_BENCH: Block = Block::named("assembly_bench");
 static BENCH_MENU: Menu = Menu::named("assembly_bench");
 
 value! {
-    /// The pattern's ghost items (0 for an empty cell), energy put into the craft under way,
-    /// what the screen says, and which cells hold items (a bit each) for the screen. New fields
-    /// go last: a saved bench loads with them 0.
+    /// The pattern's ghost items (`ghost::NO_ITEM` for an empty cell), energy put into the
+    /// craft under way, what the screen says, and which cells hold items (a bit each) for the
+    /// screen. New fields go last: a saved bench loads with them 0.
     #[derive(Default)]
     pub struct Bench {
-        pub pattern: [u32; 9],
+        pub pattern: [ItemKey; 9],
         pub spent: i64,
         pub status: u32,
         pub filled: u32,
     }
 }
-static BENCH: Component<Bench> = Component::named("cogwork:bench");
+
+/// Named anew when the pattern became item keys, so a bench saved before starts with an empty
+/// pattern rather than reading item numbers as keys.
+static BENCH: Component<Bench> = Component::named("cogwork:assembly_bench");
 
 /// Energy one craft takes.
 const CRAFT_COST: i64 = 240;
@@ -36,14 +40,18 @@ const NOTHING: &str = "cogwork:nothing";
 /// The player's inventory width in GUI pixels.
 const INVENTORY_WIDTH: f32 = 9.0 * SLOT;
 
-/// What the screen says, by `cogwork.bench.<name>`.
-mod status {
-    pub const NO_RECIPE: u32 = 0;
-    pub const MISSING: u32 = 1;
-    pub const FULL: u32 = 2;
-    pub const NO_POWER: u32 = 3;
-    pub const WORKING: u32 = 4;
-    pub const NAMES: [&str; 5] = ["no_recipe", "missing", "full", "no_power", "working"];
+/// What the bench is doing; its screen says `cogwork.bench.<name>`. Kept in
+/// `Bench::status` as its number, so the order is part of the save format: new ones go last.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr, IntoStaticStr, VariantArray)]
+#[strum(serialize_all = "snake_case")]
+#[repr(u32)]
+enum Status {
+    #[default]
+    NoRecipe,
+    Missing,
+    Full,
+    NoPower,
+    Working,
 }
 
 pub fn register(r: &mut Registry) {
@@ -53,10 +61,11 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&BENCH, craft::tick);
-    // On a block without an item, so no item has it.
+    // A tag has to name something or the game stops at load: the gantry frame has no item, so
+    // the tag is on no item.
     r.tag(NOTHING, &["gantry_frame"]);
     r.machine(&ASSEMBLY_BENCH, &BENCH_MENU)
-        .block(block)
+        .block(|b| crate::machine::block(b, "assembly_bench").hardness(3.5))
         // Filled by tubes only, through `insert`; taken from only by crafting.
         .group("grid", Slots::grid(3, 3).input().accepts(NOTHING))
         .group("output", Slots::row(3).output())
@@ -74,25 +83,26 @@ pub fn register(r: &mut Registry) {
         .screen(screen);
 }
 
-fn block(b: BlockBuilder<'_>) -> BlockBuilder<'_> {
-    b.facing(Facings::HORIZONTAL, Toward::Player)
-        .prop("working", ["false", "true"])
-        .states(|p, s| {
-            let mut faces = ["assembly_bench_side"; 6];
-            faces[3] = "assembly_bench_top";
-            faces[p.facing().face() as usize] = if p.is("working", "true") {
-                "assembly_bench_front_on"
-            } else {
-                "assembly_bench_front"
-            };
-            s.faces(faces)
-        })
-        .hardness(3.5)
-        .mineable("pickaxe")
-        .sound_group("base:block.stone")
-        .tab(&crate::TAB)
-}
-
+/// The bench's screen:
+///
+/// ```text
+/// +--------------------------------------+
+/// | Assembly Bench                       |
+/// | [ ][ ][ ]                            |
+/// | [ ][ ][ ]  ==>  [ ][ ][ ]            |  pattern, craft progress, output
+/// | [ ][ ][ ]                            |
+/// | [#####.....]                         |  stored energy
+/// | 1200 / 4000 energy                   |
+/// | Crafting                             |  status
+/// |                                      |
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |  the player's inventory
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |
+/// +--------------------------------------+
+/// ```
+///
+/// A pattern cell shows its ghost item until it holds items.
 fn screen(ui: &mut Ui) {
     ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
         ui.title();
@@ -112,11 +122,11 @@ fn screen(ui: &mut Ui) {
         });
         // As wide as the inventory whatever it says, so the cells don't move under the cursor.
         ui.column(S::col().gap(3.0).w(INVENTORY_WIDTH), |ui| {
-            crate::power_bar(ui);
+            crate::machine::power_bar(ui);
             ui.text_bind_styled(S::col().no_wrap(), |c, out| {
                 let b = c.menu_component(&BENCH).unwrap_or_default();
-                let name = status::NAMES.get(b.status as usize).unwrap_or(&"no_recipe");
-                out.set(&format!("cogwork.bench.{name}"), &[]);
+                let status: &str = Status::from_repr(b.status).unwrap_or_default().into();
+                out.set(&format!("cogwork.bench.{status}"), &[]);
             });
         });
         ui.player_inventory(true);
@@ -131,15 +141,39 @@ fn cell(ui: &mut Ui, i: u32) {
     ghost::cell(ui, under, i, move |c| {
         let b = c.menu_component(&BENCH).unwrap_or_default();
         let filled = b.filled & (1 << i) != 0;
-        if filled { 0 } else { b.pattern[i as usize] }
+        if filled {
+            0
+        } else {
+            ghost::item_of(b.pattern[i as usize])
+        }
     });
 }
 
-/// Sets the ghost of `cell` when `owner` is a bench.
+/// The items of the bench's pattern, 0 for an empty cell.
+fn pattern(bench: &Bench) -> [u32; 9] {
+    bench.pattern.map(ghost::item_of)
+}
+
+/// Sets the ghost of `cell` to `item` (0 clears it) when `owner` is a bench.
 pub fn set_ghost(w: &World, owner: u64, cell: u32, item: u32) {
-    if let Some(b) = w.component_mut(owner, &BENCH)
-        && let Some(ghost) = b.pattern.get_mut(cell as usize)
-    {
-        *ghost = item;
+    let Some(b) = w.component_mut(owner, &BENCH) else {
+        return;
+    };
+    let Some(ghost) = b.pattern.get_mut(cell as usize) else {
+        return;
+    };
+    *ghost = ghost::key_of(item);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_status_has_a_name() {
+        for &status in Status::VARIANTS {
+            let key = format!("cogwork.bench.{}", <&str>::from(status));
+            assert!(crate::translated(&key), "{key} in every lang file");
+        }
     }
 }

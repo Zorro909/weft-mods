@@ -8,6 +8,20 @@ an entry in `declare_mod!`. Add the crate and call it from your `init`:
 structures_api = { path = "<path to weft-mods>/structures/api" }
 ```
 
+## Structure files
+
+A `Structure` is a box of block states, the contents of a [`.wst` file](file-format.md):
+
+| Call | What it does |
+|---|---|
+| `Structure::decode(bytes)` | reads a file; `None` for anything that isn't a whole `.wst` file of this version |
+| `Structure::from_names(size, names)` | builds one in code from each block's state name, x fastest, then z, then y; `None` unless there is one name per block |
+| `structure.encode()` | the file's bytes |
+| `structure.size()`, `structure.blocks()` | its size along x, y and z, and each block's position and state name |
+
+`from_names` and `decode` refuse a box of more than 256 x 256 x 256 blocks, or of more than
+65535 different states, so every `Structure` encodes to a file that decodes again.
+
 ## Static structures
 
 One template, stood on the ground now and then, turned whichever way the seed says:
@@ -79,7 +93,7 @@ What a planner has:
 | `p.region()` | the region's corners; everything must stay inside, seen from above |
 | `p.random()` | the same numbers every time: `next`, `below`, `between`, `chance`, `turn` |
 | `p.spot(margin)` | a random column at least `margin` blocks inside the region |
-| `p.ground(x, z)` | the column's height and biome, `None` at a cave mouth |
+| `p.ground(x, z)` | the column's height and biome (`weft_sdk::terrain::Column`), `None` at a cave mouth |
 | `p.size(&T, turn)` | a template's size once turned |
 | `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None` |
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned |

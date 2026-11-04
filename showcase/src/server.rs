@@ -49,15 +49,7 @@ pub fn register(r: &mut Registry) {
             return;
         };
         if let Some(film) = cmd.text("film").map(str::to_string) {
-            world.emit(
-                &PLAY,
-                Play {
-                    film: name(&film),
-                    player,
-                    origin,
-                },
-            );
-            ask(player, name(&film), world.time());
+            ask(&world, player, origin, &film);
             cmd.reply("showcase.asked", &[Arg::Text(&film)]);
         } else if let Some(mod_id) = cmd.text("mod").map(str::to_string) {
             let shown = crate::gallery::show(&world, player, origin, &mod_id);
@@ -101,12 +93,22 @@ fn prepare(world: &World, player: u64) -> Option<[i32; 3]> {
     world.set_game_mode(player, game_mode::SPECTATOR);
     world.set_day_time(NOON);
     world.set_weather(false, false, CLEAR_TICKS);
-    Some(me.pos.map(|v| v.floor() as i32))
+    Some(block_at(me.pos))
 }
 
-fn ask(player: u64, film: Name, tick: u64) {
+/// Asks the mod that owns `film` to build it around `origin` and send it to `player`.
+fn ask(world: &World, player: u64, origin: [i32; 3], film: &str) {
+    let film = name(film);
+    world.emit(
+        &PLAY,
+        Play {
+            film,
+            player,
+            origin,
+        },
+    );
     answered(player);
-    lock(&ASKED).push((player, film, tick));
+    lock(&ASKED).push((player, film, world.time()));
 }
 
 fn answered(player: u64) {
@@ -116,16 +118,14 @@ fn answered(player: u64) {
 /// Gives the players here whose film never came back what they had, and tells them.
 fn give_up(world: &World) {
     let now = world.time();
-    let mut late = Vec::new();
-    lock(&ASKED).retain(|&(player, film, tick)| {
-        // `players()` leaves out spectators, which the film made them.
-        let gone = now >= tick + ANSWER_TICKS && world.entity(player).is_some();
-        if gone {
-            late.push((player, film));
-        }
-        !gone
-    });
-    for (player, film) in late {
+    // Players in this world; `players()` would leave out spectators, which the film made them.
+    let here = |player: u64| world.entity(player).is_some();
+    let late: Vec<_> = lock(&ASKED)
+        .extract_if(.., |&mut (player, _, tick)| {
+            now >= tick + ANSWER_TICKS && here(player)
+        })
+        .collect();
+    for (player, film, _) in late {
         restore(world, player);
         world.send(player, &MISSING, &Missing { film });
     }

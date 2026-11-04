@@ -7,6 +7,7 @@ pub struct Film {
     pub steps: Vec<Step>,
 }
 
+/// One thing a film does. Shots and waits take their time; the others happen at once.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Step {
     Shot(Shot),
@@ -32,7 +33,9 @@ pub enum Step {
     },
 }
 
-/// One camera move: where the eye goes, where it looks, how long it takes.
+/// One camera move: where the eye goes, where it looks, how long it takes. The functions below
+/// make shots of 5 seconds that ease in and out (`Ease::Smooth`), keep the player's field of view
+/// and cut from the shot before.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shot {
     pub path: Path,
@@ -76,7 +79,7 @@ pub enum Look {
     /// From the first point to the second over the shot.
     Pan([f64; 3], [f64; 3]),
     Subject(String),
-    /// Along the path.
+    /// Along the path; a shot that stands still keeps the way the camera looked before.
     Ahead,
     Angles {
         yaw: f32,
@@ -179,7 +182,7 @@ pub fn dolly(from: [f64; 3], to: [f64; 3]) -> Shot {
     shot(Path::Line(from, to), Look::Ahead)
 }
 
-/// Still at `eye`, looking ahead (set `look_at` to aim).
+/// Still at `eye`, looking the way the camera already does (`.look_at` aims it).
 pub fn hold(eye: [f64; 3]) -> Shot {
     shot(Path::Still(eye), Look::Ahead)
 }

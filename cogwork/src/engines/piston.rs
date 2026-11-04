@@ -4,6 +4,7 @@
 use weft_sdk::*;
 
 use super::{ENGINE, Engine, kind, model};
+use crate::lib::{ModelBox, Pos};
 
 /// The pistons lying flat (engines facing up or down), then standing (facing sideways), by
 /// engine kind.
@@ -45,7 +46,8 @@ fn claims(w: &World, owner: u64, id: u64) -> bool {
 
 /// A 16 by 4 by 16 plate centered on the pivot, which is 2 texels above the entity's feet.
 fn plate() -> Part {
-    Part::new("plate", [0.0, 2.0, 0.0]).cube([-8.0, -2.0, -8.0], [16.0, 4.0, 16.0], [0.0, 0.0])
+    let plate = ModelBox::sized([-8.0, -2.0, -8.0], [16.0, 4.0, 16.0]);
+    Part::new("plate", [0.0, 2.0, 0.0]).cube(plate.lo, plate.size(), [0.0, 0.0])
 }
 
 /// The plate stood on its edge, a quarter turn about x: thin along z.
@@ -66,10 +68,8 @@ fn steps_up(stroke: u32) -> u32 {
         s
     } else if s < TRAVEL + REST {
         TRAVEL
-    } else if s < 2 * TRAVEL + REST {
-        2 * TRAVEL + REST - s
     } else {
-        0
+        (2 * TRAVEL + REST).saturating_sub(s)
     }
 }
 
@@ -90,7 +90,7 @@ pub fn advance(stroke: u32, running: bool, time: u64) -> u32 {
 }
 
 /// Puts the engine `id`'s piston where its stroke has it.
-pub fn show(w: &World, id: u64, pos: [i32; 3], e: &mut Engine) {
+pub fn show(w: &World, id: u64, pos: Pos, e: &mut Engine) {
     let Some(out) = model::output(w, pos) else {
         return;
     };
@@ -103,9 +103,7 @@ pub fn show(w: &World, id: u64, pos: [i32; 3], e: &mut Engine) {
     // At rest the piston's middle is 2 texels from the block's toward the base plate; the
     // stroke lifts it toward the trunk's end.
     let along = (lift(e.stroke) - 2.0) / 16.0;
-    let o = out.offset();
-    let at: [f64; 3] = std::array::from_fn(|i| pos[i] as f64 + 0.5 + along * o[i] as f64);
-    let feet = [at[0], at[1] - 2.0 / 16.0, at[2]];
+    let feet = pos.center().toward_by(out, along).add_y(-2.0 / 16.0);
     e.piston = crate::owned::place(w, id, e.piston, entity, feet, yaw);
 }
 

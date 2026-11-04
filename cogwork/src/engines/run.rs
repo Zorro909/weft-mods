@@ -1,10 +1,12 @@
 //! The engines' tick: make energy, push it out of the trunk, warm up or cool down, and move the
 //! piston while running.
 
+use base_api::FUEL;
 use weft_sdk::*;
 
 use super::piston;
-use super::{Engine, fuel_ticks, kind, model};
+use super::{Engine, kind, model};
+use crate::lib::Pos;
 
 /// Energy per tick: a spring engine with a signal, an ember engine burning.
 const SPRING_MAKES: i64 = 10;
@@ -19,9 +21,9 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
     let w = b.world();
     for (id, e, ticks) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
-        let pos = st.block_pos();
+        let pos = Pos::from(st.block_pos());
         let running = if e.kind == kind::SPRING {
-            w.signal(pos) > 0
+            w.signal(pos.into()) > 0
         } else {
             burn(&w, id, e, ticks)
         };
@@ -61,6 +63,11 @@ fn burn(w: &World, id: u64, e: &mut Engine, ticks: u32) -> bool {
     true
 }
 
+/// Ticks of burning one item of `stack` gives, if it is fuel.
+fn fuel_ticks(stack: ItemStack) -> Option<u32> {
+    FUEL.on_item(stack.item).filter(|_| !stack.is_empty())
+}
+
 /// Adds what the engine made to its store; true when the store is full.
 fn store(w: &World, id: u64, made: i64) -> bool {
     let Some(energy) = w.energy_mut(id) else {
@@ -71,12 +78,11 @@ fn store(w: &World, id: u64, made: i64) -> bool {
 }
 
 /// Pushes stored energy into whatever block entity the trunk points at.
-fn push(w: &World, id: u64, pos: [i32; 3]) {
+fn push(w: &World, id: u64, pos: Pos) {
     let Some(out) = model::output(w, pos) else {
         return;
     };
-    let o = out.offset();
-    let target = w.block_entity([pos[0] + o[0], pos[1] + o[1], pos[2] + o[2]]);
+    let target = w.block_entity(pos.neighbor(out.face()).into());
     let stored = w.energy(id).map_or(0, |e| e.stored);
     if target == 0 || target == id || stored == 0 {
         return;
@@ -109,7 +115,7 @@ fn warm(e: &mut Engine, running: bool, full: bool, ticks: u32) {
 }
 
 /// Shows the heat on the block's trunk.
-fn show_heat(w: &World, pos: [i32; 3], e: &Engine) {
+fn show_heat(w: &World, pos: Pos, e: &Engine) {
     let heat = match e.heat {
         _ if e.overheated != 0 => 3,
         0..250 => 0,
@@ -117,8 +123,8 @@ fn show_heat(w: &World, pos: [i32; 3], e: &Engine) {
         _ => 2,
     };
     let heat = heat.to_string();
-    if w.prop(pos, "heat") != Some(heat.as_str()) {
-        w.set_prop(pos, "heat", &heat);
+    if w.prop(pos.into(), "heat") != Some(heat.as_str()) {
+        w.set_prop(pos.into(), "heat", &heat);
     }
 }
 

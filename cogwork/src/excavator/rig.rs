@@ -5,7 +5,8 @@
 
 use weft_sdk::*;
 
-use super::{Dig, stage};
+use super::{Dig, Frame, Stage};
+use crate::lib::{FloatPos, ModelBox};
 
 static CARRIAGE: Entity = Entity::named("drill_carriage");
 static BIT: Entity = Entity::named("drill_bit");
@@ -29,13 +30,11 @@ const BIT_HEIGHT: f64 = 0.75;
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
     r.attach(&Entity::named("excavator"), &RIG);
-    let part = |origin: [f32; 3], size: [f32; 3]| {
-        Part::new("body", [0.0; 3]).cube(origin, size, [0.0, 0.0])
-    };
+    let body = |lo, size| ModelBox::sized(lo, size).part("body", [0.0, 0.0]);
     let pieces: [(&'static Entity, Vec<Part>, [u32; 2]); 4] = [
         (
             &CARRIAGE,
-            vec![part([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0])],
+            vec![body([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0])],
             [64, 32],
         ),
         (
@@ -43,21 +42,21 @@ pub fn register(r: &mut Registry) {
             // `bit` turns about its own axis (`animations/drill_bit.animation.json`), the tip
             // with it.
             vec![
-                Part::new("bit", [0.0; 3]).cube([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0], [0.0, 0.0]),
-                Part::new("tip", [0.0; 3])
-                    .cube([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0], [32.0, 0.0])
+                ModelBox::sized([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0]).part("bit", [0.0, 0.0]),
+                ModelBox::sized([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0])
+                    .part("tip", [32.0, 0.0])
                     .child_of(0),
             ],
             [64, 32],
         ),
         (
             &SHAFT,
-            vec![part([-2.0, 0.0, -2.0], [4.0, 64.0, 4.0])],
+            vec![body([-2.0, 0.0, -2.0], [4.0, 64.0, 4.0])],
             [32, 80],
         ),
         (
             &BEAM,
-            vec![part([-32.0, 0.0, -2.0], [64.0, 4.0, 4.0])],
+            vec![body([-32.0, 0.0, -2.0], [64.0, 4.0, 4.0])],
             [144, 16],
         ),
     ];
@@ -81,27 +80,28 @@ impl Rig {
 }
 
 /// Where each piece goes now: by slot, its kind, place and turn.
-fn layout(d: &Dig) -> Vec<(usize, &'static Entity, [f64; 3], f32)> {
-    let [x, y, z] = d.head.map(|v| v as f64);
-    let top = d.hi[1] as f64 + 0.25;
+fn layout(d: &Dig) -> Vec<(usize, &'static Entity, FloatPos, f32)> {
+    let head = d.head();
+    let Frame { lo, hi } = d.frame;
+    let top = hi.y as f64 + 0.25;
+    let carriage = FloatPos { y: top, ..head };
     // On top of the block it drills, only its tip in it; never above the carriage.
-    let bit = (y + 1.0).min(top - BIT_HEIGHT);
-    let mut out = vec![
-        (0, &CARRIAGE, [x, top, z], 0.0),
-        (1, &BIT, [x, bit, z], 0.0),
-    ];
+    let bit = FloatPos {
+        y: (head.y + 1.0).min(top - BIT_HEIGHT),
+        ..head
+    };
+    let mut out = vec![(0, &CARRIAGE, carriage, 0.0), (1, &BIT, bit, 0.0)];
     // Shaft pieces hang from the carriage down to the bit; the lowest reaches into the ground.
-    let reach = top - (bit + BIT_HEIGHT);
+    let reach = top - (bit.y + BIT_HEIGHT);
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
-    out.extend((0..shafts).map(|k| (2 + k, &SHAFT, [x, top - PIECE * (k + 1) as f64, z], 0.0)));
-    let beam_y = top + 0.125;
-    let (x0, x1) = (d.lo[0] as f64 + 0.5, d.hi[0] as f64 + 0.5);
-    let (z0, z1) = (d.lo[2] as f64 + 0.5, d.hi[2] as f64 + 0.5);
-    for (k, c) in spans(x0, x1).into_iter().enumerate() {
-        out.push((2 + SHAFTS + k, &BEAM, [c, beam_y, z], 0.0));
+    out.extend((0..shafts).map(|k| (2 + k, &SHAFT, carriage.add_y(-PIECE * (k + 1) as f64), 0.0)));
+    let beams = carriage.add_y(0.125);
+    let (lo, hi) = (lo.center(), hi.center());
+    for (k, x) in spans(lo.x, hi.x).into_iter().enumerate() {
+        out.push((2 + SHAFTS + k, &BEAM, FloatPos { x, ..beams }, 0.0));
     }
-    for (k, c) in spans(z0, z1).into_iter().enumerate() {
-        out.push((2 + SHAFTS + BEAMS + k, &BEAM, [x, beam_y, c], 90.0));
+    for (k, z) in spans(lo.z, hi.z).into_iter().enumerate() {
+        out.push((2 + SHAFTS + BEAMS + k, &BEAM, FloatPos { z, ..beams }, 90.0));
     }
     out
 }
@@ -119,7 +119,7 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
     let Some(mut rig) = w.component(owner, &RIG).copied() else {
         return;
     };
-    let wanted = if d.stage == stage::MINE {
+    let wanted = if d.stage() == Stage::Mine {
         layout(d)
     } else {
         Vec::new()
@@ -144,6 +144,17 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
 mod tests {
     use super::*;
 
+    /// An excavator mining with its drill at `head`, under a frame whose top is at 8.
+    fn mining_at(head: FloatPos) -> Dig {
+        let mut d = Dig {
+            stage: Stage::Mine as u32,
+            frame: Frame::from(([0, 0, 0], [10, 8, 10])),
+            ..Dig::default()
+        };
+        d.set_head(head);
+        d
+    }
+
     #[test]
     fn a_replaced_piece_is_no_longer_the_rigs() {
         let mut rig = Rig { ids: [0; SLOTS] };
@@ -163,16 +174,11 @@ mod tests {
 
     #[test]
     fn shafts_reach_from_the_carriage_down_to_the_bit() {
-        let d = Dig {
-            stage: stage::MINE,
-            hi: [10, 8, 10],
-            head: [5.5, -3.0, 5.5],
-            ..Dig::default()
-        };
+        let d = mining_at(FloatPos::new(5.5, -3.0, 5.5));
         let shafts: Vec<f64> = layout(&d)
             .into_iter()
             .filter(|p| std::ptr::eq(p.1, &SHAFT))
-            .map(|p| p.2[1])
+            .map(|p| p.2.y)
             .collect();
         let lowest = shafts.iter().copied().fold(f64::MAX, f64::min);
         assert!(lowest <= -2.0 + BIT_HEIGHT, "down to the top of the bit");
@@ -184,16 +190,11 @@ mod tests {
 
     #[test]
     fn the_bit_stands_on_the_block_it_drills() {
-        let d = Dig {
-            stage: stage::MINE,
-            hi: [10, 8, 10],
-            head: [5.5, -3.0, 5.5],
-            ..Dig::default()
-        };
+        let d = mining_at(FloatPos::new(5.5, -3.0, 5.5));
         let bit = layout(&d)
             .into_iter()
             .find(|p| std::ptr::eq(p.1, &BIT))
-            .map(|p| p.2[1]);
+            .map(|p| p.2.y);
         assert_eq!(bit, Some(-2.0), "its foot on top of the block at -3");
     }
 }

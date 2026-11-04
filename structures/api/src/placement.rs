@@ -100,7 +100,7 @@ impl Drop for Placement<'_> {
             return;
         }
         let template = Template::generated(self.name.clone());
-        let size = self.structure.size.map(|v| v as i32);
+        let size = self.structure.size();
         templates::template(self.registry, template, std::mem::take(&mut self.structure));
         let single = Single {
             template,
@@ -151,5 +151,50 @@ impl Single {
             placed.foundation(foundation);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use weft_sdk::terrain::Column;
+
+    use super::*;
+    use crate::random::Random;
+    use crate::region::Region;
+
+    static TOWER: Template = Template::named("test:placement_tower");
+
+    fn flat(_: i32, _: i32) -> Option<Column> {
+        Some(Column {
+            height: 70,
+            biome: 0,
+        })
+    }
+
+    #[test]
+    fn a_static_structure_stays_inside_the_smallest_region() {
+        let size = [7, 3, 4];
+        let tower = Structure::from_names(size.map(|v| v as u16), ["core:air"; 84]);
+        templates::add(TOWER.name(), tower.expect("one name per block"));
+        let single = Single {
+            template: &TOWER,
+            size,
+            fit: Fit::new(),
+            foundation: None,
+            chance: 1.0,
+            turns: true,
+        };
+        // What `spacing(1)` makes of it: its longest side and a block to spare on each side.
+        let region = Region::at([-3, 5], 9);
+        for seed in 0..500 {
+            let mut plan = Plan::new(region, Random::new(seed), &flat);
+            let result = single.plan(&mut plan);
+            let parts = plan.finish(result);
+            assert_eq!(
+                parts.map(|parts| parts.len()),
+                Ok(1),
+                "placed whole, seed {seed}"
+            );
+        }
     }
 }

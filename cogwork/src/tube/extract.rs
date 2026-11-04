@@ -3,7 +3,8 @@
 
 use weft_sdk::*;
 
-use super::{BASE_SPEED, Motion, NONE, SLOTS, TUBE, Tube, step};
+use super::{BASE_SPEED, Motion, NONE, TUBE, Tube, free_slot};
+use crate::lib::Pos;
 
 /// Ticks between two pulls of a timber tube: an engine's stroke.
 const PULL_EVERY: u32 = 18;
@@ -22,7 +23,7 @@ fn items_for(energy: i64) -> u32 {
 /// A timber tube's pull, once a stroke: it takes as many items out of the machines it touches as
 /// the energy of that stroke pays for. The energy is used up whether or not there was anything
 /// to take, so a tube left idle doesn't save up for a burst.
-pub fn pull(w: &World, id: u64, pos: [i32; 3], tube: &mut Tube) {
+pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
     tube.timer = tube.timer.saturating_sub(1);
     if tube.timer > 0 {
         return;
@@ -57,17 +58,12 @@ pub fn pull(w: &World, id: u64, pos: [i32; 3], tube: &mut Tube) {
 }
 
 /// The machine (not a tube) the tube at `pos` touches through `face`.
-fn source(w: &World, pos: [i32; 3], face: u32) -> Option<u64> {
+fn source(w: &World, pos: Pos, face: u32) -> Option<u64> {
     if !super::connects_to_tube(w, pos, face) {
         return None;
     }
-    let other = w.block_entity(step(pos, face));
+    let other = w.block_entity(pos.neighbor(face).into());
     (other != 0 && w.component(other, &TUBE).is_none()).then_some(other)
-}
-
-fn free_slot(w: &World, id: u64, tube: &Tube) -> Option<usize> {
-    let inv = w.inventory(id);
-    (0..SLOTS).find(|&k| inv.get(k as u32).is_empty() && tube.moving[k].item == 0)
 }
 
 /// Puts `stack` into the tube `id` at its hub, as much as it has room for; returns the rest.

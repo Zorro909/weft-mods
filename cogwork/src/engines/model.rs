@@ -4,6 +4,13 @@
 use weft_sdk::signal::Frame;
 use weft_sdk::*;
 
+use crate::lib::{ModelBox, Pos};
+
+/// The base plate, 4 texels thick, and the trunk standing on it, 8 wide: lying on the floor,
+/// before they are turned to the engine's facing.
+const PLATE: ModelBox = ModelBox::new([0.0; 3], [16.0, 4.0, 16.0]);
+const TRUNK: ModelBox = ModelBox::new([4.0; 3], [12.0, 16.0, 12.0]);
+
 /// Trunk textures by heat level: cool, warm, hot, overheated.
 const TRUNKS: [&str; 4] = [
     "engine_trunk_blue",
@@ -42,17 +49,17 @@ fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
     s.texture(&plate_top)
         .frame(frame)
         .model_box_faces(
-            [0.0; 3],
-            [16.0, 4.0, 16.0],
+            PLATE.lo,
+            PLATE.hi,
             faces(&plate_side, EDGE, &plate_top, WHOLE),
         )
         .model_box_faces(
-            [4.0; 3],
-            [12.0, 16.0, 12.0],
+            TRUNK.lo,
+            TRUNK.hi,
             faces(trunk, [4.0, 0.0, 12.0, 12.0], trunk, [4.0, 4.0, 12.0, 12.0]),
         )
         // The whole block, piston and all: nothing walks into the piston's way.
-        .hitbox([0.0; 3], [16.0; 3])
+        .hitbox(ModelBox::BLOCK.lo, ModelBox::BLOCK.hi)
 }
 
 /// A box's faces: `side` all round, `end` on its bottom and top.
@@ -88,8 +95,8 @@ fn turn(u: &mut Use) -> bool {
 }
 
 /// Where the engine's trunk points: its output.
-pub fn output(w: &World, pos: [i32; 3]) -> Option<Dir> {
-    w.prop(pos, "facing")
+pub fn output(w: &World, pos: Pos) -> Option<Dir> {
+    w.prop(pos.into(), "facing")
         .and_then(Dir::from_name)
         .map(Dir::opposite)
 }

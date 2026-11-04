@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use crate::film::Film;
-use crate::{CUE, PLAY, SIGNAL, SUBJECT, Signal, Subject, TIMELINE, name, name_text, wire};
+use crate::{CUE, PLAY, SIGNAL, SUBJECT, Signal, Subject, TIMELINE, Timeline, name, name_text};
 
 /// Where a film is being built and for whom; positions given to it are from its origin.
 pub struct Set {
@@ -15,7 +15,7 @@ pub struct Set {
 
 impl Set {
     /// A set around `origin` for `player`, for a mod that builds and sends a film on its own
-    /// (`send`).
+    /// (`send`); `film` makes them for registered films.
     pub fn new(world: World, player: u64, origin: [i32; 3]) -> Set {
         Set {
             world,
@@ -144,7 +144,12 @@ pub fn subject(world: &World, player: u64, name: &str, entity: u64, pos: [f64; 3
 /// mode, time and weather as they are, and cues reach `on_cue` only for a film registered under
 /// that name.
 pub fn send(world: &World, player: u64, film: &str, origin: [i32; 3], steps: &Film) {
-    world.send(player, &TIMELINE, &wire::encode(film, origin, steps));
+    let timeline = Timeline {
+        film: film.into(),
+        origin,
+        steps: steps.steps.clone(),
+    };
+    world.send(player, &TIMELINE, &timeline);
 }
 
 /// Registers the film `name` of this mod (played as `mymod:name`): `build` puts its set into
@@ -158,11 +163,7 @@ pub fn film<'a>(
     let mine = full.clone();
     r.on(&PLAY, move |batch| {
         for play in batch.iter().filter(|p| name_text(&p.film) == mine) {
-            let set = Set {
-                world: batch.world(),
-                player: play.player,
-                origin: play.origin,
-            };
+            let set = Set::new(batch.world(), play.player, play.origin);
             send(&set.world, set.player, &mine, set.origin, &build(&set));
         }
     });
@@ -180,12 +181,8 @@ impl FilmOptions<'_> {
     pub fn on_cue(self, cue: &str, f: impl Fn(&Set) + Send + Sync + 'static) -> Self {
         let (film, cue) = (name(&self.film), name(cue));
         self.r.on(&CUE, move |batch| {
-            for c in batch.iter().filter(|c| c.film == film && c.name == cue) {
-                f(&Set {
-                    world: batch.world(),
-                    player: c.player,
-                    origin: c.origin,
-                });
+            for reached in batch.iter().filter(|c| c.film == film && c.name == cue) {
+                f(&Set::new(batch.world(), reached.player, reached.origin));
             }
         });
         self

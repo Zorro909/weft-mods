@@ -16,6 +16,7 @@ put a small ghost of it there; the item stays with you. Click a cell with an emp
 it. The pattern must be a crafting-table recipe; the arrow next to it fills as a craft goes on.
 
 Changing the pattern moves the items in cells that no longer ask for them into the output.
+What doesn't fit there stays in its cell, and the bench waits as full until it does.
 
 ## Filling it
 
@@ -25,10 +26,11 @@ takes the same item in several cells fills them evenly. A cell holds up to a sta
 
 ## Crafting
 
-While every cell with a ghost holds its item, and the output has room for the result, the bench
-crafts: 240 energy a craft, drawn at most 30 a tick, so a craft takes at least 8 ticks. Each
-craft uses one item from every cell. What a used item leaves behind (the bucket of a water
-bucket) goes into the output too.
+While every cell with a ghost holds its item, the bench puts energy into a craft: 240 energy a
+craft, drawn at most 30 a tick, so a craft takes at least 8 ticks. Once it is paid for, the bench
+crafts as soon as the output has room for the result and for what the used items leave behind
+(the bucket of a water bucket); until then it waits with its arrow full. Each craft uses one item
+from every cell. Nothing is ever dropped into the world.
 
 The output has three slots. A [timber tube](tubes.md#timber-extraction-tube) takes the results
 out. It stores 4,000 energy and takes in up to 200 a tick.
@@ -39,7 +41,7 @@ out. It stores 4,000 energy and takes in up to 200 a tick.
 |---|---|
 | Click cells to set a recipe | The pattern makes nothing. |
 | Waiting for ingredients | A cell is still empty. |
-| Output full | The result doesn't fit in the output. |
+| Output full | The result, or what the craft leaves behind, doesn't fit in the output. |
 | Needs engine power | |
 | Crafting | |
 

@@ -61,6 +61,7 @@ cogwork.excavator.mining = Mining layer {0}
 cogwork.excavator.full = Output full: connect a tube or a chest
 cogwork.excavator.done = Finished
 cogwork.excavator.blocked = Waiting for the area to load
+cogwork.excavator.jammed = Jammed: something in the frame's way may not be broken
 cogwork.excavator.area = {color:dim}Area {0} x {1}, standby {2} energy per tick{/}
 
 cogwork.bench.no_recipe = Click cells to set a recipe

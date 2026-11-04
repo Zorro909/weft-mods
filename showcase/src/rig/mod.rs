@@ -1,13 +1,13 @@
 //! The camera rig: where a shot puts the eye and where it looks, at any moment of it.
 
-pub mod curve;
-pub mod ease;
+mod curve;
+pub mod math;
 mod turn;
 
 use showcase_api::{Look, Path, Shot};
 
 use self::curve::Curve;
-use self::ease::{add, angles_along, eased, lerp, lerp_angle, lerp3, sub};
+use self::math::{add, angles_along, eased, lerp, lerp_angle, lerp3, sub};
 
 /// A camera: eye position, and yaw, pitch and field of view in degrees.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -85,7 +85,7 @@ impl Rig {
         Some(match &self.shot.path {
             Path::Still(p) => at(p),
             Path::Line(a, b) => lerp3(at(a), at(b), u),
-            Path::Spline(_) => self.curve.as_ref()?.at(u),
+            Path::Spline(_) => self.curve.as_ref()?.at(u)?,
             Path::Orbit {
                 center,
                 radius,
@@ -172,7 +172,7 @@ mod tests {
         for clock in [0.0, 1.0, 2.5, 4.0] {
             let pose = rig.pose(clock, &none, START);
             let d = sub(center, pose.eye);
-            assert!((ease::length(d) - 8.0).abs() < 1e-9, "distance at {clock}");
+            assert!((math::length(d) - 8.0).abs() < 1e-9, "distance at {clock}");
             let (yaw, pitch) = angles_along(d).expect("a direction");
             assert!(
                 (yaw - pose.yaw).abs() < 1e-9 && (pitch - pose.pitch).abs() < 1e-9,
@@ -252,6 +252,16 @@ mod tests {
         let rig = Rig::new(shot, [0; 3], 70.0);
         let yaw = rig.pose(2.5, &none, START).yaw;
         assert!((yaw - 45.0).abs() < 1e-6, "halfway through the turn: {yaw}");
+    }
+
+    #[test]
+    fn a_flyby_through_no_points_keeps_the_camera_where_it_was() {
+        let before = Pose {
+            eye: [3.0, 70.0, -8.0],
+            ..START
+        };
+        let rig = Rig::new(showcase_api::flyby(&[]), [100, 64, -20], 70.0);
+        assert_eq!(rig.pose(1.0, &none, before), before);
     }
 
     #[test]

@@ -14,11 +14,10 @@ mod film;
 mod set;
 mod wire;
 
-pub use decode::decode;
 pub use film::{Ease, Film, Look, Path, Shot, Step, crane, dolly, flyby, follow, hold, orbit};
 pub use set::{Set, film, send, signal, subject};
 use weft_sdk::*;
-pub use wire::{Timeline, VERSION};
+pub use wire::Timeline;
 
 /// A name in an event or packet: UTF-8, padded with zeros.
 pub type Name = [u8; 64];
@@ -36,8 +35,8 @@ value! {
 }
 pub static CUE: Event<Cue> = Event::named("showcase:cue");
 
-/// A film's steps in the `wire` format, from the mod that built it to the player's client.
-pub static TIMELINE: Channel<Vec<u8>> = Channel::named("showcase:timeline");
+/// A film, from the mod that built it to the player's client.
+pub static TIMELINE: Channel<Timeline> = Channel::named("showcase:timeline");
 
 value! {
     /// Lets a waiting film go on (`Film::wait_for`).
@@ -46,7 +45,8 @@ value! {
 pub static SIGNAL: Channel<Signal> = Channel::named("showcase:signal");
 
 value! {
-    /// What a shot named `name` follows or looks at: `entity`, or `pos` where it is 0.
+    /// What the shots naming `name` follow or look at: `entity`, or the world position `pos`
+    /// when `entity` is 0.
     pub struct Subject { pub name: Name, pub entity: u64, pub pos: [f64; 3] }
 }
 pub static SUBJECT: Channel<Subject> = Channel::named("showcase:subject");

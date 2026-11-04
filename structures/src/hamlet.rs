@@ -36,15 +36,10 @@ fn hamlet(p: &mut Plan) -> Result<(), PlanError> {
         return Ok(());
     }
     let centre = p.spot(MARGIN);
-    let fit = Fit::new().biome(&ANIMALS).max_slope(3);
-    let corner = [centre[0] - 2, centre[1] - 2];
-    let Some(well) = p.fit(&WELL, corner, Turn::None, &fit) else {
+    let Some(well) = well(p, centre)? else {
         return Ok(());
     };
-    p.structure(&WELL, well, Turn::None)?
-        .foundation(Foundation::Ground)
-        .clear_above();
-    let mut areas = vec![Area::of(corner, [5, 5])];
+    let mut areas = vec![well];
     for _ in 0..TRIES {
         if areas.len() > MOST_BUILDINGS {
             break;
@@ -57,6 +52,22 @@ fn hamlet(p: &mut Plan) -> Result<(), PlanError> {
         path(p, centre, building.middle(), &areas)?;
     }
     Ok(())
+}
+
+/// The well with its middle at `centre`, if the ground there suits a hamlet.
+fn well(p: &mut Plan, centre: [i32; 2]) -> Result<Option<Area>, PlanError> {
+    let Some([sx, _, sz]) = p.size(&WELL, Turn::None) else {
+        return Ok(None);
+    };
+    let corner = [centre[0] - sx / 2, centre[1] - sz / 2];
+    let fit = Fit::new().biome(&ANIMALS).max_slope(3);
+    let Some(well) = p.fit(&WELL, corner, Turn::None, &fit) else {
+        return Ok(None);
+    };
+    p.structure(&WELL, well, Turn::None)?
+        .foundation(Foundation::Ground)
+        .clear_above();
+    Ok(Some(Area::of(corner, [sx, sz])))
 }
 
 /// Tries one building at a random spot around the well: a cottage with its door towards the

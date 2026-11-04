@@ -57,7 +57,7 @@ that area go, hollows are filled, and the landscape beyond stays as the backdrop
 
 | Step | |
 |---|---|
-| `shot(..)` | A camera move: `orbit`, `flyby` (a smooth curve through points), `dolly` (a straight line), `crane` (up or down beside a point), `hold`, `follow` (a subject). Each takes `.secs`, `.ease`, `.look(..)`, `.fov(from, to)` and `.blend(secs)`, which brings the camera over from where the shot before ended instead of cutting. |
+| `shot(..)` | A camera move: `orbit`, `flyby` (a smooth curve through points), `dolly` (a straight line), `crane` (up or down beside a point), `hold` (still), `follow` (a subject). Each takes `.secs` (5 unless told), `.ease` (`Ease::Smooth` unless told; `Linear`, `In`, `Out`), `.look(..)` or `.look_at(point)`, `.fov(from, to)` (the player's own unless told) and `.blend(secs)`, which brings the camera over from where the shot before ended instead of cutting. Orbits and cranes also take `.arc(from, to)` in degrees, `.radius(from, to)` and `.height(from, to)`. |
 | `wait(secs)` | The camera stays. |
 | `wait_for(name, max)` | The camera stays until your mod calls `signal(world, player, name)` (or `set.signal(name)`), at most `max` seconds. |
 | `title(key, secs)` | A line from your lang files on screen while the film goes on. |
@@ -65,18 +65,20 @@ that area go, hollows are filled, and the landscape beyond stays as the backdrop
 | `menu(name, at, secs)` | Opens the menu `name` (`mymod:press`) on the block `at` in the set, as if the camera had used it, and closes it after `secs`, while the film goes on. Shots after it go on behind the menu. |
 
 Where a shot looks: `Look::At(point)`, `Pan(from, to)`, `Subject(name)`, `Ahead` along the
-path, fixed `Angles`, or `Along(angles)`, a yaw and pitch for each point of a flyby that the
-camera turns through smoothly. Subjects are what `follow` and `Look::Subject` point at:
-`set.subject(name, entity)` or `set.subject_at(name, offset)`.
+path (a `hold` keeps looking the way the camera did), fixed `Angles`, or `Along(angles)`, a yaw
+and pitch for each point of a flyby that the camera turns through smoothly. Orbits and cranes
+look at their center, `follow` at its subject, the others ahead. Subjects are what `follow` and
+`Look::Subject` point at: `set.subject(name, entity)` or `set.subject_at(name, offset)`.
 
 A mod that starts a film on its own (a command, an item) builds it the same way and plays it
 with `showcase_api::send(world, player, name, origin, &film)`.
 
 ## Playing and recording
 
-`/showcase play <mod:film>` plays a film in a running game, from where you stand. The film makes
-you a spectator, sets noon and clear weather, and gives you back your game mode and place when
-it is over, or after ten seconds if no mod sends the film.
+`/showcase play <mod:film>` plays a film in a running game, from where you stand, with this mod
+and yours built with `--features showcase` in the game's `mods/`. The film makes you a
+spectator, sets noon and clear weather, and gives you back your game mode and place when it is
+over, or after ten seconds if no mod sends the film.
 
 `/showcase gallery <mod>` needs no film: it puts every block of the mod on a plinth in a row
 from where you stand and shows each in turn under its name.

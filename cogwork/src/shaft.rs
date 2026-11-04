@@ -3,12 +3,12 @@
 
 use weft_sdk::*;
 
-pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
-static CONDUCTOR: Tag = Tag::named("conductor");
+use crate::lib::{BlockState, ModelBox, Pos};
 
-/// The rod, in texels: 4 wide in the middle of the block.
-const LO: f32 = 6.0;
-const HI: f32 = 10.0;
+pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
+
+/// The rod's middle: 4 texels wide in the middle of the block. Its arms are as thick.
+const HUB: ModelBox = ModelBox::new([6.0; 3], [10.0; 3]);
 
 pub fn register(r: &mut Registry) {
     let mut b = r.block(&TORQUE_SHAFT);
@@ -16,8 +16,8 @@ pub fn register(r: &mut Registry) {
         b = b.prop(d.name(), ["false", "true"]);
     }
     b.states(model)
-        .on_placed(|w, change| refresh(w, change.pos))
-        .on_neighbor(|e| refresh(&e.world(), e.pos()))
+        .on_placed(|w, change| refresh(w, change.pos.into()))
+        .on_neighbor(|e| refresh(&e.world(), e.pos().into()))
         .tag("conductor")
         .hardness(0.5)
         .mineable("pickaxe")
@@ -26,32 +26,33 @@ pub fn register(r: &mut Registry) {
 }
 
 fn model<'s>(p: &Props, s: State<'s>) -> State<'s> {
-    let rod = |s: State<'s>, lo: [f32; 3], hi: [f32; 3]| {
+    let rod = |s: State<'s>, part: ModelBox| {
         // Its boxes are what it collides with, too.
-        s.model_box_faces(lo, hi, [("torque_shaft", abi::UV_FROM_BOX); 6])
+        s.model_box_faces(part.lo, part.hi, [("torque_shaft", abi::UV_FROM_BOX); 6])
     };
-    let mut s = rod(s.texture("torque_shaft"), [LO; 3], [HI; 3]);
+    let mut s = rod(s.texture("torque_shaft"), HUB);
     for d in Dir::ALL.into_iter().filter(|d| p.is(d.name(), "true")) {
-        let (lo, hi) = crate::tube::arm(d, LO, HI);
-        s = rod(s, lo, hi);
+        s = rod(s, HUB.arm(d));
     }
     s
 }
 
-/// Reaches toward every conductor and every block entity that holds energy.
-fn refresh(w: &World, pos: [i32; 3]) {
-    let state = w.get(pos);
-    if !TORQUE_SHAFT.is(state) {
+/// Reaches toward every conductor and every block entity that holds energy. `CONDUCTOR` is the
+/// engine's own tag.
+fn refresh(w: &World, pos: Pos) {
+    let shaft = BlockState::at(w, pos);
+    if !shaft.is(&TORQUE_SHAFT) {
         return;
     }
-    let mut next = state;
+    let mut next = shaft;
     for d in Dir::ALL {
-        let at = crate::tube::step(pos, d.face());
-        let other = w.block_entity(at);
-        let joins = CONDUCTOR.on_block(w.get(at)) || (other != 0 && w.energy(other).is_some());
-        next = state_with(next, d.name(), if joins { "true" } else { "false" }).unwrap_or(next);
+        let at = pos.toward(d);
+        let other = w.block_entity(at.into());
+        let holds_energy = other != 0 && w.energy(other).is_some();
+        let joins = BlockState::at(w, at).has(&CONDUCTOR) || holds_energy;
+        next = next.with_flag(d.name(), joins);
     }
-    if next != state {
-        w.set(pos, next);
+    if next != shaft {
+        next.place(w, pos);
     }
 }

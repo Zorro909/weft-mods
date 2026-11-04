@@ -12,7 +12,7 @@ mod visual;
 
 pub use extract::inject;
 use shape::Arms;
-pub use shape::{arm, connects_to_tube};
+pub use shape::connects_to_tube;
 pub use sorting::set_sample;
 use weft_sdk::*;
 
@@ -77,6 +77,7 @@ pub fn register(r: &mut Registry) {
         shape::tube(r.block(block), texture, Arms::Same).tab(&crate::TAB);
         tube_entity(r, block, kind);
     }
+    // Engines drive the timber tube's pulls.
     let timber = Entity::named("timber_tube");
     r.attach_with(
         &timber,
@@ -117,8 +118,8 @@ fn tube_entity(r: &mut Registry, block: &'static Block, kind: u32) {
     );
 }
 
-/// The block one face further.
-pub fn step(pos: [i32; 3], face: u32) -> [i32; 3] {
-    let o = Dir::from_face(face).offset();
-    [pos[0] + o[0], pos[1] + o[1], pos[2] + o[2]]
+/// A slot of the tube `id` that neither holds a stack nor has an item on its way.
+fn free_slot(w: &World, id: u64, tube: &Tube) -> Option<usize> {
+    let inv = w.inventory(id);
+    (0..SLOTS).find(|&k| inv.get(k as u32).is_empty() && tube.moving[k].item == 0)
 }

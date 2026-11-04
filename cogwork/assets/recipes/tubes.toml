@@ -1,0 +1,43 @@
+# Tubes, eight at a time: glass between two of their wall material. The torque shaft too.
+
+[[shaped]]
+result = "stone_tube"
+count = 8
+pattern = ["wgw"]
+key = { w = "#smooth_stone", g = "base:glass" }
+
+[[shaped]]
+result = "timber_tube"
+count = 8
+pattern = ["wgw"]
+key = { w = "#planks", g = "base:glass" }
+
+[[shaped]]
+result = "gilded_tube"
+count = 8
+pattern = ["wgw"]
+key = { w = "#ingots/gold", g = "base:glass" }
+
+[[shaped]]
+result = "sorting_tube"
+count = 8
+pattern = ["wgw"]
+key = { w = "#gems/diamond", g = "base:glass" }
+
+[[shaped]]
+result = "directing_tube"
+count = 8
+pattern = ["wgw"]
+key = { w = "#ingots/iron", g = "base:glass" }
+
+[[shaped]]
+result = "void_tube"
+count = 8
+pattern = ["wgw"]
+key = { w = "base:obsidian", g = "base:glass" }
+
+[[shaped]]
+result = "torque_shaft"
+count = 8
+pattern = ["grg"]
+key = { g = "#ingots/gold", r = "base:redstone" }

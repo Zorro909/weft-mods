@@ -2,6 +2,8 @@
 //! through them, yaw taking the short way round between neighbours, so the camera turns without
 //! stopping at each one.
 
+use super::math::short_turn;
+
 /// Yaw and pitch in degrees at `at` along `angles`: 0 the first, 1.5 halfway from the second to
 /// the third. `None` for no angles.
 pub fn along(angles: &[[f32; 2]], at: f64) -> Option<(f64, f64)> {
@@ -22,7 +24,7 @@ fn unwrap(angles: &[[f32; 2]]) -> Vec<[f64; 2]> {
     for a in angles {
         let mut yaw = a[0] as f64;
         if let Some(before) = out.last() {
-            yaw = before[0] + (yaw - before[0] + 540.0).rem_euclid(360.0) - 180.0;
+            yaw = before[0] + short_turn(before[0], yaw);
         }
         out.push([yaw, a[1] as f64]);
     }

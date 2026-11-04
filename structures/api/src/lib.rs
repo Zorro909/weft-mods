@@ -31,9 +31,8 @@ mod stamp;
 mod templates;
 mod turn;
 
-pub use fit::{Fit, Ground};
+pub use fit::Fit;
 pub use format::Structure;
-pub use generator::Planner;
 pub use locate::{locate, names};
 pub use part::{Foundation, Placed};
 pub use place_in::PlaceError;

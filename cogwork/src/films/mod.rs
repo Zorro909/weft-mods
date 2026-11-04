@@ -12,7 +12,7 @@ use showcase_api::{Ease, Film, Look, Set, crane, dolly, film, flyby, orbit};
 use weft_sdk::*;
 
 use self::excavators::{AREA_Z, BUILDER, DEEP, DEEP_DEPTH, SHALLOW, SORTER};
-use self::parts::middle;
+use crate::lib::Pos;
 
 pub fn register(r: &mut Registry) {
     // Block entities only exist once the tick they were placed in is over: everything is
@@ -40,8 +40,8 @@ fn showcase(set: &Set) -> Film {
 }
 
 /// Where in an excavator's area the camera looks: its middle, `depth` down.
-fn area(at: [i32; 3], depth: f64) -> [f64; 3] {
-    [at[0] as f64 + 0.5, -depth, AREA_Z]
+fn area(at: Pos, depth: f64) -> [f64; 3] {
+    [at.x as f64 + 0.5, -depth, AREA_Z]
 }
 
 /// In from over the meadow to the whole site.
@@ -54,7 +54,7 @@ fn opening(film: Film) -> Film {
 /// The builder putting up its frame, across to the two digging, and in through the open side
 /// of the deeper one's frame, under its gantry, down into the pit.
 fn excavating(film: Film) -> Film {
-    let frame = [BUILDER[0] as f64 + 0.5, 2.0, AREA_Z];
+    let frame = [BUILDER.x as f64 + 0.5, 2.0, AREA_Z];
     let (shallow, deep) = (area(SHALLOW, 2.0), area(DEEP, DEEP_DEPTH as f64));
     let across = [[-10.0, 12.0, 18.0], [0.0, 11.0, 16.0], [8.0, 9.0, 12.0]];
     // Over the frame's bottom beam at x 11, below its top at 4, then down past the rim.
@@ -89,7 +89,7 @@ fn excavating(film: Film) -> Film {
 /// Up out of the pit and out past the excavator's front, along the tubes to the sorting tube,
 /// and a look into its menu.
 fn sorting(film: Film) -> Film {
-    let sorter = middle(SORTER);
+    let sorter: [f64; 3] = SORTER.center().into();
     let deep = area(DEEP, DEEP_DEPTH as f64);
     let first_tube = [16.5, 0.5, 6.5];
     // Out through the frame's south side west of the excavator's engines.
@@ -115,7 +115,7 @@ fn sorting(film: Film) -> Film {
                 .secs(5.0)
                 .blend(1.5),
         )
-        .menu("cogwork:sorting_tube", SORTER, 4.5)
+        .menu("cogwork:sorting_tube", SORTER.into(), 4.5)
         .shot(
             orbit(sorter, 4.5)
                 .arc(100.0, 150.0)
@@ -128,8 +128,8 @@ fn sorting(film: Film) -> Film {
 /// Round the end of the wall to the lever, which starts the row; along the row while it gets
 /// going, then down to the second bench and into its menu.
 fn autocrafting(film: Film) -> Film {
-    let lever = middle(crafting::LEVER);
-    let bench = middle(crafting::STONE_COGS);
+    let lever: [f64; 3] = crafting::LEVER.center().into();
+    let bench: [f64; 3] = crafting::STONE_COGS.center().into();
     let at_lever = [-12.8, 2.2, 18.9];
     let to_lever = [
         [-9.4, 2.0, 9.75],
@@ -150,7 +150,7 @@ fn autocrafting(film: Film) -> Film {
                 .secs(13.0),
         )
         .shot(crane(bench, 4.0, 90.0, [2.1, 1.0]).secs(4.0).blend(0.5))
-        .menu("cogwork:assembly_bench", crafting::STONE_COGS, 5.0)
+        .menu("cogwork:assembly_bench", crafting::STONE_COGS.into(), 5.0)
         .wait(5.0)
 }
 

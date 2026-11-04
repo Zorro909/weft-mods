@@ -2,7 +2,8 @@
 //! They are drawn here in code so they can be read and changed; structures of your own are
 //! easier to build in the game and save with `/structure save`.
 //!
-//! x runs east, z south, y up. The fronts face north (z = 0): structures aren't turned yet.
+//! x runs east, z south, y up. The fronts face north (z = 0): a hamlet turns a cottage so that
+//! side faces its well.
 
 use std::path::Path;
 
@@ -66,6 +67,7 @@ impl Draft {
 
     fn done(self) -> Structure {
         Structure::from_names(self.size.map(|v| v as u16), self.names)
+            .expect("a draft has one name per block")
     }
 }
 

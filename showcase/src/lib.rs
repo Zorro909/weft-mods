@@ -4,7 +4,7 @@
 //! `/showcase play <mod:film>` plays one in a running game, `/showcase gallery <mod>` shows
 //! every block of a mod, and `/camera` makes camera paths by hand. The server half prepares the
 //! player and builds or asks for the set (`server`, `gallery`); the client half receives the
-//! shots and flies the camera (`director`, `playback`, `rig`).
+//! shots and flies the camera (`director`, `playback`, `rig`, `view`).
 
 mod camera;
 mod director;
@@ -14,6 +14,7 @@ mod menus;
 mod playback;
 mod rig;
 mod server;
+mod view;
 
 use weft_sdk::*;
 
