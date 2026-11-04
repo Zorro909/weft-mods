@@ -5,8 +5,8 @@
 #
 #   tools/sfx.sh <mod folder> [<file>...]
 #
-# Without files it makes every sound that has no files yet; named files (`engine/overheat`) are
-# made again. The raw downloads stay in `<mod>/target/sfx/`. Needs the elevenlabs CLI, ffmpeg
+# Without files it makes every variant that has no file yet, so a run that stopped halfway
+# carries on; named files (`engine/overheat`) are made again, all their variants. The raw downloads stay in `<mod>/target/sfx/`. Needs the elevenlabs CLI, ffmpeg
 # and a key in ELEVENLABS_API_KEY (or ~/.config/elevenlabs/api-key).
 set -euo pipefail
 
@@ -24,10 +24,10 @@ fi
 raw="$folder/target/sfx"
 out="$folder/assets/sounds"
 
-# Whether sound $1 should be made in this run.
+# Whether variant $2 of sound $1 should be made in this run.
 wanted() {
     if [[ ${#names[@]} -eq 0 ]]; then
-        [[ ! -f $out/${1}1.ogg ]]
+        [[ ! -f $out/$1$2.ogg ]]
     else
         printf '%s\n' "${names[@]}" | grep -qxF "$1"
     fi
@@ -44,7 +44,7 @@ download() {
 }
 
 # Mixes wav $1 to mono with its peak at -1 dBFS, cuts the silence around it (what stays 55 dB
-# below the peak) and writes it as ogg $2.
+# below the peak) and writes it as ogg $2, which appears only once it is complete.
 finish() {
     local mono="pan=mono|c0=0.5*c0+0.5*c1" cut="silenceremove=start_periods=1:start_threshold=-56dB:detection=peak"
     local peak
@@ -53,14 +53,15 @@ finish() {
     mkdir -p "$(dirname "$2")"
     ffmpeg -hide_banner -loglevel error -y -i "$1" \
         -af "$mono,volume=$(echo "-1 - ($peak)" | bc)dB,$cut,areverse,$cut,afade=t=in:d=0.01,areverse" \
-        -c:a libvorbis -q:a 5 "$2" </dev/null
+        -c:a libvorbis -q:a 5 -f ogg "$2.part" </dev/null
+    mv "$2.part" "$2"
 }
 
 names=("$@")
 while IFS=$'\t' read -r file variants seconds influence prompt; do
     [[ -z $file || $file == \#* ]] && continue
-    wanted "$file" || continue
     for n in $(seq "$variants"); do
+        wanted "$file" "$n" || continue
         echo "sfx.sh: $file$n"
         download "$file" "$n" "$seconds" "$influence" "$prompt"
         finish "$raw/$file$n.wav" "$out/$file$n.ogg"
