@@ -110,6 +110,7 @@ fn click(c: &ClientView, cell: u32) {
     let client = c.client();
     let item = client.cursor_stack().item;
     client.send(&SET_GHOST, &SetGhost { owner, cell, item });
+    client.play_sound(&crate::sounds::GHOST, None, 1.0);
 }
 
 /// Server side: sets the ghost when the player is at the machine, whichever kind it is.

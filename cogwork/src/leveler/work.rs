@@ -7,6 +7,7 @@ use super::{LEVELER, Level, Stage, Status};
 use crate::harvest::{Harvest, cost, harvest};
 use crate::lib::{Area, BlockState, Pos};
 use crate::markers::{square_behind, take_area};
+use crate::sounds;
 
 /// Layers cleared from the leveler's height up, and filled below it.
 const CLEAR_HEIGHT: i32 = 16;
@@ -21,6 +22,8 @@ const FILL_COST: i64 = 60;
 const DRAW_RATE: i64 = 100;
 /// The most blocks looked at per tick for the next one to work on.
 const SCAN: u32 = 512;
+/// Ticks between its sounds at most: it may clear or fill a block every tick.
+const SOUND_EVERY: u64 = 4;
 
 pub fn tick(b: &mut SystemBatch<Level>) {
     let w = b.world();
@@ -82,7 +85,10 @@ fn clear_next(w: &World, id: u64, l: &mut Level) {
     match harvest(w, id, c, block_state) {
         // Paid for already: it stays paid until there is room.
         Harvest::Full => l.set_status(Status::Full),
-        Harvest::Done | Harvest::Refused => {
+        harvested => {
+            if matches!(harvested, Harvest::Done) {
+                sound(w, &sounds::SCRAPE, c);
+            }
             l.spent = 0;
             l.cursor = next(&l.area, c, -1);
         }
@@ -104,9 +110,17 @@ fn fill_next(w: &World, id: u64, l: &mut Level) {
         return;
     }
     filler.place(w, c);
+    sound(w, &sounds::FILL, c);
     stock.set(slot, stock.get(slot).shrink(1));
     l.spent = 0;
     l.cursor = next(&l.area, c, 1);
+}
+
+/// Plays `sound` at the block `c` worked on, now and then.
+fn sound(w: &World, sound: &Sound, c: Pos) {
+    if w.time().is_multiple_of(SOUND_EVERY) {
+        w.play_sound(sound, c.center().into(), 1.0);
+    }
 }
 
 /// The first stack in `stock` that can fill a hole: its slot, and the block it places.

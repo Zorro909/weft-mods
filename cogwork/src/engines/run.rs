@@ -7,6 +7,7 @@ use weft_sdk::*;
 use super::piston;
 use super::{Engine, kind, model};
 use crate::lib::Pos;
+use crate::sounds;
 
 /// Energy per tick: a spring engine with a signal, an ember engine burning.
 const SPRING_MAKES: i64 = 10;
@@ -25,7 +26,7 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
         let running = if e.kind == kind::SPRING {
             w.signal(pos.into()) > 0
         } else {
-            burn(&w, id, e, ticks)
+            burn(&w, id, pos, e, ticks)
         };
         let made = if !running {
             0
@@ -36,8 +37,10 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
         };
         let full = store(&w, id, made * ticks as i64);
         push(&w, id, pos);
+        let was_overheated = e.overheated;
         warm(e, running, full, ticks);
         e.stroke = piston::advance(e.stroke, running, w.time());
+        sound(&w, pos, e, running, was_overheated);
         show_heat(&w, pos, e);
         piston::show(&w, id, pos, e);
     }
@@ -45,7 +48,7 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
 
 /// An ember engine's fire: lights the next fuel when out, unless it is cooling down. True while
 /// burning.
-fn burn(w: &World, id: u64, e: &mut Engine, ticks: u32) -> bool {
+fn burn(w: &World, id: u64, pos: Pos, e: &mut Engine, ticks: u32) -> bool {
     if e.overheated != 0 {
         return false;
     }
@@ -58,6 +61,7 @@ fn burn(w: &World, id: u64, e: &mut Engine, ticks: u32) -> bool {
         e.burn = t;
         e.burn_max = t;
         slot.set(0, use_one(fuel));
+        w.play_sound(&sounds::EMBER_IGNITE, pos.center().into(), 1.0);
     }
     e.burn = e.burn.saturating_sub(ticks);
     true
@@ -111,6 +115,25 @@ fn warm(e: &mut Engine, running: bool, full: bool, ticks: u32) {
         e.overheated = 1;
     } else if e.heat <= COOLED {
         e.overheated = 0;
+    }
+}
+
+/// The piston's knock at the top of each stroke, and the ember engine cutting out as it
+/// overheats and starting again once cooled.
+fn sound(w: &World, pos: Pos, e: &Engine, running: bool, was_overheated: u32) {
+    let at = pos.center().into();
+    if running && piston::at_top(e.stroke) {
+        let stroke = if e.kind == kind::SPRING {
+            &sounds::SPRING_STROKE
+        } else {
+            &sounds::EMBER_STROKE
+        };
+        w.play_sound(stroke, at, 1.0);
+    }
+    match (was_overheated, e.overheated) {
+        (0, 1) => w.play_sound(&sounds::OVERHEAT, at, 1.0),
+        (1, 0) => w.play_sound(&sounds::COOLED, at, 1.0),
+        _ => {}
     }
 }
 

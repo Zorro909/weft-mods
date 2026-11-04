@@ -6,6 +6,7 @@ use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep
 use super::power::{hold, pay};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status, rig};
 use crate::lib::{BlockState, Pos};
+use crate::sounds;
 
 /// Energy to put up one block of frame.
 const FRAME_COST: i64 = 100;
@@ -19,6 +20,8 @@ const FLOOR_Y: i32 = -64;
 /// ticks between its tries while it is.
 const JAM_AFTER: u32 = 3;
 const JAM_RETRY: u64 = 100;
+/// Frame blocks per clank: one a tick would be a din.
+const FRAME_SOUND_EVERY: u32 = 4;
 
 pub fn tick(b: &mut SystemBatch<Dig>) {
     let w = b.world();
@@ -43,7 +46,7 @@ fn work(w: &World, id: u64, pos: Pos, d: &mut Dig) {
     match d.stage() {
         Stage::Frame | Stage::Mine if !hold(w, id, d) => {}
         Stage::Frame => build_frame(w, id, d),
-        Stage::Mine => mine_next(w, id, d),
+        Stage::Mine => mine_next(w, id, pos, d),
         Stage::New | Stage::Done => {}
     }
 }
@@ -74,6 +77,9 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
         d.refused = 0;
         if pay(w, id, d, FRAME_COST) {
             BlockState::of(&GANTRY_FRAME).place(w, c);
+            if d.step.is_multiple_of(FRAME_SOUND_EVERY) {
+                w.play_sound(&sounds::FRAME_PLACE, c.center().into(), 1.0);
+            }
             d.spent = 0;
             d.step += 1;
         }
@@ -139,9 +145,12 @@ fn frame_passes_over(block_state: BlockState) -> bool {
         || block_state.hardness().is_some_and(|h| h < 0.0)
 }
 
-/// Mines toward the next block that is there to mine.
-fn mine_next(w: &World, id: u64, d: &mut Dig) {
+/// Mines toward the next block that is there to mine, for the excavator `id` at `pos`.
+fn mine_next(w: &World, id: u64, pos: Pos, d: &mut Dig) {
     let Some(target) = find_target(w, d) else {
+        if d.stage() == Stage::Done {
+            w.play_sound(&sounds::EXCAVATOR_DONE, pos.center().into(), 1.0);
+        }
         return;
     };
     let block_state = BlockState::at(w, target);
@@ -153,6 +162,7 @@ fn mine_next(w: &World, id: u64, d: &mut Dig) {
     }
     match mine_block(w, id, d, target, block_state) {
         Mined::Done => {
+            w.play_sound(&sounds::DRILL, target.center().into(), 1.0);
             d.set_head(sweep(&d.frame, target, 1.0));
             d.cursor = d.frame.next(target);
         }

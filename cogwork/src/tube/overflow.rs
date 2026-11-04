@@ -28,6 +28,7 @@ pub fn check(w: &World, id: u64, pos: Pos, tube: &mut Tube, passed_on: bool) {
     };
     let inv = w.inventory(id);
     w.spawn_item(pos.center().into(), inv.get(slot as u32));
+    w.play_sound(&crate::sounds::TUBE_JAM, pos.center().into(), 1.0);
     inv.set(slot as u32, ItemStack::EMPTY);
     visual::remove(w, tube.moving[slot].visual);
     tube.moving[slot] = Motion::default();

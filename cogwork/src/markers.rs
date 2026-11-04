@@ -98,7 +98,10 @@ fn show(u: &mut Use) -> bool {
     let w = u.world();
     let pos = Pos::from(u.pos());
     match rectangle(&w, pos) {
-        Some(area) => outline(&w, &area),
+        Some(area) => {
+            outline(&w, &area);
+            w.play_sound(&crate::sounds::SURVEY, pos.center().into(), 1.0);
+        }
         None => drop(w.spawn_particles(&POOF, pos.center().into()).count(6)),
     }
     true

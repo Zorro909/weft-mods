@@ -1,0 +1,20 @@
+# The prompts cogwork's sounds were made from, for tools/sfx.sh: one sound per line, its files
+# going to assets/sounds/<file><n>.ogg for n = 1..variants. Columns, separated by tabs:
+# file, variants, seconds, prompt influence (0-1), prompt.
+engine/spring_stroke	3	1.0	0.5	Single stroke of a small wooden piston engine driven by a coiled steel spring: soft wooden creak, a firm thunk and a light ratchet click. Close up, dry, isolated game sound effect, no music.
+engine/ember_stroke	3	1.0	0.5	Single stroke of a heavy iron steam piston engine: a deep metallic chuff with a short exhale of steam over a low coal firebox rumble. Close up, isolated game sound effect, no music.
+engine/ember_ignite	2	1.2	0.5	Coal catching fire in a small iron firebox: a soft whoosh of flame swelling, then crackling embers. Close up, isolated game sound effect, no music.
+engine/overheat	1	2.0	0.5	Overheated steam engine cutting out: a sharp hiss from a pressure valve, hot metal ticking and a short shrill warning whistle. Isolated game sound effect, no music.
+engine/cooled	1	1.5	0.5	Iron engine cooling down after overheating: metal pings and ticks as it contracts, then a short soft hiss of relief. Isolated game sound effect, no music.
+tube/pull	3	0.5	0.6	Short wooden suction thup as a small object is sucked into a glass tube and slides away. Close up, dry, isolated game sound effect, no music.
+tube/void	2	0.5	0.6	A small object vanishing in a muffled vacuum pop with a tiny fizzle. Close up, isolated game sound effect, no music.
+tube/jam_drop	2	0.6	0.6	Clunk and rattle as a stuck object is ejected from a glass pipe and drops out. Close up, isolated game sound effect, no music.
+excavator/frame_place	3	0.6	0.5	Iron beam clanking into place on a scaffold frame, followed by a quick bolt ratchet. Isolated game sound effect, no music.
+excavator/drill	3	1.0	0.5	Diamond-tipped mechanical drill biting into rock: short grinding crunch with a rising motor whine. Isolated game sound effect, no music.
+excavator/done	1	2.5	0.5	Big clockwork machine finishing its work: heavy gears spinning down and slowing, then a deep final clunk as it settles. Isolated game sound effect, no music.
+bench/craft	3	1.0	0.5	Small brass clockwork machine finishing a craft: gears turning, a press stamping down and a tidy mechanical ding. Close up, isolated game sound effect, no music.
+leveler/scrape	3	0.7	0.5	Machine-driven shovel blade scraping through earth and loose dirt in one short stroke. Isolated game sound effect, no music.
+leveler/fill	3	0.6	0.5	A block of earth pressed down into a hole with a firm thud and a tamp. Isolated game sound effect, no music.
+tool/wrench	2	0.6	0.6	Wrench ratchet turning a bolt: three quick metallic clicks. Close up, dry, isolated game sound effect, no music.
+marker/survey	1	1.5	0.5	A surveying instrument measuring out an area: a soft electric hum rising into a glassy shimmer and a light chime. Isolated game sound effect, no music.
+ui/ghost	1	0.5	0.7	Very soft, short glassy tick, a subtle user interface click. Isolated, no music.

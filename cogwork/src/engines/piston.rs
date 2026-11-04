@@ -60,6 +60,11 @@ pub fn lift(stroke: u32) -> f64 {
     LIFT * steps_up(stroke) as f64 / TRAVEL as f64
 }
 
+/// Whether the piston has just reached the top at `stroke` ticks into it: once a stroke.
+pub fn at_top(stroke: u32) -> bool {
+    stroke % STROKE_TICKS == TRAVEL
+}
+
 /// Ticks of travel the piston is above its rest at `stroke` ticks into it, 0..=`TRAVEL`: up, a
 /// rest, back down, a rest.
 fn steps_up(stroke: u32) -> u32 {
@@ -144,6 +149,17 @@ mod tests {
                 "in step, started at {start}"
             );
         }
+    }
+
+    #[test]
+    fn the_piston_reaches_the_top_once_a_stroke() {
+        let tops: Vec<u32> = (0..2 * STROKE_TICKS).filter(|&s| at_top(s)).collect();
+        assert_eq!(tops.len(), 2, "once in each of two strokes: {tops:?}");
+        assert!(
+            tops.iter().all(|&s| lift(s) == LIFT),
+            "at the top: {tops:?}"
+        );
+        assert!(lift(tops[0] - 1) < LIFT, "just reached it");
     }
 
     #[test]

@@ -91,6 +91,7 @@ fn turn(u: &mut Use) -> bool {
         .and_then(Dir::from_name)
         .map_or(0, Dir::face);
     w.set_prop(pos, "facing", Dir::from_face((now + 1) % 6).name());
+    w.play_sound(&crate::sounds::WRENCH, Pos::from(pos).center().into(), 1.0);
     true
 }
 
