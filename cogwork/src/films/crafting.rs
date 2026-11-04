@@ -50,7 +50,10 @@ pub fn build(set: &Set) {
         set.place(chest.into(), CHEST.id().into());
     }
     for bench in [COGS, STONE_COGS] {
-        set.place(bench.into(), ASSEMBLY_BENCH.with(&[("facing", "south")]).into());
+        set.place(
+            bench.into(),
+            ASSEMBLY_BENCH.with(&[("facing", "south")]).into(),
+        );
     }
     for pull in PULLS {
         set.place(pull.into(), TIMBER_TUBE.id().into());
