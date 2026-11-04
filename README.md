@@ -48,14 +48,14 @@ and check steps one by one.
 | `cogwork/`, `structures/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
 | `Weft/` | The engine, as a submodule |
 | `docs/agents/` | Guides for working on this repository: mods, code style, engine, testing |
-| `tools/` | Formatting, the mods' tests and clippy (`check-mods.sh`), the headless test run, film recording (`showcase.sh`) and CI scripts |
+| `tools/` | The mods' tests and clippy (`check-mods.sh`), the headless test run, film recording (`showcase.sh`) and CI scripts |
 | `start.sh` | Builds, installs and starts everything |
 
 ## Contributing
 
 Changes come as pull requests to `main`. Commits follow
-[Conventional Commits](https://www.conventionalcommits.org), and `tools/fmt-changed.sh` formats
-just the lines you changed. Keep `Weft/` at a Weft release: pull requests that move it
+[Conventional Commits](https://www.conventionalcommits.org), and Rust is formatted by the root
+`rustfmt.toml` (`git ls-files -z '*.rs' | xargs -0 rustfmt +nightly`). Keep `Weft/` at a Weft release: pull requests that move it
 elsewhere are refused. `tools/check-mods.sh` runs every mod's unit tests and clippy; CI runs
 it too, and builds every mod on Windows, Linux and macOS.
 

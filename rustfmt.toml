@@ -1,0 +1,10 @@
+# Formatting for every mod here, checked on each pull request. `Weft/` has a `rustfmt.toml` of its
+# own. Format everything with `git ls-files -z '*.rs' | xargs -0 rustfmt +nightly`, which leaves
+# out the submodule.
+edition = "2024"
+style_edition = "2024"
+max_width = 100
+newline_style = "Unix"
+
+# Nightly only.
+group_imports = "StdExternalCrate"

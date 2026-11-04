@@ -1,7 +1,7 @@
-# Checks a pull request: the Rust lines it changes are formatted, every mod's version can be
-# released (a full one only on a tagged Weft), every mod's unit tests and clippy pass, the tests of
-# the CI scripts in `tools/ci` pass, and every mod builds for Windows, Linux and macOS against the
-# Weft the submodule pins.
+# Checks a pull request: its Rust is formatted, every mod's version can be released (a full one
+# only on a tagged Weft), every mod's unit tests and clippy pass, the tests of the CI scripts in
+# `tools/ci` pass, and every mod builds for Windows, Linux and macOS against the Weft the
+# submodule pins.
 name: Check
 
 on:
@@ -18,18 +18,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      # For the `--file-lines` that `fmt-changed.sh` formats with.
+      # For `group_imports` in `rustfmt.toml`.
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
 
-      # Only the lines the pull request changes, since older code keeps its hand formatting. The
-      # Weft submodule is not checked out, and `fmt-changed.sh` doesn't look into it anyway.
-      - name: Changed lines are formatted
+      # Every Rust file git tracks; the Weft submodule is formatted upstream.
+      - name: Rust is formatted
         run: |
-          tools/fmt-changed.sh "$(git merge-base HEAD "origin/$GITHUB_BASE_REF")"
-          if ! git diff --exit-code; then
-            echo "::error::Unformatted lines; run tools/fmt-changed.sh $GITHUB_BASE_REF and commit the result."
+          if ! git ls-files -z '*.rs' | xargs -0 rustfmt +nightly --check; then
+            echo "::error::Unformatted Rust; run git ls-files -z '*.rs' | xargs -0 rustfmt +nightly and commit the result."
             exit 1
           fi
 
