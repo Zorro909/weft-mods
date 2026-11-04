@@ -15,6 +15,9 @@ if [ -z "$bumps" ]; then
     exit 0
 fi
 
+# `cargo update` reads the mods' path dependencies on the engine.
+git submodule update --init --quiet Weft
+
 while IFS=$'\t' read -r folder version; do
     # The first `version`, the package's own.
     sed -i "0,/^version *=/s/^version *=.*/version = \"$version\"/" "$folder/Cargo.toml"
