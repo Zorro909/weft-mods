@@ -6,6 +6,8 @@
 use base_api::FUEL;
 use weft_sdk::*;
 
+use crate::pos::Pos;
+
 /// Group names this file knows the meaning of.
 const KNOWN: [&str; 4] = ["fuel", "input", "output", "chest"];
 
@@ -184,20 +186,20 @@ pub fn extract(w: &World, owner: u64, max: u32) -> ItemStack {
 }
 
 /// Whether the block entity at `pos` holds items at all.
-pub fn has_inventory(w: &World, pos: [i32; 3]) -> bool {
-    let id = w.block_entity(pos);
+pub fn has_inventory(w: &World, pos: Pos) -> bool {
+    let id = w.block_entity(pos.into());
     id != 0 && w.inventory(id).size() > 0
 }
 
 /// Hands one stack of the `output` of the machine `id` at `pos` to a tube or machine beside it.
-pub fn eject(w: &World, id: u64, pos: [i32; 3]) {
+pub fn eject(w: &World, id: u64, pos: Pos) {
     let out = w.inventory(id).group("output");
     let Some(slot) = (0..out.len()).find(|&i| !out.get(i).is_empty()) else {
         return;
     };
     let mut stack = out.get(slot);
     for face in 0..6 {
-        let other = w.block_entity(crate::neighbor(pos, face));
+        let other = w.block_entity(pos.neighbor(face).into());
         if other == 0 || other == id {
             continue;
         }

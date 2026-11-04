@@ -4,6 +4,8 @@
 
 use weft_sdk::*;
 
+use crate::pos::Pos;
+
 pub static SURVEY_MARKER: Block = Block::named("survey_marker");
 static SURVEY_GLOW: Particle = Particle::named("survey_glow");
 
@@ -34,103 +36,121 @@ pub fn register(r: &mut Registry) {
         .translucent();
 }
 
-/// The rectangle of markers that `pos` is a corner of: its lowest and highest corner, the same
-/// height as `pos`.
-pub fn rectangle(w: &World, pos: [i32; 3]) -> Option<([i32; 3], [i32; 3])> {
-    let along = |axis: usize| {
-        [1, -1].into_iter().find_map(|sign| {
-            (2..=REACH).find_map(|k| {
-                let mut p = pos;
-                p[axis] += sign * k;
-                SURVEY_MARKER.is(w.get(p)).then_some(p[axis])
-            })
-        })
-    };
-    let (x, z) = (along(0)?, along(2)?);
-    Some((
-        [pos[0].min(x), pos[1], pos[2].min(z)],
-        [pos[0].max(x), pos[1], pos[2].max(z)],
-    ))
+value! {
+    /// A rectangle on the ground, by its lowest and highest corner at the same height.
+    #[derive(Default)]
+    pub struct Area {
+        pub lo: Pos,
+        pub hi: Pos,
+    }
 }
 
-/// The rectangle of the markers next to a machine at `pos`, when the machine is outside it: its
-/// lowest and highest corner at the markers' height. The machine takes the markers down.
-pub fn take_area(w: &World, pos: [i32; 3]) -> Option<([i32; 3], [i32; 3])> {
-    let (lo, hi) = rectangle(w, beside(w, pos)?)?;
-    let outside = !(lo[0]..=hi[0]).contains(&pos[0]) || !(lo[2]..=hi[2]).contains(&pos[2]);
-    if !outside {
-        return None;
-    }
-    for x in [lo[0], hi[0]] {
-        for z in [lo[2], hi[2]] {
-            let p = [x, lo[1], z];
-            if SURVEY_MARKER.is(w.get(p)) {
-                w.break_block(p, ItemStack::EMPTY, 0, true);
-            }
+impl Area {
+    /// The rectangle with the opposite corners `a` and `b`, at `a`'s height.
+    pub fn between(a: Pos, b: Pos) -> Area {
+        Area {
+            lo: Pos::new(a.x.min(b.x), a.y, a.z.min(b.z)),
+            hi: Pos::new(a.x.max(b.x), a.y, a.z.max(b.z)),
         }
     }
-    Some((lo, hi))
+
+    /// Grows the area to take in `p`'s column.
+    pub fn grow_to(&mut self, p: Pos) {
+        let (lo, hi) = (self.lo, self.hi);
+        self.lo = Pos::new(lo.x.min(p.x), lo.y, lo.z.min(p.z));
+        self.hi = Pos::new(hi.x.max(p.x), hi.y, hi.z.max(p.z));
+    }
+
+    /// Whether `p` lies on, over or under the area, its edges included.
+    pub fn spans(&self, p: Pos) -> bool {
+        (self.lo.x..=self.hi.x).contains(&p.x) && (self.lo.z..=self.hi.z).contains(&p.z)
+    }
+
+    /// Blocks along x and along z, its edges included.
+    pub fn size(&self) -> [i32; 2] {
+        [self.hi.x - self.lo.x + 1, self.hi.z - self.lo.z + 1]
+    }
+
+    fn corners(&self) -> [Pos; 4] {
+        let (lo, hi) = (self.lo, self.hi);
+        [
+            lo,
+            Pos { x: hi.x, ..lo },
+            Pos { z: hi.z, ..lo },
+            hi.with_y(lo.y),
+        ]
+    }
+}
+
+/// The rectangle of markers that `pos` is a corner of, at `pos`'s height.
+pub fn rectangle(w: &World, pos: Pos) -> Option<Area> {
+    let marker_along = |step: fn(Pos, i32) -> Pos| {
+        [1, -1].into_iter().find_map(|sign| {
+            (2..=REACH)
+                .map(|k| step(pos, sign * k))
+                .find(|&p| SURVEY_MARKER.is(w.get(p.into())))
+        })
+    };
+    let (x, z) = (marker_along(Pos::add_x)?, marker_along(Pos::add_z)?);
+    Some(Area::between(pos, Pos { x: x.x, ..z }))
+}
+
+/// The rectangle of the markers next to a machine at `pos`, when the machine is outside it, at
+/// the markers' height. The machine takes the markers down.
+pub fn take_area(w: &World, pos: Pos) -> Option<Area> {
+    let area = rectangle(w, beside(w, pos)?)?;
+    if area.spans(pos) {
+        return None;
+    }
+    for corner in area.corners() {
+        if SURVEY_MARKER.is(w.get(corner.into())) {
+            w.break_block(corner.into(), ItemStack::EMPTY, 0, true);
+        }
+    }
+    Some(area)
 }
 
 /// A square of `size` blocks right behind a machine at `pos` facing `front`, `margin` more on
-/// every side: its lowest and highest corner at `pos`'s height.
-pub fn square_behind(pos: [i32; 3], front: Dir, size: i32, margin: i32) -> ([i32; 3], [i32; 3]) {
+/// every side, at `pos`'s height.
+pub fn square_behind(pos: Pos, front: Dir, size: i32, margin: i32) -> Area {
     // Across is any horizontal way at right angles: the square is the same either way round.
     let across = if front == Dir::West || front == Dir::East {
         Dir::North
     } else {
         Dir::West
     };
-    let (back, side) = (front.opposite().offset(), across.offset());
+    let back = front.opposite();
     let half = size / 2 + margin;
-    let corner = |depth: i32, across: i32| {
-        [
-            pos[0] + back[0] * depth + side[0] * across,
-            pos[1],
-            pos[2] + back[2] * depth + side[2] * across,
-        ]
-    };
-    let (a, b) = (corner(1, -half), corner(size + 2 * margin, half));
-    (
-        [a[0].min(b[0]), pos[1], a[2].min(b[2])],
-        [a[0].max(b[0]), pos[1], a[2].max(b[2])],
-    )
+    let corner = |depth: i32, sideways: i32| pos.toward_by(back, depth).toward_by(across, sideways);
+    Area::between(corner(1, -half), corner(size + 2 * margin, half))
 }
 
 /// A marker next to `pos`, if any, on the four sides.
-fn beside(w: &World, pos: [i32; 3]) -> Option<[i32; 3]> {
+fn beside(w: &World, pos: Pos) -> Option<Pos> {
     [Dir::West, Dir::East, Dir::North, Dir::South]
+        .map(|d| pos.toward(d))
         .into_iter()
-        .find_map(|d| {
-            let o = d.offset();
-            let p = [pos[0] + o[0], pos[1], pos[2] + o[2]];
-            SURVEY_MARKER.is(w.get(p)).then_some(p)
-        })
+        .find(|&p| SURVEY_MARKER.is(w.get(p.into())))
 }
 
 /// Using a marker draws its rectangle in the air for a few seconds; a marker without one puffs.
 fn show(u: &mut Use) -> bool {
     static POOF: Particle = Particle::named("core:poof");
     let w = u.world();
-    match rectangle(&w, u.pos()) {
-        Some((lo, hi)) => outline(&w, lo, hi),
-        None => drop(
-            w.spawn_particles(&POOF, block_center(u.pos()))
-                .count(6),
-        ),
+    let pos = Pos::from(u.pos());
+    match rectangle(&w, pos) {
+        Some(area) => outline(&w, &area),
+        None => drop(w.spawn_particles(&POOF, pos.center()).count(6)),
     }
     true
 }
 
 /// Glowing points along the edges of the rectangle, every half block.
-fn outline(w: &World, lo: [i32; 3], hi: [i32; 3]) {
-    let y = lo[1] as f64 + 0.6;
-    let (x0, x1, z0, z1) = (
-        lo[0] as f64 + 0.5,
-        hi[0] as f64 + 0.5,
-        lo[2] as f64 + 0.5,
-        hi[2] as f64 + 0.5,
-    );
+fn outline(w: &World, area: &Area) {
+    let [x0, _, z0] = area.lo.center();
+    let [x1, _, z1] = area.hi.center();
+    // A little above the middle of the markers.
+    let y = area.lo.y as f64 + 0.6;
     let mut points = Vec::new();
     let steps = |a: f64, b: f64| (0..=((b - a) * 2.0) as i32).map(move |i| a + i as f64 * 0.5);
     for x in steps(x0, x1) {
@@ -148,15 +168,52 @@ fn outline(w: &World, lo: [i32; 3], hi: [i32; 3]) {
 mod tests {
     use super::*;
 
+    fn area(lo: [i32; 3], hi: [i32; 3]) -> Area {
+        Area::between(lo.into(), hi.into())
+    }
+
     #[test]
     fn the_square_starts_right_behind_the_machine() {
-        let (lo, hi) = square_behind([0, 4, 10], Dir::South, 9, 1);
+        let pos = Pos::new(0, 4, 10);
         assert_eq!(
-            (lo, hi),
-            ([-5, 4, -1], [5, 4, 9]),
+            square_behind(pos, Dir::South, 9, 1),
+            area([-5, 4, -1], [5, 4, 9]),
             "11 wide, from one block behind"
         );
-        let (lo, hi) = square_behind([0, 4, 10], Dir::East, 9, 0);
-        assert_eq!((lo, hi), ([-9, 4, 6], [-1, 4, 14]), "9 by 9 to the west");
+        assert_eq!(
+            square_behind(pos, Dir::East, 9, 0),
+            area([-9, 4, 6], [-1, 4, 14]),
+            "9 by 9 to the west"
+        );
+    }
+
+    #[test]
+    fn an_area_is_the_same_from_either_pair_of_corners() {
+        let a = Area::between(Pos::new(5, 2, -3), Pos::new(-1, 9, 4));
+        assert_eq!(
+            a,
+            area([-1, 2, -3], [5, 2, 4]),
+            "at the first corner's height"
+        );
+        assert_eq!(a.size(), [7, 8], "edges included");
+        let corners = a.corners().map(|c| [c.x, c.z]);
+        assert_eq!(
+            corners,
+            [[-1, -3], [5, -3], [-1, 4], [5, 4]],
+            "four corners"
+        );
+        assert!(
+            corners.iter().all(|&[x, z]| a.spans(Pos::new(x, 99, z))),
+            "spanned"
+        );
+    }
+
+    #[test]
+    fn an_area_grows_to_take_in_a_column() {
+        let mut a = area([0, 0, 0], [2, 0, 2]);
+        a.grow_to(Pos::new(-3, 7, 5));
+        assert_eq!(a, area([-3, 0, 0], [2, 0, 5]), "out both ways, not up");
+        assert!(a.spans(Pos::new(-3, 99, 5)), "a corner, at any height");
+        assert!(!a.spans(Pos::new(3, 0, 0)), "not past its edge");
     }
 }

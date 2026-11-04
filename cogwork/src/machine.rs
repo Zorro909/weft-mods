@@ -3,6 +3,8 @@
 
 use weft_sdk::*;
 
+use crate::pos::Pos;
+
 /// A machine's block, textured `<name>_front` (`<name>_front_on` while it works), `<name>_top`
 /// and `<name>_side`, also underneath. Its front faces the player who places it.
 pub fn block<'a>(b: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<'a> {
@@ -23,17 +25,19 @@ pub fn block<'a>(b: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<'a> {
 }
 
 /// The way the front of the machine at `pos` faces.
-pub fn front(w: &World, pos: [i32; 3]) -> Dir {
-    w.prop(pos, "facing")
+pub fn front(w: &World, pos: Pos) -> Dir {
+    w.prop(pos.into(), "facing")
         .and_then(Dir::from_name)
         .unwrap_or(Dir::North)
 }
 
 /// Lights the front of the machine at `pos` while it works.
-pub fn show_working(w: &World, pos: [i32; 3], working: bool) {
+pub fn show_working(w: &World, pos: Pos, working: bool) {
     let value = if working { "true" } else { "false" };
-    if w.prop(pos, "working").is_some_and(|now| now != value) {
-        w.set_prop(pos, "working", value);
+    if w.prop(pos.into(), "working")
+        .is_some_and(|now| now != value)
+    {
+        w.set_prop(pos.into(), "working", value);
     }
 }
 

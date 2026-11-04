@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, NONE, TUBE, kind};
-use crate::neighbor;
+use crate::pos::Pos;
 
 pub enum Route {
     /// On through this face.
@@ -17,14 +17,7 @@ pub enum Route {
     Spill,
 }
 
-pub fn route(
-    w: &World,
-    id: u64,
-    pos: [i32; 3],
-    tube_kind: u32,
-    from: u32,
-    stack: ItemStack,
-) -> Route {
+pub fn route(w: &World, id: u64, pos: Pos, tube_kind: u32, from: u32, stack: ItemStack) -> Route {
     if tube_kind == kind::VOID {
         return Route::Destroy;
     }
@@ -65,17 +58,10 @@ fn pick<'a>(w: &World, ways: &'a [u32]) -> Option<&'a u32> {
 }
 
 /// What a kind of tube lets through `face` on its own terms.
-fn kind_allows(
-    w: &World,
-    id: u64,
-    pos: [i32; 3],
-    tube_kind: u32,
-    face: u32,
-    stack: ItemStack,
-) -> bool {
+fn kind_allows(w: &World, id: u64, pos: Pos, tube_kind: u32, face: u32, stack: ItemStack) -> bool {
     match tube_kind {
         kind::DIRECTING => {
-            DIRECTING_TUBE.is(w.get(pos)) && w.prop(pos, "out") == Some(Dir::from_face(face).name())
+            DIRECTING_TUBE.is(w.get(pos.into())) && w.prop(pos.into(), "out") == Some(Dir::from_face(face).name())
         }
         kind::SORTING => super::sorting::passes(w, id, face, stack),
         _ => true,
@@ -84,8 +70,8 @@ fn kind_allows(
 
 /// Whether the neighbor through `face` takes the item: any tube (a full one makes it wait at
 /// the face), or a machine with room. Timber tubes only feed tubes, never back into machines.
-fn takes(w: &World, pos: [i32; 3], face: u32, tube_kind: u32, stack: ItemStack) -> bool {
-    let other = w.block_entity(neighbor(pos, face));
+fn takes(w: &World, pos: Pos, face: u32, tube_kind: u32, stack: ItemStack) -> bool {
+    let other = w.block_entity(pos.neighbor(face).into());
     if other == 0 {
         return false;
     }

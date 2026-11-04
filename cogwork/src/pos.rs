@@ -50,8 +50,31 @@ impl Pos {
 
     /// The block next to this one toward `dir`.
     pub fn toward(self, dir: Dir) -> Pos {
+        self.toward_by(dir, 1)
+    }
+
+    /// `blocks` blocks from here toward `dir`; away from it for a negative number.
+    pub fn toward_by(self, dir: Dir, blocks: i32) -> Pos {
         let [dx, dy, dz] = dir.offset();
-        self.add_x(dx).add_y(dy).add_z(dz)
+        self.add_x(dx * blocks)
+            .add_y(dy * blocks)
+            .add_z(dz * blocks)
+    }
+
+    /// The block next to this one across its face `face` (in `Dir` order). Tubes, engines,
+    /// shafts and machines all hand things to their neighbors through it.
+    pub fn neighbor(self, face: u32) -> Pos {
+        self.toward(Dir::from_face(face))
+    }
+
+    /// The middle of this block, in the world.
+    pub fn center(self) -> [f64; 3] {
+        block_center(self.into())
+    }
+
+    /// The block the point `at` in the world lies in.
+    pub fn containing(at: [f64; 3]) -> Pos {
+        at.map(|v| v.floor() as i32).into()
     }
 }
 
@@ -79,6 +102,19 @@ mod tests {
         assert_eq!(p.add_z(1), Pos::new(1, 2, 4), "along z");
         assert_eq!(p.with_y(-64), Pos::new(1, -64, 3), "same column");
         assert_eq!(p.toward(Dir::Down), Pos::new(1, 1, 3), "one block down");
+        assert_eq!(p.toward_by(Dir::East, -4), Pos::new(-3, 2, 3), "four west");
+        assert_eq!(
+            p.neighbor(Dir::Up.face()),
+            Pos::new(1, 3, 3),
+            "across the top"
+        );
+    }
+
+    #[test]
+    fn a_point_in_the_world_lies_in_one_block() {
+        let block = Pos::new(-2, 3, 0);
+        assert_eq!(Pos::containing(block.center()), block, "its middle");
+        assert_eq!(Pos::containing([-1.5, 3.0, 0.99]), block, "its edges");
     }
 
     #[test]

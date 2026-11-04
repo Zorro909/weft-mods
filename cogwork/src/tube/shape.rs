@@ -6,7 +6,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
-use crate::neighbor;
+use crate::pos::Pos;
 
 /// The tube's walls, in texels: 8 wide in the middle of the block.
 const LO: f32 = 4.0;
@@ -44,9 +44,9 @@ pub fn tube<'a>(b: BlockBuilder<'a>, texture: &'static str, arms: Arms) -> Block
         }
     }
     b.states(move |p, s| model(p, s, texture, arms))
-        .on_placed(|w, change| refresh(w, change.pos))
-        .on_neighbor(|e| refresh(&e.world(), e.pos()))
-        .on_broken(|w, change| super::visual::clear_broken(w, change.pos))
+        .on_placed(|w, change| refresh(w, change.pos.into()))
+        .on_neighbor(|e| refresh(&e.world(), e.pos().into()))
+        .on_broken(|w, change| super::visual::clear_broken(w, change.pos.into()))
 }
 
 /// The hub and the connected arms, each a box of its own, which is what it collides with too.
@@ -107,19 +107,19 @@ fn output(state: u32) -> Option<Dir> {
 }
 
 /// Sets every arm property of the tube at `pos` to what its neighbors are now.
-fn refresh(w: &World, pos: [i32; 3]) {
-    let state = w.get(pos);
+fn refresh(w: &World, pos: Pos) {
+    let state = w.get(pos.into());
     if !TUBES.on_block(state) {
         return;
     }
     let next = joined(w, pos, state);
     if next != state {
-        w.set(pos, next);
+        w.set(pos.into(), next);
     }
 }
 
 /// `state` with its arm properties set to which neighbors of `pos` it joins.
-fn joined(w: &World, pos: [i32; 3], state: u32) -> u32 {
+fn joined(w: &World, pos: Pos, state: u32) -> u32 {
     let out = output(state);
     Dir::ALL.into_iter().fold(state, |next, d| {
         let Some(name) = arm_prop(out, d) else {
@@ -136,9 +136,9 @@ fn joined(w: &World, pos: [i32; 3], state: u32) -> u32 {
 
 /// Whether the tube `state` at `pos` reaches toward `d`: to any other tube but two timber tubes,
 /// and to anything holding items.
-fn joins(w: &World, pos: [i32; 3], state: u32, d: Dir) -> bool {
-    let at = neighbor(pos, d.face());
-    let other = w.get(at);
+fn joins(w: &World, pos: Pos, state: u32, d: Dir) -> bool {
+    let at = pos.neighbor(d.face());
+    let other = w.get(at.into());
     if TUBES.on_block(other) {
         return !(TIMBER_TUBE.is(state) && TIMBER_TUBE.is(other));
     }
@@ -146,8 +146,8 @@ fn joins(w: &World, pos: [i32; 3], state: u32, d: Dir) -> bool {
 }
 
 /// Whether the tube at `pos` has its arm toward `face` out, so a neighbor can hand it items.
-pub fn connects_to_tube(w: &World, pos: [i32; 3], face: u32) -> bool {
-    let state = w.get(pos);
+pub fn connects_to_tube(w: &World, pos: Pos, face: u32) -> bool {
+    let state = w.get(pos.into());
     let d = Dir::from_face(face);
     match arm_prop(output(state), d) {
         Some(name) => state_prop(state, name) == Some("true"),
@@ -161,8 +161,8 @@ pub fn turn_output(u: &mut Use) -> bool {
     if !crate::cogs::holds_wrench(&w, u.player()) {
         return false;
     }
-    let pos = u.pos();
-    let state = w.get(pos);
+    let pos = Pos::from(u.pos());
+    let state = w.get(pos.into());
     let Some(now) = output(state).filter(|_| DIRECTING_TUBE.is(state)) else {
         return true;
     };
@@ -170,7 +170,7 @@ pub fn turn_output(u: &mut Use) -> bool {
         .map(|k| Dir::from_face((now.face() + k) % 6))
         .find(|d| connects_to_tube(&w, pos, d.face()));
     if let Some(turned) = next.and_then(|d| state_with(state, "out", d.name())) {
-        w.set(pos, joined(&w, pos, turned));
+        w.set(pos.into(), joined(&w, pos, turned));
     }
     true
 }

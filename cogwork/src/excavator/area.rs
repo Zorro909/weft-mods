@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use weft_sdk::*;
 
 use super::GANTRY_FRAME;
+use crate::markers::{Area, square_behind, take_area};
 use crate::pos::Pos;
 
 /// The frame's height above the excavator's block.
@@ -31,16 +32,12 @@ impl Frame {
     /// markers next to it, else on a frame already standing beside it (one put back by its old
     /// frame carries on there), else around a 9 by 9 area behind it.
     pub fn plan(w: &World, pos: Pos, front: Dir) -> Frame {
-        let ring = crate::markers::take_area(w, pos.into())
-            .map(Frame::from)
+        let ground = take_area(w, pos)
             .or_else(|| standing_frame(w, pos))
-            .unwrap_or_else(|| {
-                let square = crate::markers::square_behind(pos.into(), front, DEFAULT_INSIDE, 1);
-                Frame::from(square)
-            });
+            .unwrap_or_else(|| square_behind(pos, front, DEFAULT_INSIDE, 1));
         Frame {
-            lo: ring.lo.with_y(pos.y),
-            hi: ring.hi.with_y(pos.y + FRAME_RISE),
+            lo: ground.lo.with_y(pos.y),
+            hi: ground.hi.with_y(pos.y + FRAME_RISE),
         }
     }
 
@@ -104,21 +101,20 @@ impl Frame {
     fn first_of_layer(&self, y: i32) -> Pos {
         self.lo.add_x(1).add_z(1).with_y(y)
     }
+}
 
-    /// Grows the frame to take in `p`.
-    fn grow_to(&mut self, p: Pos) {
-        let (lo, hi) = (self.lo, self.hi);
-        self.lo = Pos::new(lo.x.min(p.x), lo.y.min(p.y), lo.z.min(p.z));
-        self.hi = Pos::new(hi.x.max(p.x), hi.y.max(p.y), hi.z.max(p.z));
-    }
-
-    /// Whether `p` lies over or under the frame: within it along x and along z.
-    fn spans(&self, p: Pos) -> bool {
-        (self.lo.x..=self.hi.x).contains(&p.x) && (self.lo.z..=self.hi.z).contains(&p.z)
+/// A flat frame: only its ring round `area`.
+impl From<Area> for Frame {
+    fn from(area: Area) -> Frame {
+        Frame {
+            lo: area.lo,
+            hi: area.hi,
+        }
     }
 }
 
-/// A frame from the lowest and highest corner the survey markers give.
+/// For tests: a frame from its corners written as arrays.
+#[cfg(test)]
 impl From<([i32; 3], [i32; 3])> for Frame {
     fn from((lo, hi): ([i32; 3], [i32; 3])) -> Frame {
         Frame {
@@ -129,26 +125,23 @@ impl From<([i32; 3], [i32; 3])> for Frame {
 }
 
 /// The bottom ring of a frame beside `pos` at its height, with `pos` outside it.
-fn standing_frame(w: &World, pos: Pos) -> Option<Frame> {
+fn standing_frame(w: &World, pos: Pos) -> Option<Area> {
     let ring = ring_bounds(pos, |p| GANTRY_FRAME.is(w.get(p.into())))?;
     (!ring.spans(pos)).then_some(ring)
 }
 
-/// The flat frame round the frame blocks joined to a side of `pos`, at its height, if they make
-/// a ring round an area at least one block across. One block may be missing from the ring,
+/// The area the frame blocks joined to a side of `pos` ring, at its height, if they make a ring
+/// round an inside at least one block across. One block may be missing from the ring,
 /// which is still joined the other way round; with more, the ring may be in pieces, so it isn't
 /// taken.
-fn ring_bounds(pos: Pos, is_frame: impl Fn(Pos) -> bool) -> Option<Frame> {
+fn ring_bounds(pos: Pos, is_frame: impl Fn(Pos) -> bool) -> Option<Area> {
     let start = SIDES
         .map(|d| pos.toward(d))
         .into_iter()
         .find(|&p| is_frame(p))?;
     let mut seen = HashSet::from([start]);
     let mut todo = vec![start];
-    let mut ring = Frame {
-        lo: start,
-        hi: start,
-    };
+    let mut ring = Area::between(start, start);
     while let Some(p) = todo.pop() {
         for n in SIDES.map(|d| p.toward(d)) {
             if seen.len() >= MAX_RING || seen.contains(&n) || !is_frame(n) {
@@ -159,8 +152,9 @@ fn ring_bounds(pos: Pos, is_frame: impl Fn(Pos) -> bool) -> Option<Frame> {
             ring.grow_to(n);
         }
     }
-    let missing = ring.cells().into_iter().filter(|&c| !is_frame(c)).count();
-    let [x, z] = ring.inside();
+    let flat = Frame::from(ring);
+    let missing = flat.cells().into_iter().filter(|&c| !is_frame(c)).count();
+    let [x, z] = flat.inside();
     (x >= 1 && z >= 1 && missing <= 1).then_some(ring)
 }
 
@@ -183,15 +177,6 @@ mod tests {
         assert_eq!(unplanned.inside(), [0, 0], "nothing yet, not -1");
     }
 
-    #[test]
-    fn a_frame_grows_to_take_in_a_block() {
-        let mut frame = Frame::from(([0, 0, 0], [2, 0, 2]));
-        frame.grow_to(Pos::new(-3, 0, 5));
-        assert_eq!(frame, Frame::from(([-3, 0, 0], [2, 0, 5])), "out both ways");
-        assert!(frame.spans(Pos::new(-3, 99, 5)), "a corner, at any height");
-        assert!(!frame.spans(Pos::new(3, 0, 0)), "not past its edge");
-    }
-
     /// The bottom ring of a frame from `lo` to `hi`, less the blocks in `gaps`.
     fn ring(lo: [i32; 3], hi: [i32; 3], gaps: &[[i32; 3]]) -> HashSet<Pos> {
         let gaps: Vec<Pos> = gaps.iter().map(|&g| g.into()).collect();
@@ -205,7 +190,7 @@ mod tests {
     #[test]
     fn a_standing_frame_is_found_from_beside_it() {
         let (lo, hi) = ([0, 4, 0], [10, 8, 10]);
-        let bottom = Some(Frame::from(([0, 4, 0], [10, 4, 10])));
+        let bottom = Some(Area::between(Pos::new(0, 4, 0), Pos::new(10, 4, 10)));
         let found = |from: [i32; 3], blocks: &HashSet<Pos>| {
             ring_bounds(from.into(), |p| blocks.contains(&p))
         };

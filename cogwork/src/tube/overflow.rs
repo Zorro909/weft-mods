@@ -4,6 +4,7 @@
 use weft_sdk::*;
 
 use super::{Motion, NONE, SLOTS, Tube, free_slot, visual};
+use crate::pos::Pos;
 
 /// Ticks a full tube may go without passing an item on before it drops one, and then between
 /// one drop and the next while it stays jammed.
@@ -12,7 +13,7 @@ const AGAIN: u32 = 10;
 
 /// Counts how long the tube `id` at `pos` has been full without passing anything on, and drops
 /// a stuck item once that is too long.
-pub fn check(w: &World, id: u64, pos: [i32; 3], tube: &mut Tube, passed_on: bool) {
+pub fn check(w: &World, id: u64, pos: Pos, tube: &mut Tube, passed_on: bool) {
     let full = free_slot(w, id, tube).is_none();
     if !full || passed_on {
         tube.stuck = 0;
@@ -26,7 +27,7 @@ pub fn check(w: &World, id: u64, pos: [i32; 3], tube: &mut Tube, passed_on: bool
         return;
     };
     let inv = w.inventory(id);
-    w.spawn_item(block_center(pos), inv.get(slot as u32));
+    w.spawn_item(pos.center(), inv.get(slot as u32));
     inv.set(slot as u32, ItemStack::EMPTY);
     visual::remove(w, tube.moving[slot].visual);
     tube.moving[slot] = Motion::default();

@@ -4,6 +4,8 @@
 use weft_sdk::signal::Frame;
 use weft_sdk::*;
 
+use crate::pos::Pos;
+
 /// Trunk textures by heat level: cool, warm, hot, overheated.
 const TRUNKS: [&str; 4] = [
     "engine_trunk_blue",
@@ -78,18 +80,18 @@ fn turn(u: &mut Use) -> bool {
     if !crate::cogs::holds_wrench(&w, u.player()) {
         return false;
     }
-    let pos = u.pos();
+    let pos = Pos::from(u.pos());
     let now = w
-        .prop(pos, "facing")
+        .prop(pos.into(), "facing")
         .and_then(Dir::from_name)
         .map_or(0, Dir::face);
-    w.set_prop(pos, "facing", Dir::from_face((now + 1) % 6).name());
+    w.set_prop(pos.into(), "facing", Dir::from_face((now + 1) % 6).name());
     true
 }
 
 /// Where the engine's trunk points: its output.
-pub fn output(w: &World, pos: [i32; 3]) -> Option<Dir> {
-    w.prop(pos, "facing")
+pub fn output(w: &World, pos: Pos) -> Option<Dir> {
+    w.prop(pos.into(), "facing")
         .and_then(Dir::from_name)
         .map(Dir::opposite)
 }

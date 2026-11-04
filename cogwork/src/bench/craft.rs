@@ -29,7 +29,7 @@ pub fn tick(b: &mut SystemBatch<Bench>) {
         };
         bench.status = status as u32;
         bench.filled = filled(&grid(&w, id));
-        crate::machine::show_working(&w, st.block_pos(), status == Status::Working);
+        crate::machine::show_working(&w, st.block_pos().into(), status == Status::Working);
     }
 }
 

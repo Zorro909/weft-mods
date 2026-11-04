@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use weft_sdk::*;
 
 use super::{Motion, NONE, TUBES};
+use crate::pos::Pos;
 
 static ITEM_ENTITY: Entity = Entity::named("core:item");
 /// Marks a picture's stack, a different value for neighbors, so two pictures of the same item
@@ -89,13 +90,13 @@ fn sweep(w: &World) {
 
 /// Where in the world an item at `m` in the tube at `pos` is, and how fast it goes there
 /// (blocks per second).
-fn place_of(pos: [i32; 3], m: &Motion) -> ([f64; 3], [f64; 3]) {
+fn place_of(pos: Pos, m: &Motion) -> ([f64; 3], [f64; 3]) {
     let (face, along, sign) = if m.pos < 0.5 {
         (m.from, 0.5 - m.pos, -1.0)
     } else {
         (m.to, m.pos - 0.5, 1.0)
     };
-    let mut at = pos.map(|v| v as f64 + 0.5);
+    let mut at = pos.center();
     let mut vel = [0.0; 3];
     if face != NONE {
         let o = Dir::from_face(face).offset();
@@ -108,7 +109,7 @@ fn place_of(pos: [i32; 3], m: &Motion) -> ([f64; 3], [f64; 3]) {
 }
 
 /// Shows the item at `m` where it is now, making its picture if it has none.
-pub fn show(w: &World, pos: [i32; 3], m: &mut Motion, stack: ItemStack) {
+pub fn show(w: &World, pos: Pos, m: &mut Motion, stack: ItemStack) {
     let (mut at, vel) = place_of(pos, m);
     // A dropped item is drawn bobbing above where it is: a block 0.15 up, a flat item from
     // 0.15 to 0.65 up.
@@ -159,16 +160,14 @@ pub fn remove(w: &World, id: u64) {
 }
 
 /// Removes the pictures left where a tube was broken; the spilled stacks stay.
-pub fn clear_broken(w: &World, pos: [i32; 3]) {
-    if TUBES.on_block(w.get(pos)) {
+pub fn clear_broken(w: &World, pos: Pos) {
+    if TUBES.on_block(w.get(pos.into())) {
         return;
     }
-    let center = pos.map(|v| v as f64 + 0.5);
-    for id in w.near(center, 1.5, Some(&ITEM_ENTITY)) {
+    for id in w.near(pos.center(), 1.5, Some(&ITEM_ENTITY)) {
         // Back up by the bob `show` takes off, to find the cell it was drawn for.
         let inside = w.entity(id).is_some_and(|st| {
-            let cell = [st.pos[0], st.pos[1] + 0.4, st.pos[2]].map(|v| v.floor() as i32);
-            cell == pos
+            Pos::containing([st.pos[0], st.pos[1] + 0.4, st.pos[2]]) == pos
         });
         if inside {
             remove(w, id);
@@ -201,12 +200,13 @@ mod tests {
     #[test]
     fn an_item_is_drawn_on_its_way_through_the_tube() {
         let (west, up) = (Dir::West.face(), Dir::Up.face());
-        let (hub, still) = place_of([0, 0, 0], &at(0.5, NONE, NONE));
+        let tube = Pos::new(0, 0, 0);
+        let (hub, still) = place_of(tube, &at(0.5, NONE, NONE));
         assert_eq!((hub, still), ([0.5; 3], [0.0; 3]), "waiting at the hub");
-        let (start, vel) = place_of([0, 0, 0], &at(0.0, west, NONE));
+        let (start, vel) = place_of(tube, &at(0.0, west, NONE));
         assert_eq!(start, [0.0, 0.5, 0.5], "in at the west face");
         assert!(vel[0] > 0.0, "heading east, to the hub");
-        let (end, vel) = place_of([0, 0, 0], &at(1.0, west, up));
+        let (end, vel) = place_of(tube, &at(1.0, west, up));
         assert_eq!(end, [0.5, 1.0, 0.5], "out at the top");
         assert!((vel[1] - 1.0).abs() < 1e-6, "a block a second, going up");
     }

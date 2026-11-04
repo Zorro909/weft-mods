@@ -7,29 +7,38 @@ mod work;
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
 
+use crate::markers::Area;
+use crate::pos::Pos;
+
 pub static LEVELER: Block = Block::named("leveler");
 static LEVELER_MENU: Menu = Menu::named("leveler");
 
 value! {
-    /// A leveler's work: the area from `lo` to `hi`, flat at `lo`'s height, and the next block
-    /// to look at.
+    /// A leveler's work: the `area` it makes flat at its height, the next block to look at, and
+    /// the energy put into the job under way.
     #[derive(Default)]
     pub struct Level {
         pub stage: u32,
         pub status: u32,
-        pub lo: [i32; 3],
-        pub hi: [i32; 3],
-        pub cursor: [i32; 3],
+        // Laid out as the `lo` and `hi` it replaced, so saved levelers keep their area.
+        pub area: Area,
+        pub cursor: Pos,
         pub spent: i64,
     }
 }
 static LEVEL: Component<Level> = Component::named("cogwork:level");
 
-mod stage {
-    pub const NEW: u32 = 0;
-    pub const CLEAR: u32 = 1;
-    pub const FILL: u32 = 2;
-    pub const DONE: u32 = 3;
+/// How far a leveler has got. Kept in `Level::stage` as its number, so the order is part of the
+/// save format.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr)]
+#[repr(u32)]
+pub enum Stage {
+    /// Placed, its area not planned yet.
+    #[default]
+    New,
+    Clear,
+    Fill,
+    Done,
 }
 
 /// What the leveler is doing; its screen says `cogwork.leveler.<name>`. Kept in
@@ -47,6 +56,31 @@ pub enum Status {
     NoBlocks,
     Blocked,
     Done,
+}
+
+impl Status {
+    /// Whether the leveler shows it is at work: clearing or filling.
+    pub fn is_working(self) -> bool {
+        matches!(self, Status::Clearing | Status::Filling)
+    }
+}
+
+impl Level {
+    pub fn stage(&self) -> Stage {
+        Stage::from_repr(self.stage).unwrap_or_default()
+    }
+
+    pub fn set_stage(&mut self, stage: Stage) {
+        self.stage = stage as u32;
+    }
+
+    pub fn status(&self) -> Status {
+        Status::from_repr(self.status).unwrap_or_default()
+    }
+
+    pub fn set_status(&mut self, status: Status) {
+        self.status = status as u32;
+    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -73,6 +107,20 @@ pub fn register(r: &mut Registry) {
         .screen(screen);
 }
 
+/// The leveler's screen, above the player's inventory:
+///
+/// ```text
+/// +-----------------------------------------------------------------+
+/// | Leveler                                                         |
+/// | [#####.....]                              [ ][ ][ ]             |  stored energy, output
+/// | 4000 / 10000 energy                       [ ][ ][ ]             |
+/// | Clearing layer 72                         [ ][ ][ ]             |  status
+/// | Area 9 x 9, flat at height 64                                   |
+/// | Stock                                                           |
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]                                     |  blocks to fill with
+/// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]                                     |
+/// +-----------------------------------------------------------------+
+/// ```
 fn screen(ui: &mut Ui) {
     ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
         ui.title();
@@ -81,19 +129,25 @@ fn screen(ui: &mut Ui) {
                 crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let l = c.menu_component(&LEVEL).unwrap_or_default();
-                    let status: &str = Status::from_repr(l.status).unwrap_or_default().into();
+                    let status: &str = l.status().into();
+                    let layer = l.cursor.y;
                     out.set(
                         &format!("cogwork.leveler.{status}"),
-                        &[Arg::Int(l.cursor[1] as i64)],
+                        &[Arg::Int(layer as i64)],
                     );
                 });
                 ui.text_bind(|c, out| {
                     let l = c.menu_component(&LEVEL).unwrap_or_default();
-                    let (x, z) = (l.hi[0] - l.lo[0] + 1, l.hi[2] - l.lo[2] + 1);
-                    let size = |v: i32| Arg::Int(if l.stage == stage::NEW { 0 } else { v as i64 });
+                    let planned = l.stage() != Stage::New;
+                    let [x, z] = if planned { l.area.size() } else { [0, 0] };
+                    let height = l.area.lo.y;
                     out.set(
                         "cogwork.leveler.area",
-                        &[size(x), size(z), Arg::Int(l.lo[1] as i64)],
+                        &[
+                            Arg::Int(x as i64),
+                            Arg::Int(z as i64),
+                            Arg::Int(height as i64),
+                        ],
                     );
                 });
             });
@@ -115,5 +169,27 @@ mod tests {
             let key = format!("cogwork.leveler.{}", <&str>::from(status));
             assert!(crate::translated(&key), "{key} in every lang file");
         }
+    }
+
+    #[test]
+    fn the_area_lies_where_the_old_corners_were_saved() {
+        use std::mem::offset_of;
+        assert_eq!(
+            offset_of!(Level, area),
+            8,
+            "after stage and status, as `lo` was"
+        );
+        assert_eq!(offset_of!(Level, cursor), 32, "after `lo` and `hi`");
+    }
+
+    #[test]
+    fn an_unknown_saved_number_reads_as_the_default() {
+        let l = Level {
+            stage: 99,
+            status: 99,
+            ..Level::default()
+        };
+        assert_eq!(l.stage(), Stage::New, "a stage from a newer cogwork");
+        assert_eq!(l.status(), Status::Idle, "a status from a newer cogwork");
     }
 }

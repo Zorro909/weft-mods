@@ -9,32 +9,32 @@
 use showcase_api::Set;
 use weft_sdk::*;
 
-use super::excavators::beside;
 use super::parts::{CHEST, line, spring, stock};
 use crate::bench::{ASSEMBLY_BENCH, set_ghost};
+use crate::pos::Pos;
 use crate::tube::TIMBER_TUBE;
 
 /// The row everything stands on, and where along it.
 pub const ROW_Z: i32 = 16;
-pub const STICKS: [i32; 3] = [-12, 0, ROW_Z];
-pub const STONE_COGS: [i32; 3] = [-2, 0, ROW_Z];
-const COGS: [i32; 3] = [-7, 0, ROW_Z];
-const OUTPUT: [i32; 3] = [3, 0, ROW_Z];
+pub const STICKS: Pos = Pos::new(-12, 0, ROW_Z);
+pub const STONE_COGS: Pos = Pos::new(-2, 0, ROW_Z);
+const COGS: Pos = Pos::new(-7, 0, ROW_Z);
+const OUTPUT: Pos = Pos::new(3, 0, ROW_Z);
 /// The cobblestone's chest, north of the second bench behind the wall.
-const COBBLE: [i32; 3] = [-2, 0, ROW_Z - 3];
+const COBBLE: Pos = Pos::new(-2, 0, ROW_Z - 3);
 /// Timber tubes, each with an engine on top: out of the stick chest, out of each bench, and
 /// out of the cobblestone chest.
-const PULLS: [[i32; 3]; 4] = [
-    [-11, 0, ROW_Z],
-    [-6, 0, ROW_Z],
-    [-1, 0, ROW_Z],
-    [-2, 0, ROW_Z - 2],
+const PULLS: [Pos; 4] = [
+    Pos::new(-11, 0, ROW_Z),
+    Pos::new(-6, 0, ROW_Z),
+    Pos::new(-1, 0, ROW_Z),
+    Pos::new(-2, 0, ROW_Z - 2),
 ];
 /// The wall behind the row, two blocks high, from end to end of the machines.
 const WALL_Z: i32 = ROW_Z - 1;
 const WALL_X: [i32; 2] = [-12, -1];
 /// On the wall's face above the stick chest, where the camera sees it thrown.
-pub const LEVER: [i32; 3] = [WALL_X[0], 1, ROW_Z];
+pub const LEVER: Pos = Pos::new(WALL_X[0], 1, ROW_Z);
 
 /// The cells of the patterns: a wooden cog is four sticks round a gap, a stone cog four
 /// cobblestones round a wooden cog.
@@ -47,21 +47,22 @@ static LEVER_BLOCK: Block = Block::named("base:lever");
 
 pub fn build(set: &Set) {
     for chest in [STICKS, COBBLE, OUTPUT] {
-        set.place(chest, CHEST.id());
+        set.place(chest.into(), CHEST.id());
     }
     for bench in [COGS, STONE_COGS] {
-        set.place(bench, ASSEMBLY_BENCH.with(&[("facing", "south")]));
+        set.place(bench.into(), ASSEMBLY_BENCH.with(&[("facing", "south")]));
     }
     for pull in PULLS {
-        set.place(pull, TIMBER_TUBE.id());
+        set.place(pull.into(), TIMBER_TUBE.id());
     }
     for machine in [COGS, STONE_COGS].into_iter().chain(PULLS) {
-        spring(set, beside(machine, Dir::Up), Dir::Down);
+        spring(set, machine.toward(Dir::Up), Dir::Down);
     }
-    line(set, [-10, 0, ROW_Z], [-8, 0, ROW_Z]);
-    line(set, [-5, 0, ROW_Z], [-3, 0, ROW_Z]);
-    line(set, [-2, 0, WALL_Z], [-2, 0, WALL_Z]);
-    line(set, [0, 0, ROW_Z], [2, 0, ROW_Z]);
+    let on_row = |x: i32| Pos::new(x, 0, ROW_Z);
+    line(set, on_row(-10), on_row(-8));
+    line(set, on_row(-5), on_row(-3));
+    line(set, Pos::new(-2, 0, WALL_Z), Pos::new(-2, 0, WALL_Z));
+    line(set, on_row(0), on_row(2));
     power_line(set);
 }
 
@@ -71,14 +72,15 @@ fn power_line(set: &Set) {
     let floor_wire = REDSTONE.with(&[("faces", "4")]);
     for x in WALL_X[0]..=WALL_X[1] {
         // The cobblestone's tube runs under the wall.
-        if x != COBBLE[0] {
-            set.place([x, 0, WALL_Z], STONE_BRICKS.id());
+        let ground = Pos::new(x, 0, WALL_Z);
+        if x != COBBLE.x {
+            set.place(ground.into(), STONE_BRICKS.id());
         }
-        set.place([x, 1, WALL_Z], STONE_BRICKS.id());
-        set.place([x, 2, WALL_Z], floor_wire);
+        set.place(ground.add_y(1).into(), STONE_BRICKS.id());
+        set.place(ground.add_y(2).into(), floor_wire);
     }
     let lever = [("attach", "north"), ("front", "down"), ("power", "off")];
-    set.place(LEVER, LEVER_BLOCK.with(&lever));
+    set.place(LEVER.into(), LEVER_BLOCK.with(&lever));
 }
 
 /// Fills the supply chests and lays out both patterns; the machines wait for the lever.
@@ -88,8 +90,8 @@ pub fn start(set: &Set) {
     let world = set.world();
     let item = |name: &str| Item::lookup(name).unwrap_or(0);
     let (cogs, stone_cogs) = (
-        world.block_entity(set.at(COGS)),
-        world.block_entity(set.at(STONE_COGS)),
+        world.block_entity(set.at(COGS.into())),
+        world.block_entity(set.at(STONE_COGS.into())),
     );
     for cell in ROUND {
         set_ghost(&world, cogs, cell, item("base:stick"));
@@ -100,5 +102,5 @@ pub fn start(set: &Set) {
 
 /// Throws the lever: the whole row starts.
 pub fn switch_on(set: &Set) {
-    set.world().set_prop(set.at(LEVER), "power", "on");
+    set.world().set_prop(set.at(LEVER.into()), "power", "on");
 }

@@ -25,8 +25,8 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
     let w = b.world();
     for (id, d, _ticks) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
-        let pos = st.block_pos();
-        if !EXCAVATOR.is(w.get(pos)) {
+        let pos = Pos::from(st.block_pos());
+        if !EXCAVATOR.is(w.get(pos.into())) {
             continue;
         }
         work(&w, id, pos, d);
@@ -36,7 +36,7 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
 }
 
 /// Passes on what the excavator `id` at `pos` mined, then works on its stage.
-fn work(w: &World, id: u64, pos: [i32; 3], d: &mut Dig) {
+fn work(w: &World, id: u64, pos: Pos, d: &mut Dig) {
     if d.stage() == Stage::New {
         start(w, pos, d);
     }
@@ -49,8 +49,8 @@ fn work(w: &World, id: u64, pos: [i32; 3], d: &mut Dig) {
     }
 }
 
-fn start(w: &World, pos: [i32; 3], d: &mut Dig) {
-    d.frame = Frame::plan(w, pos.into(), crate::machine::front(w, pos));
+fn start(w: &World, pos: Pos, d: &mut Dig) {
+    d.frame = Frame::plan(w, pos, crate::machine::front(w, pos));
     d.set_stage(Stage::Frame);
     d.step = 0;
 }

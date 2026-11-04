@@ -3,6 +3,8 @@
 
 use weft_sdk::*;
 
+use crate::pos::Pos;
+
 static TOOL: Item = Item::named("base:diamond_pickaxe");
 
 /// A block's loot table, by the block's name.
@@ -42,7 +44,7 @@ pub fn cost(state: u32, base: f32, per_hardness: f32) -> i64 {
 
 /// Breaks the block `state` at `c` into the `output` group of the machine `id`, only when
 /// everything it drops fits there.
-pub fn harvest(w: &World, id: u64, c: [i32; 3], state: u32) -> Harvest {
+pub fn harvest(w: &World, id: u64, c: Pos, state: u32) -> Harvest {
     let output = || w.inventory(id).group("output");
     let tool = ItemStack::new(TOOL.id(), 1);
     let name = block_name(state).split('[').next().unwrap_or("");
@@ -58,13 +60,13 @@ pub fn harvest(w: &World, id: u64, c: [i32; 3], state: u32) -> Harvest {
     {
         return Harvest::Full;
     }
-    if !w.break_block(c, tool, 0, false) {
+    if !w.break_block(c.into(), tool, 0, false) {
         return Harvest::Refused;
     }
     for s in drops {
         let left = crate::store::insert_into(output(), s, false);
         if !left.is_empty() {
-            w.spawn_item(block_center(c), left);
+            w.spawn_item(c.center(), left);
         }
     }
     Harvest::Done

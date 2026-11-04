@@ -14,7 +14,7 @@ mod leveler;
 mod machine;
 mod markers;
 mod owned;
-mod pos;
+pub mod pos;
 mod recipes;
 mod shaft;
 mod store;
@@ -44,13 +44,6 @@ fn init(r: &mut Registry) {
     recipes::register(r);
     #[cfg(feature = "showcase")]
     films::register(r);
-}
-
-/// The position of the block next to `pos` across its face `face` (in `Dir` order). Tubes,
-/// engines, shafts and machines all hand things to their neighbors through it.
-pub fn neighbor(pos: [i32; 3], face: u32) -> [i32; 3] {
-    let o = Dir::from_face(face).offset();
-    [pos[0] + o[0], pos[1] + o[1], pos[2] + o[2]]
 }
 
 /// Whether every language file of the mod has `key`.
