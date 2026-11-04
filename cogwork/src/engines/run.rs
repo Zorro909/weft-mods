@@ -28,7 +28,6 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
         } else {
             burn(&w, id, pos, e, ticks)
         };
-        e.running = running as u32;
         let made = if !running {
             0
         } else if e.kind == kind::SPRING {
