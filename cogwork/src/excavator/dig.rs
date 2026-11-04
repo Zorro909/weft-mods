@@ -15,7 +15,7 @@ const SCAN: u32 = 512;
 /// Ticks a layer may stay unloaded before the excavator takes it for the floor of the world.
 const FLOOR_WAIT: u32 = 200;
 /// The deepest layer it mines, like the floor of vanilla's worlds.
-const FLOOR_Y: i32 = -64;
+pub const FLOOR_Y: i32 = -64;
 /// Refused tries in a row at clearing the frame's way before the excavator is jammed, and the
 /// ticks between its tries while it is.
 const JAM_AFTER: u32 = 3;
