@@ -100,6 +100,7 @@ options and the packages it needs (weston, PipeWire, GStreamer).
 
 - `/camera point` marks where the camera is and where it looks; `/camera clear` forgets them.
 - `/camera play [secs]` flies through the points, turning to look where each was marked.
-- `/camera orbit <radius> [secs]` circles the point `radius` blocks in front of you once.
+- `/camera orbit [radius] [secs]` circles the point `radius` blocks (8 unless told) in front of
+  you once.
 
 It flies through walls only in spectator mode.

@@ -130,20 +130,28 @@ impl Playback {
             Step::Wait(secs) => (clock >= *secs).then_some(*secs),
             Step::WaitFor { name, max } => {
                 if signals.remove(name) {
+                    // The signal came at some point in this frame: the next step starts afresh.
                     Some(clock)
                 } else {
                     (clock >= *max).then_some(*max)
                 }
             }
-            Step::Shot(shot) => {
-                let rig = self
-                    .rig
-                    .get_or_insert_with(|| Rig::new(shot.clone(), self.origin, self.own_fov));
-                let secs = rig.secs();
-                self.pose = rig.pose(clock.min(secs), subjects, self.start);
-                (clock >= secs).then_some(secs)
-            }
+            Step::Shot(_) => self.advance_shot(subjects),
         }
+    }
+
+    /// Moves the camera along the current shot for the clock, setting up its rig on its first
+    /// frame; `Some(its length)` once the clock is past its end.
+    fn advance_shot(&mut self, subjects: Subjects) -> Option<f32> {
+        let Some(Step::Shot(shot)) = self.steps.get(self.index) else {
+            return None;
+        };
+        let rig = self
+            .rig
+            .get_or_insert_with(|| Rig::new(shot.clone(), self.origin, self.own_fov));
+        let secs = rig.secs();
+        self.pose = rig.pose(self.clock.min(secs), subjects, self.start);
+        (self.clock >= secs).then_some(secs)
     }
 
     /// Eye positions the film's shots pass, to load the world around before it starts: the
@@ -230,6 +238,53 @@ mod tests {
             vec!["after".to_string()]
         );
         assert!(signals.is_empty(), "the signal is used up");
+    }
+
+    #[test]
+    fn a_signal_sent_before_its_wait_is_kept() {
+        let mut p = play(Film::new().wait(1.0).wait_for("dug", 60.0).cue("after"));
+        let mut signals = HashSet::from(["dug".to_string()]);
+        assert!(
+            p.advance(0.5, &mut signals, &none).is_empty(),
+            "still in the first wait"
+        );
+        assert!(signals.contains("dug"), "kept for the wait_for");
+        assert_eq!(
+            p.advance(0.6, &mut signals, &none),
+            vec!["after".to_string()]
+        );
+        assert!(signals.is_empty(), "used up there");
+    }
+
+    #[test]
+    fn a_signal_ends_its_wait_with_no_time_over() {
+        let mut p = play(Film::new().wait_for("dug", 60.0).wait(1.0).cue("after"));
+        let mut signals = HashSet::new();
+        p.advance(5.0, &mut signals, &none);
+        signals.insert("dug".to_string());
+        p.advance(0.5, &mut signals, &none);
+        assert!(
+            p.advance(0.9, &mut signals, &none).is_empty(),
+            "the next wait started at the signal"
+        );
+        assert_eq!(
+            p.advance(0.1, &mut signals, &none),
+            vec!["after".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_timed_out_wait_carries_its_extra_time_on() {
+        let mut p = play(Film::new().wait_for("never", 2.0).wait(1.0).cue("after"));
+        let mut signals = HashSet::new();
+        assert!(
+            p.advance(2.5, &mut signals, &none).is_empty(),
+            "half a second into the next wait"
+        );
+        assert_eq!(
+            p.advance(0.5, &mut signals, &none),
+            vec!["after".to_string()]
+        );
     }
 
     #[test]

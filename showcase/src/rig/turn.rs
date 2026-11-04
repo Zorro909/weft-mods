@@ -10,11 +10,12 @@ pub fn along(angles: &[[f32; 2]], at: f64) -> Option<(f64, f64)> {
     let last = angles.len().checked_sub(1)?;
     let unwrapped = unwrap(angles);
     let at = at.clamp(0.0, last as f64);
-    let i = (at.floor() as usize).min(last.saturating_sub(1));
-    let t = at - i as f64;
-    let get = |k: isize| unwrapped[(i as isize + k).clamp(0, last as isize) as usize];
+    let segment = (at.floor() as usize).min(last.saturating_sub(1));
+    let t = at - segment as f64;
+    let get =
+        |offset: isize| unwrapped[(segment as isize + offset).clamp(0, last as isize) as usize];
     let (p0, p1, p2, p3) = (get(-1), get(0), get(1), get(2));
-    let pick = |n: usize| catmull_rom(p0[n], p1[n], p2[n], p3[n], t);
+    let pick = |axis: usize| catmull_rom(p0[axis], p1[axis], p2[axis], p3[axis], t);
     Some((pick(0), pick(1)))
 }
 
@@ -47,11 +48,12 @@ mod tests {
     #[test]
     fn the_turn_passes_every_angle() {
         let angles = [[0.0, 0.0], [90.0, 10.0], [180.0, -20.0]];
-        for (i, a) in angles.iter().enumerate() {
-            let (yaw, pitch) = along(&angles, i as f64).expect("angles");
+        for (index, [marked_yaw, marked_pitch]) in angles.into_iter().enumerate() {
+            let (yaw, pitch) = along(&angles, index as f64).expect("angles");
             assert!(
-                (yaw - a[0] as f64).abs() < 1e-9 && (pitch - a[1] as f64).abs() < 1e-9,
-                "at {i}"
+                (yaw - marked_yaw as f64).abs() < 1e-9
+                    && (pitch - marked_pitch as f64).abs() < 1e-9,
+                "at {index}"
             );
         }
     }

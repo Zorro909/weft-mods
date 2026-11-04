@@ -19,7 +19,8 @@ use crate::view::{camera, missing_notice, put, set_fov, titles};
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
 const STOP_FRAMES: u32 = 20;
-/// Longest frame the film steps by: a hitch skips ahead instead of jumping.
+/// Most seconds the film moves on in one frame: a hitch slows the film instead of making the
+/// camera jump.
 const MAX_DT: f32 = 0.1;
 /// Seconds a film that never came is reported on screen.
 const NOTICE_SECS: f32 = 6.0;

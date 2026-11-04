@@ -1,6 +1,6 @@
 //! `/camera`, for animators: camera paths made in the game and played on this client alone.
 //! `/camera point` marks where the camera is and where it looks, `/camera play` flies through
-//! the points looking the way each was marked, `/camera orbit` circles the point in front of
+//! the points looking the way each was marked, `/camera orbit` circles a point in front of
 //! the camera, `/camera clear` forgets the points. Spectators fly through walls; anyone else
 //! is stopped by them.
 
@@ -21,9 +21,13 @@ static POINTS: Mutex<Vec<Pose>> = Mutex::new(Vec::new());
 const SECS_PER_POINT: f64 = 2.5;
 /// Seconds of `/camera orbit` when it isn't told how long.
 const ORBIT_SECS: f64 = 12.0;
+/// Blocks ahead of the camera that `/camera orbit` circles when it isn't told how far.
+const ORBIT_RADIUS: f64 = 8.0;
+/// The nearest `/camera orbit` circles, in blocks: any closer and the camera spins on the spot.
+const MIN_ORBIT_RADIUS: f64 = 0.5;
 
 pub fn register(r: &mut Registry) {
-    let usage = "point | play [secs:float] | orbit <radius:float> [secs:float] | clear";
+    let usage = "point | play [secs:float] | orbit [radius:float] [secs:float] | clear";
     r.client_command("camera", usage, |cmd| {
         let c = cmd.client();
         if cmd.has("point") {
@@ -36,7 +40,8 @@ pub fn register(r: &mut Registry) {
         } else if cmd.has("play") {
             play_points(&c, cmd);
         } else if cmd.has("orbit") {
-            let radius = cmd.float("radius").unwrap_or(8.0).max(0.5);
+            let radius = cmd.float("radius").unwrap_or(ORBIT_RADIUS);
+            let radius = radius.max(MIN_ORBIT_RADIUS);
             let secs = cmd.float("secs").unwrap_or(ORBIT_SECS);
             play(&c, local(orbit_ahead(camera(&c), radius, secs)));
         } else if cmd.has("clear") {
