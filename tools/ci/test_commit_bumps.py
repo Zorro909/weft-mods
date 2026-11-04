@@ -78,7 +78,7 @@ class CommitBumps(unittest.TestCase):
 
     def test_bumps_in_a_checkout_without_the_engine(self):
         origin = self.root / "origin.git"
-        run(self.root, "git", "init", "-q", "--bare", str(origin))
+        run(self.root, "git", "init", "-q", "--bare", "-b", "main", str(origin))
         make_engine(self.root / "engine")
         make_mods(self.root / "mods", self.root / "engine", origin)
         # As CI checks out the release plan: without submodules.
