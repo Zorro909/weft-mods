@@ -24,8 +24,7 @@ Several engines can drive the same machine; their energy adds up.
 
 ### Spring Engine
 
-Runs while it gets a redstone signal, and stops when the signal does. Its screen shows the
-stored energy and its heat, and says when it has no signal.
+Runs while it gets a redstone signal, and stops when the signal does.
 
 ```
 ppp       p = #planks          c = #cogs/wood
