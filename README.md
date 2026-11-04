@@ -81,9 +81,9 @@ instead of the Weft this repository pins.
 
 | Mod | Release | Release candidate | Experimental |
 |---|---|---|---|
-| cogwork | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.1.2), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | – | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.1.2-experimental.4563878.917596d), Weft 26.11.1 [4563878](https://github.com/Weft-Rust/Weft/commit/4563878b067425085701268f074f9483b2625e4c) |
-| showcase | [0.1.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.1.0), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | – | [0.1.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.1.0-experimental.4563878.7ce8734), Weft 26.11.1 [4563878](https://github.com/Weft-Rust/Weft/commit/4563878b067425085701268f074f9483b2625e4c) |
-| structures | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.2), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | – | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.2-experimental.4563878.917596d), Weft 26.11.1 [4563878](https://github.com/Weft-Rust/Weft/commit/4563878b067425085701268f074f9483b2625e4c) |
+| cogwork | [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.0), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | – | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.1.2-experimental.4563878.917596d), Weft 26.11.1 [4563878](https://github.com/Weft-Rust/Weft/commit/4563878b067425085701268f074f9483b2625e4c) |
+| showcase | [0.1.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.1.0), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | [0.1.1-rc.1](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.1.1-rc.1), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | [0.1.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.1.0-experimental.4563878.7ce8734), Weft 26.11.1 [4563878](https://github.com/Weft-Rust/Weft/commit/4563878b067425085701268f074f9483b2625e4c) |
+| structures | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.2), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | [0.1.3-rc.1](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3-rc.1), Weft 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.2-experimental.4563878.917596d), Weft 26.11.1 [4563878](https://github.com/Weft-Rust/Weft/commit/4563878b067425085701268f074f9483b2625e4c) |
 
 ## Versions
 
@@ -91,6 +91,7 @@ instead of the Weft this repository pins.
 
 | Version | Released | Weft |
 |---|---|---|
+| [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.0) | 2026-11-04 | 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) |
 | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.1.2) | 2026-11-02 | 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) |
 | [0.1.1](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.1.1) | 2026-11-02 | 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) |
 | [0.1.0](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.1.0) | 2026-11-02 | 26.10.4 [5faf2e3](https://github.com/Weft-Rust/Weft/commit/5faf2e3e57697dd3476b03a300f1231b84f6419e) |
