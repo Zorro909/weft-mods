@@ -15,12 +15,12 @@ impl BlockState {
 
     /// The block at `pos`.
     pub fn at(w: &World, pos: Pos) -> BlockState {
-        BlockState(w.get(pos.into()))
+        BlockState(w.block(pos))
     }
 
     /// The block at `pos`, `None` while that part of the world isn't loaded.
     pub fn loaded_at(w: &World, pos: Pos) -> Option<BlockState> {
-        w.get_loaded(pos.into()).map(BlockState)
+        w.block_loaded(pos).map(BlockState)
     }
 
     /// `block` with its properties at their defaults.
@@ -35,7 +35,7 @@ impl BlockState {
 
     /// Puts it at `pos`; false where the world isn't loaded.
     pub fn place(self, w: &World, pos: Pos) -> bool {
-        w.set(pos.into(), self.0)
+        w.set_block(pos, self.0)
     }
 
     /// The SDK's number for it, for the SDK calls that take one.
@@ -69,10 +69,10 @@ impl BlockState {
         state_with(self.0, name, value).map(BlockState)
     }
 
-    /// Its block's name with its properties, as loot tables and logs know it
-    /// (`base:oak_log[axis=y]`).
-    pub fn name(self) -> &'static str {
-        block_name(self.0)
+    /// Its block's name without its properties (`base:oak_log`), as loot tables know it; empty
+    /// for a state no block has.
+    pub fn block_name(self) -> &'static str {
+        block_info(self.0).map_or("", |info| info.name)
     }
 
     /// How hard it is to break; below 0 for blocks that can't be, `None` for blocks that don't

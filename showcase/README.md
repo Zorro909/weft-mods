@@ -84,6 +84,9 @@ and yours built with `--features showcase` in the game's `mods/`. The film makes
 spectator, sets noon and clear weather, and gives you back your game mode and place when it is
 over, or after ten seconds if no mod sends the film.
 
+Every film, however it starts, is seen through showcase's own camera mode: F5 and the free
+camera (P) are locked while it plays, and the view eases back to your own camera at its end.
+
 `/showcase gallery <mod>` needs no film: it puts every block of the mod on a plinth in a row
 from where you stand and shows each in turn under its name.
 
@@ -103,4 +106,4 @@ options and the packages it needs (weston, PipeWire, GStreamer).
 - `/camera orbit [radius] [secs]` circles the point `radius` blocks (8 unless told) in front of
   you once.
 
-It flies through walls only in spectator mode.
+The camera flies through walls in any game mode.

@@ -4,8 +4,6 @@
 
 use weft_sdk::*;
 
-use crate::lib::FloatPos;
-
 /// The block entity an owned entity belongs to.
 static OWNER: Component<u64> = Component::named("cogwork:owner");
 
@@ -33,44 +31,35 @@ pub fn kind<'a>(b: EntityBuilder<'a>, claims: Claims) -> EntityBuilder<'a> {
 fn leave_unclaimed(t: &EntityTick, claims: Claims) {
     let w = t.world();
     for &id in t.ids() {
-        let owner = w.component(id, &OWNER).copied().unwrap_or(0);
+        let owner = w.component(id, &OWNER).unwrap_or(0);
         if owner == 0 || w.entity(owner).is_none() || !claims(&w, owner, id) {
-            w.remove(id);
+            w.despawn(id);
         }
     }
 }
 
 /// Moves `owner`'s entity `id` to `pos`, turned `yaw` degrees; makes it if it is gone or of
 /// another kind. Returns its id.
-pub fn place(w: &World, owner: u64, id: u64, kind: &Entity, pos: FloatPos, yaw: f32) -> u64 {
+pub fn place(w: &World, owner: u64, id: u64, kind: &EntityKind, pos: Vec3, yaw: f32) -> u64 {
     let current = w.entity(id).filter(|_| id != 0);
-    let Some(mut st) = current.filter(|st| st.kind == kind.id()) else {
-        if current.is_some() && w.component(id, &OWNER) == Some(&owner) {
-            w.remove(id);
+    let Some(st) = current.filter(|st| st.kind == kind.id()) else {
+        if current.is_some() && w.component(id, &OWNER) == Some(owner) {
+            w.despawn(id);
         }
         return spawn(w, owner, kind, pos, yaw);
     };
     // A kinematic entity moves by its velocity after this tick's systems: just that speed lands
     // it on `pos`, and it stands still once there. Placing it as well would overshoot.
-    let now = FloatPos::from(st.pos);
-    let vel = [pos.x - now.x, pos.y - now.y, pos.z - now.z].map(|gap| gap * 20.0);
+    let vel = (pos - st.pos) * 20.0;
     let yaw = yaw.to_radians();
     if vel != st.vel || yaw != st.yaw {
-        st.vel = vel;
-        st.yaw = yaw;
-        w.set_entity(id, &st);
+        w.entity_edit(id).velocity(vel).yaw(yaw);
     }
     id
 }
 
-fn spawn(w: &World, owner: u64, kind: &Entity, pos: FloatPos, yaw: f32) -> u64 {
-    let id = w.spawn(kind, pos.into());
-    if let Some(o) = w.component_mut(id, &OWNER) {
-        *o = owner;
-    }
-    if let Some(mut st) = w.entity(id) {
-        st.yaw = yaw.to_radians();
-        w.set_entity(id, &st);
-    }
+fn spawn(w: &World, owner: u64, kind: &EntityKind, pos: Vec3, yaw: f32) -> u64 {
+    let id = w.spawn_with(kind, pos, &Spawn::new().yaw(yaw.to_radians()));
+    w.set_component(id, &OWNER, owner);
     id
 }

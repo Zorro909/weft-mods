@@ -121,10 +121,10 @@ pub fn register(r: &mut Registry) {
 /// +-----------------------------------------------------------------+
 /// ```
 fn screen(ui: &mut Ui) {
-    ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
+    ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
         ui.title();
         ui.row(S::row().gap(10.0), |ui| {
-            ui.column(S::col().gap(3.0), |ui| {
+            ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let l = c.menu_component(&LEVEL).unwrap_or_default();

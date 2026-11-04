@@ -1,6 +1,6 @@
 //! A box of a model, in texels: 16 to a block. A block's model and hitbox lie in its cell, from 0
 //! to 16 along each axis; an entity's model lies around its feet. The SDK takes a box as its two
-//! corners (`model_box`, `hitbox`) or as a corner and a size (`Part::cube`).
+//! corners (`model_box`, `hitbox`) or as a corner and a size (`ModelPart::cuboid`).
 
 use weft_sdk::*;
 
@@ -45,8 +45,8 @@ impl ModelBox {
     }
 
     /// The entity model part `name` made of this box alone, its texture at `uv`.
-    pub fn part(self, name: &str, uv: [f32; 2]) -> Part {
-        Part::new(name, [0.0; 3]).cube(self.lo, self.size(), uv)
+    pub fn part(self, name: &str, uv: [f32; 2]) -> ModelPart {
+        ModelPart::new(name, [0.0; 3]).cuboid(self.lo, self.size(), uv)
     }
 }
 

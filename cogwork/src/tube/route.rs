@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use super::{DIRECTING_TUBE, NONE, TUBE, kind};
+use super::{DIRECTING_TUBE, NONE, kind};
 use crate::lib::{BlockState, Pos};
 
 pub enum Route {
@@ -72,11 +72,8 @@ fn kind_allows(w: &World, id: u64, pos: Pos, tube_kind: u32, face: u32, stack: I
 /// Whether the neighbor through `face` takes the item: any tube (a full one makes it wait at
 /// the face), or a machine with room. Timber tubes only feed tubes, never back into machines.
 fn takes(w: &World, pos: Pos, face: u32, tube_kind: u32, stack: ItemStack) -> bool {
-    let other = w.block_entity(pos.neighbor(face).into());
-    if other == 0 {
-        return false;
-    }
-    if w.component(other, &TUBE).is_some() {
+    let other = pos.neighbor(face);
+    if super::is_tube(w, other) {
         return true;
     }
     tube_kind != kind::TIMBER && crate::store::accepts(w, other, stack)

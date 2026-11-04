@@ -16,6 +16,8 @@ pub use shape::connects_to_tube;
 pub use sorting::set_sample;
 use weft_sdk::*;
 
+use crate::lib::{BlockState, Pos};
+
 /// Items one tube carries at once.
 pub const SLOTS: usize = 8;
 /// The face of an item put in at the hub instead of through a face.
@@ -74,13 +76,14 @@ pub fn register(r: &mut Registry) {
     r.entity_component(&TUBE, Tube::default(), component_flags::SAVE);
     r.system(&TUBE, travel::tick_tubes);
     for (block, kind, texture) in PLAIN {
-        shape::tube(r.block(block), texture, Arms::Same).tab(&crate::TAB);
-        tube_entity(r, block, kind);
+        shape::tube(r.block(block), texture, Arms::Same)
+            .tab(&crate::TAB)
+            .inventory(SLOTS as u32);
+        attach_tube(r, block, kind);
     }
     // Engines drive the timber tube's pulls.
-    let timber = Entity::named("timber_tube");
     r.attach_with(
-        &timber,
+        &EntityKind::named("timber_tube"),
         &ENERGY,
         Energy {
             stored: 0,
@@ -95,21 +98,18 @@ pub fn register(r: &mut Registry) {
         Arms::Output("tube_directing_out"),
     )
     .on_use(shape::turn_output)
-    .tab(&crate::TAB);
-    tube_entity(r, &DIRECTING_TUBE, kind::DIRECTING);
+    .tab(&crate::TAB)
+    .inventory(SLOTS as u32);
+    attach_tube(r, &DIRECTING_TUBE, kind::DIRECTING);
     sorting::register(r);
     visual::register(r);
 }
 
-/// A tube's block entity: the slots it carries items in and its `Tube` state.
-fn tube_entity(r: &mut Registry, block: &'static Block, kind: u32) {
-    let entity = Entity::generated(block.name().to_string());
-    r.entity(entity)
-        .no_egg()
-        .flags(abi::entity_flags::NO_GRAVITY | abi::entity_flags::INVULNERABLE);
-    r.block_entity(block, entity, SLOTS as u32);
+/// The `Tube` state of a tube's block entity, which `inventory(SLOTS)` gave it for the items it
+/// carries. A block entity's kind is named like its block.
+fn attach_tube(r: &mut Registry, block: &'static Block, kind: u32) {
     r.attach_with(
-        entity,
+        &EntityKind::named(block.name()),
         &TUBE,
         Tube {
             kind,
@@ -118,8 +118,15 @@ fn tube_entity(r: &mut Registry, block: &'static Block, kind: u32) {
     );
 }
 
-/// A slot of the tube `id` that neither holds a stack nor has an item on its way.
-fn free_slot(w: &World, id: u64, tube: &Tube) -> Option<usize> {
-    let inv = w.inventory(id);
+/// Whether the block at `pos` is a tube. Asked of its block, which is cheaper than reading
+/// its `Tube`.
+pub fn is_tube(w: &World, pos: Pos) -> bool {
+    BlockState::at(w, pos).has(&TUBES)
+}
+
+/// A slot of the tube `at` (its entity, or its block) that neither holds a stack nor has an
+/// item on its way.
+fn free_slot(w: &World, at: impl Into<Holder>, tube: &Tube) -> Option<usize> {
+    let inv = w.inventory(at);
     (0..SLOTS).find(|&k| inv.get(k as u32).is_empty() && tube.moving[k].item == 0)
 }

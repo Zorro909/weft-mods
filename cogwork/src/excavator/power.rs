@@ -26,7 +26,7 @@ impl Frame {
 /// same, so a weak supply can't save up to run in bursts.
 pub fn hold(w: &World, id: u64, d: &mut Dig) -> bool {
     let need = d.frame.standby();
-    let Some(e) = w.energy_mut(id) else {
+    let Some(e) = w.component_mut(id, &ENERGY) else {
         return false;
     };
     let drawn = e.stored.min(need);
@@ -53,7 +53,7 @@ pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
 
 /// Pays for up to `max` blocks of drill travel; returns how far the energy took it.
 pub fn travel(w: &World, id: u64, max: f64) -> f64 {
-    let Some(e) = w.energy_mut(id) else {
+    let Some(e) = w.component_mut(id, &ENERGY) else {
         return 0.0;
     };
     let cost = e.stored.min((max * TRAVEL_COST as f64).ceil() as i64);

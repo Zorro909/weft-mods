@@ -153,7 +153,7 @@ pub fn turn_output(u: &mut Use) -> bool {
         .find(|d| connects_to_tube(&w, pos, d.face()));
     if let Some(turned) = next.and_then(|d| tube.with_prop("out", d.name())) {
         joined(&w, pos, turned).place(&w, pos);
-        w.play_sound(&crate::sounds::WRENCH, pos.center().into(), 1.0);
+        w.play_sound(&crate::sounds::WRENCH, pos.center(), 1.0);
     }
     true
 }

@@ -51,7 +51,7 @@ impl Set {
 
     /// Sets the block `offset` from the origin; false if it is not loaded.
     pub fn place(&self, offset: Pos, state: BlockState) -> bool {
-        self.world.set(self.at(offset).into(), state.id())
+        self.world.set_block(self.at(offset), state.id())
     }
 
     /// Sets every block in `area`, in offsets from the origin.
@@ -76,14 +76,14 @@ impl Set {
     }
 
     fn get(&self, offset: Pos) -> BlockState {
-        self.world.get(self.at(offset).into()).into()
+        self.world.block(self.at(offset)).into()
     }
 
     /// Fills the column down from `top` to the first block that isn't air, a plant or a liquid.
     fn fill_hollow(&self, top: Pos, state: BlockState) {
         for y in (top.y - HOLLOW_DEPTH + 1..=top.y).rev() {
             let offset = Pos { y, ..top };
-            if self.world.flags(self.at(offset).into()) & (REPLACEABLE | LIQUID) == 0 {
+            if self.world.block_flags(self.at(offset)) & (REPLACEABLE | LIQUID) == 0 {
                 return;
             }
             self.place(offset, state);

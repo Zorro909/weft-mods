@@ -49,7 +49,7 @@ pub fn start(set: &Set) {
         (Dir::East, "base:obsidian"),
     ];
     let world = set.world();
-    let sorter = world.block_entity(in_world(set, SORTER).into());
+    let sorter = world.block_entity(in_world(set, SORTER));
     for (side, item) in samples {
         if let Some(item) = Item::lookup(item) {
             set_sample(&world, sorter, side.face() * ROW as u32, item);

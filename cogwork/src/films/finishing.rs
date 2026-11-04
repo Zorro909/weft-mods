@@ -46,7 +46,7 @@ pub fn build(set: &Set) {
     for y in pos.y - PIT_DEPTH..pos.y {
         for z in frame.lo.z + 1..frame.hi.z {
             for x in frame.lo.x + 1..frame.hi.x {
-                world.set([x, y, z], air);
+                world.set_block([x, y, z], air);
             }
         }
     }
@@ -57,7 +57,7 @@ pub fn start(set: &Set) {
     let world = set.world();
     let pos = in_world(set, FINISHER);
     let frame = Frame::plan(&world, pos, Dir::South);
-    let Some(d) = world.component_mut(world.block_entity(pos.into()), &DIG) else {
+    let Some(d) = world.component_mut(world.block_entity(pos), &DIG) else {
         return;
     };
     d.frame = frame;
@@ -99,7 +99,7 @@ fn signal_when_done(w: &World) {
     let Some((player, pos)) = *watched else {
         return;
     };
-    let dig = w.component(w.block_entity(pos.into()), &DIG);
+    let dig = w.component(pos, &DIG);
     if dig.is_some_and(|d| d.stage() == Stage::Done) {
         signal(w, player, FINISHED);
         *watched = None;

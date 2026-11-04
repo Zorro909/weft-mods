@@ -1,13 +1,12 @@
-//! A block position with named axes, for code that works positions out. The SDK takes and gives
-//! `[i32; 3]`; `Pos` turns into one and back with `into` and `from`.
+//! A block position that can be saved, for code that works positions out. The SDK takes and
+//! gives `BlockPos`, which is no `Value`; `Pos` goes to SDK calls as it is and comes back from
+//! them with `from`.
 
 use weft_sdk::*;
 
-use super::FloatPos;
-
 value! {
-    /// A block's position. Laid out as the `[i32; 3]` the SDK uses, so a saved `[i32; 3]` loads
-    /// as one.
+    /// A block's position. Laid out as the `[i32; 3]` cogwork saved positions as before, so a
+    /// saved `[i32; 3]` loads as one.
     #[derive(Default, Eq, Hash)]
     pub struct Pos {
         pub x: i32,
@@ -57,10 +56,10 @@ impl Pos {
 
     /// `blocks` blocks from here toward `dir`; away from it for a negative number.
     pub fn toward_by(self, dir: Dir, blocks: i32) -> Pos {
-        let [dx, dy, dz] = dir.offset();
-        self.add_x(dx * blocks)
-            .add_y(dy * blocks)
-            .add_z(dz * blocks)
+        let step = dir.offset();
+        self.add_x(step.x * blocks)
+            .add_y(step.y * blocks)
+            .add_z(step.z * blocks)
     }
 
     /// The block next to this one across its face `face` (in `Dir` order). Tubes, engines,
@@ -70,22 +69,13 @@ impl Pos {
     }
 
     /// The middle of this block.
-    pub fn center(self) -> FloatPos {
-        FloatPos::from(self).add_x(0.5).add_y(0.5).add_z(0.5)
+    pub fn center(self) -> Vec3 {
+        BlockPos::from(self).center()
     }
 
     /// The middle of this block's floor, where something stands on it.
-    pub fn floor_middle(self) -> FloatPos {
-        FloatPos::from(self).add_x(0.5).add_z(0.5)
-    }
-
-    /// The block the point `at` lies in.
-    pub fn containing(at: FloatPos) -> Pos {
-        Pos::new(
-            at.x.floor() as i32,
-            at.y.floor() as i32,
-            at.z.floor() as i32,
-        )
+    pub fn floor_middle(self) -> Vec3 {
+        self.center().offset(0.0, -0.5, 0.0)
     }
 }
 
@@ -95,9 +85,22 @@ impl From<[i32; 3]> for Pos {
     }
 }
 
-impl From<Pos> for [i32; 3] {
-    fn from(p: Pos) -> [i32; 3] {
-        [p.x, p.y, p.z]
+impl From<BlockPos> for Pos {
+    fn from(BlockPos { x, y, z }: BlockPos) -> Pos {
+        Pos { x, y, z }
+    }
+}
+
+impl From<Pos> for BlockPos {
+    fn from(Pos { x, y, z }: Pos) -> BlockPos {
+        BlockPos { x, y, z }
+    }
+}
+
+/// The block at `pos`, as the holder of its block entity's inventory and components.
+impl From<Pos> for Holder {
+    fn from(pos: Pos) -> Holder {
+        Holder::block(pos.into())
     }
 }
 
@@ -124,18 +127,19 @@ mod tests {
     #[test]
     fn a_point_in_the_world_lies_in_one_block() {
         let block = Pos::new(-2, 3, 0);
-        assert_eq!(Pos::containing(block.center()), block, "its middle");
-        assert_eq!(Pos::containing(block.floor_middle()), block, "its floor");
-        let edge = FloatPos::new(-1.5, 3.0, 0.99);
-        assert_eq!(Pos::containing(edge), block, "near its edges");
+        assert_eq!(block.center(), Vec3::new(-1.5, 3.5, 0.5), "its middle");
+        assert_eq!(Pos::from(block.center().block()), block, "lies in it");
+        assert_eq!(Pos::from(block.floor_middle().block()), block, "its floor");
+        let edge = Vec3::new(-1.5, 3.0, 0.99);
+        assert_eq!(Pos::from(edge.block()), block, "near its edges");
     }
 
     #[test]
-    fn it_turns_into_the_sdks_array_and_back() {
+    fn it_turns_into_the_sdks_position_and_back() {
         let p = Pos::new(4, -5, 6);
-        let array: [i32; 3] = p.into();
-        assert_eq!(array, [4, -5, 6], "x, y, z in order");
-        assert_eq!(Pos::from(array), p, "and back");
+        let sdk = BlockPos::from(p);
+        assert_eq!(sdk, BlockPos::new(4, -5, 6), "x, y, z in order");
+        assert_eq!(Pos::from(sdk), p, "and back");
         let size = std::mem::size_of::<Pos>();
         assert_eq!(size, std::mem::size_of::<[i32; 3]>(), "saved alike");
     }

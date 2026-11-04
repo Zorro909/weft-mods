@@ -13,14 +13,14 @@ pub fn register(r: &mut Registry) {
         .max_stack(1)
         .tab(&base_api::tabs::TOOLS)
         .on_use(|wand| {
-            let Some((pos, _)) = wand.target() else {
+            let Some((pos, _)) = wand.target_block() else {
                 return false;
             };
             selection::set_corner(&wand.world(), wand.player(), 1, pos);
             true
         });
     // Hitting a block with the wand marks it instead of breaking it.
-    r.intercept(&question::BREAK_BLOCK, |hit| {
+    r.intercept(&actions::BREAK_BLOCK, |hit| {
         if hit.entity() == 0 || hit.item() != WAND.id() {
             return Verdict::Abstain;
         }

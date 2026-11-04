@@ -24,10 +24,11 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
         let Some(st) = w.entity(id) else { continue };
         let pos = Pos::from(st.block_pos());
         let running = if e.kind == kind::SPRING {
-            w.signal(pos.into()) > 0
+            w.signal(pos) > 0
         } else {
             burn(&w, id, pos, e, ticks)
         };
+        e.running = running as u32;
         let made = if !running {
             0
         } else if e.kind == kind::SPRING {
@@ -39,7 +40,7 @@ pub fn tick_engines(b: &mut SystemBatch<Engine>) {
         push(&w, id, pos);
         let was_overheated = e.overheated;
         warm(e, running, full, ticks);
-        e.stroke = piston::advance(e.stroke, running, w.time());
+        e.stroke = piston::advance(e.stroke, running, w.game_time());
         sound(&w, pos, e, running, was_overheated);
         show_heat(&w, pos, e);
         piston::show(&w, id, pos, e);
@@ -60,8 +61,8 @@ fn burn(w: &World, id: u64, pos: Pos, e: &mut Engine, ticks: u32) -> bool {
         };
         e.burn = t;
         e.burn_max = t;
-        slot.set(0, use_one(fuel));
-        w.play_sound(&sounds::EMBER_IGNITE, pos.center().into(), 1.0);
+        slot.set(0, consume_one(fuel));
+        w.play_sound(&sounds::EMBER_IGNITE, pos.center(), 1.0);
     }
     e.burn = e.burn.saturating_sub(ticks);
     true
@@ -74,7 +75,7 @@ fn fuel_ticks(stack: ItemStack) -> Option<u32> {
 
 /// Adds what the engine made to its store; true when the store is full.
 fn store(w: &World, id: u64, made: i64) -> bool {
-    let Some(energy) = w.energy_mut(id) else {
+    let Some(energy) = w.component_mut(id, &ENERGY) else {
         return false;
     };
     energy.stored = (energy.stored + made).min(energy.capacity);
@@ -86,13 +87,12 @@ fn push(w: &World, id: u64, pos: Pos) {
     let Some(out) = model::output(w, pos) else {
         return;
     };
-    let target = w.block_entity(pos.neighbor(out.face()).into());
-    let stored = w.energy(id).map_or(0, |e| e.stored);
-    if target == 0 || target == id || stored == 0 {
+    let stored = w.component(id, &ENERGY).map_or(0, |e| e.stored);
+    if stored == 0 {
         return;
     }
-    let moved = w.insert_energy(target, stored.min(PUSH), false);
-    if let Some(energy) = w.energy_mut(id) {
+    let moved = w.energy_move(pos.neighbor(out.face()), stored.min(PUSH), false);
+    if let Some(energy) = w.component_mut(id, &ENERGY) {
         energy.stored -= moved;
     }
 }
@@ -121,7 +121,7 @@ fn warm(e: &mut Engine, running: bool, full: bool, ticks: u32) {
 /// The piston's knock at the top of each stroke, and the ember engine cutting out as it
 /// overheats and starting again once cooled.
 fn sound(w: &World, pos: Pos, e: &Engine, running: bool, was_overheated: u32) {
-    let at = pos.center().into();
+    let at = pos.center();
     if running && piston::at_top(e.stroke) {
         let stroke = if e.kind == kind::SPRING {
             &sounds::SPRING_STROKE
@@ -131,8 +131,8 @@ fn sound(w: &World, pos: Pos, e: &Engine, running: bool, was_overheated: u32) {
         w.play_sound(stroke, at, 1.0);
     }
     match (was_overheated, e.overheated) {
-        (0, 1) => w.play_sound(&sounds::OVERHEAT, at, 1.0),
-        (1, 0) => w.play_sound(&sounds::COOLED, at, 1.0),
+        (0, 1) => drop(w.play_sound(&sounds::OVERHEAT, at, 1.0)),
+        (1, 0) => drop(w.play_sound(&sounds::COOLED, at, 1.0)),
         _ => {}
     }
 }
@@ -146,8 +146,8 @@ fn show_heat(w: &World, pos: Pos, e: &Engine) {
         _ => 2,
     };
     let heat = heat.to_string();
-    if w.prop(pos.into(), "heat") != Some(heat.as_str()) {
-        w.set_prop(pos.into(), "heat", &heat);
+    if w.prop(pos, "heat") != Some(heat.as_str()) {
+        w.prop_set(pos, "heat", &heat);
     }
 }
 

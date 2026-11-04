@@ -63,12 +63,12 @@ pub fn register(r: &mut Registry) {
 }
 
 fn screen(ui: &mut Ui) {
-    ui.panel("panel", S::col().pad(7.0).gap(3.0), |ui| {
+    ui.panel("panel", S::column().pad(7.0).gap(3.0), |ui| {
         ui.title();
         for (face, (color, _)) in SIDES.into_iter().enumerate() {
             ui.row(S::row().gap(6.0), |ui| {
                 ui.image(&format!("cogwork:gui/swatch_{color}"), 10.0, 10.0);
-                ui.text_styled(S::col().w(36.0), &format!("cogwork.color.{color}"), &[]);
+                ui.text_styled(S::column().w(36.0), &format!("cogwork.color.{color}"), &[]);
                 ui.row(S::row(), |ui| (0..ROW).for_each(|i| sample(ui, face, i)));
             });
         }

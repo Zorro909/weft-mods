@@ -38,21 +38,21 @@ impl Structure {
         turn: Turn,
     ) -> Result<Vec<([i32; 3], u32)>, PlaceError> {
         let states = self.states(turn)?;
-        let size = self.size();
+        let (size, corner) = (self.size(), BlockPos::from(corner));
         let blocks: Vec<([i32; 3], u32)> = self
             .blocks()
             .map(|(pos, name)| {
-                let [x, y, z] = turn.pos(pos, size);
-                ([corner[0] + x, corner[1] + y, corner[2] + z], states[name])
+                let pos = corner + turn.pos(pos, size).into();
+                (pos.to_array(), states[name])
             })
             .collect();
         let replaced: Option<Vec<([i32; 3], u32)>> = blocks
             .iter()
-            .map(|&(pos, _)| world.get_loaded(pos).map(|state| (pos, state)))
+            .map(|&(pos, _)| world.block_loaded(pos).map(|state| (pos, state)))
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
         for &(pos, state) in &blocks {
-            world.set(pos, state);
+            world.set_block(pos, state);
         }
         Ok(replaced)
     }

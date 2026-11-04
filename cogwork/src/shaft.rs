@@ -47,9 +47,7 @@ fn refresh(w: &World, pos: Pos) {
     let mut next = shaft;
     for d in Dir::ALL {
         let at = pos.toward(d);
-        let other = w.block_entity(at.into());
-        let holds_energy = other != 0 && w.energy(other).is_some();
-        let joins = BlockState::at(w, at).has(&CONDUCTOR) || holds_energy;
+        let joins = BlockState::at(w, at).has(&CONDUCTOR) || w.component(at, &ENERGY).is_some();
         next = next.with_flag(d.name(), joins);
     }
     if next != shaft {

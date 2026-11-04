@@ -93,8 +93,8 @@ pub fn start(set: &Set) {
     let world = set.world();
     let item = |name: &str| Item::lookup(name).unwrap_or(0);
     let (cogs, stone_cogs) = (
-        world.block_entity(in_world(set, COGS).into()),
-        world.block_entity(in_world(set, STONE_COGS).into()),
+        world.block_entity(in_world(set, COGS)),
+        world.block_entity(in_world(set, STONE_COGS)),
     );
     for cell in ROUND {
         set_ghost(&world, cogs, cell, item("base:stick"));
@@ -105,6 +105,5 @@ pub fn start(set: &Set) {
 
 /// Throws the lever: the whole row starts.
 pub fn switch_on(set: &Set) {
-    set.world()
-        .set_prop(in_world(set, LEVER).into(), "power", "on");
+    set.world().prop_set(in_world(set, LEVER), "power", "on");
 }

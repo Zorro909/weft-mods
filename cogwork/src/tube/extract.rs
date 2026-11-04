@@ -30,7 +30,7 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
     }
     tube.timer = PULL_EVERY;
     let energy = w
-        .energy_mut(id)
+        .component_mut(id, &ENERGY)
         .map_or(0, |e| std::mem::take(&mut e.stored));
     let paid_for = items_for(energy);
     let mut left = paid_for;
@@ -57,29 +57,27 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
         };
     }
     if left < paid_for {
-        w.play_sound(&crate::sounds::TUBE_PULL, pos.center().into(), 1.0);
+        w.play_sound(&crate::sounds::TUBE_PULL, pos.center(), 1.0);
     }
 }
 
 /// The machine (not a tube) the tube at `pos` touches through `face`.
-fn source(w: &World, pos: Pos, face: u32) -> Option<u64> {
-    if !super::connects_to_tube(w, pos, face) {
-        return None;
-    }
-    let other = w.block_entity(pos.neighbor(face).into());
-    (other != 0 && w.component(other, &TUBE).is_none()).then_some(other)
+fn source(w: &World, pos: Pos, face: u32) -> Option<Pos> {
+    let other = pos.neighbor(face);
+    let machine = super::connects_to_tube(w, pos, face) && !super::is_tube(w, other);
+    machine.then_some(other)
 }
 
-/// Puts `stack` into the tube `id` at its hub, as much as it has room for; returns the rest.
+/// Puts `stack` into the tube at `pos` at its hub, as much as it has room for; returns the rest.
 /// For machines outside the tube system: their callbacks see tubes outside a batch.
-pub fn inject(w: &World, id: u64, stack: ItemStack) -> ItemStack {
-    let Some(tube) = w.component(id, &TUBE).copied() else {
+pub fn inject(w: &World, pos: Pos, stack: ItemStack) -> ItemStack {
+    let Some(tube) = w.component(pos, &TUBE) else {
         return stack;
     };
-    let Some(slot) = free_slot(w, id, &tube) else {
+    let Some(slot) = free_slot(w, pos, &tube) else {
         return stack;
     };
-    w.inventory(id).set(slot as u32, stack);
+    w.inventory(pos).set(slot as u32, stack);
     ItemStack::EMPTY
 }
 

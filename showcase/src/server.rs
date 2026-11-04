@@ -1,23 +1,24 @@
 //! Server half: `/showcase play` makes the player the camera and asks the film's mod to build
-//! its set; the client reports the start, cues and end of the film here. A film no mod answers
-//! for in time gives the player back what they had.
+//! its set; the client reports the start, cues and end of the film here. The film camera is held
+//! from its start to its end, whichever way it was started, since only the server can hold one.
+//! A film no mod answers for in time gives the player back what they had.
 
 use std::sync::Mutex;
 
 use showcase_api::{CUE, Cue, Name, PLAY, Play, Pos};
-use weft_sdk::abi::game_mode;
 use weft_sdk::*;
 
 use crate::lock;
+use crate::view::FILM;
 
 value! {
     /// A film reached `Film::cue(name)`.
     pub struct Reached { pub film: Name, pub origin: Pos, pub name: Name }
 }
 pub static REACHED: Channel<Reached> = Channel::named("reached");
-/// The film arrived and plays.
+/// The film arrived, or one of this client's own began, and plays.
 pub static STARTED: Channel<()> = Channel::named("started");
-/// The film is over: the player gets back their game mode and place.
+/// The film is over: the player gets back their camera, game mode and place.
 pub static FINISHED: Channel<()> = Channel::named("finished");
 value! {
     /// A film's `Film::menu` step: open `menu` on the block at `at` for this player.
@@ -37,12 +38,14 @@ const ANSWER_TICKS: u64 = 20 * 10;
 const NOON: u64 = 6000;
 /// Ten minutes of clear weather, longer than any film.
 const CLEAR_TICKS: u32 = 20 * 60 * 10;
+/// How the view eases out of the film camera back to the player's own: seconds, `easing::*`.
+const CAMERA_EXIT: (f32, u32) = (0.8, easing::SMOOTH);
 
 /// What a watching player had before the film, given back at its end.
 struct Before {
     player: u64,
     game_mode: u32,
-    pos: [f64; 3],
+    pos: Vec3,
 }
 
 /// A film asked for that hasn't started yet.
@@ -74,7 +77,7 @@ pub fn register(r: &mut Registry) {
             }
         }
     });
-    r.packet(&STARTED, |p, ()| answered(p.player()));
+    r.packet(&STARTED, |p, ()| start(&p.world(), p.player()));
     r.world_tick(give_up);
     r.packet(&REACHED, |p, reached| {
         let cue = Cue {
@@ -88,7 +91,19 @@ pub fn register(r: &mut Registry) {
     r.packet(&OPEN_MENU, |p, open| {
         open_menu(&p.world(), p.player(), open)
     });
-    r.packet(&FINISHED, |p, ()| restore(&p.world(), p.player()));
+    r.packet(&FINISHED, |p, ()| finish(&p.world(), p.player()));
+}
+
+fn start(world: &World, player: u64) {
+    answered(player);
+    // At once, as the mode has no change of its own: by the time this arrives the client has
+    // already moved the player where the film begins, so there is nothing to ease from.
+    world.force_camera(player, &FILM, None);
+}
+
+fn finish(world: &World, player: u64) {
+    world.release_camera(player, Some(CAMERA_EXIT));
+    restore(world, player);
 }
 
 fn open_menu(world: &World, player: u64, open: OpenMenu) {
@@ -97,7 +112,7 @@ fn open_menu(world: &World, player: u64, open: OpenMenu) {
         warn!("showcase: a film opens the menu {menu}, which no mod has");
         return;
     };
-    world.open_menu_at(player, Id::<Menu>::from(id), open.at.into());
+    world.open_menu(player, Id::<Menu>::from(id), Holder::block(open.at.into()));
 }
 
 /// Makes the player the camera: a spectator at noon in clear weather. Returns the block they
@@ -109,10 +124,10 @@ fn prepare(world: &World, player: u64) -> Option<Pos> {
         game_mode: world.game_mode(player),
         pos: me.pos,
     });
-    world.set_game_mode(player, game_mode::SPECTATOR);
+    world.set_game_mode(player, &game_modes::SPECTATOR);
     world.set_day_time(NOON);
-    world.set_weather(false, false, CLEAR_TICKS);
-    Some(block_at(me.pos).into())
+    world.set_weather(&weathers::CLEAR, CLEAR_TICKS);
+    Some(block_pos_of(me.pos).into())
 }
 
 /// Asks the mod that owns `film` to build it around `origin` and send it to `player`.
@@ -127,7 +142,7 @@ fn ask(world: &World, player: u64, origin: Pos, film: &str) {
         },
     );
     answered(player);
-    let tick = world.time();
+    let tick = world.game_time();
     lock(&ASKED).push(Asked { player, film, tick });
 }
 
@@ -137,7 +152,7 @@ fn answered(player: u64) {
 
 /// Gives the players here whose film never came back what they had, and tells them.
 fn give_up(world: &World) {
-    let now = world.time();
+    let now = world.game_time();
     // Players in this world; `players()` would leave out spectators, which the film made them.
     let here = |player: u64| world.entity(player).is_some();
     let late: Vec<Asked> = lock(&ASKED)

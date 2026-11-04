@@ -23,6 +23,11 @@ as one big chest. An assembly bench takes only what its pattern asks for.
 An item that burns always goes into a `fuel` group when the machine has one. Logs sent into a
 furnace by tube therefore end up as its fuel, never in its input.
 
+Tubes carry items only, so they leave liquid groups (`Slots::liquid`) alone: a group, or a whole
+plain inventory, that holds a liquid is neither filled nor emptied. The SDK doesn't say which
+groups are liquid ones, so an empty one looks like any other to them: a machine with liquid
+groups should give them names of their own and name its item groups as above.
+
 ## Energy
 
 Engines push into any block entity that takes `core:energy` (up to 200 a tick), and the

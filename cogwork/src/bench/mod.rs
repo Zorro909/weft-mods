@@ -104,10 +104,10 @@ pub fn register(r: &mut Registry) {
 ///
 /// A pattern cell shows its ghost item until it holds items.
 fn screen(ui: &mut Ui) {
-    ui.panel("panel", S::col().pad(7.0).gap(4.0), |ui| {
+    ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
         ui.title();
         ui.row(S::row().gap(8.0), |ui| {
-            ui.column(S::col(), |ui| {
+            ui.column(S::column(), |ui| {
                 for row in 0..3 {
                     ui.row(S::row(), |ui| {
                         (0..3).for_each(|col| cell(ui, row * 3 + col))
@@ -121,9 +121,9 @@ fn screen(ui: &mut Ui) {
             ui.group("output");
         });
         // As wide as the inventory whatever it says, so the cells don't move under the cursor.
-        ui.column(S::col().gap(3.0).w(INVENTORY_WIDTH), |ui| {
+        ui.column(S::column().gap(3.0).w(INVENTORY_WIDTH), |ui| {
             crate::machine::power_bar(ui);
-            ui.text_bind_styled(S::col().no_wrap(), |c, out| {
+            ui.text_bind_styled(S::column().no_wrap(), |c, out| {
                 let b = c.menu_component(&BENCH).unwrap_or_default();
                 let status: &str = Status::from_repr(b.status).unwrap_or_default().into();
                 out.set(&format!("cogwork.bench.{status}"), &[]);
