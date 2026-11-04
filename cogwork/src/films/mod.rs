@@ -1,11 +1,14 @@
 //! Cogwork's film for the showcase mod, built only with the `showcase` feature:
 //! `weft --showcase cogwork:showcase`, or `tools/showcase.sh cogwork:showcase`. A site on flat
-//! meadow: excavators at work and one putting up its frame, their output sorted by tubes, and
-//! an assembly line of two benches started by a lever. The camera mostly looks north, at the
+//! meadow: excavators at work and one putting up its frame, their output sorted by tubes, an
+//! assembly line of two benches started by a lever, a leveler set out with survey markers and
+//! the tuning wrench, and an excavator finishing its job. The camera mostly looks north, at the
 //! machines' working side.
 
 mod crafting;
 mod excavators;
+mod finishing;
+mod leveling;
 mod parts;
 
 use showcase_api::{Ease, Film, Look, Set, crane, dolly, film, flyby, orbit};
@@ -21,21 +24,31 @@ pub fn register(r: &mut Registry) {
         .on_cue("start", |set| {
             excavators::start(set);
             crafting::start(set);
+            finishing::start(set);
         })
         .on_cue("build", excavators::power_builder)
-        .on_cue("switch", crafting::switch_on);
+        .on_cue("switch", crafting::switch_on)
+        .on_cue("survey", leveling::survey)
+        .on_cue("leveler", leveling::place_leveler)
+        .on_cue("wrench", leveling::turn_engine)
+        .on_cue("finish", finishing::power);
+    finishing::register(r);
 }
 
 fn showcase(set: &Set) -> Film {
     // Flat ground as far as the camera comes near, the landscape around left as it is.
-    set.level([-30, -16], [30, 30], 20);
+    set.level([-30, -16], [42, 30], 20);
     excavators::build(set);
     crafting::build(set);
+    leveling::build(set);
+    finishing::build(set);
     let film = Film::new().cue("start");
     let film = opening(film);
     let film = excavating(film);
     let film = sorting(film);
     let film = autocrafting(film);
+    let film = surveying(film);
+    let film = finishing(film);
     closing(film)
 }
 
@@ -154,9 +167,67 @@ fn autocrafting(film: Film) -> Film {
         .wait(5.0)
 }
 
+/// East from the benches to the leveling site: the corner marker shows the rectangle, the
+/// leveler goes down and the wrench turns its engine to it; round the hill while it is leveled.
+/// Halfway round, the excavator further east is started: the floor of the world is too deep
+/// to be loaded, so it waits out its ten seconds for it and is done as the camera gets there.
+fn surveying(film: Film) -> Film {
+    let bench: [f64; 3] = crafting::STONE_COGS.center().into();
+    let site = [13.0, 0.0, 19.5];
+    let over = [[-1.5, 2.0, 20.5], [3.5, 3.5, 25.5], [9.0, 4.0, 29.0]];
+    film.shot(
+        flyby(&over)
+            .look(Look::Pan(bench, site))
+            .secs(5.0)
+            .blend(1.0),
+    )
+    .title("cogwork.film.survey", 3.0)
+    .cue("survey")
+    .wait(3.0)
+    .cue("leveler")
+    .title("cogwork.film.wrench", 2.5)
+    .wait(1.5)
+    .cue("wrench")
+    .wait(1.0)
+    .title("cogwork.film.level", 5.0)
+    .shot(
+        orbit(leveling::MIDDLE, 11.9)
+            .arc(118.0, 84.0)
+            .height(3.5, 4.75)
+            .ease(Ease::In)
+            .secs(6.0)
+            .blend(1.0),
+    )
+    .cue("finish")
+    .shot(
+        orbit(leveling::MIDDLE, 11.9)
+            .arc(84.0, 50.0)
+            .height(4.75, 6.0)
+            .ease(Ease::Out)
+            .secs(6.0),
+    )
+}
+
+/// On east to the excavator at the end of its job, which finishes as the camera gets there, and
+/// its screen says it is done.
+fn finishing(film: Film) -> Film {
+    let toward = [[22.2, 6.5, 27.6], [27.0, 7.0, 21.0], [31.0, 6.5, 15.0]];
+    let pit_edge = [32.5, 0.5, 0.0];
+    film.shot(
+        flyby(&toward)
+            .look(Look::Pan(leveling::MIDDLE, pit_edge))
+            .secs(5.0),
+    )
+    .title("cogwork.film.finish", 5.0)
+    .wait_for(finishing::FINISHED, 12.0)
+    .wait(1.5)
+    .menu("cogwork:excavator", finishing::FINISHER.into(), 4.0)
+    .wait(4.0)
+}
+
 /// Up and away over the whole site and the lake behind.
 fn closing(film: Film) -> Film {
-    let path = [[0.0, 4.0, 23.0], [10.0, 20.0, 36.0], [2.0, 42.0, 50.0]];
+    let path = [[31.0, 6.5, 15.0], [22.0, 20.0, 32.0], [6.0, 42.0, 50.0]];
     film.title("cogwork.film.end", 5.0)
-        .shot(flyby(&path).look_at([0.0, 0.0, 4.0]).secs(11.0).blend(1.5))
+        .shot(flyby(&path).look_at([8.0, 0.0, 6.0]).secs(11.0).blend(1.5))
 }

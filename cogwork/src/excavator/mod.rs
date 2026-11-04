@@ -16,6 +16,8 @@ pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
 pub use area::Frame;
+#[cfg(feature = "showcase")]
+pub use dig::FLOOR_Y;
 
 use crate::lib::{FloatPos, Pos};
 

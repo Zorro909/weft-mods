@@ -7,6 +7,8 @@ mod model;
 mod piston;
 mod run;
 
+#[cfg(feature = "showcase")]
+pub use model::turn;
 use weft_sdk::*;
 
 pub static SPRING_ENGINE: Block = Block::named("spring_engine");

@@ -93,6 +93,7 @@ fn decide(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize, stack: Ite
         Route::Out(face) => m.to = face,
         Route::Wait => {}
         Route::Destroy => {
+            w.play_sound(&crate::sounds::TUBE_VOID, pos.center().into(), 1.0);
             w.inventory(id).set(slot as u32, ItemStack::EMPTY);
             visual::remove(w, m.visual);
             *m = Motion::default();

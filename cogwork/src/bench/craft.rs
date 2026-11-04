@@ -8,6 +8,7 @@ use base_api::CRAFTING;
 use weft_sdk::*;
 
 use super::{Bench, CRAFT_COST, Status, cells, pattern};
+use crate::lib::Pos;
 use crate::store::{insert_all, insert_into};
 
 /// The most energy a bench puts into a craft per tick: one takes at least 8 ticks.
@@ -21,15 +22,16 @@ pub fn tick(b: &mut SystemBatch<Bench>) {
     let w = b.world();
     for (id, bench, _) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
+        let pos = Pos::from(st.block_pos());
         let pattern = pattern(bench);
         let status = if evict_misplaced(&w, id, &pattern) {
-            work(&w, id, bench, &pattern)
+            work(&w, id, pos, bench, &pattern)
         } else {
             Status::Full
         };
         bench.status = status as u32;
         bench.filled = filled(&grid(&w, id));
-        crate::machine::show_working(&w, st.block_pos().into(), status == Status::Working);
+        crate::machine::show_working(&w, pos, status == Status::Working);
     }
 }
 
@@ -58,8 +60,9 @@ fn evict_misplaced(w: &World, id: u64, pattern: &[u32; 9]) -> bool {
     all_out
 }
 
-/// Works on the next craft of `pattern`: pays for it, then makes it once the output has room.
-fn work(w: &World, id: u64, bench: &mut Bench, pattern: &[u32; 9]) -> Status {
+/// Works on the next craft of `pattern` at the bench `id` at `pos`: pays for it, then makes it
+/// once the output has room.
+fn work(w: &World, id: u64, pos: Pos, bench: &mut Bench, pattern: &[u32; 9]) -> Status {
     let result = made_by(pattern);
     if result.is_empty() {
         bench.spent = 0;
@@ -84,6 +87,7 @@ fn work(w: &World, id: u64, bench: &mut Bench, pattern: &[u32; 9]) -> Status {
         return Status::Full;
     }
     use_up(w, id, &cells);
+    w.play_sound(&crate::sounds::CRAFT, pos.center().into(), 1.0);
     bench.spent = 0;
     Status::Working
 }

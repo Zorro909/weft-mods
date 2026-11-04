@@ -32,10 +32,11 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
     let energy = w
         .energy_mut(id)
         .map_or(0, |e| std::mem::take(&mut e.stored));
-    let mut left = items_for(energy);
+    let paid_for = items_for(energy);
+    let mut left = paid_for;
     for face in 0..6 {
         let Some(slot) = free_slot(w, id, tube).filter(|_| left > 0) else {
-            return;
+            break;
         };
         let Some(from) = source(w, pos, face) else {
             continue;
@@ -54,6 +55,9 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
             from: face,
             to: NONE,
         };
+    }
+    if left < paid_for {
+        w.play_sound(&crate::sounds::TUBE_PULL, pos.center().into(), 1.0);
     }
 }
 

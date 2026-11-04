@@ -87,7 +87,8 @@ from where you stand and shows each in turn under its name.
 whose spawn is a meadow by a lake, plays the film there once and quits. `--showcase-seed`
 picks another seed and `--showcase-dim` another dimension.
 `tools/showcase.sh <mod:film>` in this repository builds everything, runs that on a virtual
-screen and writes the video to `showcase/out/`; `--help` lists its options.
+screen and writes the video, with the game's sound, to `showcase/out/`; `--help` lists its
+options and the packages it needs (weston, PipeWire, GStreamer).
 
 ## Camera paths by hand
 

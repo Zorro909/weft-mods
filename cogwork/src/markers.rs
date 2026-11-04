@@ -92,16 +92,22 @@ fn beside(w: &World, pos: Pos) -> Option<Pos> {
         .find(|&p| BlockState::at(w, p).is(&SURVEY_MARKER))
 }
 
-/// Using a marker draws its rectangle in the air for a few seconds; a marker without one puffs.
 fn show(u: &mut Use) -> bool {
+    survey(&u.world(), Pos::from(u.pos()));
+    true
+}
+
+/// Using the marker at `pos`: its rectangle drawn in the air for a few seconds, or a puff from a
+/// marker without one.
+pub fn survey(w: &World, pos: Pos) {
     static POOF: Particle = Particle::named("core:poof");
-    let w = u.world();
-    let pos = Pos::from(u.pos());
-    match rectangle(&w, pos) {
-        Some(area) => outline(&w, &area),
+    match rectangle(w, pos) {
+        Some(area) => {
+            outline(w, &area);
+            w.play_sound(&crate::sounds::SURVEY, pos.center().into(), 1.0);
+        }
         None => drop(w.spawn_particles(&POOF, pos.center().into()).count(6)),
     }
-    true
 }
 
 /// Glowing points along the edges of the rectangle, every half block.

@@ -26,7 +26,7 @@ pub fn engine<'a>(b: BlockBuilder<'a>, kind: &'static str) -> BlockBuilder<'a> {
         .prop("heat", 0..=3)
         .sound_group("base:block.stone")
         .states(move |p, s| shape(p, s, kind))
-        .on_use(turn)
+        .on_use(use_wrench)
 }
 
 /// The boxes for one state, written lying on the floor with the trunk up.
@@ -79,19 +79,23 @@ fn faces<'t>(
     ]
 }
 
-/// The tuning wrench points the engine's trunk the next way round.
-fn turn(u: &mut Use) -> bool {
+fn use_wrench(u: &mut Use) -> bool {
     let w = u.world();
     if !crate::cogs::holds_wrench(&w, u.player()) {
         return false;
     }
-    let pos = u.pos();
+    turn(&w, Pos::from(u.pos()));
+    true
+}
+
+/// The tuning wrench on the engine at `pos`: its trunk points the next way round.
+pub fn turn(w: &World, pos: Pos) {
     let now = w
-        .prop(pos, "facing")
+        .prop(pos.into(), "facing")
         .and_then(Dir::from_name)
         .map_or(0, Dir::face);
-    w.set_prop(pos, "facing", Dir::from_face((now + 1) % 6).name());
-    true
+    w.set_prop(pos.into(), "facing", Dir::from_face((now + 1) % 6).name());
+    w.play_sound(&crate::sounds::WRENCH, pos.center().into(), 1.0);
 }
 
 /// Where the engine's trunk points: its output.
