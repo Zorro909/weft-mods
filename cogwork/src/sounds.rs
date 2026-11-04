@@ -21,24 +21,25 @@ pub static WRENCH: Sound = Sound::named("tool.wrench");
 pub static SURVEY: Sound = Sound::named("marker.survey");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
-/// The sounds heard in the world: files, volume, lowest and highest pitch, blocks they carry.
+/// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
+/// carry (fading out on the way there): heavy machinery far, small parts close.
 static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 16] = [
-    (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 16.0),
-    (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 16.0),
-    (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 16.0),
-    (&OVERHEAT, "engine/overheat", 1.0, 0.95, 1.05, 24.0),
-    (&COOLED, "engine/cooled", 0.7, 0.95, 1.05, 16.0),
-    (&TUBE_PULL, "tube/pull", 0.5, 0.85, 1.15, 12.0),
-    (&TUBE_VOID, "tube/void", 0.6, 0.9, 1.1, 12.0),
-    (&TUBE_JAM, "tube/jam_drop", 0.8, 0.9, 1.1, 16.0),
-    (&FRAME_PLACE, "excavator/frame_place", 0.6, 0.85, 1.1, 24.0),
-    (&DRILL, "excavator/drill", 0.7, 0.9, 1.1, 24.0),
-    (&EXCAVATOR_DONE, "excavator/done", 1.0, 1.0, 1.0, 32.0),
-    (&CRAFT, "bench/craft", 0.7, 0.95, 1.05, 16.0),
-    (&SCRAPE, "leveler/scrape", 0.6, 0.85, 1.1, 16.0),
-    (&FILL, "leveler/fill", 0.6, 0.85, 1.1, 16.0),
-    (&WRENCH, "tool/wrench", 0.8, 0.95, 1.05, 8.0),
-    (&SURVEY, "marker/survey", 0.8, 1.0, 1.0, 24.0),
+    (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
+    (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
+    (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
+    (&OVERHEAT, "engine/overheat", 1.0, 0.95, 1.05, 48.0),
+    (&COOLED, "engine/cooled", 0.7, 0.95, 1.05, 32.0),
+    (&TUBE_PULL, "tube/pull", 0.5, 0.85, 1.15, 16.0),
+    (&TUBE_VOID, "tube/void", 0.6, 0.9, 1.1, 16.0),
+    (&TUBE_JAM, "tube/jam_drop", 0.8, 0.9, 1.1, 20.0),
+    (&FRAME_PLACE, "excavator/frame_place", 0.6, 0.85, 1.1, 40.0),
+    (&DRILL, "excavator/drill", 0.7, 0.9, 1.1, 48.0),
+    (&EXCAVATOR_DONE, "excavator/done", 1.0, 1.0, 1.0, 64.0),
+    (&CRAFT, "bench/craft", 0.7, 0.95, 1.05, 24.0),
+    (&SCRAPE, "leveler/scrape", 0.6, 0.85, 1.1, 32.0),
+    (&FILL, "leveler/fill", 0.6, 0.85, 1.1, 32.0),
+    (&WRENCH, "tool/wrench", 0.8, 0.95, 1.05, 12.0),
+    (&SURVEY, "marker/survey", 0.8, 1.0, 1.0, 32.0),
 ];
 
 pub fn register(r: &mut Registry) {
