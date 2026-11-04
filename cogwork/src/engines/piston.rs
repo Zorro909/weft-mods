@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{ENGINE, Engine, kind, model};
-use crate::lib::Pos;
+use crate::lib::{ModelBox, Pos};
 
 /// The pistons lying flat (engines facing up or down), then standing (facing sideways), by
 /// engine kind.
@@ -46,7 +46,8 @@ fn claims(w: &World, owner: u64, id: u64) -> bool {
 
 /// A 16 by 4 by 16 plate centered on the pivot, which is 2 texels above the entity's feet.
 fn plate() -> Part {
-    Part::new("plate", [0.0, 2.0, 0.0]).cube([-8.0, -2.0, -8.0], [16.0, 4.0, 16.0], [0.0, 0.0])
+    let plate = ModelBox::sized([-8.0, -2.0, -8.0], [16.0, 4.0, 16.0]);
+    Part::new("plate", [0.0, 2.0, 0.0]).cube(plate.lo, plate.size(), [0.0, 0.0])
 }
 
 /// The plate stood on its edge, a quarter turn about x: thin along z.

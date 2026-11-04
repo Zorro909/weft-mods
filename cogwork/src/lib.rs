@@ -11,17 +11,19 @@ mod films;
 mod ghost;
 mod harvest;
 mod leveler;
-/// The types the whole mod builds on: block positions, points in the world, block states and
-/// areas on the ground, in `src/lib/`.
+/// The types the whole mod builds on: block positions, points in the world, block states, areas
+/// on the ground and model boxes, in `src/lib/`.
 mod lib {
     mod area;
     mod block_state;
     mod float_pos;
+    mod model_box;
     mod pos;
 
     pub use area::Area;
     pub use block_state::BlockState;
     pub use float_pos::FloatPos;
+    pub use model_box::ModelBox;
     pub use pos::Pos;
 }
 mod machine;

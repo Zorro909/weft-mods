@@ -3,13 +3,12 @@
 
 use weft_sdk::*;
 
-use crate::lib::{BlockState, Pos};
+use crate::lib::{BlockState, ModelBox, Pos};
 
 pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
 
-/// The rod, in texels: 4 wide in the middle of the block.
-const LO: f32 = 6.0;
-const HI: f32 = 10.0;
+/// The rod's middle: 4 texels wide in the middle of the block. Its arms are as thick.
+const HUB: ModelBox = ModelBox::new([6.0; 3], [10.0; 3]);
 
 pub fn register(r: &mut Registry) {
     let mut b = r.block(&TORQUE_SHAFT);
@@ -27,14 +26,13 @@ pub fn register(r: &mut Registry) {
 }
 
 fn model<'s>(p: &Props, s: State<'s>) -> State<'s> {
-    let rod = |s: State<'s>, lo: [f32; 3], hi: [f32; 3]| {
+    let rod = |s: State<'s>, part: ModelBox| {
         // Its boxes are what it collides with, too.
-        s.model_box_faces(lo, hi, [("torque_shaft", abi::UV_FROM_BOX); 6])
+        s.model_box_faces(part.lo, part.hi, [("torque_shaft", abi::UV_FROM_BOX); 6])
     };
-    let mut s = rod(s.texture("torque_shaft"), [LO; 3], [HI; 3]);
+    let mut s = rod(s.texture("torque_shaft"), HUB);
     for d in Dir::ALL.into_iter().filter(|d| p.is(d.name(), "true")) {
-        let (lo, hi) = crate::tube::arm(d, LO, HI);
-        s = rod(s, lo, hi);
+        s = rod(s, HUB.arm(d));
     }
     s
 }

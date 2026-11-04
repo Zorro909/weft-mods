@@ -6,7 +6,7 @@
 use weft_sdk::*;
 
 use super::{Dig, Frame, Stage};
-use crate::lib::FloatPos;
+use crate::lib::{FloatPos, ModelBox};
 
 static CARRIAGE: Entity = Entity::named("drill_carriage");
 static BIT: Entity = Entity::named("drill_bit");
@@ -30,13 +30,11 @@ const BIT_HEIGHT: f64 = 0.75;
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
     r.attach(&Entity::named("excavator"), &RIG);
-    let part = |origin: [f32; 3], size: [f32; 3]| {
-        Part::new("body", [0.0; 3]).cube(origin, size, [0.0, 0.0])
-    };
+    let body = |lo, size| ModelBox::sized(lo, size).part("body", [0.0, 0.0]);
     let pieces: [(&'static Entity, Vec<Part>, [u32; 2]); 4] = [
         (
             &CARRIAGE,
-            vec![part([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0])],
+            vec![body([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0])],
             [64, 32],
         ),
         (
@@ -44,21 +42,21 @@ pub fn register(r: &mut Registry) {
             // `bit` turns about its own axis (`animations/drill_bit.animation.json`), the tip
             // with it.
             vec![
-                Part::new("bit", [0.0; 3]).cube([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0], [0.0, 0.0]),
-                Part::new("tip", [0.0; 3])
-                    .cube([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0], [32.0, 0.0])
+                ModelBox::sized([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0]).part("bit", [0.0, 0.0]),
+                ModelBox::sized([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0])
+                    .part("tip", [32.0, 0.0])
                     .child_of(0),
             ],
             [64, 32],
         ),
         (
             &SHAFT,
-            vec![part([-2.0, 0.0, -2.0], [4.0, 64.0, 4.0])],
+            vec![body([-2.0, 0.0, -2.0], [4.0, 64.0, 4.0])],
             [32, 80],
         ),
         (
             &BEAM,
-            vec![part([-32.0, 0.0, -2.0], [64.0, 4.0, 4.0])],
+            vec![body([-32.0, 0.0, -2.0], [64.0, 4.0, 4.0])],
             [144, 16],
         ),
     ];

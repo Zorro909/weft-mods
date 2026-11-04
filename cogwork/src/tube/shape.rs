@@ -6,11 +6,10 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
-use crate::lib::{BlockState, Pos};
+use crate::lib::{BlockState, ModelBox, Pos};
 
-/// The tube's walls, in texels: 8 wide in the middle of the block.
-const LO: f32 = 4.0;
-const HI: f32 = 12.0;
+/// The tube's hub: 8 texels wide in the middle of the block. Its arms are as thick.
+const HUB: ModelBox = ModelBox::new([4.0; 3], [12.0; 3]);
 /// A directing tube's arms besides its output, by their place among the other five directions.
 const OTHER_ARMS: [&str; 5] = ["arm1", "arm2", "arm3", "arm4", "arm5"];
 const BOOL: [&str; 2] = ["false", "true"];
@@ -53,7 +52,7 @@ pub fn tube<'a>(b: BlockBuilder<'a>, texture: &'static str, arms: Arms) -> Block
 fn model<'s>(p: &Props, s: State<'s>, texture: &'static str, arms: Arms) -> State<'s> {
     let side = |d| side_texture(texture, arms, d);
     let hub = Dir::ALL.map(|d| (side(d), abi::UV_FROM_BOX));
-    let mut s = s.texture(texture).model_box_faces([LO; 3], [HI; 3], hub);
+    let mut s = s.texture(texture).model_box_faces(HUB.lo, HUB.hi, hub);
     let (out, out_texture) = match arms {
         Arms::Output(out_texture) => (Dir::from_name(p.get("out")), out_texture),
         _ => (None, texture),
@@ -64,8 +63,8 @@ fn model<'s>(p: &Props, s: State<'s>, texture: &'static str, arms: Arms) -> Stat
             Some(name) if p.is(name, "true") => side(d),
             Some(_) => continue,
         };
-        let (lo, hi) = arm(d, LO, HI);
-        s = s.model_box_faces(lo, hi, [(face_texture, abi::UV_FROM_BOX); 6]);
+        let arm = HUB.arm(d);
+        s = s.model_box_faces(arm.lo, arm.hi, [(face_texture, abi::UV_FROM_BOX); 6]);
     }
     s
 }
@@ -76,18 +75,6 @@ fn side_texture(texture: &'static str, arms: Arms, d: Dir) -> &'static str {
         Arms::PerSide(texture_toward) => texture_toward(d),
         _ => texture,
     }
-}
-
-/// The box from the hub's face toward `d` out to the edge of the block, `lo`..`hi` thick.
-pub fn arm(d: Dir, lo: f32, hi: f32) -> ([f32; 3], [f32; 3]) {
-    let axis = d.face() as usize / 2;
-    let (mut min, mut max) = ([lo; 3], [hi; 3]);
-    if d.face().is_multiple_of(2) {
-        (min[axis], max[axis]) = (0.0, lo);
-    } else {
-        (min[axis], max[axis]) = (hi, 16.0);
-    }
-    (min, max)
 }
 
 /// The property saying whether a tube has its arm toward `d`: the direction's own on a plain
@@ -173,25 +160,6 @@ pub fn turn_output(u: &mut Use) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn arms_reach_from_the_hub_to_the_edge() {
-        assert_eq!(
-            arm(Dir::West, LO, HI),
-            ([0.0, 4.0, 4.0], [4.0, 12.0, 12.0]),
-            "west"
-        );
-        assert_eq!(
-            arm(Dir::Up, LO, HI),
-            ([4.0, 12.0, 4.0], [12.0, 16.0, 12.0]),
-            "up"
-        );
-        assert_eq!(
-            arm(Dir::South, LO, HI),
-            ([4.0, 4.0, 12.0], [12.0, 12.0, 16.0]),
-            "south"
-        );
-    }
 
     #[test]
     fn a_directing_tube_names_its_arms_after_the_output() {

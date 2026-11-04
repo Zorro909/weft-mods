@@ -87,7 +87,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 
 | Module | What it holds |
 |---|---|
-| `lib/` | The types the whole mod builds on: `Pos` (a block), `FloatPos` (a point in the world), `BlockState`, `Area` (a rectangle on the ground) |
+| `lib/` | The types the whole mod builds on: `Pos` (a block), `FloatPos` (a point in the world), `BlockState`, `Area` (a rectangle on the ground), `ModelBox` (a model box in texels) |
 | `tube/` | The tubes: their shape, routing, moving items along, pulling, sorting, jams, the pictures of items |
 | `engines/` | Spring and ember engines: their block, tick, heat and piston |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
