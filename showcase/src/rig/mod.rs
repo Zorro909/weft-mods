@@ -232,9 +232,7 @@ mod tests {
     fn a_marked_path_looks_where_it_was_marked() {
         let points = [[0.0; 3], [5.0, 0.0, 0.0], [5.0, 0.0, 5.0]];
         let angles = vec![[0.0, 0.0], [90.0, -30.0], [180.0, 0.0]];
-        let shot = flyby(&points)
-            .look(Look::Along(angles))
-            .ease(Ease::Linear);
+        let shot = flyby(&points).look(Look::Along(angles)).ease(Ease::Linear);
         let rig = Rig::new(shot, Pos::default(), 70.0);
         let middle = rig.pose(2.5, &none, START);
         assert!(

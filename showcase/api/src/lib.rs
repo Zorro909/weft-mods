@@ -40,7 +40,7 @@ value! {
 pub static CUE: Event<Cue> = Event::named("showcase:cue");
 
 /// A film, from the mod that built it to the player's client: a `Timeline` as `Timeline::encode`
-/// writes it. Only the showcase mod reads it, so the reading is there.
+/// writes it and `Timeline::decode` reads it back.
 pub static TIMELINE: Channel<Vec<u8>> = Channel::named("showcase:timeline");
 
 value! {

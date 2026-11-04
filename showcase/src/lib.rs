@@ -14,7 +14,6 @@ mod menus;
 mod playback;
 mod rig;
 mod server;
-mod timeline;
 mod view;
 
 use std::sync::{Mutex, MutexGuard};

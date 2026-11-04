@@ -15,7 +15,6 @@ use crate::playback::Playback;
 use crate::rig::Pose;
 use crate::rig::math::{add, angles_along, sub};
 use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
-use crate::timeline::decode;
 use crate::view::{camera, missing_notice, put, set_fov, titles};
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
@@ -70,7 +69,7 @@ fn with<R>(f: impl FnOnce(&mut Director) -> R) -> R {
 
 pub fn register(r: &mut Registry) {
     r.client_packet(&TIMELINE, |c, bytes| {
-        let Some(timeline) = decode(&bytes) else {
+        let Some(timeline) = Timeline::decode(&bytes) else {
             let len = bytes.len();
             error!("showcase: a film arrived that this version can't read ({len} bytes)");
             return;
