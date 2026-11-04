@@ -5,10 +5,8 @@ use weft_sdk::*;
 
 use super::power::{pay, travel};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Status};
-use crate::block_state::BlockState;
-use crate::float_pos::FloatPos;
 use crate::harvest::{Harvest, cost, harvest};
-use crate::pos::Pos;
+use crate::lib::{BlockState, FloatPos, Pos};
 
 /// Energy per block: a base and as much again per point of hardness (stone 1.5: 1000).
 const BASE_COST: f32 = 400.0;

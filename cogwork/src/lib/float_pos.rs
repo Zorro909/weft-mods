@@ -5,7 +5,7 @@
 
 use weft_sdk::*;
 
-use crate::pos::Pos;
+use super::Pos;
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct FloatPos {

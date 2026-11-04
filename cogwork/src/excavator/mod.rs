@@ -17,8 +17,7 @@ static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
 pub use area::Frame;
 
-use crate::float_pos::FloatPos;
-use crate::pos::Pos;
+use crate::lib::{FloatPos, Pos};
 
 value! {
     /// An excavator's work. It puts up `frame`, then mines inside it. `step` counts the frame

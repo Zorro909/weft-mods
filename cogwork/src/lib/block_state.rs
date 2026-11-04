@@ -2,9 +2,10 @@
 //! arms, an engine's facing). The SDK passes these around as bare `u32` states; here they are a
 //! `BlockState` that answers what cogwork asks of a block.
 
+use weft_sdk::abi::block_flags::{LIQUID, OPAQUE, REPLACEABLE, SOLID};
 use weft_sdk::*;
 
-use crate::pos::Pos;
+use super::Pos;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct BlockState(u32);
@@ -82,20 +83,109 @@ impl BlockState {
 
     /// Whether something built there simply takes its place: air, plants, liquids.
     pub fn can_build_into(self) -> bool {
-        use abi::block_flags::{LIQUID, REPLACEABLE};
-        self == BlockState::AIR || state_flags(self.0) & (REPLACEABLE | LIQUID) != 0
+        self.traits().can_build_into()
     }
 
     /// Whether a machine can break it: not air or liquid, and not unbreakable.
     pub fn can_break(self) -> bool {
-        self != BlockState::AIR
-            && state_flags(self.0) & abi::block_flags::LIQUID == 0
-            && self.hardness().is_none_or(|h| h >= 0.0)
+        self.traits().can_break()
     }
 
     /// Whether it is a whole block that fills its cell: solid and not see-through.
     pub fn is_whole(self) -> bool {
-        let whole = abi::block_flags::SOLID | abi::block_flags::OPAQUE;
-        state_flags(self.0) & whole == whole
+        self.traits().is_whole()
+    }
+
+    fn traits(self) -> Traits {
+        if self == BlockState::AIR {
+            return Traits::AIR;
+        }
+        Traits {
+            air: false,
+            flags: state_flags(self.0),
+            hardness: self.hardness(),
+        }
+    }
+}
+
+/// What the engine knows of a block that the questions above are answered from, kept apart so
+/// the answers can be tested without the engine.
+struct Traits {
+    air: bool,
+    /// `abi::block_flags`.
+    flags: u32,
+    hardness: Option<f32>,
+}
+
+impl Traits {
+    const AIR: Traits = Traits {
+        air: true,
+        flags: 0,
+        hardness: None,
+    };
+
+    fn can_build_into(&self) -> bool {
+        self.air || self.flags & (REPLACEABLE | LIQUID) != 0
+    }
+
+    fn can_break(&self) -> bool {
+        !self.air && self.flags & LIQUID == 0 && self.hardness.is_none_or(|h| h >= 0.0)
+    }
+
+    fn is_whole(&self) -> bool {
+        self.flags & (SOLID | OPAQUE) == SOLID | OPAQUE
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn block(flags: u32, hardness: f32) -> Traits {
+        Traits {
+            air: false,
+            flags,
+            hardness: Some(hardness),
+        }
+    }
+
+    #[test]
+    fn air_is_built_into_but_never_broken() {
+        let air = Traits::AIR;
+        assert!(air.can_build_into(), "built into");
+        assert!(!air.can_break(), "nothing to break");
+        assert!(!air.is_whole(), "not whole");
+        assert_eq!(BlockState::AIR.id(), 0, "the engine's air");
+    }
+
+    #[test]
+    fn stone_is_broken_and_fills_its_cell() {
+        let stone = block(SOLID | OPAQUE, 1.5);
+        assert!(stone.can_break(), "broken");
+        assert!(!stone.can_build_into(), "in the way");
+        assert!(stone.is_whole(), "whole");
+    }
+
+    #[test]
+    fn plants_and_liquids_give_way() {
+        let grass = block(REPLACEABLE, 0.0);
+        assert!(grass.can_build_into(), "grass is built over");
+        assert!(grass.can_break(), "and can be broken");
+        let water = block(LIQUID, 100.0);
+        assert!(water.can_build_into(), "water is built into");
+        assert!(!water.can_break(), "but not broken");
+    }
+
+    #[test]
+    fn unbreakable_and_see_through_blocks() {
+        let bedrock = block(SOLID | OPAQUE, -1.0);
+        assert!(!bedrock.can_break(), "bedrock stays");
+        let glass = block(SOLID, 0.3);
+        assert!(!glass.is_whole(), "glass is see-through");
+        let unknown = Traits {
+            hardness: None,
+            ..block(SOLID | OPAQUE, 0.0)
+        };
+        assert!(unknown.can_break(), "a block without a hardness breaks");
     }
 }

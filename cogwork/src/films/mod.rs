@@ -12,7 +12,7 @@ use showcase_api::{Ease, Film, Look, Set, crane, dolly, film, flyby, orbit};
 use weft_sdk::*;
 
 use self::excavators::{AREA_Z, BUILDER, DEEP, DEEP_DEPTH, SHALLOW, SORTER};
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 pub fn register(r: &mut Registry) {
     // Block entities only exist once the tick they were placed in is over: everything is

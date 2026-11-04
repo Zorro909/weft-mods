@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{ENGINE, Engine, kind, model};
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// The pistons lying flat (engines facing up or down), then standing (facing sideways), by
 /// engine kind.

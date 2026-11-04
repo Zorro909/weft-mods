@@ -7,9 +7,8 @@ use showcase_api::Set;
 use weft_sdk::*;
 
 use super::parts::{CHEST, engine, fuel, line, line_of};
-use crate::block_state::BlockState;
 use crate::excavator::EXCAVATOR;
-use crate::pos::Pos;
+use crate::lib::{BlockState, Pos};
 use crate::tube::{DIRECTING_TUBE, GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
 
 /// The one that builds its frame while the camera watches.

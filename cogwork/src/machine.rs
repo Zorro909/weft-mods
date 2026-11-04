@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// A machine's block, textured `<name>_front` (`<name>_front_on` while it works), `<name>_top`
 /// and `<name>_side`, also underneath. Its front faces the player who places it.

@@ -6,9 +6,8 @@ use std::collections::HashSet;
 use weft_sdk::*;
 
 use super::GANTRY_FRAME;
-use crate::block_state::BlockState;
-use crate::markers::{Area, square_behind, take_area};
-use crate::pos::Pos;
+use crate::lib::{Area, BlockState, Pos};
+use crate::markers::{square_behind, take_area};
 
 /// The frame's height above the excavator's block.
 const FRAME_RISE: i32 = 4;

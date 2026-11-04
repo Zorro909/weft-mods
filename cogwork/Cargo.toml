@@ -15,6 +15,10 @@ twox-hash = { version = "2.1", default-features = false, features = ["xxhash3_64
 # Only for the films, which releases leave out.
 showcase_api = { path = "../showcase/api", optional = true }
 
+[build-dependencies]
+# Reads the recipe files in `assets/recipes/` (see `build.rs`).
+toml = "1"
+
 [features]
 # Builds the films (`src/films/`), played by the showcase mod: `--features showcase`.
 showcase = ["dep:showcase_api"]

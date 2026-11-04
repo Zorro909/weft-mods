@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 use twox_hash::XxHash3_64;
 use weft_sdk::*;
 
-use crate::float_pos::FloatPos;
+use crate::lib::FloatPos;
 
 /// Side of a cell in GUI pixels, the same as a slot.
 pub const SLOT: f32 = 18.0;

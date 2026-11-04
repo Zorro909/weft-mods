@@ -4,7 +4,7 @@
 use weft_sdk::signal::Frame;
 use weft_sdk::*;
 
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// Trunk textures by heat level: cool, warm, hot, overheated.
 const TRUNKS: [&str; 4] = [

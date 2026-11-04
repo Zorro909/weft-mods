@@ -87,6 +87,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 
 | Module | What it holds |
 |---|---|
+| `lib/` | The types the whole mod builds on: `Pos` (a block), `FloatPos` (a point in the world), `BlockState`, `Area` (a rectangle on the ground) |
 | `tube/` | The tubes: their shape, routing, moving items along, pulling, sorting, jams, the pictures of items |
 | `engines/` | Spring and ember engines: their block, tick, heat and piston |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
@@ -94,7 +95,8 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `store.rs` | Putting items into and taking them out of any mod's machines, by slot group |
 | `harvest.rs` | Breaking a block by machine into its output |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
-| `cogs.rs`, `shaft.rs`, `recipes.rs` | Cogs and the wrench, the torque shaft, every crafting recipe |
+| `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
+| `recipes.rs` | Registers the crafting recipes, which are written in `assets/recipes/*.toml` and checked by `build.rs` when the mod is built |
 | `films/` | The showcase film, only with `--features showcase` |
 
 Unit tests sit at the end of the files whose logic they check; `cargo test --release` runs them.

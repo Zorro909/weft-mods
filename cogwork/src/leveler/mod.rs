@@ -7,8 +7,7 @@ mod work;
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
 
-use crate::markers::Area;
-use crate::pos::Pos;
+use crate::lib::{Area, Pos};
 
 pub static LEVELER: Block = Block::named("leveler");
 static LEVELER_MENU: Menu = Menu::named("leveler");

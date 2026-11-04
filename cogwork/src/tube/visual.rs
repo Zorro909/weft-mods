@@ -14,9 +14,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use weft_sdk::*;
 
 use super::{Motion, NONE, TUBES};
-use crate::block_state::BlockState;
-use crate::float_pos::FloatPos;
-use crate::pos::Pos;
+use crate::lib::{BlockState, FloatPos, Pos};
 
 static ITEM_ENTITY: Entity = Entity::named("core:item");
 /// Marks a picture's stack, a different value for neighbors, so two pictures of the same item

@@ -6,7 +6,7 @@ use weft_sdk::*;
 
 use super::piston;
 use super::{Engine, kind, model};
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// Energy per tick: a spring engine with a signal, an ember engine burning.
 const SPRING_MAKES: i64 = 10;

@@ -3,20 +3,30 @@
 //! and `base_api`.
 
 mod bench;
-mod block_state;
 mod cogs;
 mod engines;
 mod excavator;
 #[cfg(feature = "showcase")]
 mod films;
-mod float_pos;
 mod ghost;
 mod harvest;
 mod leveler;
+/// The types the whole mod builds on: block positions, points in the world, block states and
+/// areas on the ground, in `src/lib/`.
+mod lib {
+    mod area;
+    mod block_state;
+    mod float_pos;
+    mod pos;
+
+    pub use area::Area;
+    pub use block_state::BlockState;
+    pub use float_pos::FloatPos;
+    pub use pos::Pos;
+}
 mod machine;
 mod markers;
 mod owned;
-mod pos;
 mod recipes;
 mod shaft;
 mod store;

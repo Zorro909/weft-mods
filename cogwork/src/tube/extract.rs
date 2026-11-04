@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{BASE_SPEED, Motion, NONE, TUBE, Tube, free_slot};
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// Ticks between two pulls of a timber tube: an engine's stroke.
 const PULL_EVERY: u32 = 18;

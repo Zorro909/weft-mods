@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{Motion, NONE, SLOTS, Tube, free_slot, visual};
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// Ticks a full tube may go without passing an item on before it drops one, and then between
 /// one drop and the next while it stays jammed.

@@ -6,7 +6,7 @@
 use base_api::FUEL;
 use weft_sdk::*;
 
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// Group names this file knows the meaning of.
 const KNOWN: [&str; 4] = ["fuel", "input", "output", "chest"];

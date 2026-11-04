@@ -6,7 +6,7 @@
 use weft_sdk::*;
 
 use super::{Dig, Frame, Stage};
-use crate::float_pos::FloatPos;
+use crate::lib::FloatPos;
 
 static CARRIAGE: Entity = Entity::named("drill_carriage");
 static BIT: Entity = Entity::named("drill_bit");

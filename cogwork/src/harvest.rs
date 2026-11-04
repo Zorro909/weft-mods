@@ -3,8 +3,7 @@
 
 use weft_sdk::*;
 
-use crate::block_state::BlockState;
-use crate::pos::Pos;
+use crate::lib::{BlockState, Pos};
 
 static TOOL: Item = Item::named("base:diamond_pickaxe");
 

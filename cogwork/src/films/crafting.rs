@@ -11,7 +11,7 @@ use weft_sdk::*;
 
 use super::parts::{CHEST, line, spring, stock};
 use crate::bench::{ASSEMBLY_BENCH, set_ghost};
-use crate::pos::Pos;
+use crate::lib::Pos;
 use crate::tube::TIMBER_TUBE;
 
 /// The row everything stands on, and where along it.

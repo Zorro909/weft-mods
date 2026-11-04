@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use crate::float_pos::FloatPos;
+use super::FloatPos;
 
 value! {
     /// A block's position. Laid out as the `[i32; 3]` the SDK uses, so a saved `[i32; 3]` loads

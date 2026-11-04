@@ -3,9 +3,8 @@
 use showcase_api::Set;
 use weft_sdk::*;
 
-use crate::block_state::BlockState;
 use crate::engines::{EMBER_ENGINE, SPRING_ENGINE};
-use crate::pos::Pos;
+use crate::lib::{BlockState, Pos};
 use crate::tube::STONE_TUBE;
 
 pub static CHEST: Block = Block::named("base:chest");

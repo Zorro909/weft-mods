@@ -4,8 +4,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, NONE, TUBE, kind};
-use crate::block_state::BlockState;
-use crate::pos::Pos;
+use crate::lib::{BlockState, Pos};
 
 pub enum Route {
     /// On through this face.

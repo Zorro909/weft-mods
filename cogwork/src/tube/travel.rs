@@ -8,7 +8,7 @@ use weft_sdk::*;
 
 use super::route::{Route, route};
 use super::{BASE_SPEED, GILDED_SPEED, Motion, NONE, SLOTS, TUBE, Tube, free_slot, kind, visual};
-use crate::pos::Pos;
+use crate::lib::Pos;
 
 /// An item at the far face of a tube, to go on through it.
 struct Handoff {

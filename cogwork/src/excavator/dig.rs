@@ -5,8 +5,7 @@ use weft_sdk::*;
 use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
 use super::power::{hold, pay};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status, rig};
-use crate::block_state::BlockState;
-use crate::pos::Pos;
+use crate::lib::{BlockState, Pos};
 
 /// Energy to put up one block of frame.
 const FRAME_COST: i64 = 100;
@@ -206,7 +205,7 @@ fn finish(d: &mut Dig) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::float_pos::FloatPos;
+    use crate::lib::FloatPos;
 
     #[test]
     fn a_frame_refused_again_and_again_is_tried_only_now_and_then() {

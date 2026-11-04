@@ -4,7 +4,7 @@
 
 use weft_sdk::*;
 
-use crate::float_pos::FloatPos;
+use crate::lib::FloatPos;
 
 /// The block entity an owned entity belongs to.
 static OWNER: Component<u64> = Component::named("cogwork:owner");

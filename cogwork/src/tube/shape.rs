@@ -6,8 +6,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
-use crate::block_state::BlockState;
-use crate::pos::Pos;
+use crate::lib::{BlockState, Pos};
 
 /// The tube's walls, in texels: 8 wide in the middle of the block.
 const LO: f32 = 4.0;

@@ -4,10 +4,9 @@
 use weft_sdk::*;
 
 use super::{LEVELER, Level, Stage, Status};
-use crate::block_state::BlockState;
 use crate::harvest::{Harvest, cost, harvest};
-use crate::markers::{Area, square_behind, take_area};
-use crate::pos::Pos;
+use crate::lib::{Area, BlockState, Pos};
+use crate::markers::{square_behind, take_area};
 
 /// Layers cleared from the leveler's height up, and filled below it.
 const CLEAR_HEIGHT: i32 = 16;
