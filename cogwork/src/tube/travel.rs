@@ -113,7 +113,7 @@ fn spill(w: &World, pos: Pos, face: u32, stack: ItemStack) {
     } else {
         pos.neighbor(face)
     };
-    w.spawn_item(at.center(), stack);
+    w.spawn_item(at.center().into(), stack);
 }
 
 /// Sends an item waiting at its tube's far face on: into the next tube, into a machine, or out.

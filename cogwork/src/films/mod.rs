@@ -89,7 +89,7 @@ fn excavating(film: Film) -> Film {
 /// Up out of the pit and out past the excavator's front, along the tubes to the sorting tube,
 /// and a look into its menu.
 fn sorting(film: Film) -> Film {
-    let sorter = SORTER.center();
+    let sorter: [f64; 3] = SORTER.center().into();
     let deep = area(DEEP, DEEP_DEPTH as f64);
     let first_tube = [16.5, 0.5, 6.5];
     // Out through the frame's south side west of the excavator's engines.
@@ -128,8 +128,8 @@ fn sorting(film: Film) -> Film {
 /// Round the end of the wall to the lever, which starts the row; along the row while it gets
 /// going, then down to the second bench and into its menu.
 fn autocrafting(film: Film) -> Film {
-    let lever = crafting::LEVER.center();
-    let bench = crafting::STONE_COGS.center();
+    let lever: [f64; 3] = crafting::LEVER.center().into();
+    let bench: [f64; 3] = crafting::STONE_COGS.center().into();
     let at_lever = [-12.8, 2.2, 18.9];
     let to_lever = [
         [-9.4, 2.0, 9.75],

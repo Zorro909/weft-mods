@@ -3,18 +3,20 @@
 //! and `base_api`.
 
 mod bench;
+mod block_state;
 mod cogs;
 mod engines;
 mod excavator;
 #[cfg(feature = "showcase")]
 mod films;
+mod float_pos;
 mod ghost;
 mod harvest;
 mod leveler;
 mod machine;
 mod markers;
 mod owned;
-pub mod pos;
+mod pos;
 mod recipes;
 mod shaft;
 mod store;

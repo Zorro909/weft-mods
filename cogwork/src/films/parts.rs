@@ -3,6 +3,7 @@
 use showcase_api::Set;
 use weft_sdk::*;
 
+use crate::block_state::BlockState;
 use crate::engines::{EMBER_ENGINE, SPRING_ENGINE};
 use crate::pos::Pos;
 use crate::tube::STONE_TUBE;
@@ -47,10 +48,10 @@ pub fn stock(set: &Set, at: Pos, items: &[&str], stacks: u32) {
 
 /// Stone tubes on every block from `from` to `to`, both included, along one axis.
 pub fn line(set: &Set, from: Pos, to: Pos) {
-    line_of(set, from, to, STONE_TUBE.id());
+    line_of(set, from, to, BlockState::of(&STONE_TUBE));
 }
 
-/// Blocks of `state` on every block from `from` to `to`, both included, along one axis.
-pub fn line_of(set: &Set, from: Pos, to: Pos, state: u32) {
-    set.fill(from.into(), to.into(), state);
+/// `block_state` on every block from `from` to `to`, both included, along one axis.
+pub fn line_of(set: &Set, from: Pos, to: Pos, block_state: BlockState) {
+    set.fill(from.into(), to.into(), block_state.id());
 }

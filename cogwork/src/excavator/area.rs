@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use weft_sdk::*;
 
 use super::GANTRY_FRAME;
+use crate::block_state::BlockState;
 use crate::markers::{Area, square_behind, take_area};
 use crate::pos::Pos;
 
@@ -126,7 +127,7 @@ impl From<([i32; 3], [i32; 3])> for Frame {
 
 /// The bottom ring of a frame beside `pos` at its height, with `pos` outside it.
 fn standing_frame(w: &World, pos: Pos) -> Option<Area> {
-    let ring = ring_bounds(pos, |p| GANTRY_FRAME.is(w.get(p.into())))?;
+    let ring = ring_bounds(pos, |p| BlockState::at(w, p).is(&GANTRY_FRAME))?;
     (!ring.spans(pos)).then_some(ring)
 }
 

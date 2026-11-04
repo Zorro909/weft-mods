@@ -4,7 +4,8 @@
 use weft_sdk::*;
 
 use super::{LEVELER, Level, Stage, Status};
-use crate::harvest::{Harvest, breakable, cost, harvest, opens_into};
+use crate::block_state::BlockState;
+use crate::harvest::{Harvest, cost, harvest};
 use crate::markers::{Area, square_behind, take_area};
 use crate::pos::Pos;
 
@@ -27,7 +28,7 @@ pub fn tick(b: &mut SystemBatch<Level>) {
     for (id, l, _) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
         let pos = Pos::from(st.block_pos());
-        if !LEVELER.is(w.get(pos.into())) {
+        if !BlockState::at(&w, pos).is(&LEVELER) {
             continue;
         }
         work(&w, id, pos, l);
@@ -71,7 +72,8 @@ fn next(area: &Area, c: Pos, dy: i32) -> Pos {
 
 /// Breaks the next block standing at or above the leveler's height.
 fn clear_next(w: &World, id: u64, l: &mut Level) {
-    let Some((c, block_state)) = find(w, l, |s| breakable(s) && !LEVELER.is(s)) else {
+    let clearable = |s: BlockState| s.can_break() && !s.is(&LEVELER);
+    let Some((c, block_state)) = find(w, l, clearable) else {
         return;
     };
     l.set_status(Status::Clearing);
@@ -90,11 +92,11 @@ fn clear_next(w: &World, id: u64, l: &mut Level) {
 
 /// Fills the next hole below the leveler's height with a block from its stock.
 fn fill_next(w: &World, id: u64, l: &mut Level) {
-    let Some((c, _)) = find(w, l, opens_into) else {
+    let Some((c, _)) = find(w, l, BlockState::can_build_into) else {
         return;
     };
     let stock = w.inventory(id).group("input");
-    let Some((slot, block)) = first_filler(&stock) else {
+    let Some((slot, filler)) = first_filler(&stock) else {
         l.set_status(Status::NoBlocks);
         return;
     };
@@ -102,33 +104,36 @@ fn fill_next(w: &World, id: u64, l: &mut Level) {
     if !pay(w, id, l, FILL_COST) {
         return;
     }
-    w.set(c.into(), block);
+    filler.place(w, c);
     stock.set(slot, stock.get(slot).shrink(1));
     l.spent = 0;
     l.cursor = next(&l.area, c, 1);
 }
 
 /// The first stack in `stock` that can fill a hole: its slot, and the block it places.
-fn first_filler(stock: &InventoryGroup) -> Option<(u32, u32)> {
+fn first_filler(stock: &InventoryGroup) -> Option<(u32, BlockState)> {
     (0..stock.len()).find_map(|slot| fill_block(stock.get(slot)).map(|block| (slot, block)))
 }
 
-/// The block a stack places, if it is a whole solid one fit to fill with.
-fn fill_block(stack: ItemStack) -> Option<u32> {
-    let block = item_block(stack.item).filter(|_| !stack.is_empty())?;
-    let whole = abi::block_flags::SOLID | abi::block_flags::OPAQUE;
-    (state_flags(block) & whole == whole).then_some(block)
+/// The block a stack places, if it is a whole one fit to fill with.
+fn fill_block(stack: ItemStack) -> Option<BlockState> {
+    let block_state = BlockState::placed_by(stack.item).filter(|_| !stack.is_empty())?;
+    block_state.is_whole().then_some(block_state)
 }
 
 /// From the cursor on, the next block that `wanted` picks and its state. `None` while waiting,
 /// when there is nothing this tick, or when the stage is over.
-fn find(w: &World, l: &mut Level, wanted: impl Fn(u32) -> bool) -> Option<(Pos, u32)> {
+fn find(
+    w: &World,
+    l: &mut Level,
+    wanted: impl Fn(BlockState) -> bool,
+) -> Option<(Pos, BlockState)> {
     for _ in 0..SCAN {
         if stage_over(l) {
             return None;
         }
         let c = l.cursor;
-        let Some(block_state) = w.get_loaded(c.into()) else {
+        let Some(block_state) = BlockState::loaded_at(w, c) else {
             l.set_status(Status::Blocked);
             return None;
         };

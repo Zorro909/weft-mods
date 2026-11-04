@@ -6,6 +6,7 @@
 use weft_sdk::*;
 
 use super::{Dig, Frame, Stage};
+use crate::float_pos::FloatPos;
 
 static CARRIAGE: Entity = Entity::named("drill_carriage");
 static BIT: Entity = Entity::named("drill_bit");
@@ -81,28 +82,28 @@ impl Rig {
 }
 
 /// Where each piece goes now: by slot, its kind, place and turn.
-fn layout(d: &Dig) -> Vec<(usize, &'static Entity, [f64; 3], f32)> {
-    let [x, y, z] = d.head.map(|v| v as f64);
+fn layout(d: &Dig) -> Vec<(usize, &'static Entity, FloatPos, f32)> {
+    let head = d.head();
     let Frame { lo, hi } = d.frame;
     let top = hi.y as f64 + 0.25;
+    let carriage = FloatPos { y: top, ..head };
     // On top of the block it drills, only its tip in it; never above the carriage.
-    let bit = (y + 1.0).min(top - BIT_HEIGHT);
-    let mut out = vec![
-        (0, &CARRIAGE, [x, top, z], 0.0),
-        (1, &BIT, [x, bit, z], 0.0),
-    ];
+    let bit = FloatPos {
+        y: (head.y + 1.0).min(top - BIT_HEIGHT),
+        ..head
+    };
+    let mut out = vec![(0, &CARRIAGE, carriage, 0.0), (1, &BIT, bit, 0.0)];
     // Shaft pieces hang from the carriage down to the bit; the lowest reaches into the ground.
-    let reach = top - (bit + BIT_HEIGHT);
+    let reach = top - (bit.y + BIT_HEIGHT);
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
-    out.extend((0..shafts).map(|k| (2 + k, &SHAFT, [x, top - PIECE * (k + 1) as f64, z], 0.0)));
-    let beam_y = top + 0.125;
-    let (x0, x1) = (lo.x as f64 + 0.5, hi.x as f64 + 0.5);
-    let (z0, z1) = (lo.z as f64 + 0.5, hi.z as f64 + 0.5);
-    for (k, c) in spans(x0, x1).into_iter().enumerate() {
-        out.push((2 + SHAFTS + k, &BEAM, [c, beam_y, z], 0.0));
+    out.extend((0..shafts).map(|k| (2 + k, &SHAFT, carriage.add_y(-PIECE * (k + 1) as f64), 0.0)));
+    let beams = carriage.add_y(0.125);
+    let (lo, hi) = (lo.center(), hi.center());
+    for (k, x) in spans(lo.x, hi.x).into_iter().enumerate() {
+        out.push((2 + SHAFTS + k, &BEAM, FloatPos { x, ..beams }, 0.0));
     }
-    for (k, c) in spans(z0, z1).into_iter().enumerate() {
-        out.push((2 + SHAFTS + BEAMS + k, &BEAM, [x, beam_y, c], 90.0));
+    for (k, z) in spans(lo.z, hi.z).into_iter().enumerate() {
+        out.push((2 + SHAFTS + BEAMS + k, &BEAM, FloatPos { z, ..beams }, 90.0));
     }
     out
 }
@@ -146,13 +147,14 @@ mod tests {
     use super::*;
 
     /// An excavator mining with its drill at `head`, under a frame whose top is at 8.
-    fn mining_at(head: [f32; 3]) -> Dig {
-        Dig {
+    fn mining_at(head: FloatPos) -> Dig {
+        let mut d = Dig {
             stage: Stage::Mine as u32,
             frame: Frame::from(([0, 0, 0], [10, 8, 10])),
-            head,
             ..Dig::default()
-        }
+        };
+        d.set_head(head);
+        d
     }
 
     #[test]
@@ -174,11 +176,11 @@ mod tests {
 
     #[test]
     fn shafts_reach_from_the_carriage_down_to_the_bit() {
-        let d = mining_at([5.5, -3.0, 5.5]);
+        let d = mining_at(FloatPos::new(5.5, -3.0, 5.5));
         let shafts: Vec<f64> = layout(&d)
             .into_iter()
             .filter(|p| std::ptr::eq(p.1, &SHAFT))
-            .map(|p| p.2[1])
+            .map(|p| p.2.y)
             .collect();
         let lowest = shafts.iter().copied().fold(f64::MAX, f64::min);
         assert!(lowest <= -2.0 + BIT_HEIGHT, "down to the top of the bit");
@@ -190,11 +192,11 @@ mod tests {
 
     #[test]
     fn the_bit_stands_on_the_block_it_drills() {
-        let d = mining_at([5.5, -3.0, 5.5]);
+        let d = mining_at(FloatPos::new(5.5, -3.0, 5.5));
         let bit = layout(&d)
             .into_iter()
             .find(|p| std::ptr::eq(p.1, &BIT))
-            .map(|p| p.2[1]);
+            .map(|p| p.2.y);
         assert_eq!(bit, Some(-2.0), "its foot on top of the block at -3");
     }
 }

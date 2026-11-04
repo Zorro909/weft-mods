@@ -102,10 +102,7 @@ pub fn show(w: &World, id: u64, pos: Pos, e: &mut Engine) {
     // At rest the piston's middle is 2 texels from the block's toward the base plate; the
     // stroke lifts it toward the trunk's end.
     let along = (lift(e.stroke) - 2.0) / 16.0;
-    let o = out.offset();
-    let center = pos.center();
-    let at: [f64; 3] = std::array::from_fn(|i| center[i] + along * o[i] as f64);
-    let feet = [at[0], at[1] - 2.0 / 16.0, at[2]];
+    let feet = pos.center().toward_by(out, along).add_y(-2.0 / 16.0);
     e.piston = crate::owned::place(w, id, e.piston, entity, feet, yaw);
 }
 

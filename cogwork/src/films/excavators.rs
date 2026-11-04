@@ -7,6 +7,7 @@ use showcase_api::Set;
 use weft_sdk::*;
 
 use super::parts::{CHEST, engine, fuel, line, line_of};
+use crate::block_state::BlockState;
 use crate::excavator::EXCAVATOR;
 use crate::pos::Pos;
 use crate::tube::{DIRECTING_TUBE, GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
@@ -94,7 +95,7 @@ fn output_lines(set: &Set) {
     line(set, SHALLOW.toward(Dir::South), meet.add_z(-1));
     line(set, DEEP.toward(Dir::South), on_row(DEEP.x));
     line(set, on_row(DEEP.x - 1), on_row(11));
-    line_of(set, on_row(10), on_row(6), GILDED_TUBE.id());
+    line_of(set, on_row(10), on_row(6), BlockState::of(&GILDED_TUBE));
     line(set, on_row(5), meet.add_x(1));
     set.place(meet.into(), DIRECTING_TUBE.with(&[("out", "west")]));
     line(set, meet.add_x(-1), SORTER.toward(Dir::East));

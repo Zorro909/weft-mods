@@ -52,13 +52,13 @@ pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
 }
 
 /// Pays for up to `max` blocks of drill travel; returns how far the energy took it.
-pub fn travel(w: &World, id: u64, max: f32) -> f32 {
+pub fn travel(w: &World, id: u64, max: f64) -> f64 {
     let Some(e) = w.energy_mut(id) else {
         return 0.0;
     };
-    let cost = e.stored.min((max * TRAVEL_COST as f32).ceil() as i64);
+    let cost = e.stored.min((max * TRAVEL_COST as f64).ceil() as i64);
     e.stored -= cost;
-    (cost as f32 / TRAVEL_COST as f32).min(max)
+    (cost as f64 / TRAVEL_COST as f64).min(max)
 }
 
 #[cfg(test)]

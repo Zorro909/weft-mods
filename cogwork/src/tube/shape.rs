@@ -6,6 +6,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
+use crate::block_state::BlockState;
 use crate::pos::Pos;
 
 /// The tube's walls, in texels: 8 wide in the middle of the block.
@@ -101,57 +102,52 @@ fn arm_prop(out: Option<Dir>, d: Dir) -> Option<&'static str> {
     others.position(|o| o == d).map(|i| OTHER_ARMS[i])
 }
 
-/// Where the tube `state` sends its items, if it is a directing tube.
-fn output(state: u32) -> Option<Dir> {
-    state_prop(state, "out").and_then(Dir::from_name)
+/// Where `tube` sends its items, if it is a directing tube.
+fn output(tube: BlockState) -> Option<Dir> {
+    tube.prop("out").and_then(Dir::from_name)
 }
 
 /// Sets every arm property of the tube at `pos` to what its neighbors are now.
 fn refresh(w: &World, pos: Pos) {
-    let state = w.get(pos.into());
-    if !TUBES.on_block(state) {
+    let tube = BlockState::at(w, pos);
+    if !tube.has(&TUBES) {
         return;
     }
-    let next = joined(w, pos, state);
-    if next != state {
-        w.set(pos.into(), next);
+    let next = joined(w, pos, tube);
+    if next != tube {
+        next.place(w, pos);
     }
 }
 
-/// `state` with its arm properties set to which neighbors of `pos` it joins.
-fn joined(w: &World, pos: Pos, state: u32) -> u32 {
-    let out = output(state);
-    Dir::ALL.into_iter().fold(state, |next, d| {
-        let Some(name) = arm_prop(out, d) else {
-            return next;
-        };
-        let on = if joins(w, pos, state, d) {
-            "true"
-        } else {
-            "false"
-        };
-        state_with(next, name, on).unwrap_or(next)
-    })
+/// `tube` with its arm properties set to which neighbors of `pos` it joins.
+fn joined(w: &World, pos: Pos, tube: BlockState) -> BlockState {
+    let out = output(tube);
+    Dir::ALL
+        .into_iter()
+        .fold(tube, |next, d| match arm_prop(out, d) {
+            Some(name) => next.with_flag(name, joins(w, pos, tube, d)),
+            None => next,
+        })
 }
 
-/// Whether the tube `state` at `pos` reaches toward `d`: to any other tube but two timber tubes,
-/// and to anything holding items.
-fn joins(w: &World, pos: Pos, state: u32, d: Dir) -> bool {
+/// Whether `tube` at `pos` reaches toward `d`: to any other tube but two timber tubes, and to
+/// anything holding items.
+fn joins(w: &World, pos: Pos, tube: BlockState, d: Dir) -> bool {
     let at = pos.neighbor(d.face());
-    let other = w.get(at.into());
-    if TUBES.on_block(other) {
-        return !(TIMBER_TUBE.is(state) && TIMBER_TUBE.is(other));
+    let other = BlockState::at(w, at);
+    if other.has(&TUBES) {
+        return !(tube.is(&TIMBER_TUBE) && other.is(&TIMBER_TUBE));
     }
     crate::store::has_inventory(w, at)
 }
 
 /// Whether the tube at `pos` has its arm toward `face` out, so a neighbor can hand it items.
 pub fn connects_to_tube(w: &World, pos: Pos, face: u32) -> bool {
-    let state = w.get(pos.into());
+    let tube = BlockState::at(w, pos);
     let d = Dir::from_face(face);
-    match arm_prop(output(state), d) {
-        Some(name) => state_prop(state, name) == Some("true"),
-        None => joins(w, pos, state, d),
+    match arm_prop(output(tube), d) {
+        Some(name) => tube.prop(name) == Some("true"),
+        None => joins(w, pos, tube, d),
     }
 }
 
@@ -162,15 +158,15 @@ pub fn turn_output(u: &mut Use) -> bool {
         return false;
     }
     let pos = Pos::from(u.pos());
-    let state = w.get(pos.into());
-    let Some(now) = output(state).filter(|_| DIRECTING_TUBE.is(state)) else {
+    let tube = BlockState::at(&w, pos);
+    let Some(now) = output(tube).filter(|_| tube.is(&DIRECTING_TUBE)) else {
         return true;
     };
     let next = (1..6)
         .map(|k| Dir::from_face((now.face() + k) % 6))
         .find(|d| connects_to_tube(&w, pos, d.face()));
-    if let Some(turned) = next.and_then(|d| state_with(state, "out", d.name())) {
-        w.set(pos.into(), joined(&w, pos, turned));
+    if let Some(turned) = next.and_then(|d| tube.with_prop("out", d.name())) {
+        joined(&w, pos, turned).place(&w, pos);
     }
     true
 }

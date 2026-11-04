@@ -4,6 +4,8 @@
 
 use weft_sdk::*;
 
+use crate::float_pos::FloatPos;
+
 /// The block entity an owned entity belongs to.
 static OWNER: Component<u64> = Component::named("cogwork:owner");
 
@@ -40,7 +42,7 @@ fn leave_unclaimed(t: &EntityTick, claims: Claims) {
 
 /// Moves `owner`'s entity `id` to `pos`, turned `yaw` degrees; makes it if it is gone or of
 /// another kind. Returns its id.
-pub fn place(w: &World, owner: u64, id: u64, kind: &Entity, pos: [f64; 3], yaw: f32) -> u64 {
+pub fn place(w: &World, owner: u64, id: u64, kind: &Entity, pos: FloatPos, yaw: f32) -> u64 {
     let current = w.entity(id).filter(|_| id != 0);
     let Some(mut st) = current.filter(|st| st.kind == kind.id()) else {
         if current.is_some() && w.component(id, &OWNER) == Some(&owner) {
@@ -50,7 +52,8 @@ pub fn place(w: &World, owner: u64, id: u64, kind: &Entity, pos: [f64; 3], yaw: 
     };
     // A kinematic entity moves by its velocity after this tick's systems: just that speed lands
     // it on `pos`, and it stands still once there. Placing it as well would overshoot.
-    let vel: [f64; 3] = std::array::from_fn(|i| (pos[i] - st.pos[i]) * 20.0);
+    let now = FloatPos::from(st.pos);
+    let vel = [pos.x - now.x, pos.y - now.y, pos.z - now.z].map(|gap| gap * 20.0);
     let yaw = yaw.to_radians();
     if vel != st.vel || yaw != st.yaw {
         st.vel = vel;
@@ -60,8 +63,8 @@ pub fn place(w: &World, owner: u64, id: u64, kind: &Entity, pos: [f64; 3], yaw: 
     id
 }
 
-fn spawn(w: &World, owner: u64, kind: &Entity, pos: [f64; 3], yaw: f32) -> u64 {
-    let id = w.spawn(kind, pos);
+fn spawn(w: &World, owner: u64, kind: &Entity, pos: FloatPos, yaw: f32) -> u64 {
+    let id = w.spawn(kind, pos.into());
     if let Some(o) = w.component_mut(id, &OWNER) {
         *o = owner;
     }

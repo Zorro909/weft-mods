@@ -3,6 +3,8 @@
 
 use weft_sdk::*;
 
+use crate::float_pos::FloatPos;
+
 value! {
     /// A block's position. Laid out as the `[i32; 3]` the SDK uses, so a saved `[i32; 3]` loads
     /// as one.
@@ -67,14 +69,23 @@ impl Pos {
         self.toward(Dir::from_face(face))
     }
 
-    /// The middle of this block, in the world.
-    pub fn center(self) -> [f64; 3] {
-        block_center(self.into())
+    /// The middle of this block.
+    pub fn center(self) -> FloatPos {
+        FloatPos::from(self).add_x(0.5).add_y(0.5).add_z(0.5)
     }
 
-    /// The block the point `at` in the world lies in.
-    pub fn containing(at: [f64; 3]) -> Pos {
-        at.map(|v| v.floor() as i32).into()
+    /// The middle of this block's floor, where something stands on it.
+    pub fn floor_middle(self) -> FloatPos {
+        FloatPos::from(self).add_x(0.5).add_z(0.5)
+    }
+
+    /// The block the point `at` lies in.
+    pub fn containing(at: FloatPos) -> Pos {
+        Pos::new(
+            at.x.floor() as i32,
+            at.y.floor() as i32,
+            at.z.floor() as i32,
+        )
     }
 }
 
@@ -114,7 +125,9 @@ mod tests {
     fn a_point_in_the_world_lies_in_one_block() {
         let block = Pos::new(-2, 3, 0);
         assert_eq!(Pos::containing(block.center()), block, "its middle");
-        assert_eq!(Pos::containing([-1.5, 3.0, 0.99]), block, "its edges");
+        assert_eq!(Pos::containing(block.floor_middle()), block, "its floor");
+        let edge = FloatPos::new(-1.5, 3.0, 0.99);
+        assert_eq!(Pos::containing(edge), block, "near its edges");
     }
 
     #[test]

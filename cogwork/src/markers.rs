@@ -4,6 +4,8 @@
 
 use weft_sdk::*;
 
+use crate::block_state::BlockState;
+use crate::float_pos::FloatPos;
 use crate::pos::Pos;
 
 pub static SURVEY_MARKER: Block = Block::named("survey_marker");
@@ -88,7 +90,7 @@ pub fn rectangle(w: &World, pos: Pos) -> Option<Area> {
         [1, -1].into_iter().find_map(|sign| {
             (2..=REACH)
                 .map(|k| step(pos, sign * k))
-                .find(|&p| SURVEY_MARKER.is(w.get(p.into())))
+                .find(|&p| BlockState::at(w, p).is(&SURVEY_MARKER))
         })
     };
     let (x, z) = (marker_along(Pos::add_x)?, marker_along(Pos::add_z)?);
@@ -103,7 +105,7 @@ pub fn take_area(w: &World, pos: Pos) -> Option<Area> {
         return None;
     }
     for corner in area.corners() {
-        if SURVEY_MARKER.is(w.get(corner.into())) {
+        if BlockState::at(w, corner).is(&SURVEY_MARKER) {
             w.break_block(corner.into(), ItemStack::EMPTY, 0, true);
         }
     }
@@ -130,7 +132,7 @@ fn beside(w: &World, pos: Pos) -> Option<Pos> {
     [Dir::West, Dir::East, Dir::North, Dir::South]
         .map(|d| pos.toward(d))
         .into_iter()
-        .find(|&p| SURVEY_MARKER.is(w.get(p.into())))
+        .find(|&p| BlockState::at(w, p).is(&SURVEY_MARKER))
 }
 
 /// Using a marker draws its rectangle in the air for a few seconds; a marker without one puffs.
@@ -140,27 +142,25 @@ fn show(u: &mut Use) -> bool {
     let pos = Pos::from(u.pos());
     match rectangle(&w, pos) {
         Some(area) => outline(&w, &area),
-        None => drop(w.spawn_particles(&POOF, pos.center()).count(6)),
+        None => drop(w.spawn_particles(&POOF, pos.center().into()).count(6)),
     }
     true
 }
 
 /// Glowing points along the edges of the rectangle, every half block.
 fn outline(w: &World, area: &Area) {
-    let [x0, _, z0] = area.lo.center();
-    let [x1, _, z1] = area.hi.center();
     // A little above the middle of the markers.
-    let y = area.lo.y as f64 + 0.6;
+    let (lo, hi) = (area.lo.center().add_y(0.1), area.hi.center().add_y(0.1));
     let mut points = Vec::new();
-    let steps = |a: f64, b: f64| (0..=((b - a) * 2.0) as i32).map(move |i| a + i as f64 * 0.5);
-    for x in steps(x0, x1) {
-        points.extend([[x, y, z0], [x, y, z1]]);
+    let steps = |a: f64, b: f64| (0..=((b - a) * 2.0) as i32).map(move |i| i as f64 * 0.5);
+    for along in steps(lo.x, hi.x) {
+        points.extend([lo.add_x(along), FloatPos { z: hi.z, ..lo }.add_x(along)]);
     }
-    for z in steps(z0, z1) {
-        points.extend([[x0, y, z], [x1, y, z]]);
+    for along in steps(lo.z, hi.z) {
+        points.extend([lo.add_z(along), FloatPos { x: hi.x, ..lo }.add_z(along)]);
     }
     for p in points {
-        drop(w.spawn_particles(&SURVEY_GLOW, p).count(1));
+        drop(w.spawn_particles(&SURVEY_GLOW, p.into()).count(1));
     }
 }
 

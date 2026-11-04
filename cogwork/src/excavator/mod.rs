@@ -17,6 +17,7 @@ static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
 pub use area::Frame;
 
+use crate::float_pos::FloatPos;
 use crate::pos::Pos;
 
 value! {
@@ -34,7 +35,8 @@ value! {
         pub cursor: Pos,
         pub step: u32,
         pub spent: i64,
-        pub head: [f32; 3],
+        // In `f32`s, as it has always been saved: `head()` reads it.
+        head: [f32; 3],
         pub waited: u32,
         // Last, so excavators saved before it load with it 0.
         pub refused: u32,
@@ -94,6 +96,15 @@ impl Dig {
 
     pub fn set_status(&mut self, status: Status) {
         self.status = status as u32;
+    }
+
+    pub fn head(&self) -> FloatPos {
+        let [x, y, z] = self.head.map(f64::from);
+        FloatPos::new(x, y, z)
+    }
+
+    pub fn set_head(&mut self, at: FloatPos) {
+        self.head = [at.x, at.y, at.z].map(|v| v as f32);
     }
 }
 

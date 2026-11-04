@@ -14,6 +14,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use weft_sdk::*;
 
 use super::{Motion, NONE, TUBES};
+use crate::block_state::BlockState;
+use crate::float_pos::FloatPos;
 use crate::pos::Pos;
 
 static ITEM_ENTITY: Entity = Entity::named("core:item");
@@ -90,57 +92,61 @@ fn sweep(w: &World) {
 
 /// Where in the world an item at `m` in the tube at `pos` is, and how fast it goes there
 /// (blocks per second).
-fn place_of(pos: Pos, m: &Motion) -> ([f64; 3], [f64; 3]) {
+fn place_of(pos: Pos, m: &Motion) -> (FloatPos, [f64; 3]) {
     let (face, along, sign) = if m.pos < 0.5 {
         (m.from, 0.5 - m.pos, -1.0)
     } else {
         (m.to, m.pos - 0.5, 1.0)
     };
-    let mut at = pos.center();
-    let mut vel = [0.0; 3];
-    if face != NONE {
-        let o = Dir::from_face(face).offset();
-        for i in 0..3 {
-            at[i] += o[i] as f64 * along as f64;
-            vel[i] = o[i] as f64 * sign * m.speed as f64 * 20.0;
-        }
+    if face == NONE {
+        return (pos.center(), [0.0; 3]);
     }
+    let dir = Dir::from_face(face);
+    let at = pos.center().toward_by(dir, along as f64);
+    // Ticks are a twentieth of a second.
+    let vel = dir
+        .offset()
+        .map(|o| o as f64 * sign * m.speed as f64 * 20.0);
     (at, vel)
 }
 
 /// Shows the item at `m` where it is now, making its picture if it has none.
 pub fn show(w: &World, pos: Pos, m: &mut Motion, stack: ItemStack) {
-    let (mut at, vel) = place_of(pos, m);
+    let (at, vel) = place_of(pos, m);
     // A dropped item is drawn bobbing above where it is: a block 0.15 up, a flat item from
     // 0.15 to 0.65 up.
-    at[1] -= if item_block(stack.item).is_some() {
+    let bob = if BlockState::placed_by(stack.item).is_some() {
         0.15
     } else {
         0.4
     };
-    let mut state = w
+    let at = at.add_y(-bob);
+    let mut picture = w
         .entity(m.visual)
         .filter(|st| m.visual != 0 && st.kind == ITEM_ENTITY.id());
-    if state.is_none() {
+    if picture.is_none() {
         m.visual = spawn(w, at, stack);
-        state = w.entity(m.visual);
+        picture = w.entity(m.visual);
     }
-    let Some(mut st) = state else { return };
+    let Some(mut st) = picture else { return };
     // Again on every show, for pictures saved before they were marked.
     mark_picture(w, m.visual);
     pictures(|p| p.insert((w.dimension(), m.visual), w.time()));
-    st.pos = at;
+    st.pos = at.into();
     st.vel = vel;
     w.set_entity(m.visual, &st);
 }
 
 /// A new picture of `stack` at `at`, or 0 if it couldn't be found after spawning.
-fn spawn(w: &World, at: [f64; 3], stack: ItemStack) -> u64 {
+fn spawn(w: &World, at: FloatPos, stack: ItemStack) -> u64 {
     let mark = NEXT_MARK.fetch_add(1, Ordering::Relaxed) % 64;
-    let before = w.near(at, 0.5, Some(&ITEM_ENTITY));
-    w.spawn_item(at, ItemStack { count: 1, ..stack }.with(&PICTURE, mark));
+    let before = w.near(at.into(), 0.5, Some(&ITEM_ENTITY));
+    w.spawn_item(
+        at.into(),
+        ItemStack { count: 1, ..stack }.with(&PICTURE, mark),
+    );
     let id = w
-        .near(at, 0.5, Some(&ITEM_ENTITY))
+        .near(at.into(), 0.5, Some(&ITEM_ENTITY))
         .into_iter()
         .find(|id| !before.contains(id))
         .unwrap_or(0);
@@ -161,14 +167,14 @@ pub fn remove(w: &World, id: u64) {
 
 /// Removes the pictures left where a tube was broken; the spilled stacks stay.
 pub fn clear_broken(w: &World, pos: Pos) {
-    if TUBES.on_block(w.get(pos.into())) {
+    if BlockState::at(w, pos).has(&TUBES) {
         return;
     }
-    for id in w.near(pos.center(), 1.5, Some(&ITEM_ENTITY)) {
+    for id in w.near(pos.center().into(), 1.5, Some(&ITEM_ENTITY)) {
         // Back up by the bob `show` takes off, to find the cell it was drawn for.
-        let inside = w.entity(id).is_some_and(|st| {
-            Pos::containing([st.pos[0], st.pos[1] + 0.4, st.pos[2]]) == pos
-        });
+        let inside = w
+            .entity(id)
+            .is_some_and(|st| Pos::containing(FloatPos::from(st.pos).add_y(0.4)) == pos);
         if inside {
             remove(w, id);
         }
@@ -202,12 +208,13 @@ mod tests {
         let (west, up) = (Dir::West.face(), Dir::Up.face());
         let tube = Pos::new(0, 0, 0);
         let (hub, still) = place_of(tube, &at(0.5, NONE, NONE));
-        assert_eq!((hub, still), ([0.5; 3], [0.0; 3]), "waiting at the hub");
+        let middle = FloatPos::new(0.5, 0.5, 0.5);
+        assert_eq!((hub, still), (middle, [0.0; 3]), "waiting at the hub");
         let (start, vel) = place_of(tube, &at(0.0, west, NONE));
-        assert_eq!(start, [0.0, 0.5, 0.5], "in at the west face");
+        assert_eq!(start, FloatPos::new(0.0, 0.5, 0.5), "in at the west face");
         assert!(vel[0] > 0.0, "heading east, to the hub");
         let (end, vel) = place_of(tube, &at(1.0, west, up));
-        assert_eq!(end, [0.5, 1.0, 0.5], "out at the top");
+        assert_eq!(end, FloatPos::new(0.5, 1.0, 0.5), "out at the top");
         assert!((vel[1] - 1.0).abs() < 1e-6, "a block a second, going up");
     }
 }

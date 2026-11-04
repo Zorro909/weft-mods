@@ -3,6 +3,7 @@
 
 use weft_sdk::*;
 
+use crate::block_state::BlockState;
 use crate::pos::Pos;
 
 static TOOL: Item = Item::named("base:diamond_pickaxe");
@@ -24,33 +25,22 @@ pub enum Harvest {
     Refused,
 }
 
-/// Whether a block can simply be built into: air, plants, liquids.
-pub fn opens_into(state: u32) -> bool {
-    state == 0
-        || state_flags(state) & (abi::block_flags::REPLACEABLE | abi::block_flags::LIQUID) != 0
+/// Energy to break `block_state`: `base`, and as much again as `per_hardness` per point of
+/// hardness.
+pub fn cost(block_state: BlockState, base: f32, per_hardness: f32) -> i64 {
+    (base + per_hardness * block_state.hardness().unwrap_or(1.0)) as i64
 }
 
-/// Whether a machine can break the block: not air or liquid, and not unbreakable.
-pub fn breakable(state: u32) -> bool {
-    state != 0
-        && state_flags(state) & abi::block_flags::LIQUID == 0
-        && HARDNESS.on_block(state).is_none_or(|h| h >= 0.0)
-}
-
-/// Energy to break the block: `base`, and as much again as `per_hardness` per point of hardness.
-pub fn cost(state: u32, base: f32, per_hardness: f32) -> i64 {
-    (base + per_hardness * HARDNESS.on_block(state).unwrap_or(1.0)) as i64
-}
-
-/// Breaks the block `state` at `c` into the `output` group of the machine `id`, only when
+/// Breaks `block_state` at `c` into the `output` group of the machine `id`, only when
 /// everything it drops fits there.
-pub fn harvest(w: &World, id: u64, c: Pos, state: u32) -> Harvest {
+pub fn harvest(w: &World, id: u64, c: Pos, block_state: BlockState) -> Harvest {
     let output = || w.inventory(id).group("output");
     let tool = ItemStack::new(TOOL.id(), 1);
-    let name = block_name(state).split('[').next().unwrap_or("");
+    // The loot table is the block's, whatever its properties.
+    let name = block_state.name().split('[').next().unwrap_or("");
     let ctx = LootCtx {
         tool,
-        mined: state,
+        mined: block_state.id(),
         ..LootCtx::default()
     };
     let drops = w.roll_loot(&TableOf(name), &ctx);
@@ -66,7 +56,7 @@ pub fn harvest(w: &World, id: u64, c: Pos, state: u32) -> Harvest {
     for s in drops {
         let left = crate::store::insert_into(output(), s, false);
         if !left.is_empty() {
-            w.spawn_item(c.center(), left);
+            w.spawn_item(c.center().into(), left);
         }
     }
     Harvest::Done

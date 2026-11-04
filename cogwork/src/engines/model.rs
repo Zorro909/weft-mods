@@ -80,12 +80,12 @@ fn turn(u: &mut Use) -> bool {
     if !crate::cogs::holds_wrench(&w, u.player()) {
         return false;
     }
-    let pos = Pos::from(u.pos());
+    let pos = u.pos();
     let now = w
-        .prop(pos.into(), "facing")
+        .prop(pos, "facing")
         .and_then(Dir::from_name)
         .map_or(0, Dir::face);
-    w.set_prop(pos.into(), "facing", Dir::from_face((now + 1) % 6).name());
+    w.set_prop(pos, "facing", Dir::from_face((now + 1) % 6).name());
     true
 }
 

@@ -12,6 +12,8 @@ use std::sync::OnceLock;
 use twox_hash::XxHash3_64;
 use weft_sdk::*;
 
+use crate::float_pos::FloatPos;
+
 /// Side of a cell in GUI pixels, the same as a slot.
 pub const SLOT: f32 = 18.0;
 /// How far from a machine a player may set its ghosts, in blocks.
@@ -110,15 +112,20 @@ fn click(c: &ClientView, cell: u32) {
 /// Server side: sets the ghost when the player is at the machine, whichever kind it is.
 fn set(p: &Packet, g: SetGhost) {
     let w = p.world();
-    let (Some(at), Some(me)) = (w.entity(g.owner), w.entity(p.player())) else {
+    let (Some(machine), Some(player)) = (w.entity(g.owner), w.entity(p.player())) else {
         return;
     };
-    let near = (0..3).map(|i| (at.pos[i] - me.pos[i]).powi(2)).sum::<f64>() <= REACH * REACH;
+    let near = within_reach(machine.pos.into(), player.pos.into());
     let known = g.item == 0 || !item_name(g.item).is_empty();
     if near && known {
         crate::bench::set_ghost(&w, g.owner, g.cell, g.item);
         crate::tube::set_sample(&w, g.owner, g.cell, g.item);
     }
+}
+
+/// Whether a player at `player` may set the ghosts of the machine at `machine`.
+fn within_reach(machine: FloatPos, player: FloatPos) -> bool {
+    machine.distance_to(player) <= REACH
 }
 
 #[cfg(test)]
@@ -136,6 +143,29 @@ mod tests {
             hash("cogwork:stone_tube"),
             hash("cogwork:stone_cog"),
             "like names differ"
+        );
+        assert_ne!(
+            hash("base:stick"),
+            hash("cogwork:stick"),
+            "the same name from another mod"
+        );
+    }
+
+    #[test]
+    fn no_item_keeps_the_empty_key() {
+        assert_eq!(key_of(0), NO_ITEM, "an empty hand clears the ghost");
+        assert_ne!(hash(""), NO_ITEM, "no name hashes to it");
+    }
+
+    #[test]
+    fn ghosts_are_set_only_from_near_the_machine() {
+        let machine = FloatPos::new(0.5, 64.0, 0.5);
+        let beside = machine.add_x(REACH);
+        assert!(within_reach(machine, beside), "at the edge of reach");
+        assert!(!within_reach(machine, beside.add_x(0.1)), "just past it");
+        assert!(
+            !within_reach(machine, machine.add_y(-REACH - 1.0)),
+            "below it too"
         );
     }
 }
