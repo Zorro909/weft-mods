@@ -38,11 +38,11 @@ fn leave_unclaimed(t: &EntityTick, claims: Claims) {
     }
 }
 
-/// Moves `owner`'s entity `id` to `pos`, turned `yaw` degrees; makes it if it is gone or of
-/// another kind. Returns its id.
+/// Moves `owner`'s entity `id` to `pos`, turned `yaw` degrees; makes it anew if it is gone, of
+/// another kind or turned another way. Returns its id.
 pub fn place(w: &World, owner: u64, id: u64, kind: &EntityKind, pos: Vec3, yaw: f32) -> u64 {
     let current = w.entity(id).filter(|_| id != 0);
-    let Some(st) = current.filter(|st| st.kind == kind.id()) else {
+    let Some(st) = current.filter(|st| still_fits(st.kind, st.yaw, kind.id(), yaw)) else {
         if current.is_some() && w.component(id, &OWNER) == Some(owner) {
             w.despawn(id);
         }
@@ -51,15 +51,33 @@ pub fn place(w: &World, owner: u64, id: u64, kind: &EntityKind, pos: Vec3, yaw: 
     // A kinematic entity moves by its velocity after this tick's systems: just that speed lands
     // it on `pos`, and it stands still once there. Placing it as well would overshoot.
     let vel = (pos - st.pos) * 20.0;
-    let yaw = yaw.to_radians();
-    if vel != st.vel || yaw != st.yaw {
-        w.entity_edit(id).velocity(vel).yaw(yaw);
+    if vel != st.vel {
+        w.entity_edit(id).velocity(vel);
     }
     id
+}
+
+/// Whether an entity of `kind` turned `yaw` radians can stay to be of `wanted` turned
+/// `wanted_yaw` degrees. A turned one can't: clients turn its body after its yaw like a mob's,
+/// which stops 50 degrees short when it stands still.
+fn still_fits(kind: u32, yaw: f32, wanted: u32, wanted_yaw: f32) -> bool {
+    kind == wanted && yaw == wanted_yaw.to_radians()
 }
 
 fn spawn(w: &World, owner: u64, kind: &EntityKind, pos: Vec3, yaw: f32) -> u64 {
     let id = w.spawn_with(kind, pos, &Spawn::new().yaw(yaw.to_radians()));
     w.set_component(id, &OWNER, owner);
     id
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_turned_entity_is_made_anew() {
+        assert!(still_fits(3, 90f32.to_radians(), 3, 90.0), "as it was");
+        assert!(!still_fits(3, 0.0, 3, 90.0), "turned a quarter");
+        assert!(!still_fits(3, 0.0, 4, 0.0), "another kind");
+    }
 }
