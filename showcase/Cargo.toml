@@ -1,6 +1,6 @@
 [package]
 name = "showcase"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 # As `Weft/Cargo.toml` declares; cargo then picks dependency versions that build with it.
 rust-version = "1.95"
