@@ -89,9 +89,13 @@ static TICKETS: LazyLock<Mutex<Tickets>> = LazyLock::new(Default::default);
 enum Role {
     /// A loader's cubes, or a machine's own and those around it.
     Home,
-    /// The cube a machine works in.
+    /// The cubes a machine works in.
     Work,
+    /// The cubes between those two, when its work is above or below them.
+    Link,
 }
+
+const ROLES: [Role; 3] = [Role::Home, Role::Work, Role::Link];
 
 pub fn register(r: &mut Registry) {
     loader::register(r);
@@ -174,24 +178,46 @@ fn release(w: &World, key: u64) {
 pub fn keep_machine(w: &World, pos: Pos, work: Option<Cubes>) {
     let home = Cubes::around(pos, 1);
     keep(w, key(w, pos, Role::Home), home, Keeper::Machine);
-    let work_key = key(w, pos, Role::Work);
-    match work.filter(|cubes| !home.contains(cubes)) {
-        Some(cubes) => drop(keep(w, work_key, cubes, Keeper::Machine)),
-        None => release(w, work_key),
+    let work = work.filter(|cubes| !home.contains(cubes));
+    keep_or_release(w, key(w, pos, Role::Work), work);
+    keep_or_release(w, key(w, pos, Role::Link), work.and_then(|c| link(pos, c)));
+}
+
+/// A column of the cubes between the machine's own at `pos` and the height of its `work`, if
+/// any. A machine sees only the loaded cubes joined to its own, so work far below it, as an
+/// excavator's, would be out of its reach once the cubes between unload.
+fn link(pos: Pos, work: Cubes) -> Option<Cubes> {
+    let own = Cubes::around(pos, 0).lo;
+    let (lo, hi) = if work.lo.y > own.y {
+        (own.y + 1, work.lo.y - 1)
+    } else {
+        (work.hi.y + 1, own.y - 1)
+    };
+    (lo <= hi).then(|| Cubes {
+        lo: own.with_y(lo),
+        hi: own.with_y(hi),
+    })
+}
+
+fn keep_or_release(w: &World, key: u64, cubes: Option<Cubes>) {
+    match cubes {
+        Some(cubes) => drop(keep(w, key, cubes, Keeper::Machine)),
+        None => release(w, key),
     }
 }
 
 /// Lets go of what the machine at `pos` kept loaded: it is done.
 pub fn release_machine(w: &World, pos: Pos) {
-    release(w, key(w, pos, Role::Home));
-    release(w, key(w, pos, Role::Work));
+    for role in ROLES {
+        release(w, key(w, pos, role));
+    }
 }
 
 /// A block that keeps cubes loaded was broken: its tickets go now, even ones restored with the
 /// world that cogwork has not noted again yet.
 pub fn let_go(w: &World, change: &BlockChange) {
     let pos = Pos::from(change.pos);
-    for role in [Role::Home, Role::Work] {
+    for role in ROLES {
         let key = key(w, pos, role);
         lock().remove(&key);
         w.release_loaded(key);
@@ -305,6 +331,21 @@ mod tests {
         assert!(!tickets.contains_key(&1), "run out");
         assert!(tickets.contains_key(&2), "still kept");
         assert!(!tickets.contains_key(&3), "from another world");
+    }
+
+    #[test]
+    fn work_far_below_is_linked_to_the_machine_by_the_cubes_between() {
+        let pos = Pos::new(5, 320, 5);
+        let below = Cubes::around(Pos::new(30, 60, 30), 2);
+        let column = link(pos, below).expect("cubes between");
+        assert_eq!(column.lo, Pos::new(0, 4, 0), "from just above the work");
+        assert_eq!(column.hi, Pos::new(0, 19, 0), "to just below the machine");
+        let above = Cubes::around(Pos::new(30, 400, 30), 0);
+        assert_eq!(link(pos, above).map(|c| c.lo.y), Some(21), "work above it");
+        let beside = Cubes::around(Pos::new(30, 330, 30), 2);
+        assert_eq!(link(pos, beside), None, "at its height");
+        let next_cube_down = Cubes::around(Pos::new(30, 310, 30), 2);
+        assert_eq!(link(pos, next_cube_down), None, "joined already");
     }
 
     #[test]

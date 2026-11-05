@@ -94,13 +94,14 @@ fn keep_loaded(w: &World, pos: Pos, l: &Level) {
 
 /// The cubes it works in, across the whole area: while it clears, those of the layer it
 /// clears; while it fills, those of every layer left to fill. Filling ends just below the
-/// height clearing ended at, so the cubes there stay rather than going and coming back.
+/// height clearing ended at, so the cubes there stay rather than going and coming back. None
+/// once the cursor has passed the last layer to fill: the stage ends on the next tick.
 fn work_cubes(l: &Level) -> Option<Cubes> {
     let (lo, hi, y) = (l.area.lo, l.area.hi, l.cursor.y);
     match l.stage() {
         Stage::Clear => Some(Cubes::spanning(lo.with_y(y), hi.with_y(y))),
-        Stage::Fill => Some(Cubes::spanning(lo.with_y(y), hi.with_y(lo.y - 1))),
-        Stage::New | Stage::Done => None,
+        Stage::Fill if y < lo.y => Some(Cubes::spanning(lo.with_y(y), hi.with_y(lo.y - 1))),
+        Stage::Fill | Stage::New | Stage::Done => None,
     }
 }
 

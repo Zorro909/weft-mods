@@ -208,25 +208,30 @@ mod tests {
 
     #[test]
     fn no_cube_is_let_go_and_kept_again_over_a_job() {
-        // Filling from y 62 to 65 starts a cube below where clearing ends, at 66.
-        let area = Area::between(Pos::new(-20, 66, -20), Pos::new(40, 66, 40));
-        let mut l = Level {
-            stage: Stage::Clear as u32,
-            area,
-            cursor: area.lo.add_y(CLEAR_HEIGHT - 1),
-            ..Level::default()
-        };
-        let mut kept = Vec::new();
-        loop {
-            stage_over(&mut l);
-            if l.stage() == Stage::Done {
-                break;
+        // At 66, filling from 62 to 65 starts a cube below where clearing ends; at 64, filling
+        // ends where a cube begins.
+        for height in [66, 64] {
+            let area = Area::between(Pos::new(-20, height, -20), Pos::new(40, height, 40));
+            let mut l = Level {
+                stage: Stage::Clear as u32,
+                area,
+                cursor: area.lo.add_y(CLEAR_HEIGHT - 1),
+                ..Level::default()
+            };
+            // What it keeps after each block, as a tick does once the cursor has moved on.
+            let mut kept = Vec::new();
+            loop {
+                stage_over(&mut l);
+                if l.stage() == Stage::Done {
+                    break;
+                }
+                let dy = if l.stage() == Stage::Clear { -1 } else { 1 };
+                l.cursor = next(&area, l.cursor, dy);
+                kept.extend(super::super::work_cubes(&l));
             }
-            kept.push(super::super::work_cubes(&l).expect("working"));
-            let dy = if l.stage() == Stage::Clear { -1 } else { 1 };
-            l.cursor = next(&area, l.cursor, dy);
+            let again = crate::loading::kept_again(kept);
+            assert_eq!(again, None, "down, then up, at {height}");
         }
-        assert_eq!(crate::loading::kept_again(kept), None, "down, then up");
     }
 
     #[test]

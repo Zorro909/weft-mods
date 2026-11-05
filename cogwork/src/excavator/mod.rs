@@ -108,10 +108,12 @@ impl Dig {
         self.head = at.to_array().map(|v| v as f32);
     }
 
-    /// The cubes of the layer it mines, across the whole frame.
-    fn mining_layer(&self) -> Cubes {
+    /// The cubes of the layer it mines, across the whole frame. None once the cursor has passed
+    /// the floor: it finishes on the next tick.
+    fn mining_layer(&self) -> Option<Cubes> {
         let y = self.cursor.y;
-        Cubes::spanning(self.frame.lo.with_y(y), self.frame.hi.with_y(y))
+        (y >= dig::FLOOR_Y)
+            .then(|| Cubes::spanning(self.frame.lo.with_y(y), self.frame.hi.with_y(y)))
     }
 }
 
@@ -119,7 +121,7 @@ impl Dig {
 /// Building the frame keeps nothing loaded: it takes a player near.
 fn keep_loaded(w: &World, pos: Pos, d: &Dig) {
     match d.stage() {
-        Stage::Mine => crate::loading::keep_machine(w, pos, Some(d.mining_layer())),
+        Stage::Mine => crate::loading::keep_machine(w, pos, d.mining_layer()),
         Stage::New | Stage::Frame | Stage::Done => crate::loading::release_machine(w, pos),
     }
 }
@@ -249,11 +251,17 @@ mod tests {
             cursor: frame.first(),
             ..Dig::default()
         };
-        let mut kept = Vec::new();
-        while d.cursor.y >= -20 {
-            kept.push(d.mining_layer());
+        // What it keeps after each block, as a tick does once the cursor has moved on.
+        let mut kept = vec![d.mining_layer().expect("the top layer")];
+        while d.cursor.y >= dig::FLOOR_Y {
             d.cursor = frame.next(d.cursor);
+            kept.extend(d.mining_layer());
         }
+        assert_eq!(
+            kept.last().map(|c| c.lo.y),
+            Some(-4),
+            "nothing below the floor"
+        );
         assert_eq!(crate::loading::kept_again(kept), None, "from the top down");
     }
 }
