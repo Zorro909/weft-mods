@@ -12,6 +12,8 @@ static CARRIAGE: EntityKind = EntityKind::named("drill_carriage");
 static BIT: EntityKind = EntityKind::named("drill_bit");
 static SHAFT: EntityKind = EntityKind::named("drill_shaft");
 static BEAM: EntityKind = EntityKind::named("gantry_beam");
+/// A block of beam, to end a beam flush with the frame where a whole piece would stick out.
+static BEAM_END: EntityKind = EntityKind::named("gantry_beam_end");
 
 value! {
     /// The rig's entities: carriage, bit, then shaft pieces, then beams along x and along z.
@@ -20,7 +22,10 @@ value! {
 static RIG: Component<Rig> = Component::named("cogwork:rig");
 
 const SHAFTS: usize = 40;
-const BEAMS: usize = 19;
+/// Whole beam pieces on each axis: enough for the 64 blocks survey markers reach.
+const LONG_BEAMS: usize = 16;
+/// Beam pieces on each axis, the whole ones then up to three ends.
+const BEAMS: usize = LONG_BEAMS + 3;
 const SLOTS: usize = 2 + SHAFTS + 2 * BEAMS;
 /// Blocks one shaft or beam piece is long.
 const PIECE: f64 = 4.0;
@@ -61,10 +66,22 @@ pub fn register(r: &mut Registry) {
         ),
     ];
     for (kind, parts, uv) in pieces {
-        crate::owned::kind(r.entity(kind), claims)
-            .model(Model::from(parts).uv_size(uv[0], uv[1]))
-            .size(0.5, 0.5);
+        piece(r, kind, parts, uv);
     }
+    // A short piece of the same beam, so it wears the beam's skin.
+    let end = vec![body([-8.0, 0.0, -2.0], [16.0, 4.0, 4.0])];
+    piece(r, &BEAM_END, end, [144, 16]).texture("gantry_beam");
+}
+
+fn piece<'a>(
+    r: &'a mut Registry,
+    kind: &'static EntityKind,
+    parts: Vec<ModelPart>,
+    uv: [u32; 2],
+) -> EntityBuilder<'a> {
+    crate::owned::kind(r.entity(kind), claims)
+        .model(Model::from(parts).uv_size(uv[0], uv[1]))
+        .size(0.5, 0.5)
 }
 
 fn claims(w: &World, owner: u64, id: u64) -> bool {
@@ -98,21 +115,25 @@ fn layout(d: &Dig) -> Vec<(usize, &'static EntityKind, Vec3, f32)> {
     out.extend((0..shafts).map(|k| (2 + k, &SHAFT, below_carriage(k), 0.0)));
     let beams = carriage.offset(0.0, 0.125, 0.0);
     let (lo, hi) = (lo.center(), hi.center());
-    for (k, x) in spans(lo.x, hi.x).into_iter().enumerate() {
-        out.push((2 + SHAFTS + k, &BEAM, Vec3 { x, ..beams }, 0.0));
+    for (k, (kind, x)) in spans(lo.x, hi.x).into_iter().enumerate() {
+        out.push((2 + SHAFTS + k, kind, Vec3 { x, ..beams }, 0.0));
     }
-    for (k, z) in spans(lo.z, hi.z).into_iter().enumerate() {
-        out.push((2 + SHAFTS + BEAMS + k, &BEAM, Vec3 { z, ..beams }, 90.0));
+    for (k, (kind, z)) in spans(lo.z, hi.z).into_iter().enumerate() {
+        out.push((2 + SHAFTS + BEAMS + k, kind, Vec3 { z, ..beams }, 90.0));
     }
     out
 }
 
-/// Centers of beam pieces covering `a`..`b`, the last one flush with `b`.
-fn spans(a: f64, b: f64) -> Vec<f64> {
-    let n = (((b - a) / PIECE).ceil() as usize).clamp(1, BEAMS);
-    (0..n)
-        .map(|k| (a + PIECE / 2.0 + PIECE * k as f64).min(b - PIECE / 2.0))
-        .collect()
+/// Beam pieces end to end from `a` to `b`, whole ones then ends, by kind and center. None
+/// overlap: where two did, their faces flickered through each other.
+fn spans(a: f64, b: f64) -> Vec<(&'static EntityKind, f64)> {
+    let blocks = (b - a).round().max(0.0) as usize;
+    let long = (blocks / PIECE as usize).min(LONG_BEAMS);
+    let ends = (blocks - long * PIECE as usize).min(BEAMS - LONG_BEAMS);
+    let after_long = a + PIECE * long as f64;
+    let long = (0..long).map(|k| (&BEAM, a + PIECE * (k as f64 + 0.5)));
+    let ends = (0..ends).map(|k| (&BEAM_END, after_long + k as f64 + 0.5));
+    long.chain(ends).collect()
 }
 
 /// Puts the rig where the drill is, while the excavator mines; takes it away otherwise.
@@ -163,12 +184,48 @@ mod tests {
         assert!(!rig.holds(7), "the bit it lost and replaced");
     }
 
+    /// Where each piece starts and ends along its beam.
+    fn extents(pieces: &[(&'static EntityKind, f64)]) -> Vec<(f64, f64)> {
+        let half = |kind| {
+            if std::ptr::eq(kind, &BEAM) {
+                PIECE / 2.0
+            } else {
+                0.5
+            }
+        };
+        pieces
+            .iter()
+            .map(|&(kind, c)| (c - half(kind), c + half(kind)))
+            .collect()
+    }
+
     #[test]
-    fn beam_pieces_cover_the_span_and_end_flush() {
-        let centers = spans(0.5, 10.5);
-        assert_eq!(centers.len(), 3, "ten blocks take three pieces");
-        assert_eq!(centers[0] - PIECE / 2.0, 0.5, "first starts at the start");
-        assert_eq!(centers[2] + PIECE / 2.0, 10.5, "last ends at the end");
+    fn beam_pieces_cover_the_span_end_to_end() {
+        for blocks in [1, 3, 4, 10, 15, 64] {
+            let pieces = extents(&spans(0.5, 0.5 + blocks as f64));
+            assert_eq!(
+                pieces[0].0, 0.5,
+                "{blocks} blocks: first starts at the start"
+            );
+            for pair in pieces.windows(2) {
+                assert_eq!(pair[0].1, pair[1].0, "{blocks} blocks: no overlap, no gap");
+            }
+            let last = pieces[pieces.len() - 1].1;
+            assert_eq!(
+                last,
+                0.5 + blocks as f64,
+                "{blocks} blocks: last ends at the end"
+            );
+        }
+    }
+
+    #[test]
+    fn ten_blocks_take_two_pieces_and_two_ends() {
+        let whole: Vec<bool> = spans(0.5, 10.5)
+            .iter()
+            .map(|p| std::ptr::eq(p.0, &BEAM))
+            .collect();
+        assert_eq!(whole, [true, true, false, false]);
     }
 
     #[test]
