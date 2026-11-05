@@ -56,7 +56,9 @@ pub fn register(r: &mut Registry) {
         ),
         (
             &SHAFT,
-            vec![body([-2.0, 0.0, -2.0], [4.0, 64.0, 4.0])],
+            // Hangs below its place, which is its top: the engine lights an entity by the block
+            // just above its place, and the lowest piece's foot is down in the ground.
+            vec![body([-2.0, -64.0, -2.0], [4.0, 64.0, 4.0])],
             [32, 80],
         ),
         (
@@ -111,7 +113,7 @@ fn layout(d: &Dig) -> Vec<(usize, &'static EntityKind, Vec3, f32)> {
     // Shaft pieces hang from the carriage down to the bit; the lowest reaches into the ground.
     let reach = top - (bit.y + BIT_HEIGHT);
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
-    let below_carriage = |k: usize| carriage.offset(0.0, -PIECE * (k + 1) as f64, 0.0);
+    let below_carriage = |k: usize| carriage.offset(0.0, -PIECE * k as f64, 0.0);
     out.extend((0..shafts).map(|k| (2 + k, &SHAFT, below_carriage(k), 0.0)));
     let beams = carriage.offset(0.0, 0.125, 0.0);
     let (lo, hi) = (lo.center(), hi.center());
@@ -231,17 +233,34 @@ mod tests {
     #[test]
     fn shafts_reach_from_the_carriage_down_to_the_bit() {
         let d = mining_at(Vec3::new(5.5, -3.0, 5.5));
+        // Each piece's top, where it is placed.
         let shafts: Vec<f64> = layout(&d)
             .into_iter()
             .filter(|p| std::ptr::eq(p.1, &SHAFT))
             .map(|p| p.2.y)
             .collect();
         let lowest = shafts.iter().copied().fold(f64::MAX, f64::min);
-        assert!(lowest <= -2.0 + BIT_HEIGHT, "down to the top of the bit");
         assert!(
-            shafts.iter().all(|y| y + PIECE <= 8.25 + 1e-9),
+            lowest - PIECE <= -2.0 + BIT_HEIGHT,
+            "down to the top of the bit"
+        );
+        assert!(
+            shafts.iter().all(|&y| y <= 8.25 + 1e-9),
             "none above the carriage"
         );
+    }
+
+    #[test]
+    fn every_shaft_piece_takes_its_light_from_the_air() {
+        // An entity is lit by the block half a block above its place; the drilled block is the
+        // highest solid one under the bit.
+        for depth in [-3.0, -3.5, -5.0, -6.25] {
+            let d = mining_at(Vec3::new(5.5, depth, 5.5));
+            for p in layout(&d).iter().filter(|p| std::ptr::eq(p.1, &SHAFT)) {
+                let lit_by = (p.2.y + 0.5).floor();
+                assert!(lit_by > depth, "drilling at {depth}: piece at {}", p.2.y);
+            }
+        }
     }
 
     #[test]
