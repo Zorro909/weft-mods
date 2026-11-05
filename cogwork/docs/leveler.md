@@ -28,8 +28,9 @@ behind it. The flat height is the leveler's own.
 
 Afterwards the ground in the area ends just below the leveler's layer, flat.
 
-While it works, it keeps its own cube and the eight around it loaded, and the cube it clears or
-fills in; see [cuboid loaders](loading.md#excavators-and-levelers).
+While it works, it keeps its own cube and the eight around it loaded, and the cubes of the
+layer it clears or fills all the way across its area; see
+[cuboid loaders](loading.md#excavators-and-levelers).
 
 ## The stock
 

@@ -134,14 +134,14 @@ mod tests {
     fn an_answer_reads_as_it_was_written() {
         let boxes = vec![
             (Cubes::around(Pos::new(-40, 70, 8), 3), Keeper::LoaderAll),
-            (Cubes::of(Pos::new(5, -60, 5)), Keeper::Machine),
+            (Cubes::around(Pos::new(5, -60, 5), 0), Keeper::Machine),
         ];
         assert_eq!(decode(&encode(&boxes)), boxes, "both boxes, in order");
     }
 
     #[test]
     fn a_box_with_an_unknown_keeper_is_left_out() {
-        let mut bytes = encode(&[(Cubes::of(Pos::new(0, 0, 0)), Keeper::Loader)]);
+        let mut bytes = encode(&[(Cubes::around(Pos::new(0, 0, 0), 0), Keeper::Loader)]);
         bytes[24..28].copy_from_slice(&99i32.to_le_bytes());
         assert!(decode(&bytes).is_empty(), "keeper 99");
         assert!(decode(&[1, 2, 3]).is_empty(), "too short");

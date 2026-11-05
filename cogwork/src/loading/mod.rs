@@ -167,13 +167,16 @@ fn release(w: &World, key: u64) {
 }
 
 /// Keeps what a working machine at `pos` needs loaded: its own cube and the eight around it,
-/// and the cube of `work`, the block it works on, when that is outside them.
-pub fn keep_machine(w: &World, pos: Pos, work: Option<Pos>) {
+/// and the cubes it works in, `work`, when they reach outside them.
+///
+/// A machine's `work` should not let go of a cube it comes back to later: unloaded, a cube is
+/// written to disk at once, and read back from it when wanted again.
+pub fn keep_machine(w: &World, pos: Pos, work: Option<Cubes>) {
     let home = Cubes::around(pos, 1);
     keep(w, key(w, pos, Role::Home), home, Keeper::Machine);
     let work_key = key(w, pos, Role::Work);
-    match work.map(Cubes::of).filter(|cube| !home.contains(cube)) {
-        Some(cube) => drop(keep(w, work_key, cube, Keeper::Machine)),
+    match work.filter(|cubes| !home.contains(cubes)) {
+        Some(cubes) => drop(keep(w, work_key, cubes, Keeper::Machine)),
         None => release(w, work_key),
     }
 }
@@ -219,6 +222,28 @@ fn shown(dimension: u32, now: u64) -> Vec<(Cubes, Keeper)> {
 
 fn lock() -> MutexGuard<'static, Tickets> {
     TICKETS.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// For machines' tests: the first cube that `kept`, the boxes a machine keeps one after another,
+/// lets go of and later keeps again.
+#[cfg(test)]
+pub fn kept_again(kept: impl IntoIterator<Item = Cubes>) -> Option<Pos> {
+    use std::collections::HashSet;
+    let (mut held, mut gone): (HashSet<Pos>, HashSet<Pos>) = Default::default();
+    let mut last = None;
+    for cubes in kept {
+        if last == Some(cubes) {
+            continue;
+        }
+        last = Some(cubes);
+        if let Some(back) = cubes.each().find(|cube| gone.contains(cube)) {
+            return Some(back);
+        }
+        let now: HashSet<Pos> = cubes.each().collect();
+        gone.extend(held.difference(&now));
+        held = now;
+    }
+    None
 }
 
 #[cfg(test)]
@@ -280,6 +305,15 @@ mod tests {
         assert!(!tickets.contains_key(&1), "run out");
         assert!(tickets.contains_key(&2), "still kept");
         assert!(!tickets.contains_key(&3), "from another world");
+    }
+
+    #[test]
+    fn a_cube_let_go_and_kept_again_is_found() {
+        let layer = |y| Cubes::spanning(Pos::new(0, y, 0), Pos::new(40, y, 40));
+        let down = [70, 70, 60, 50, 40].map(layer);
+        assert_eq!(kept_again(down), None, "one layer after another");
+        let back = [70, 60, 70].map(layer);
+        assert_eq!(kept_again(back), Some(Pos::new(0, 64, 0)), "back up");
     }
 
     #[test]

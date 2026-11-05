@@ -13,11 +13,6 @@ pub struct Cubes {
 }
 
 impl Cubes {
-    /// The cube the block `pos` is in.
-    pub fn of(pos: Pos) -> Cubes {
-        Cubes::around(pos, 0)
-    }
-
     /// The cubes up to `range` away from the one the block `pos` is in, along x and z, at its
     /// height.
     pub fn around(pos: Pos, range: i32) -> Cubes {
@@ -25,6 +20,15 @@ impl Cubes {
         Cubes {
             lo: center.add_x(-range).add_z(-range),
             hi: center.add_x(range).add_z(range),
+        }
+    }
+
+    /// The cubes the blocks from `a` to `b` are in, both included.
+    pub fn spanning(a: Pos, b: Pos) -> Cubes {
+        let (a, b) = (cube_of(a), cube_of(b));
+        Cubes {
+            lo: Pos::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z)),
+            hi: Pos::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z)),
         }
     }
 
@@ -81,7 +85,7 @@ mod tests {
 
     #[test]
     fn blocks_below_zero_are_in_the_cube_below() {
-        let cubes = Cubes::of(Pos::new(-1, -16, 15));
+        let cubes = Cubes::around(Pos::new(-1, -16, 15), 0);
         assert_eq!(cubes.lo, Pos::new(-1, -1, 0), "-1 and -16 in -1, 15 in 0");
         assert_eq!(cubes.count(), 1, "one cube");
     }
@@ -111,11 +115,27 @@ mod tests {
     }
 
     #[test]
+    fn a_span_takes_every_cube_its_blocks_are_in() {
+        let cubes = Cubes::spanning(Pos::new(20, 30, -1), Pos::new(-17, 33, 15));
+        assert_eq!(cubes.lo, Pos::new(-2, 1, -1), "-17 is two cubes down");
+        assert_eq!(cubes.hi, Pos::new(1, 2, 0), "33 is in the third cube up");
+    }
+
+    #[test]
     fn a_cube_is_contained_only_when_inside() {
         let home = Cubes::around(Pos::new(0, 0, 0), 1);
-        assert!(home.contains(&Cubes::of(Pos::new(20, 5, -10))), "beside it");
-        assert!(!home.contains(&Cubes::of(Pos::new(0, -1, 0))), "below it");
-        assert!(!home.contains(&Cubes::of(Pos::new(32, 0, 0))), "two away");
+        assert!(
+            home.contains(&Cubes::around(Pos::new(20, 5, -10), 0)),
+            "beside it"
+        );
+        assert!(
+            !home.contains(&Cubes::around(Pos::new(0, -1, 0), 0)),
+            "below it"
+        );
+        assert!(
+            !home.contains(&Cubes::around(Pos::new(32, 0, 0), 0)),
+            "two away"
+        );
     }
 
     #[test]

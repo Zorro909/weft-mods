@@ -49,7 +49,7 @@ says *Not loading: not allowed here*.
 
 The count is Cogwork's own: the engine tells mods neither which cubes other mods keep loaded nor
 how many. With another mod that loads cubes, the world can reach its limit before the count
-does; the engine then drops what doesn't fit, without a word.
+does; the engine then refuses what doesn't fit, with only a warning in the server log.
 
 A loader keeps its cubes loaded for 5 seconds at a time and renews them while it stands. Broken,
 it lets them go at once; when it is gone some other way, they go within 5 seconds. Loading
@@ -58,9 +58,20 @@ survives a restart.
 ## Excavators and levelers
 
 While it works, an [excavator](excavator.md) or a [leveler](leveler.md) keeps its own cube and
-the eight around it loaded, at its height, and also the cube of the block it works on when that
-is further out: the next frame block to put up, the next block to mine, or the next to clear or
-fill. They keep machines running only. Once done, they let go.
+the eight around it loaded, at its height, and every cube of its area at the height it works
+at:
+
+- An excavator keeps the cubes of its whole frame while it builds it, then those of the layer it
+  mines, all the way across the frame. It mines from the top of the frame down, so the frame's
+  cubes stay until it is below them.
+- A leveler keeps the cubes of the layer it clears, all the way across its area, then, while it
+  fills, those of every layer left to fill (at most two cubes high), so the cubes just below its
+  height stay from clearing to filling.
+
+So a cube it moves on from is one it is done with. A cube no player and no machine keeps
+loaded is written to disk and read back from it when wanted again; keeping the whole layer
+means that happens once per 16 layers, not on every row. They keep machines running only.
+Once done, they let go.
 
 ## Cuboid Lens
 

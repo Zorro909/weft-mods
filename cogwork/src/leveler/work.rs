@@ -207,6 +207,29 @@ mod tests {
     }
 
     #[test]
+    fn no_cube_is_let_go_and_kept_again_over_a_job() {
+        // Filling from y 62 to 65 starts a cube below where clearing ends, at 66.
+        let area = Area::between(Pos::new(-20, 66, -20), Pos::new(40, 66, 40));
+        let mut l = Level {
+            stage: Stage::Clear as u32,
+            area,
+            cursor: area.lo.add_y(CLEAR_HEIGHT - 1),
+            ..Level::default()
+        };
+        let mut kept = Vec::new();
+        loop {
+            stage_over(&mut l);
+            if l.stage() == Stage::Done {
+                break;
+            }
+            kept.push(super::super::work_cubes(&l).expect("working"));
+            let dy = if l.stage() == Stage::Clear { -1 } else { 1 };
+            l.cursor = next(&area, l.cursor, dy);
+        }
+        assert_eq!(crate::loading::kept_again(kept), None, "down, then up");
+    }
+
+    #[test]
     fn rows_then_layers_in_either_direction() {
         let area = Area::between(Pos::new(0, 5, 0), Pos::new(1, 5, 1));
         let mut c = area.lo;

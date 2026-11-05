@@ -20,6 +20,7 @@ pub use area::Frame;
 pub use dig::FLOOR_Y;
 
 use crate::lib::Pos;
+use crate::loading::Cubes;
 
 value! {
     /// An excavator's work. It puts up `frame`, then mines inside it. `step` counts the frame
@@ -107,11 +108,17 @@ impl Dig {
         self.head = at.to_array().map(|v| v as f32);
     }
 
-    /// The block it works on: the next frame block to put up, or the next block to mine.
-    fn working_on(&self) -> Option<Pos> {
+    /// The cubes it works in, across the whole frame: while it builds, those of the frame;
+    /// while it mines, those of the layer it mines. It mines from the top of the frame, so the
+    /// frame's cubes stay until it is below them, rather than going and coming back.
+    fn work_cubes(&self) -> Option<Cubes> {
+        let (lo, hi) = (self.frame.lo, self.frame.hi);
         match self.stage() {
-            Stage::Frame => self.frame.cells().get(self.step as usize).copied(),
-            Stage::Mine => Some(self.cursor),
+            Stage::Frame => Some(Cubes::spanning(lo, hi)),
+            Stage::Mine => {
+                let y = self.cursor.y;
+                Some(Cubes::spanning(lo.with_y(y.min(lo.y)), hi.with_y(y)))
+            }
             Stage::New | Stage::Done => None,
         }
     }
@@ -122,7 +129,7 @@ fn keep_loaded(w: &World, pos: Pos, d: &Dig) {
     if d.stage() == Stage::Done {
         crate::loading::release_machine(w, pos);
     } else {
-        crate::loading::keep_machine(w, pos, d.working_on());
+        crate::loading::keep_machine(w, pos, d.work_cubes());
     }
 }
 
@@ -239,5 +246,24 @@ mod tests {
             "after stage and status, as `lo` was"
         );
         assert_eq!(offset_of!(Dig, cursor), 32, "after `lo` and `hi`");
+    }
+
+    #[test]
+    fn no_cube_is_let_go_and_kept_again_over_a_dig() {
+        // The frame stands across the cubes from y 0 to 15 and from 16 up.
+        let frame = Frame::from(([3, 13, 3], [40, 17, 40]));
+        let mut d = Dig {
+            stage: Stage::Frame as u32,
+            frame,
+            ..Dig::default()
+        };
+        let mut kept = vec![d.work_cubes().expect("building")];
+        d.set_stage(Stage::Mine);
+        d.cursor = frame.first();
+        while d.cursor.y >= -20 {
+            kept.push(d.work_cubes().expect("mining"));
+            d.cursor = frame.next(d.cursor);
+        }
+        assert_eq!(crate::loading::kept_again(kept), None, "frame, then down");
     }
 }

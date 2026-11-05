@@ -8,6 +8,7 @@ use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
 
 use crate::lib::{Area, Pos};
+use crate::loading::Cubes;
 
 pub static LEVELER: Block = Block::named("leveler");
 static LEVELER_MENU: Menu = Menu::named("leveler");
@@ -83,12 +84,23 @@ impl Level {
 }
 
 /// Keeps the cubes the leveler at `pos` needs loaded until it is done, then lets them go: its
-/// own and those around it, and the cube of the block it clears or fills.
+/// own and those around it, and those it works in.
 fn keep_loaded(w: &World, pos: Pos, l: &Level) {
     match l.stage() {
-        Stage::Clear | Stage::Fill => crate::loading::keep_machine(w, pos, Some(l.cursor)),
-        Stage::New => crate::loading::keep_machine(w, pos, None),
         Stage::Done => crate::loading::release_machine(w, pos),
+        _ => crate::loading::keep_machine(w, pos, work_cubes(l)),
+    }
+}
+
+/// The cubes it works in, across the whole area: while it clears, those of the layer it
+/// clears; while it fills, those of every layer left to fill. Filling ends just below the
+/// height clearing ended at, so the cubes there stay rather than going and coming back.
+fn work_cubes(l: &Level) -> Option<Cubes> {
+    let (lo, hi, y) = (l.area.lo, l.area.hi, l.cursor.y);
+    match l.stage() {
+        Stage::Clear => Some(Cubes::spanning(lo.with_y(y), hi.with_y(y))),
+        Stage::Fill => Some(Cubes::spanning(lo.with_y(y), hi.with_y(lo.y - 1))),
+        Stage::New | Stage::Done => None,
     }
 }
 
