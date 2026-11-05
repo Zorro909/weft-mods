@@ -108,28 +108,19 @@ impl Dig {
         self.head = at.to_array().map(|v| v as f32);
     }
 
-    /// The cubes it works in, across the whole frame: while it builds, those of the frame;
-    /// while it mines, those of the layer it mines. It mines from the top of the frame, so the
-    /// frame's cubes stay until it is below them, rather than going and coming back.
-    fn work_cubes(&self) -> Option<Cubes> {
-        let (lo, hi) = (self.frame.lo, self.frame.hi);
-        match self.stage() {
-            Stage::Frame => Some(Cubes::spanning(lo, hi)),
-            Stage::Mine => {
-                let y = self.cursor.y;
-                Some(Cubes::spanning(lo.with_y(y.min(lo.y)), hi.with_y(y)))
-            }
-            Stage::New | Stage::Done => None,
-        }
+    /// The cubes of the layer it mines, across the whole frame.
+    fn mining_layer(&self) -> Cubes {
+        let y = self.cursor.y;
+        Cubes::spanning(self.frame.lo.with_y(y), self.frame.hi.with_y(y))
     }
 }
 
-/// Keeps the cubes the excavator at `pos` needs loaded until it is done, then lets them go.
+/// Keeps the cubes the excavator at `pos` needs loaded while it mines, then lets them go.
+/// Building the frame keeps nothing loaded: it takes a player near.
 fn keep_loaded(w: &World, pos: Pos, d: &Dig) {
-    if d.stage() == Stage::Done {
-        crate::loading::release_machine(w, pos);
-    } else {
-        crate::loading::keep_machine(w, pos, d.work_cubes());
+    match d.stage() {
+        Stage::Mine => crate::loading::keep_machine(w, pos, Some(d.mining_layer())),
+        Stage::New | Stage::Frame | Stage::Done => crate::loading::release_machine(w, pos),
     }
 }
 
@@ -253,17 +244,16 @@ mod tests {
         // The frame stands across the cubes from y 0 to 15 and from 16 up.
         let frame = Frame::from(([3, 13, 3], [40, 17, 40]));
         let mut d = Dig {
-            stage: Stage::Frame as u32,
+            stage: Stage::Mine as u32,
             frame,
+            cursor: frame.first(),
             ..Dig::default()
         };
-        let mut kept = vec![d.work_cubes().expect("building")];
-        d.set_stage(Stage::Mine);
-        d.cursor = frame.first();
+        let mut kept = Vec::new();
         while d.cursor.y >= -20 {
-            kept.push(d.work_cubes().expect("mining"));
+            kept.push(d.mining_layer());
             d.cursor = frame.next(d.cursor);
         }
-        assert_eq!(crate::loading::kept_again(kept), None, "frame, then down");
+        assert_eq!(crate::loading::kept_again(kept), None, "from the top down");
     }
 }

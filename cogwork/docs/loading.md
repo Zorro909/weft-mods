@@ -61,9 +61,8 @@ While it works, an [excavator](excavator.md) or a [leveler](leveler.md) keeps it
 the eight around it loaded, at its height, and every cube of its area at the height it works
 at:
 
-- An excavator keeps the cubes of its whole frame while it builds it, then those of the layer it
-  mines, all the way across the frame. It mines from the top of the frame down, so the frame's
-  cubes stay until it is below them.
+- An excavator keeps the cubes of the layer it mines, all the way across the frame. Building
+  its frame keeps nothing loaded: someone has to be near for that.
 - A leveler keeps the cubes of the layer it clears, all the way across its area, then, while it
   fills, those of every layer left to fill (at most two cubes high), so the cubes just below its
   height stay from clearing to filling.
