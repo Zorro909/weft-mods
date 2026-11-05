@@ -34,6 +34,7 @@ pub fn tick(b: &mut SystemBatch<Level>) {
             continue;
         }
         work(&w, id, pos, l);
+        super::keep_loaded(&w, pos, l);
         crate::machine::show_working(&w, pos, l.status().is_working());
     }
 }

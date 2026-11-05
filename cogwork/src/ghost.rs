@@ -127,8 +127,9 @@ fn set(p: &Packet, g: SetGhost) {
     }
 }
 
-/// Whether a player at `player` may set the ghosts of the machine at `machine`.
-fn within_reach(machine: Vec3, player: Vec3) -> bool {
+/// Whether a player at `player` may set the ghosts of the machine at `machine`, or any other
+/// setting of it.
+pub fn within_reach(machine: Vec3, player: Vec3) -> bool {
     point::distance(machine, player) <= REACH
 }
 

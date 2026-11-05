@@ -82,6 +82,16 @@ impl Level {
     }
 }
 
+/// Keeps the cubes the leveler at `pos` needs loaded until it is done, then lets them go: its
+/// own and those around it, and the cube of the block it clears or fills.
+fn keep_loaded(w: &World, pos: Pos, l: &Level) {
+    match l.stage() {
+        Stage::Clear | Stage::Fill => crate::loading::keep_machine(w, pos, Some(l.cursor)),
+        Stage::New => crate::loading::keep_machine(w, pos, None),
+        Stage::Done => crate::loading::release_machine(w, pos),
+    }
+}
+
 pub fn register(r: &mut Registry) {
     r.entity_component(
         &LEVEL,
@@ -90,7 +100,11 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&LEVEL, work::tick);
     r.machine(&LEVELER, &LEVELER_MENU)
-        .block(|b| crate::machine::block(b, "leveler").hardness(4.0))
+        .block(|b| {
+            crate::machine::block(b, "leveler")
+                .hardness(4.0)
+                .on_broken(crate::loading::let_go)
+        })
         .group("input", Slots::grid(9, 2))
         .group("output", Slots::grid(3, 3).output())
         .attach(&LEVEL)

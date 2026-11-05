@@ -106,6 +106,24 @@ impl Dig {
     pub fn set_head(&mut self, at: Vec3) {
         self.head = at.to_array().map(|v| v as f32);
     }
+
+    /// The block it works on: the next frame block to put up, or the next block to mine.
+    fn working_on(&self) -> Option<Pos> {
+        match self.stage() {
+            Stage::Frame => self.frame.cells().get(self.step as usize).copied(),
+            Stage::Mine => Some(self.cursor),
+            Stage::New | Stage::Done => None,
+        }
+    }
+}
+
+/// Keeps the cubes the excavator at `pos` needs loaded until it is done, then lets them go.
+fn keep_loaded(w: &World, pos: Pos, d: &Dig) {
+    if d.stage() == Stage::Done {
+        crate::loading::release_machine(w, pos);
+    } else {
+        crate::loading::keep_machine(w, pos, d.working_on());
+    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -116,7 +134,11 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&DIG, dig::tick);
     r.machine(&EXCAVATOR, &EXCAVATOR_MENU)
-        .block(|b| crate::machine::block(b, "excavator").hardness(4.0))
+        .block(|b| {
+            crate::machine::block(b, "excavator")
+                .hardness(4.0)
+                .on_broken(crate::loading::let_go)
+        })
         .group("output", Slots::grid(3, 3).output())
         .attach(&DIG)
         .attach_with(

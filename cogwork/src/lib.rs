@@ -1,6 +1,6 @@
-//! Cogwork: item tubes that show what they carry, engines that drive them, and machines for the
-//! big jobs: an excavator, an assembly bench and a leveler. Everything goes through `weft_sdk`
-//! and `base_api`.
+//! Cogwork: item tubes that show what they carry, engines that drive them, machines for the big
+//! jobs (an excavator, an assembly bench and a leveler) and cuboid loaders that keep them running
+//! with nobody near. Everything goes through `weft_sdk` and `base_api`.
 
 mod bench;
 mod cogs;
@@ -25,6 +25,7 @@ mod lib {
     pub use model_box::ModelBox;
     pub use pos::Pos;
 }
+mod loading;
 mod machine;
 mod markers;
 mod owned;
@@ -55,6 +56,7 @@ fn init(r: &mut Registry) {
     bench::register(r);
     ghost::register(r);
     leveler::register(r);
+    loading::register(r);
     shaft::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

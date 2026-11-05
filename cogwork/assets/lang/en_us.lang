@@ -1,6 +1,6 @@
 language.name = English
 mod.cogwork.name = Cogwork
-mod.cogwork.description = Gears, item tubes and engines, an excavator that digs out a whole area layer by layer, an assembly bench that crafts on its own and a leveler that makes land flat.\n\nTimber tubes pull items out of chests and machines when an engine drives them. Stone tubes carry them along, and every item can be seen travelling inside. Gilded tubes speed items up, sorting tubes send each kind its own way, directing tubes send everything one way, and void tubes destroy what reaches them.\n\nThe excavator builds a frame around its area and lowers a drill on a gantry, mining down to the floor of the world and handing everything to the tubes or chests beside it.
+mod.cogwork.description = Gears, item tubes and engines, an excavator that digs out a whole area layer by layer, an assembly bench that crafts on its own, a leveler that makes land flat and cuboid loaders that keep them working with nobody near.\n\nTimber tubes pull items out of chests and machines when an engine drives them. Stone tubes carry them along, and every item can be seen travelling inside. Gilded tubes speed items up, sorting tubes send each kind its own way, directing tubes send everything one way, and void tubes destroy what reaches them.\n\nThe excavator builds a frame around its area and lowers a drill on a gantry, mining down to the floor of the world and handing everything to the tubes or chests beside it.
 mod.cogwork.authors = Zorro909
 tab.cogwork.cogwork = Cogwork
 
@@ -42,6 +42,12 @@ block.cogwork.leveler = Leveler
 block.cogwork.leveler.tooltip = Makes the area behind it, or the one marked out by survey markers next to it, flat at its height: clears up to 16 blocks above and fills holes up to 4 deep with whole blocks from its stock.
 block.cogwork.survey_marker = Survey Marker
 block.cogwork.survey_marker.tooltip = Place up to three more along two straight lines to mark a rectangle, then put an excavator or a leveler next to one. Use one to see the area; a marker without one puffs.
+block.cogwork.cuboid_loader = Cuboid Loader
+block.cogwork.cuboid_loader.tooltip = Keeps its own cube (16 by 16 by 16 blocks) loaded with nobody near, so machines there go on working. Its screen switches to keeping everything running there, mobs and growing plants too.
+block.cogwork.ultra_cuboid_loader = Ultra Cuboid Loader
+block.cogwork.ultra_cuboid_loader.tooltip = Keeps the 7 by 7 cubes around it loaded at its height, three each way. Its screen switches between keeping only machines running there and everything.
+item.cogwork.cuboid_lens = Cuboid Lens
+item.cogwork.cuboid_lens.tooltip = Held, outlines every cube Cogwork keeps loaded: cyan where a loader keeps machines running, green where it keeps everything, orange around a working excavator or leveler.
 
 cogwork.ghost = {0}
 cogwork.energy = {color:dim}{0} / {1} energy{/}
@@ -93,3 +99,14 @@ cogwork.film.wrench = A leveler goes down, and the tuning wrench turns its engin
 cogwork.film.level = It clears the hill and fills the holes, flat at its own height
 cogwork.film.finish = At the floor of the world, an excavator's job is done
 cogwork.film.end = Machines that dig, carry and craft
+
+cogwork.loader.own = Keeps its own cube loaded
+cogwork.loader.area = Keeps {0} x {0} cubes loaded at its height
+cogwork.loader.loading = Keeping machines running
+cogwork.loader.loading_all = Keeping everything running
+cogwork.loader.over_limit = {#ff5040}Not loading: that would pass the world's limit{/}
+cogwork.loader.refused = {#ff5040}Not loading: not allowed here{/}
+cogwork.loader.machines = Machines only
+cogwork.loader.everything = Everything
+cogwork.loader.used = {color:dim}Cogwork keeps {0} of at most {1} cubes loaded{/}
+cogwork.loader.used_near = {#ffc828}Cogwork keeps {0} of at most {1} cubes loaded{/}

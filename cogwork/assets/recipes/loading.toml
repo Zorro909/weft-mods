@@ -1,0 +1,16 @@
+# Cuboid loaders, and the lens that shows what they keep loaded.
+
+[[shaped]]
+result = "cuboid_loader"
+pattern = ["ogo", "rdr", "ogo"]
+key = { o = "base:obsidian", g = "#cogs/gold", r = "base:redstone", d = "#cogs/diamond" }
+
+[[shaped]]
+result = "ultra_cuboid_loader"
+pattern = [" c ", "c c", " c "]
+key = { c = "cuboid_loader" }
+
+[[shaped]]
+result = "cuboid_lens"
+pattern = [" g ", "gGg", " s "]
+key = { g = "#ingots/gold", G = "#glass", s = "#stick" }
