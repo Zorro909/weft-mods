@@ -19,6 +19,8 @@
 ### Fixed
 
 - An engine turned to face west no longer stands its piston askew.
+- An excavator's gantry beams no longer flicker where their pieces met.
+- The lowest piece of a drill's shaft is no longer drawn black.
 
 ## 0.2.2 - 2026-11-05
 
