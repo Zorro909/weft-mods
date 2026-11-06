@@ -1,5 +1,6 @@
 # Releases the mods. Each release of a mod holds one `<id>.zip` with its Windows, Linux and macOS
-# builds, and README.md lists the newest of every mod and each version before.
+# builds and its machine-readable record `<id>.mod.json`, both with a build provenance attestation,
+# and README.md lists the newest of every mod and each version before.
 #   - On every push to main, a mod whose crate version has no release yet gets one: a full release
 #     for `X.Y.Z`, only on a tagged Weft, and a release candidate for `X.Y.Z-rc.N`. A mod that
 #     changed since its version was released gets the next candidate, which this workflow commits
@@ -89,9 +90,15 @@ jobs:
     with:
       ref: ${{ needs.plan.outputs.ref }}
 
+  # Each job attests its zips and their `.mod.json` records (build provenance, signed by
+  # Sigstore with the job's OIDC token) before it publishes them.
   publish:
     needs: [plan, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -105,11 +112,23 @@ jobs:
           path: libraries
           merge-multiple: true
 
+      - name: Pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ needs.plan.outputs.release }}
+        run: tools/ci/publish.sh pack "$PLAN" libraries dist
+
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/*/*.zip
+            dist/*/*.mod.json
+
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
           PLAN: ${{ needs.plan.outputs.release }}
-        run: tools/ci/publish.sh "$PLAN" libraries
+        run: tools/ci/publish.sh release "$PLAN" dist
 
   build-experimental:
     needs: plan
@@ -123,6 +142,10 @@ jobs:
   publish-experimental:
     needs: [plan, build-experimental]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -141,11 +164,23 @@ jobs:
           path: libraries
           merge-multiple: true
 
+      - name: Pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ needs.plan.outputs.experimental }}
+        run: tools/ci/publish.sh pack "$PLAN" libraries dist
+
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/*/*.zip
+            dist/*/*.mod.json
+
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
           PLAN: ${{ needs.plan.outputs.experimental }}
-        run: tools/ci/publish.sh "$PLAN" libraries
+        run: tools/ci/publish.sh release "$PLAN" dist
 
   # On every run, also when nothing was published or one publish job failed: it commits only
   # when the section changes. Weft's history tells which experimental builds are still ahead.

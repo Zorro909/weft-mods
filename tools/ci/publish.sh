@@ -1,13 +1,29 @@
 #!/usr/bin/env bash
 # Publishes the mods in the plan PLAN (from `plan-release.sh` or `plan-experimental.sh`) as GitHub
-# releases of HEAD. Each release holds one `<id>.zip` that players put into their `mods/` folder:
-# the mod's assets and its library for Windows, Linux and macOS, from which the game loads its
-# system's own. LIBRARIES holds `<id>/` with the three libraries, and the Weft checkout is the one
-# they were built against. Every zip is packed before anything is published.
-# Usage: `tools/ci/publish.sh PLAN LIBRARIES`; needs `GH_TOKEN`.
+# releases of HEAD, in two steps so that CI can attest the zips between them:
+#   - `pack PLAN LIBRARIES DIST` packs every zip into `DIST/<tag>/<id>.zip`, with its record
+#     `DIST/<tag>/<id>.mod.json` beside it (`mod_json.py`). LIBRARIES holds `<id>/` with the three
+#     libraries, and the Weft checkout is the one they were built against.
+#   - `release PLAN DIST` publishes each release with its two files, once every zip is packed.
+# Each zip is what players put into their `mods/` folder: the mod's assets and its library for
+# Windows, Linux and macOS, from which the game loads its system's own.
+# Usage: `tools/ci/publish.sh pack PLAN LIBRARIES DIST`, then `tools/ci/publish.sh release PLAN
+# DIST`; both need `GH_TOKEN`.
 set -euo pipefail
-plan=$1
-libraries=$(cd "$2" && pwd)
+step=$1
+plan=$2
+case $step in
+    pack)
+        libraries=$(cd "$3" && pwd)
+        mkdir -p "$4"
+        dist=$(cd "$4" && pwd)
+        ;;
+    release) dist=$(cd "$3" && pwd) ;;
+    *)
+        echo "publish.sh: unknown step $step" >&2
+        exit 1
+        ;;
+esac
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 source tools/ci/mods.sh
 
@@ -15,11 +31,11 @@ weft_commit=$(git -C Weft rev-parse HEAD)
 weft_version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' Weft/Cargo.toml | head -n 1)
 weft_url=$(git config -f .gitmodules submodule.Weft.url)
 weft_url=${weft_url%.git}
-dist=$(mktemp -d)
 
-# Packs `<dist>/<tag>/<id>.zip`, a folder per release since every zip of a mod has the same name.
+# Packs `<dist>/<tag>/<id>.zip`, a folder per release since every zip of a mod has the same name,
+# and writes its `<id>.mod.json` beside it.
 pack() {
-    local folder=$1 id=$2 tag=$3 staging
+    local folder=$1 id=$2 tag=$3 kind=$4 staging
     staging=$(mktemp -d)
     for library in "$id.dll" "lib$id.so" "lib$id.dylib"; do
         if [ ! -f "$libraries/$id/$library" ]; then
@@ -33,6 +49,7 @@ pack() {
     fi
     mkdir -p "$dist/$tag"
     (cd "$staging" && zip -qrX "$dist/$tag/$id.zip" .)
+    python3 tools/ci/mod_json.py "$folder" "$tag" "$kind" "$dist/$tag/$id.zip" >"$dist/$tag/$id.mod.json"
 }
 
 # The release notes, in Markdown. `tools/ci/readme.py` reads the "Built against" line.
@@ -66,7 +83,8 @@ publish() {
     if [ "$kind" != release ]; then
         flags=(--prerelease --latest=false)
     fi
-    gh release create "$tag" "$dist/$tag/$id.zip" --target "$(git rev-parse HEAD)" \
+    gh release create "$tag" "$dist/$tag/$id.zip" "$dist/$tag/$id.mod.json" \
+        --target "$(git rev-parse HEAD)" \
         --title "$title" --notes "$(notes "$folder" "$id" "$kind" "$since")" "${flags[@]}"
 }
 
@@ -76,8 +94,8 @@ if [ -z "$entries" ]; then
     exit 0
 fi
 while IFS=$'\t' read -r folder id version tag kind since; do
-    pack "$folder" "$id" "$tag"
-done <<<"$entries"
-while IFS=$'\t' read -r folder id version tag kind since; do
-    publish "$folder" "$id" "$version" "$tag" "$kind" "$since"
+    case $step in
+        pack) pack "$folder" "$id" "$tag" "$kind" ;;
+        release) publish "$folder" "$id" "$version" "$tag" "$kind" "$since" ;;
+    esac
 done <<<"$entries"
