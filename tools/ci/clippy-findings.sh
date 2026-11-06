@@ -10,7 +10,7 @@ findings=$(jq -r --arg weft "$weft" '
     | select(.manifest_path | startswith($weft) | not)
     | .message.rendered' "$1")
 
-if [ -n "$findings" ]; then
+if [[ -n "$findings" ]]; then
     echo "$findings"
     echo "::error::Clippy found problems; run tools/check-mods.sh to see them locally."
     exit 1
