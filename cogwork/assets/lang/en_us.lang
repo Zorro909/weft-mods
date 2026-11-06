@@ -1,6 +1,6 @@
 language.name = English
 mod.cogwork.name = Cogwork
-mod.cogwork.description = Gears, item tubes and engines, an excavator that digs out a whole area layer by layer, an assembly bench that crafts on its own, a leveler that makes land flat and cuboid loaders that keep them working with nobody near.\n\nTimber tubes pull items out of chests and machines when an engine drives them. Stone tubes carry them along, and every item can be seen travelling inside. Gilded tubes speed items up, sorting tubes send each kind its own way, directing tubes send everything one way, and void tubes destroy what reaches them.\n\nThe excavator builds a frame around its area and lowers a drill on a gantry, mining down to the floor of the world and handing everything to the tubes or chests beside it.
+mod.cogwork.description = Item tubes you can see into, engines, and machines that take over the big jobs: an excavator that mines out a whole area, an assembly bench that crafts on its own and a leveler that makes land flat. Cuboid loaders keep them working with nobody near.
 mod.cogwork.authors = Zorro909
 tab.cogwork.cogwork = Cogwork
 

@@ -14,6 +14,10 @@ Changes to Cogwork, newest first. Release candidates are listed under the releas
   loaded.
 - Cuboid Lens: held in either hand, it outlines every cube Cogwork keeps loaded.
 
+### Changed
+
+- A shorter description on the Mods screen.
+
 ### Fixed
 
 - An engine turned to face west no longer stands its piston askew.
