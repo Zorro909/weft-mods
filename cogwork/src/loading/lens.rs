@@ -6,7 +6,8 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use weft_sdk::*;
 
-use super::{CubePos, Cubes, Keeper};
+use super::tickets::{self, Keeper};
+use super::{CubePos, Cubes};
 
 pub static CUBOID_LENS: Item = Item::named("cuboid_lens");
 
@@ -43,7 +44,7 @@ pub fn register(r: &mut Registry) {
 /// Server side: the boxes kept loaded in the asking player's dimension.
 fn answer(p: &Packet, _: ()) {
     let w = p.world();
-    let shown = super::shown(w.dimension(), w.game_time());
+    let shown = tickets::shown(w.dimension(), w.game_time());
     p.reply(&SHOWN, &encode(&shown));
 }
 

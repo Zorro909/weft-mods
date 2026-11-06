@@ -122,10 +122,9 @@ impl Cubes {
         self.hi
     }
 
-    pub fn count(&self) -> i64 {
+    pub fn count(&self) -> i32 {
         let span = self.hi - self.lo;
-        let across = |cubes_apart: i32| i64::from(cubes_apart) + 1;
-        across(span.x) * across(span.y) * across(span.z)
+        (span.x + 1) * (span.y + 1) * (span.z + 1)
     }
 
     /// Whether every cube of `other` is one of these.
@@ -225,7 +224,7 @@ mod tests {
     fn each_cube_is_listed_once() {
         let cubes = Cubes::around(Pos::new(0, 0, 0), 1);
         let all: Vec<CubePos> = cubes.each().collect();
-        assert_eq!(all.len() as i64, cubes.count(), "as many as it counts");
+        assert_eq!(all.len() as i32, cubes.count(), "as many as it counts");
         assert!(all.contains(&CubePos::new(-1, 0, 1)), "a corner cube");
     }
 }
