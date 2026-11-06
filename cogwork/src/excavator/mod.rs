@@ -20,6 +20,7 @@ pub use area::Frame;
 pub use dig::FLOOR_Y;
 
 use crate::lib::Pos;
+use crate::loading::Cubes;
 
 value! {
     /// An excavator's work. It puts up `frame`, then mines inside it. `step` counts the frame
@@ -106,6 +107,27 @@ impl Dig {
     pub fn set_head(&mut self, at: Vec3) {
         self.head = at.to_array().map(|v| v as f32);
     }
+
+    /// The cubes of the layer it mines, across the whole frame. None once the cursor has passed
+    /// the floor: it finishes on the next tick.
+    fn mining_layer(&self) -> Option<Cubes> {
+        match self.cursor.y {
+            y if y >= dig::FLOOR_Y => Some(Cubes::spanning(
+                self.frame.lo.with_y(y),
+                self.frame.hi.with_y(y),
+            )),
+            _ => None,
+        }
+    }
+}
+
+/// Keeps the cubes the excavator at `pos` needs loaded while it mines, then lets them go.
+/// Building the frame keeps nothing loaded: it takes a player near.
+fn keep_loaded(w: &World, pos: Pos, d: &Dig) {
+    match d.stage() {
+        Stage::Mine => crate::loading::keep_machine(w, pos, d.mining_layer()),
+        _ => crate::loading::release_machine(w, pos),
+    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -116,7 +138,11 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&DIG, dig::tick);
     r.machine(&EXCAVATOR, &EXCAVATOR_MENU)
-        .block(|b| crate::machine::block(b, "excavator").hardness(4.0))
+        .block(|b| {
+            crate::machine::block(b, "excavator")
+                .hardness(4.0)
+                .on_broken(crate::loading::let_go)
+        })
         .group("output", Slots::grid(3, 3).output())
         .attach(&DIG)
         .attach_with(
@@ -217,5 +243,29 @@ mod tests {
             "after stage and status, as `lo` was"
         );
         assert_eq!(offset_of!(Dig, cursor), 32, "after `lo` and `hi`");
+    }
+
+    #[test]
+    fn no_cube_is_let_go_and_kept_again_over_a_dig() {
+        // The frame stands across the cubes from y 0 to 15 and from 16 up.
+        let frame = Frame::from(([3, 13, 3], [40, 17, 40]));
+        let mut d = Dig {
+            stage: Stage::Mine as u32,
+            frame,
+            cursor: frame.first(),
+            ..Dig::default()
+        };
+        // What it keeps after each block, as a tick does once the cursor has moved on.
+        let mut kept = vec![d.mining_layer().expect("the top layer")];
+        while d.cursor.y >= dig::FLOOR_Y {
+            d.cursor = frame.next(d.cursor);
+            kept.extend(d.mining_layer());
+        }
+        assert_eq!(
+            kept.last().map(|c| c.lo().y),
+            Some(-4),
+            "nothing below the floor"
+        );
+        assert_eq!(crate::loading::kept_again(kept), None, "from the top down");
     }
 }

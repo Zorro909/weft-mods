@@ -97,6 +97,13 @@ impl From<Pos> for BlockPos {
     }
 }
 
+/// The block's lowest corner in every direction, as a point in the world.
+impl From<Pos> for Vec3 {
+    fn from(Pos { x, y, z }: Pos) -> Vec3 {
+        Vec3::new(x as f64, y as f64, z as f64)
+    }
+}
+
 /// The block at `pos`, as the holder of its block entity's inventory and components.
 impl From<Pos> for Holder {
     fn from(pos: Pos) -> Holder {
@@ -130,6 +137,7 @@ mod tests {
         assert_eq!(block.center(), Vec3::new(-1.5, 3.5, 0.5), "its middle");
         assert_eq!(Pos::from(block.center().block()), block, "lies in it");
         assert_eq!(Pos::from(block.floor_middle().block()), block, "its floor");
+        assert_eq!(Vec3::from(block), Vec3::new(-2.0, 3.0, 0.0), "its corner");
         let edge = Vec3::new(-1.5, 3.0, 0.99);
         assert_eq!(Pos::from(edge.block()), block, "near its edges");
     }

@@ -32,6 +32,7 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
             continue;
         }
         work(&w, id, pos, d);
+        super::keep_loaded(&w, pos, d);
         rig::update(&w, id, d);
         crate::machine::show_working(&w, pos, d.status().is_working());
     }

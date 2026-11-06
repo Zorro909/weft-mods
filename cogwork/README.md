@@ -35,6 +35,12 @@ and torque shafts carry it further, joining any mod's cables.
   area flat.
 - **Survey markers** mark out the area the excavator or leveler works.
 
+### Keeping the world loaded
+
+The cuboid loader keeps its own cube of the world running with nobody near, the ultra cuboid
+loader the 7 by 7 cubes around it; their screen picks machines only or everything. Excavators
+and levelers keep what they need loaded while they work, and the cuboid lens shows it all.
+
 ### Crafting parts
 
 Five tiers of cogs, from wood to diamond, go into every machine. The tuning wrench turns
@@ -61,7 +67,10 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Assembly bench](docs/assembly-bench.md)
 - [Leveler](docs/leveler.md)
 - [Survey markers](docs/survey-markers.md)
+- [Cuboid loaders and the lens](docs/loading.md)
 - [Working with other mods](docs/other-mods.md)
+
+What changed in each version is in the [changelog](CHANGELOG.md).
 
 ## Build and install
 

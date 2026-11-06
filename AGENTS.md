@@ -44,6 +44,7 @@ Read the matching guide before you start; each is short.
 
 - Format with the root `rustfmt.toml`: `git ls-files -z '*.rs' | xargs -0 rustfmt +nightly` formats every mod and leaves out `Weft/`. For engine changes, run `cargo fmt --all` inside `Weft/`, which formats by its own `rustfmt.toml`.
 - Every fixed bug comes with a test that fails without the fix.
+- Every change to a mod that players notice gets a short bullet in that mod's `CHANGELOG.md`, under `## Unreleased` and `Added`, `Changed` or `Fixed`. A mod without one gets one shaped like `cogwork/CHANGELOG.md`.
 - For a mod, run the checks in `docs/agents/mods.md`. For an engine change, run in `Weft/`: `cargo build --release --workspace`, `cargo test --release --workspace`, then `--test all` through `tools/run-headless.sh` as `docs/agents/testing.md` runs it; upstream CI runs no tests, so this is the only check. Report any check you could not run, and say when something visual needs a human to look at it in the game.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org).
 - Commit and push every finished change in this repository without waiting to be asked. Engine work in `Weft/` reaches upstream only through your user.

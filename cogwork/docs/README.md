@@ -14,6 +14,7 @@ short overview of the mod, see the [README](../README.md).
 | [Assembly bench](assembly-bench.md) | Setting a pattern, filling it and crafting by machine |
 | [Leveler](leveler.md) | Clearing and filling an area flat |
 | [Survey markers](survey-markers.md) | Marking out the area of an excavator or leveler |
+| [Cuboid loaders and the lens](loading.md) | Keeping cubes loaded with nobody near, and seeing which are |
 | [Working with other mods](other-mods.md) | Slot groups, energy, tags: how Cogwork meets other mods' content |
 
 ## Numbers

@@ -53,6 +53,11 @@ mines along rows, back and forth, then the next layer down. It skips air, liquid
 that can't be broken, and stops at y = -64, or at the first layer that stays unloaded for ten
 seconds.
 
+While it mines, it keeps its own cube and the eight around it loaded, and the cubes of the
+layer it mines all the way across the frame, so it digs on with nobody near; see
+[cuboid loaders](loading.md#excavators-and-levelers). Building the frame keeps nothing loaded:
+stay near until it stands.
+
 A block costs 400 energy and 400 more per point of hardness: stone (1.5) takes 1,000. The drill
 also pays 80 energy per block it travels. What a block drops is what a diamond pickaxe would
 get, and goes into the excavator's 3 by 3 output. Each tick the excavator hands a stack from its
