@@ -14,7 +14,8 @@ for attempt in 1 2 3; do
     git fetch -q origin "$branch"
     git reset -q --hard "origin/$branch"
     gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
-        --jq '.[] | select(.draft | not) | {tag: .tag_name, url: .html_url, date: .published_at, body}' |
+        --jq '.[] | select(.draft | not) | {tag: .tag_name, url: .html_url, date: .published_at, body,
+            mod_json_url: ([.assets[] | select(.name | endswith(".mod.json")) | .browser_download_url][0])}' |
         python3 tools/ci/readme.py README.md
     if git diff --quiet README.md; then
         echo "README.md already lists every release"

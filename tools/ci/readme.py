@@ -1,38 +1,33 @@
 """Rewrites the mod releases section of README.md from the repository's GitHub releases.
 
-Reads the releases from stdin, one JSON object per line with `tag`, `url`, `date` and `body`, as
-`update-readme.sh` fetches them. The section between the markers is replaced, or added at the end.
-Run from the repository root, with the history of the Weft submodule fetched.
-Usage: `python3 tools/ci/readme.py README.md < releases`.
+Reads the releases from stdin, one JSON object per line with `tag`, `url`, `date`, `body` and
+`mod_json_url`, as `update-readme.sh` fetches them. The section between the markers is replaced, or
+added at the end. Usage: `python3 tools/ci/readme.py README.md < releases`.
 """
 
 import json
 import re
-import subprocess
 import sys
-from collections.abc import Callable
+import urllib.request
 from dataclasses import dataclass
 
 START = "<!-- mod-releases:start -->"
 END = "<!-- mod-releases:end -->"
-# The tags `plan-release.sh` and `plan-experimental.sh` make: `<id>-v<version>`, the version
-# `X.Y.Z` or `X.Y.Z-rc.N`, with a suffix for an experimental build.
-TAG = re.compile(
-    r"^(?P<mod>.+)-v(?P<version>\d+\.\d+\.\d+(?P<rc>-rc\.\d+)?)(?P<experimental>-experimental\.\S+)?$"
-)
-# The line `publish.sh` writes into every release's notes.
-WEFT = re.compile(
-    r"Built against Weft (?P<version>\S+), commit (?P<link>\[\w+\]\([^)]*/commit/(?P<commit>\w+)\))"
-)
+# The tags of releases: `<id>-v<version>`, the version `X.Y.Z` or a candidate `X.Y.Z-rc.N`, which
+# weft-mod-action makes `X.Y.Z-rc.<run>.g<commit>`. The experimental builds of the scripts before
+# it, `X.Y.Z-experimental.<weft>.<mod>`, are left out.
+TAG = re.compile(r"^(?P<mod>.+)-v(?P<version>\d+\.\d+\.\d+(?P<rc>-rc\.\d+(\.g[0-9a-f]{7})?)?)$")
+# The line the release scripts before weft-mod-action wrote into the notes. Releases since then
+# carry `<id>.mod.json`, which names the Weft.
+NOTES_WEFT = re.compile(r"Built against Weft (?P<version>\S+), commit (?P<link>\[\w+\]\([^)]*/commit/\w+\))")
+WEFT_COMMITS = "https://github.com/Weft-Rust/Weft/commit/"
 
 INTRO = """\
 ## Downloads
 
 Put a mod's zip as it is into the game's `mods/` folder; each one holds the Windows, Linux and
 macOS builds. A mod loads only into a game with the same mod interface as the Weft it was built
-against. Full releases are built against a released Weft. Release candidates (`X.Y.Z-rc.N`) are builds
-of `main` on the way to the next release, and experimental builds use Weft's upstream `master`
-instead of the Weft this repository pins.
+against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to the next release.
 """
 
 
@@ -44,36 +39,32 @@ class Release:
     url: str
     # ISO 8601, so that comparing the strings compares the times.
     published: str
-    # The Weft it was built against, in Markdown, and its full commit ("" when unknown).
+    # The Weft it was built against, in Markdown.
     weft: str
-    weft_commit: str
 
 
-# Whether the first Weft commit is the second or one of its ancestors.
-WeftContains = Callable[[str, str], bool]
-
-
-def parse(release: dict) -> Release | None:
-    """The release, or None for a tag this repository's workflow didn't make."""
+def parse(release: dict, mod_json: dict | None) -> Release | None:
+    """The release, with its `<id>.mod.json` if it has one, or None for a tag of another kind."""
     tag = TAG.match(release["tag"])
     if not tag:
         return None
-    weft = WEFT.search(release["body"] or "")
     return Release(
         mod=tag["mod"],
         version=tag["version"],
-        kind="experimental" if tag["experimental"] else "rc" if tag["rc"] else "release",
+        kind="rc" if tag["rc"] else "release",
         url=release["url"],
         published=release["date"],
-        weft=f"{weft['version']} {weft['link']}" if weft else "unknown",
-        weft_commit=weft["commit"] if weft else "",
+        weft=weft(release["body"] or "", mod_json),
     )
 
 
-def weft_contains(older: str, newer: str) -> bool:
-    """Whether the Weft commit `newer` includes `older`, by the submodule's history."""
-    ancestor = ["git", "-C", "Weft", "merge-base", "--is-ancestor", older, newer]
-    return bool(older and newer) and subprocess.run(ancestor, capture_output=True).returncode == 0
+def weft(body: str, mod_json: dict | None) -> str:
+    """The Weft a release was built against, as `<version> [<commit>](<link>)`."""
+    if mod_json:
+        commit = mod_json["weft"]["commit"]
+        return f"{mod_json['weft']['tag'].removeprefix('v')} [{commit[:7]}]({WEFT_COMMITS}{commit})"
+    notes = NOTES_WEFT.search(body)
+    return f"{notes['version']} {notes['link']}" if notes else "unknown"
 
 
 def newest(releases: list[Release], kind: str, after: str = "") -> Release | None:
@@ -88,19 +79,13 @@ def cell(release: Release | None) -> str:
     return f"[{release.version}]({release.url}), Weft {release.weft}"
 
 
-def latest_table(mods: dict[str, list[Release]], contains: WeftContains) -> list[str]:
-    """One row per mod: its release, the candidate newer than that, and the experimental build on
-    a Weft the newest of those two doesn't have yet. The time an experimental build was published
-    says nothing, since it runs beside the release."""
-    lines = ["| Mod | Release | Release candidate | Experimental |", "|---|---|---|---|"]
+def latest_table(mods: dict[str, list[Release]]) -> list[str]:
+    """One row per mod: its release, and the candidate newer than that."""
+    lines = ["| Mod | Release | Release candidate |", "|---|---|---|"]
     for mod, releases in mods.items():
         release = newest(releases, "release")
         candidate = newest(releases, "rc", release.published if release else "")
-        stable = candidate or release
-        experimental = newest(releases, "experimental")
-        if experimental and stable and contains(experimental.weft_commit, stable.weft_commit):
-            experimental = None
-        lines.append(f"| {mod} | {cell(release)} | {cell(candidate)} | {cell(experimental)} |")
+        lines.append(f"| {mod} | {cell(release)} | {cell(candidate)} |")
     return lines
 
 
@@ -114,13 +99,13 @@ def history(mod: str, releases: list[Release]) -> list[str]:
     return lines + [""]
 
 
-def section(releases: list[Release], contains: WeftContains) -> str:
+def section(releases: list[Release]) -> str:
     mods: dict[str, list[Release]] = {}
     for release in sorted(releases, key=lambda r: r.mod):
         mods.setdefault(release.mod, []).append(release)
     if not mods:
         return f"{START}\n{INTRO}\nNo releases yet.\n{END}"
-    lines = [START, INTRO, *latest_table(mods, contains), "", "## Versions", ""]
+    lines = [START, INTRO, *latest_table(mods), "", "## Versions", ""]
     for mod, mod_releases in mods.items():
         lines += history(mod, mod_releases)
     return "\n".join(lines + [END])
@@ -133,12 +118,20 @@ def replace_section(readme: str, new: str) -> str:
     return readme[:start] + new + readme[end + len(END) :]
 
 
+def download_json(url: str | None) -> dict | None:
+    if not url:
+        return None
+    with urllib.request.urlopen(url, timeout=60) as response:
+        return json.load(response)
+
+
 def main() -> None:
     path = sys.argv[1]
-    releases = [parse(json.loads(line)) for line in sys.stdin if line.strip()]
+    lines = [json.loads(line) for line in sys.stdin if line.strip()]
+    releases = [parse(r, download_json(r["mod_json_url"])) for r in lines if TAG.match(r["tag"])]
     with open(path, encoding="utf-8") as file:
         readme = file.read()
-    readme = replace_section(readme, section([r for r in releases if r], weft_contains))
+    readme = replace_section(readme, section(releases))
     with open(path, "w", encoding="utf-8", newline="\n") as file:
         file.write(readme)
 
