@@ -1,82 +1,150 @@
-//! Boxes of cubes: the 16-block units the engine loads the world in, and keeps loaded.
+//! Cubes: the 16-block units the engine loads the world in, and keeps loaded. A cube has its
+//! own position, `CubePos`, apart from a block's, so the two can't be mixed up.
+
+use std::ops::Sub;
+
+use weft_sdk::*;
 
 use crate::lib::Pos;
 
 /// Blocks along each side of a cube.
 pub const CUBE: i32 = 16;
 
-/// The cubes from `lo` to `hi`, both included, in cube coordinates (a block's divided by 16).
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Cubes {
-    pub lo: Pos,
-    pub hi: Pos,
+value! {
+    /// A cube's position: that of its blocks divided by 16, rounded down.
+    #[derive(Eq, Hash)]
+    pub struct CubePos {
+        pub x: i32,
+        pub y: i32,
+        pub z: i32,
+    }
+}
+
+impl CubePos {
+    pub const fn new(x: i32, y: i32, z: i32) -> CubePos {
+        CubePos { x, y, z }
+    }
+
+    /// The cube the block `pos` is in.
+    pub fn of(pos: Pos) -> CubePos {
+        let cube = |block: i32| block.div_euclid(CUBE);
+        CubePos::new(cube(pos.x), cube(pos.y), cube(pos.z))
+    }
+
+    /// Its lowest block in every direction.
+    pub fn first_block(self) -> Pos {
+        Pos::new(self.x * CUBE, self.y * CUBE, self.z * CUBE)
+    }
+
+    /// Its highest block in every direction.
+    pub fn last_block(self) -> Pos {
+        let last = CUBE - 1;
+        self.first_block().add_x(last).add_y(last).add_z(last)
+    }
+
+    /// `dx` cubes along x from here.
+    pub const fn add_x(self, dx: i32) -> CubePos {
+        CubePos {
+            x: self.x + dx,
+            ..self
+        }
+    }
+
+    /// `dz` cubes along z from here.
+    pub const fn add_z(self, dz: i32) -> CubePos {
+        CubePos {
+            z: self.z + dz,
+            ..self
+        }
+    }
+
+    /// The same column of cubes at the height `y`.
+    pub const fn with_y(self, y: i32) -> CubePos {
+        CubePos { y, ..self }
+    }
+
+    /// Whether it lies at or below `other` along each of x, y and z.
+    fn at_or_below(self, other: CubePos) -> bool {
+        self.x <= other.x && self.y <= other.y && self.z <= other.z
+    }
+}
+
+/// How many cubes apart along each of x, y and z.
+impl Sub for CubePos {
+    type Output = CubePos;
+
+    fn sub(self, other: CubePos) -> CubePos {
+        CubePos::new(self.x - other.x, self.y - other.y, self.z - other.z)
+    }
+}
+
+value! {
+    /// The cubes from `lo` to `hi`, both included. `lo` lies at or below `hi` along each of x, y
+    /// and z: every way to make one sees to it.
+    #[derive(Eq)]
+    pub struct Cubes {
+        lo: CubePos,
+        hi: CubePos,
+    }
 }
 
 impl Cubes {
+    /// The cubes with the opposite corners `a` and `b`.
+    pub fn between(a: CubePos, b: CubePos) -> Cubes {
+        Cubes {
+            lo: CubePos::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z)),
+            hi: CubePos::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z)),
+        }
+    }
+
     /// The cubes up to `range` away from the one the block `pos` is in, along x and z, at its
     /// height.
     pub fn around(pos: Pos, range: i32) -> Cubes {
-        let center = cube_of(pos);
-        Cubes {
-            lo: center.add_x(-range).add_z(-range),
-            hi: center.add_x(range).add_z(range),
-        }
+        let center = CubePos::of(pos);
+        Cubes::between(
+            center.add_x(-range).add_z(-range),
+            center.add_x(range).add_z(range),
+        )
     }
 
     /// The cubes the blocks from `a` to `b` are in, both included.
     pub fn spanning(a: Pos, b: Pos) -> Cubes {
-        let (a, b) = (cube_of(a), cube_of(b));
-        Cubes {
-            lo: Pos::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z)),
-            hi: Pos::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z)),
-        }
+        Cubes::between(CubePos::of(a), CubePos::of(b))
+    }
+
+    /// The lowest cube in every direction.
+    pub fn lo(&self) -> CubePos {
+        self.lo
+    }
+
+    /// The highest cube in every direction.
+    pub fn hi(&self) -> CubePos {
+        self.hi
     }
 
     pub fn count(&self) -> i64 {
-        let across = |lo: i32, hi: i32| (hi - lo + 1).max(0) as i64;
-        let (lo, hi) = (self.lo, self.hi);
-        across(lo.x, hi.x) * across(lo.y, hi.y) * across(lo.z, hi.z)
+        let span = self.hi - self.lo;
+        let across = |cubes_apart: i32| i64::from(cubes_apart) + 1;
+        across(span.x) * across(span.y) * across(span.z)
     }
 
     /// Whether every cube of `other` is one of these.
     pub fn contains(&self, other: &Cubes) -> bool {
-        let (lo, hi) = (self.lo, self.hi);
-        let inside = |p: Pos| {
-            (lo.x..=hi.x).contains(&p.x)
-                && (lo.y..=hi.y).contains(&p.y)
-                && (lo.z..=hi.z).contains(&p.z)
-        };
-        inside(other.lo) && inside(other.hi)
+        self.lo.at_or_below(other.lo) && other.hi.at_or_below(self.hi)
     }
 
     /// The first and the last block of the box, as `World::keep_loaded` takes it.
     pub fn blocks(&self) -> (Pos, Pos) {
-        let last = CUBE - 1;
-        let first_block = |c: Pos| Pos::new(c.x * CUBE, c.y * CUBE, c.z * CUBE);
-        let end = first_block(self.hi);
-        (
-            first_block(self.lo),
-            Pos::new(end.x + last, end.y + last, end.z + last),
-        )
+        (self.lo.first_block(), self.hi.last_block())
     }
 
-    /// Each cube's first block.
-    pub fn each(&self) -> impl Iterator<Item = Pos> + use<> {
+    /// Each cube.
+    pub fn each(&self) -> impl Iterator<Item = CubePos> + use<> {
         let (lo, hi) = (self.lo, self.hi);
         (lo.y..=hi.y).flat_map(move |y| {
-            (lo.z..=hi.z).flat_map(move |z| {
-                (lo.x..=hi.x).map(move |x| Pos::new(x * CUBE, y * CUBE, z * CUBE))
-            })
+            (lo.z..=hi.z).flat_map(move |z| (lo.x..=hi.x).map(move |x| CubePos::new(x, y, z)))
         })
     }
-}
-
-fn cube_of(pos: Pos) -> Pos {
-    Pos::new(
-        pos.x.div_euclid(CUBE),
-        pos.y.div_euclid(CUBE),
-        pos.z.div_euclid(CUBE),
-    )
 }
 
 #[cfg(test)]
@@ -85,9 +153,20 @@ mod tests {
 
     #[test]
     fn blocks_below_zero_are_in_the_cube_below() {
-        let cubes = Cubes::around(Pos::new(-1, -16, 15), 0);
-        assert_eq!(cubes.lo, Pos::new(-1, -1, 0), "-1 and -16 in -1, 15 in 0");
-        assert_eq!(cubes.count(), 1, "one cube");
+        let cube = CubePos::of(Pos::new(-1, -16, 15));
+        assert_eq!(cube, CubePos::new(-1, -1, 0), "-1 and -16 in -1, 15 in 0");
+        assert_eq!(cube.first_block(), Pos::new(-16, -16, 0), "starts at");
+        assert_eq!(cube.last_block(), Pos::new(-1, -1, 15), "ends at");
+    }
+
+    #[test]
+    fn corners_given_either_way_round_make_the_same_box() {
+        let (a, b) = (CubePos::new(3, -1, 0), CubePos::new(-2, 4, 0));
+        let cubes = Cubes::between(a, b);
+        assert_eq!(cubes, Cubes::between(b, a), "swapped");
+        assert_eq!(cubes.lo(), CubePos::new(-2, -1, 0), "lowest of each");
+        assert_eq!(cubes.hi(), CubePos::new(3, 4, 0), "highest of each");
+        assert_eq!(cubes.count(), 36, "6 by 6, one deep");
     }
 
     #[test]
@@ -95,11 +174,11 @@ mod tests {
         let cubes = Cubes::around(Pos::new(40, 70, 8), 3);
         assert_eq!(cubes.count(), 49, "7 by 7, one high");
         assert_eq!(
-            cubes.lo,
-            Pos::new(-1, 4, -3),
+            cubes.lo(),
+            CubePos::new(-1, 4, -3),
             "three each way of cube 2, 4, 0"
         );
-        assert_eq!(cubes.hi, Pos::new(5, 4, 3), "and the same up");
+        assert_eq!(cubes.hi(), CubePos::new(5, 4, 3), "and the same up");
     }
 
     #[test]
@@ -117,8 +196,12 @@ mod tests {
     #[test]
     fn a_span_takes_every_cube_its_blocks_are_in() {
         let cubes = Cubes::spanning(Pos::new(20, 30, -1), Pos::new(-17, 33, 15));
-        assert_eq!(cubes.lo, Pos::new(-2, 1, -1), "-17 is two cubes down");
-        assert_eq!(cubes.hi, Pos::new(1, 2, 0), "33 is in the third cube up");
+        assert_eq!(cubes.lo(), CubePos::new(-2, 1, -1), "-17 is two cubes down");
+        assert_eq!(
+            cubes.hi(),
+            CubePos::new(1, 2, 0),
+            "33 is in the third cube up"
+        );
     }
 
     #[test]
@@ -141,8 +224,8 @@ mod tests {
     #[test]
     fn each_cube_is_listed_once() {
         let cubes = Cubes::around(Pos::new(0, 0, 0), 1);
-        let all: Vec<Pos> = cubes.each().collect();
+        let all: Vec<CubePos> = cubes.each().collect();
         assert_eq!(all.len() as i64, cubes.count(), "as many as it counts");
-        assert!(all.contains(&Pos::new(-16, 0, 16)), "a corner cube");
+        assert!(all.contains(&CubePos::new(-1, 0, 1)), "a corner cube");
     }
 }

@@ -111,9 +111,13 @@ impl Dig {
     /// The cubes of the layer it mines, across the whole frame. None once the cursor has passed
     /// the floor: it finishes on the next tick.
     fn mining_layer(&self) -> Option<Cubes> {
-        let y = self.cursor.y;
-        (y >= dig::FLOOR_Y)
-            .then(|| Cubes::spanning(self.frame.lo.with_y(y), self.frame.hi.with_y(y)))
+        match self.cursor.y {
+            y if y >= dig::FLOOR_Y => Some(Cubes::spanning(
+                self.frame.lo.with_y(y),
+                self.frame.hi.with_y(y),
+            )),
+            _ => None,
+        }
     }
 }
 
@@ -122,7 +126,7 @@ impl Dig {
 fn keep_loaded(w: &World, pos: Pos, d: &Dig) {
     match d.stage() {
         Stage::Mine => crate::loading::keep_machine(w, pos, d.mining_layer()),
-        Stage::New | Stage::Frame | Stage::Done => crate::loading::release_machine(w, pos),
+        _ => crate::loading::release_machine(w, pos),
     }
 }
 
@@ -258,7 +262,7 @@ mod tests {
             kept.extend(d.mining_layer());
         }
         assert_eq!(
-            kept.last().map(|c| c.lo.y),
+            kept.last().map(|c| c.lo().y),
             Some(-4),
             "nothing below the floor"
         );

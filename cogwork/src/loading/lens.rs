@@ -6,8 +6,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use weft_sdk::*;
 
-use super::{Cubes, Keeper};
-use crate::lib::Pos;
+use super::{CubePos, Cubes, Keeper};
 
 pub static CUBOID_LENS: Item = Item::named("cuboid_lens");
 
@@ -19,8 +18,6 @@ static SHOWN: Channel<Vec<u8>> = Channel::named("lens_shown");
 const ASK_EVERY: f32 = 0.5;
 /// Blocks each outline is drawn inside its cube, so neighbours' outlines don't fight.
 const INSET: f64 = 0.05;
-/// Numbers per box in an answer: its lowest and highest cube, then its keeper.
-const WORDS: usize = 7;
 
 /// On the client: the boxes of the last answer, and the seconds since the last ask.
 struct Drawn {
@@ -69,57 +66,72 @@ fn frame(client: &Client) {
         client.send(&ASK, &());
     }
     for (cubes, keeper) in &drawn.boxes {
-        for corner in cubes.each() {
-            outline(client, corner, color(*keeper));
+        for cube in cubes.each() {
+            outline(client, cube, color(*keeper));
         }
     }
 }
 
-/// The outline of the cube whose first block is `corner`.
-fn outline(client: &Client, corner: Pos, color: u32) {
+/// The outline of `cube`.
+fn outline(client: &Client, cube: CubePos, color: u32) {
+    let corner = Vec3::from(cube.first_block());
     let (near, far) = (INSET, super::cubes::CUBE as f64 - INSET);
-    let at = |d: f64| {
-        Vec3::new(
-            corner.x as f64 + d,
-            corner.y as f64 + d,
-            corner.z as f64 + d,
-        )
-    };
+    let at = |d: f64| corner.offset(d, d, d);
     client.draw_box(None, at(near), at(far), color);
 }
 
-/// `0xRRGGBBAA`: cyan for machines kept running by a loader, green for everything, orange for
-/// a working excavator or leveler.
+/// Outline colors as `0xRRGGBBAA`. Cyan: a loader keeping machines running.
+const LOADER_COLOR: u32 = 0x3fd8_e6ff;
+/// Green: a loader keeping everything running.
+const LOADER_ALL_COLOR: u32 = 0x5ee0_5aff;
+/// Orange: a working excavator or leveler.
+const MACHINE_COLOR: u32 = 0xff9a_30ff;
+
 fn color(keeper: Keeper) -> u32 {
     match keeper {
-        Keeper::Loader => 0x3fd8_e6ff,
-        Keeper::LoaderAll => 0x5ee0_5aff,
-        Keeper::Machine => 0xff9a_30ff,
+        Keeper::Loader => LOADER_COLOR,
+        Keeper::LoaderAll => LOADER_ALL_COLOR,
+        Keeper::Machine => MACHINE_COLOR,
+    }
+}
+
+value! {
+    /// One box in an answer: its cubes, and who keeps them as `Keeper`'s number.
+    struct Shown {
+        cubes: Cubes,
+        keeper: u32,
+    }
+}
+
+impl Shown {
+    fn new(cubes: Cubes, keeper: Keeper) -> Shown {
+        Shown {
+            cubes,
+            keeper: keeper as u32,
+        }
+    }
+
+    /// Its box, if it read right. Its corners are put in order again, as they came over the
+    /// network.
+    fn read(self) -> Option<(Cubes, Keeper)> {
+        let keeper = Keeper::from_repr(self.keeper)?;
+        let cubes = Cubes::between(self.cubes.lo(), self.cubes.hi());
+        Some((cubes, keeper))
     }
 }
 
 fn encode(boxes: &[(Cubes, Keeper)]) -> Vec<u8> {
-    let words = boxes.iter().flat_map(|(c, keeper)| {
-        let (lo, hi) = (c.lo, c.hi);
-        [lo.x, lo.y, lo.z, hi.x, hi.y, hi.z, *keeper as i32]
-    });
-    words.flat_map(i32::to_le_bytes).collect()
+    let shown = boxes
+        .iter()
+        .map(|&(cubes, keeper)| Shown::new(cubes, keeper));
+    shown.flat_map(|s| Payload::encode(&s)).collect()
 }
 
 /// What `encode` wrote; boxes that don't read right are left out.
 fn decode(bytes: &[u8]) -> Vec<(Cubes, Keeper)> {
-    let (words, _) = bytes.as_chunks::<4>();
-    let words: Vec<i32> = words.iter().map(|&b| i32::from_le_bytes(b)).collect();
-    let read = |&[x0, y0, z0, x1, y1, z1, keeper]: &[i32; WORDS]| {
-        let keeper = Keeper::from_repr(u32::try_from(keeper).ok()?)?;
-        let cubes = Cubes {
-            lo: Pos::new(x0, y0, z0),
-            hi: Pos::new(x1, y1, z1),
-        };
-        Some((cubes, keeper))
-    };
-    let (boxes, _) = words.as_chunks::<WORDS>();
-    boxes.iter().filter_map(read).collect()
+    let (shown, _) = bytes.as_chunks::<{ size_of::<Shown>() }>();
+    let shown = shown.iter().filter_map(|bytes| Shown::decode(bytes));
+    shown.filter_map(Shown::read).collect()
 }
 
 fn lock() -> MutexGuard<'static, Drawn> {
@@ -129,6 +141,7 @@ fn lock() -> MutexGuard<'static, Drawn> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lib::Pos;
 
     #[test]
     fn an_answer_reads_as_it_was_written() {

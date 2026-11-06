@@ -10,7 +10,7 @@ mod loader;
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
 
-pub use cubes::Cubes;
+pub use cubes::{CubePos, Cubes};
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use twox_hash::XxHash3_64;
 use weft_sdk::*;
@@ -187,16 +187,13 @@ pub fn keep_machine(w: &World, pos: Pos, work: Option<Cubes>) {
 /// any. A machine sees only the loaded cubes joined to its own, so work far below it, as an
 /// excavator's, would be out of its reach once the cubes between unload.
 fn link(pos: Pos, work: Cubes) -> Option<Cubes> {
-    let own = Cubes::around(pos, 0).lo;
-    let (lo, hi) = if work.lo.y > own.y {
-        (own.y + 1, work.lo.y - 1)
+    let own = CubePos::of(pos);
+    let (lo, hi) = if work.lo().y > own.y {
+        (own.y + 1, work.lo().y - 1)
     } else {
-        (work.hi.y + 1, own.y - 1)
+        (work.hi().y + 1, own.y - 1)
     };
-    (lo <= hi).then(|| Cubes {
-        lo: own.with_y(lo),
-        hi: own.with_y(hi),
-    })
+    (lo <= hi).then(|| Cubes::between(own.with_y(lo), own.with_y(hi)))
 }
 
 fn keep_or_release(w: &World, key: u64, cubes: Option<Cubes>) {
@@ -253,9 +250,9 @@ fn lock() -> MutexGuard<'static, Tickets> {
 /// For machines' tests: the first cube that `kept`, the boxes a machine keeps one after another,
 /// lets go of and later keeps again.
 #[cfg(test)]
-pub fn kept_again(kept: impl IntoIterator<Item = Cubes>) -> Option<Pos> {
+pub fn kept_again(kept: impl IntoIterator<Item = Cubes>) -> Option<CubePos> {
     use std::collections::HashSet;
-    let (mut held, mut gone): (HashSet<Pos>, HashSet<Pos>) = Default::default();
+    let (mut held, mut gone): (HashSet<CubePos>, HashSet<CubePos>) = Default::default();
     let mut last = None;
     for cubes in kept {
         if last == Some(cubes) {
@@ -265,7 +262,7 @@ pub fn kept_again(kept: impl IntoIterator<Item = Cubes>) -> Option<Pos> {
         if let Some(back) = cubes.each().find(|cube| gone.contains(cube)) {
             return Some(back);
         }
-        let now: HashSet<Pos> = cubes.each().collect();
+        let now: HashSet<CubePos> = cubes.each().collect();
         gone.extend(held.difference(&now));
         held = now;
     }
@@ -338,10 +335,22 @@ mod tests {
         let pos = Pos::new(5, 320, 5);
         let below = Cubes::around(Pos::new(30, 60, 30), 2);
         let column = link(pos, below).expect("cubes between");
-        assert_eq!(column.lo, Pos::new(0, 4, 0), "from just above the work");
-        assert_eq!(column.hi, Pos::new(0, 19, 0), "to just below the machine");
+        assert_eq!(
+            column.lo(),
+            CubePos::new(0, 4, 0),
+            "from just above the work"
+        );
+        assert_eq!(
+            column.hi(),
+            CubePos::new(0, 19, 0),
+            "to just below the machine"
+        );
         let above = Cubes::around(Pos::new(30, 400, 30), 0);
-        assert_eq!(link(pos, above).map(|c| c.lo.y), Some(21), "work above it");
+        assert_eq!(
+            link(pos, above).map(|c| c.lo().y),
+            Some(21),
+            "work above it"
+        );
         let beside = Cubes::around(Pos::new(30, 330, 30), 2);
         assert_eq!(link(pos, beside), None, "at its height");
         let next_cube_down = Cubes::around(Pos::new(30, 310, 30), 2);
@@ -354,7 +363,7 @@ mod tests {
         let down = [70, 70, 60, 50, 40].map(layer);
         assert_eq!(kept_again(down), None, "one layer after another");
         let back = [70, 60, 70].map(layer);
-        assert_eq!(kept_again(back), Some(Pos::new(0, 64, 0)), "back up");
+        assert_eq!(kept_again(back), Some(CubePos::new(0, 4, 0)), "back up");
     }
 
     #[test]

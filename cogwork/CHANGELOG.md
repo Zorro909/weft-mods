@@ -1,7 +1,5 @@
 # Changelog
 
-Changes to Cogwork, newest first. Release candidates are listed under the release they lead to.
-
 ## Unreleased
 
 ### Added
