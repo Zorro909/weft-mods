@@ -69,7 +69,8 @@ at:
 
 When the layer it works at is more than a cube above or below its own, it also keeps the
 column of cubes between, one cube wide, straight above or below itself: a machine reaches only
-blocks in loaded cubes joined to its own.
+blocks in loaded cubes joined to its own, and somewhere between 64 and 112 blocks of unloaded
+cubes cut it off from its work.
 
 So a cube it moves on from is one it is done with. A cube no player and no machine keeps
 loaded is written to disk and read back from it when wanted again; keeping the whole layer

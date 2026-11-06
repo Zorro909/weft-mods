@@ -28,8 +28,11 @@ pub fn release_machine(w: &World, pos: Pos) {
 }
 
 /// A column of the cubes between the machine's own at `pos` and the height of its `work`, if
-/// any. A machine sees only the loaded cubes joined to its own, so work far below it, as an
-/// excavator's, would be out of its reach once the cubes between unload.
+/// any. A machine's tick sees only its own region: the loaded cubes joined to its own through
+/// touching sections of 4 x 4 x 4 cubes. A gap of unloaded cubes splits the region only once it
+/// holds a whole section, from 64 blocks deep and always by 112, so shallow work stays in reach
+/// without this, and so does work a player near loads the cubes down to. An excavator's work
+/// goes far deeper.
 fn link(pos: Pos, work: Cubes) -> Option<Cubes> {
     let own = CubePos::of(pos);
     let (lo, hi) = if work.lo().y > own.y {
