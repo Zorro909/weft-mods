@@ -1,14 +1,19 @@
 //! What excavators and levelers keep loaded while they work: their own cubes, those they work
-//! in, and those between.
+//! in, and those that join the two.
 
 use weft_sdk::*;
 
 use super::tickets::{self, Keeper};
-use super::{CubePos, Cubes, ROLES, Role, key};
+use super::{CubePos, Cubes, Role, key};
 use crate::lib::Pos;
 
+/// Cubes along each side of a section. A machine reaches only its own region: the loaded cubes
+/// joined to its own through sections that touch, a section counting once a cube of it is
+/// loaded. Two cubes at most this far apart lie in touching sections.
+const SECTION: i32 = 4;
+
 /// Keeps what a working machine at `pos` needs loaded: its own cube and the eight around it,
-/// and the cubes it works in, `work`, when they reach outside them.
+/// the cubes it works in, `work`, when they reach outside them, and the cubes that join them.
 ///
 /// A machine's `work` should not let go of a cube it comes back to later: unloaded, a cube is
 /// written to disk at once, and read back from it when wanted again.
@@ -17,33 +22,53 @@ pub fn keep_machine(w: &World, pos: Pos, work: Option<Cubes>) {
     tickets::keep(w, key(w, pos, Role::Home), home, Keeper::Machine);
     let work = work.filter(|cubes| !home.contains(cubes));
     keep_or_release(w, key(w, pos, Role::Work), work);
-    keep_or_release(w, key(w, pos, Role::Link), work.and_then(|c| link(pos, c)));
+    let links = work.map(|cubes| links(pos, cubes)).unwrap_or_default();
+    for (i, &cube) in links.iter().enumerate() {
+        let link = Some(Cubes::between(cube, cube));
+        keep_or_release(w, key(w, pos, Role::Link(i as u32)), link);
+    }
+    release_links(w, pos, links.len());
 }
 
 /// Lets go of what the machine at `pos` kept loaded: it is done.
 pub fn release_machine(w: &World, pos: Pos) {
-    for role in ROLES {
-        tickets::release(w, key(w, pos, role));
+    tickets::release(w, key(w, pos, Role::Home));
+    tickets::release(w, key(w, pos, Role::Work));
+    release_links(w, pos, 0);
+}
+
+/// Lets go of the links of the machine at `pos` from the `from`th on, up to the first cogwork
+/// doesn't hold. Any after that, no longer renewed, runs out on its own.
+pub(super) fn release_links(w: &World, pos: Pos, from: usize) {
+    let mut i = from as u32;
+    while tickets::release(w, key(w, pos, Role::Link(i))) {
+        i += 1;
     }
 }
 
-/// The column of cubes straight between the machine at `pos` and its `work`, if any. A machine
-/// reaches only its own region, and a gap of 64 blocks or more with nothing loaded puts its
-/// work in another one.
-fn link(pos: Pos, work: Cubes) -> Option<Cubes> {
+/// The cubes that join the machine at `pos` to its `work` above or below it: one in every
+/// `SECTION` straight up or down from its own. Sideways it needs none, as a machine's area
+/// always starts beside it, within a cube of its own.
+fn links(pos: Pos, work: Cubes) -> Vec<CubePos> {
     let own = CubePos::of(pos);
-    let (lo, hi) = if work.lo().y > own.y {
-        (own.y + 1, work.lo().y - 1)
+    let (edge, step) = if work.lo().y > own.y {
+        (work.lo().y, SECTION)
     } else {
-        (work.hi().y + 1, own.y - 1)
+        (work.hi().y, -SECTION)
     };
-    (lo <= hi).then(|| Cubes::between(own.with_y(lo), own.with_y(hi)))
+    let mut links = Vec::new();
+    let mut last = own.y;
+    while (edge - last).abs() > SECTION {
+        last += step;
+        links.push(own.with_y(last));
+    }
+    links
 }
 
 fn keep_or_release(w: &World, key: u64, cubes: Option<Cubes>) {
     match cubes {
         Some(cubes) => drop(tickets::keep(w, key, cubes, Keeper::Machine)),
-        None => tickets::release(w, key),
+        None => drop(tickets::release(w, key)),
     }
 }
 
@@ -73,31 +98,51 @@ pub fn kept_again(kept: impl IntoIterator<Item = Cubes>) -> Option<CubePos> {
 mod tests {
     use super::*;
 
+    fn heights(cubes: &[CubePos]) -> Vec<i32> {
+        cubes.iter().map(|c| c.y).collect()
+    }
+
     #[test]
-    fn work_far_below_is_linked_to_the_machine_by_the_cubes_between() {
+    fn work_far_below_is_joined_by_a_cube_in_every_four() {
         let pos = Pos::new(5, 320, 5);
         let below = Cubes::around(Pos::new(30, 60, 30), 2);
-        let column = link(pos, below).expect("cubes between");
-        assert_eq!(
-            column.lo(),
-            CubePos::new(0, 4, 0),
-            "from just above the work"
-        );
-        assert_eq!(
-            column.hi(),
-            CubePos::new(0, 19, 0),
-            "to just below the machine"
+        let joining = links(pos, below);
+        assert_eq!(heights(&joining), [16, 12, 8, 4], "from cube 20 down to 3");
+        assert!(
+            joining.iter().all(|c| c.x == 0 && c.z == 0),
+            "its own column"
         );
         let above = Cubes::around(Pos::new(30, 400, 30), 0);
-        assert_eq!(
-            link(pos, above).map(|c| c.lo().y),
-            Some(21),
-            "work above it"
-        );
-        let beside = Cubes::around(Pos::new(30, 330, 30), 2);
-        assert_eq!(link(pos, beside), None, "at its height");
-        let next_cube_down = Cubes::around(Pos::new(30, 310, 30), 2);
-        assert_eq!(link(pos, next_cube_down), None, "joined already");
+        assert_eq!(heights(&links(pos, above)), [24], "up to cube 25");
+        let near = Cubes::around(Pos::new(30, 256, 30), 2);
+        assert_eq!(links(pos, near), [], "four cubes down: touching");
+    }
+
+    #[test]
+    fn each_cube_of_the_chain_lies_in_a_section_touching_the_next() {
+        let section = |y: i32| y.div_euclid(SECTION);
+        let pos = Pos::new(0, 600, 0);
+        for work_y in -64..1200 {
+            let work = Cubes::around(Pos::new(0, work_y, 0), 0);
+            let mut chain = vec![CubePos::of(pos).y];
+            chain.extend(heights(&links(pos, work)));
+            chain.push(work.lo().y);
+            let touching = chain
+                .windows(2)
+                .all(|p| (section(p[0]) - section(p[1])).abs() <= 1);
+            assert!(touching, "{chain:?} for work at {work_y}");
+        }
+    }
+
+    #[test]
+    fn links_only_grow_as_work_goes_down() {
+        let pos = Pos::new(0, 300, 0);
+        let mut held = Vec::new();
+        for work_y in (-64..300).rev() {
+            let now = links(pos, Cubes::around(Pos::new(0, work_y, 0), 0));
+            assert_eq!(now[..held.len()], held[..], "nothing let go at {work_y}");
+            held = now;
+        }
     }
 
     #[test]

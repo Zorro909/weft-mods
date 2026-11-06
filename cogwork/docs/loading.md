@@ -67,10 +67,9 @@ at:
   fills, those of every layer left to fill (at most two cubes high), so the cubes just below its
   height stay from clearing to filling.
 
-When the layer it works at is more than a cube above or below its own, it also keeps the
-column of cubes between, one cube wide, straight above or below itself: a machine reaches only
-blocks in loaded cubes joined to its own, and somewhere between 64 and 112 blocks of unloaded
-cubes cut it off from its work.
+When the layer it works at is more than four cubes above or below its own, it also keeps one
+cube in every four straight above or below itself: a machine reaches only blocks joined to its
+own through loaded cubes, and 64 blocks or more with nothing loaded cut it off from its work.
 
 So a cube it moves on from is one it is done with. A cube no player and no machine keeps
 loaded is written to disk and read back from it when wanted again; keeping the whole layer

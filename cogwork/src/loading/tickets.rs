@@ -129,11 +129,13 @@ fn forget_stale(tickets: &mut Tickets, now: u64) {
     tickets.retain(|_, &mut (_, until)| until > now && until <= now + LIFETIME as u64);
 }
 
-/// Lets ticket `key` go, if cogwork holds it.
-pub fn release(w: &World, key: u64) {
-    if lock().remove(&key).is_some() {
+/// Lets ticket `key` go, if cogwork holds it; whether it did.
+pub fn release(w: &World, key: u64) -> bool {
+    let held = lock().remove(&key).is_some();
+    if held {
         w.release_loaded(key);
     }
+    held
 }
 
 /// Lets ticket `key` go even when cogwork doesn't hold it: one restored with the world is not
