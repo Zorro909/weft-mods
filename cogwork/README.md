@@ -70,6 +70,8 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Cuboid loaders and the lens](docs/loading.md)
 - [Working with other mods](docs/other-mods.md)
 
+What changed in each version is in the [changelog](CHANGELOG.md).
+
 ## Build and install
 
 To play it, take the zip from the [releases](../README.md#downloads). To build it yourself,
