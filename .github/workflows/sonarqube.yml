@@ -1,0 +1,41 @@
+# Lints every mod with clippy and sends the code and clippy's findings to SonarQube Cloud, on
+# every pull request and every push to main. A clippy warning in a mod fails the run, after the
+# analysis with it is sent. The analysis needs the secret `SONAR_TOKEN`, which pull requests from
+# forks don't get: theirs skip it. The project's settings are in `sonar-project.properties`.
+name: SonarQube
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      # The whole history, so that SonarQube can tell new code from old.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Clippy report
+        run: tools/ci/clippy-report.sh clippy-report.json
+
+      # The steps after the report run when it fails too, so that clippy's findings show.
+      - name: Clippy finds nothing
+        if: ${{ !cancelled() }}
+        run: tools/ci/clippy-findings.sh clippy-report.json
+
+      - name: SonarQube analysis
+        if: ${{ !cancelled() && env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@v8
