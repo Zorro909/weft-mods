@@ -34,7 +34,7 @@ Before adding or changing content, read `modding.md` and the topic guide for it.
 
 ## Releasing
 
-`.github/workflows/release.yml` publishes from every push to `main` with [weft-mod-action](https://github.com/Zorro909/weft-mod-action), whose README has the rules; the top of the workflow sums them up. Each release holds `<id>.zip` and `<id>.mod.json` for the Weft mod index. A mod's crate version is `X.Y.Z` for a full release or `X.Y.Z-rc.N` for a release candidate.
+`.github/workflows/release.yml` publishes from every push to `main` with [weft-mod-action](https://github.com/Zorro909/weft-mod-action), whose README has the rules; the top of the workflow sums them up. Each release holds `<id>.zip`, with `weft-mod.toml` (the mod's id, name, version, Weft ABI and `declare_mod!` deps) beside its libraries and `assets/`, and `<id>.mod.json`, the zip's build provenance attestation, which the launcher checks. Attestations name this repository's own workflow, so releases come only from `release.yml` and the repository stays public. A mod's crate version is `X.Y.Z` for a full release or `X.Y.Z-rc.N` for a release candidate.
 
 - A version without a release is released as it is when it reaches `main`.
 - A mod that changes without a new version gets a candidate from CI, `X.Y.(Z+1)-rc.<run>.g<commit>`, set only in the build: nothing is committed. Set the version yourself for a full release, or a candidate of another version such as `0.2.0-rc.1`.

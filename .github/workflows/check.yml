@@ -81,7 +81,7 @@ jobs:
         with:
           submodules: true
 
-      - uses: Zorro909/weft-mod-action/build@v1
+      - uses: Zorro909/weft-mod-action/build@feat/mod-manager-v2
         with:
           release-unchanged: true
           mods: |

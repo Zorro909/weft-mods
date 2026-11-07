@@ -1,6 +1,6 @@
 # Releases the mods with Zorro909/weft-mod-action on every push to main. Each release holds
-# `<id>.zip`, with the mod's Windows, Linux and macOS builds, and `<id>.mod.json` for the Weft mod
-# index, with attested build provenance.
+# `<id>.zip`, with the mod's Windows, Linux and macOS builds, its assets and its `weft-mod.toml`,
+# and `<id>.mod.json`, the zip's build provenance attestation, which the Weft launcher checks.
 #   - A mod whose crate version has no release yet is released as it is: a full release for
 #     `X.Y.Z`, a release candidate for `X.Y.Z-rc.N`.
 #   - A mod that changed since its newest release (its folder or the Weft submodule) gets a
@@ -37,7 +37,7 @@ jobs:
           submodules: true
 
       # Every mod folder; a new mod is added here, in check.yml and in index-pr.yml.
-      - uses: Zorro909/weft-mod-action/build@v1
+      - uses: Zorro909/weft-mod-action/build@feat/mod-manager-v2
         with:
           mods: |
             cogwork
@@ -56,7 +56,7 @@ jobs:
         with:
           submodules: true
 
-      - uses: Zorro909/weft-mod-action/release@v1
+      - uses: Zorro909/weft-mod-action/release@feat/mod-manager-v2
 
   # Also when nothing was released, or the release failed: it commits only when the section
   # changes. Not for a run started by hand on another branch, which mustn't push to main. The
