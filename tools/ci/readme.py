@@ -1,14 +1,13 @@
 """Rewrites the mod releases section of README.md from the repository's GitHub releases.
 
 Reads the releases from stdin, one JSON object per line with `tag`, `url`, `date`, `body` and
-`mod_json_url`, as `update-readme.sh` fetches them. The section between the markers is replaced, or
+`weft`, the Weft its `<id>.mod.json` names (null without one), as `update-readme.sh` fetches them. The section between the markers is replaced, or
 added at the end. Usage: `python3 tools/ci/readme.py README.md < releases`.
 """
 
 import json
 import re
 import sys
-import urllib.request
 from dataclasses import dataclass
 
 START = "<!-- mod-releases:start -->"
@@ -43,8 +42,8 @@ class Release:
     weft: str
 
 
-def parse(release: dict, mod_json: dict | None) -> Release | None:
-    """The release, with its `<id>.mod.json` if it has one, or None for a tag of another kind."""
+def parse(release: dict) -> Release | None:
+    """The release, or None for a tag of another kind."""
     tag = TAG.match(release["tag"])
     if not tag:
         return None
@@ -54,15 +53,16 @@ def parse(release: dict, mod_json: dict | None) -> Release | None:
         kind="rc" if tag["rc"] else "release",
         url=release["url"],
         published=release["date"],
-        weft=weft(release["body"] or "", mod_json),
+        weft=weft(release["body"] or "", release.get("weft")),
     )
 
 
-def weft(body: str, mod_json: dict | None) -> str:
-    """The Weft a release was built against, as `<version> [<commit>](<link>)`."""
-    if mod_json:
-        commit = mod_json["weft"]["commit"]
-        return f"{mod_json['weft']['tag'].removeprefix('v')} [{commit[:7]}]({WEFT_COMMITS}{commit})"
+def weft(body: str, mod_weft: dict | None) -> str:
+    """The Weft a release was built against, as `<version> [<commit>](<link>)`: from the `weft` of
+    its `<id>.mod.json`, else from its notes."""
+    if mod_weft:
+        commit = mod_weft["commit"]
+        return f"{mod_weft['tag'].removeprefix('v')} [{commit[:7]}]({WEFT_COMMITS}{commit})"
     notes = NOTES_WEFT.search(body)
     return f"{notes['version']} {notes['link']}" if notes else "unknown"
 
@@ -118,20 +118,12 @@ def replace_section(readme: str, new: str) -> str:
     return readme[:start] + new + readme[end + len(END) :]
 
 
-def download_json(url: str | None) -> dict | None:
-    if not url:
-        return None
-    with urllib.request.urlopen(url, timeout=60) as response:
-        return json.load(response)
-
-
 def main() -> None:
     path = sys.argv[1]
-    lines = [json.loads(line) for line in sys.stdin if line.strip()]
-    releases = [parse(r, download_json(r["mod_json_url"])) for r in lines if TAG.match(r["tag"])]
+    releases = [parse(json.loads(line)) for line in sys.stdin if line.strip()]
     with open(path, encoding="utf-8") as file:
         readme = file.read()
-    readme = replace_section(readme, section(releases))
+    readme = replace_section(readme, section([r for r in releases if r]))
     with open(path, "w", encoding="utf-8", newline="\n") as file:
         file.write(readme)
 

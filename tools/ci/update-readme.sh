@@ -10,13 +10,28 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+# Every release as one JSON line for `readme.py`, with the `weft` its `<id>.mod.json` names, or
+# null for a release from before weft-mod-action, which has none.
+releases() {
+    local release asset weft
+    gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+        --jq '.[] | select(.draft | not) | {tag: .tag_name, url: .html_url, date: .published_at, body,
+            mod_json: ([.assets[] | select(.name | endswith(".mod.json")) | .id][0])}' |
+        while IFS= read -r release; do
+            asset=$(jq -r '.mod_json // empty' <<<"$release")
+            weft=null
+            if [ -n "$asset" ]; then
+                weft=$(gh api -H 'Accept: application/octet-stream' \
+                    "repos/$GITHUB_REPOSITORY/releases/assets/$asset" | jq -c .weft)
+            fi
+            jq -c --argjson weft "$weft" 'del(.mod_json) + {weft: $weft}' <<<"$release"
+        done
+}
+
 for attempt in 1 2 3; do
     git fetch -q origin "$branch"
     git reset -q --hard "origin/$branch"
-    gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
-        --jq '.[] | select(.draft | not) | {tag: .tag_name, url: .html_url, date: .published_at, body,
-            mod_json_url: ([.assets[] | select(.name | endswith(".mod.json")) | .browser_download_url][0])}' |
-        python3 tools/ci/readme.py README.md
+    releases | python3 tools/ci/readme.py README.md
     if git diff --quiet README.md; then
         echo "README.md already lists every release"
         exit 0
