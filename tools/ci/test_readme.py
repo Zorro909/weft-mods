@@ -31,9 +31,13 @@ class Parse(unittest.TestCase):
     def test_experimental_build_is_left_out(self):
         self.assertIsNone(parse(release("cogwork-v0.1.0-experimental.ff9c712.8da6d93", "2026-11-02T00:00:00Z")))
 
-    def test_weft_from_the_mod_json(self):
+    def test_weft_release_the_tag_pins(self):
         parsed = parse(release("cogwork-v0.2.4", "2026-11-07T00:00:00Z", weft={"tag": "v26.11.2", "commit": PINNED}))
         self.assertEqual(parsed.weft, f"26.11.2 [5faf2e3](https://github.com/Weft-Rust/Weft/commit/{PINNED})")
+
+    def test_untagged_weft_without_notes_is_its_commit(self):
+        parsed = parse(release("cogwork-v0.2.4", "2026-11-07T00:00:00Z", weft={"tag": "", "commit": PINNED}))
+        self.assertEqual(parsed.weft, f"[5faf2e3](https://github.com/Weft-Rust/Weft/commit/{PINNED})")
 
     def test_weft_from_the_notes_of_an_older_release(self):
         body = f"Built against Weft 26.10.4, commit [5faf2e3](https://x/commit/{PINNED}).\n"

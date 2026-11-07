@@ -10,21 +10,24 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-# Every release as one JSON line for `readme.py`, with the `weft` its `<id>.mod.json` names, or
-# null for a release from before weft-mod-action, which has none.
+# Every release as one JSON line for `readme.py`, with the `weft` it was built against: the Weft
+# commit its tag pins, and that commit's Weft release tag ("" when it has none). Null when the tag
+# isn't fetched here. Needs the tags.
 releases() {
-    local release asset weft
+    local weft_tags release tag commit weft_tag
+    # Annotated tags show up a second time as `<tag>^{}`, with the commit they point at.
+    weft_tags=$(git ls-remote --tags "$(git config -f .gitmodules submodule.Weft.url)" | sed 's/\^{}$//')
     gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
-        --jq '.[] | select(.draft | not) | {tag: .tag_name, url: .html_url, date: .published_at, body,
-            mod_json: ([.assets[] | select(.name | endswith(".mod.json")) | .id][0])}' |
+        --jq '.[] | select(.draft | not) | {tag: .tag_name, url: .html_url, date: .published_at, body}' |
         while IFS= read -r release; do
-            asset=$(jq -r '.mod_json // empty' <<<"$release")
-            weft=null
-            if [ -n "$asset" ]; then
-                weft=$(gh api -H 'Accept: application/octet-stream' \
-                    "repos/$GITHUB_REPOSITORY/releases/assets/$asset" | jq -c .weft)
+            tag=$(jq -r .tag <<<"$release")
+            if ! commit=$(git rev-parse -q --verify "refs/tags/$tag:Weft"); then
+                jq -c '. + {weft: null}' <<<"$release"
+                continue
             fi
-            jq -c --argjson weft "$weft" 'del(.mod_json) + {weft: $weft}' <<<"$release"
+            weft_tag=$(awk -v commit="$commit" '$1 == commit { sub("refs/tags/", "", $2); print $2 }' <<<"$weft_tags" |
+                grep -xE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)
+            jq -c --arg commit "$commit" --arg tag "$weft_tag" '. + {weft: {commit: $commit, tag: $tag}}' <<<"$release"
         done
 }
 

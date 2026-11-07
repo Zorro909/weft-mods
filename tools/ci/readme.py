@@ -1,8 +1,9 @@
 """Rewrites the mod releases section of README.md from the repository's GitHub releases.
 
 Reads the releases from stdin, one JSON object per line with `tag`, `url`, `date`, `body` and
-`weft`, the Weft its `<id>.mod.json` names (null without one), as `update-readme.sh` fetches them. The section between the markers is replaced, or
-added at the end. Usage: `python3 tools/ci/readme.py README.md < releases`.
+`weft`, the Weft commit the tag pins and its release tag (null when unknown), as
+`update-readme.sh` lists them. The section between the markers is replaced, or added at the end.
+Usage: `python3 tools/ci/readme.py README.md < releases`.
 """
 
 import json
@@ -16,8 +17,8 @@ END = "<!-- mod-releases:end -->"
 # weft-mod-action makes `X.Y.Z-rc.<run>.g<commit>`. The experimental builds of the scripts before
 # it, `X.Y.Z-experimental.<weft>.<mod>`, are left out.
 TAG = re.compile(r"^(?P<mod>.+)-v(?P<version>\d+\.\d+\.\d+(?P<rc>-rc\.\d+(\.g[0-9a-f]{7})?)?)$")
-# The line the release scripts before weft-mod-action wrote into the notes. Releases since then
-# carry `<id>.mod.json`, which names the Weft.
+# The line the release scripts before weft-mod-action wrote into the notes, naming the Weft of a
+# release built on an untagged one.
 NOTES_WEFT = re.compile(r"Built against Weft (?P<version>\S+), commit (?P<link>\[\w+\]\([^)]*/commit/\w+\))")
 WEFT_COMMITS = "https://github.com/Weft-Rust/Weft/commit/"
 
@@ -57,14 +58,16 @@ def parse(release: dict) -> Release | None:
     )
 
 
-def weft(body: str, mod_weft: dict | None) -> str:
-    """The Weft a release was built against, as `<version> [<commit>](<link>)`: from the `weft` of
-    its `<id>.mod.json`, else from its notes."""
-    if mod_weft:
-        commit = mod_weft["commit"]
-        return f"{mod_weft['tag'].removeprefix('v')} [{commit[:7]}]({WEFT_COMMITS}{commit})"
+def weft(body: str, pinned: dict | None) -> str:
+    """The Weft a release was built against, as `<version> [<commit>](<link>)`: the release tag of
+    the Weft commit it pins, else the notes' version, else the commit alone."""
+    link = f"[{pinned['commit'][:7]}]({WEFT_COMMITS}{pinned['commit']})" if pinned else ""
+    if pinned and pinned["tag"]:
+        return f"{pinned['tag'].removeprefix('v')} {link}"
     notes = NOTES_WEFT.search(body)
-    return f"{notes['version']} {notes['link']}" if notes else "unknown"
+    if notes:
+        return f"{notes['version']} {notes['link']}"
+    return link or "unknown"
 
 
 def newest(releases: list[Release], kind: str, after: str = "") -> Release | None:

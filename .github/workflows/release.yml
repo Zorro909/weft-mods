@@ -59,15 +59,17 @@ jobs:
       - uses: Zorro909/weft-mod-action/release@v1
 
   # Also when nothing was released, or the release failed: it commits only when the section
-  # changes.
+  # changes. Not for a run started by hand on another branch, which mustn't push to main. The
+  # tags tell which Weft each release was built against.
   readme:
     needs: release
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
+          fetch-depth: 0
           ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - name: Update README.md
