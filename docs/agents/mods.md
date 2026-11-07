@@ -34,9 +34,12 @@ Before adding or changing content, read `modding.md` and the topic guide for it.
 
 ## Releasing
 
-`.github/workflows/release.yml` publishes from every push to `main`; the top of the file says how. A mod's crate version is `X.Y.Z` for a full release or `X.Y.Z-rc.N` for a release candidate.
+`.github/workflows/release.yml` publishes from every push to `main` with [weft-mod-action](https://github.com/Zorro909/weft-mod-action), whose README has the rules; the top of the workflow sums them up. Each release holds `<id>.zip`, with `weft-mod.toml` (the mod's id, name, version, Weft ABI and `declare_mod!` deps) beside its libraries and `assets/`, and `<id>.mod.json`, the zip's build provenance attestation, which the launcher checks. Attestations name this repository's own workflow, so releases come only from `release.yml` and the repository stays public. A mod's crate version is `X.Y.Z` for a full release or `X.Y.Z-rc.N` for a release candidate.
 
-- A version without a release is released as it is when it reaches `main`. A full version only on a Weft release: the submodule has to sit at an upstream tag such as `v26.11.1`, and a pull request that breaks this is refused.
-- A mod that changes without a new version gets the next candidate from CI, which commits it to `main`: `0.1.0` to `0.1.1-rc.1`, `0.1.1-rc.1` to `0.1.1-rc.2`. Set the version yourself only for a full release, or a candidate of another version such as `0.2.0-rc.1`.
+- A version without a release is released as it is when it reaches `main`.
+- A mod that changes without a new version gets a candidate from CI, `X.Y.(Z+1)-rc.<run>.g<commit>`, set only in the build: nothing is committed. Set the version yourself for a full release, or a candidate of another version such as `0.2.0-rc.1`.
+- The workflows list the mod folders: a new mod goes into the `mods` of `release.yml`, `check.yml` and `index-pr.yml`.
 
-The workflow keeps the releases section of the root `README.md` up to date: leave what lies between its markers to it. Pull requests are checked by `.github/workflows/check.yml`: rustfmt over every Rust file, the release planner, `tools/check-mods.sh`, the tests of `tools/ci`, and a build of every mod on Windows, Linux and macOS. `.github/workflows/sonarqube.yml` runs clippy over every mod as `tools/check-mods.sh` does and sends its findings with the code to SonarQube Cloud, set up in `sonar-project.properties`.
+`.github/workflows/index-pr.yml`, run by hand from the Actions tab, proposes the newest releases to the Weft mod index; it needs the secret `WEFT_INDEX_TOKEN`.
+
+The workflow keeps the releases section of the root `README.md` up to date: leave what lies between its markers to it. Pull requests are checked by `.github/workflows/check.yml`: rustfmt over every Rust file, the Weft submodule at a release tag such as `v26.11.2`, `tools/check-mods.sh`, the tests of `tools/ci`, and a build of every mod on Windows, Linux and macOS with the action. `.github/workflows/sonarqube.yml` runs clippy over every mod as `tools/check-mods.sh` does, measures the test coverage of the mods (`tools/ci/rust-coverage.sh`, with cargo-llvm-cov) and of `tools/ci` (`tools/ci/python-coverage.sh`), and sends the findings and coverage with the code to SonarQube Cloud, set up in `sonar-project.properties`. Its quality gate wants 80% of new code covered.

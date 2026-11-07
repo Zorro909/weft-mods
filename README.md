@@ -61,29 +61,29 @@ it too, and builds every mod on Windows, Linux and macOS.
 
 ## Releases
 
-Every push to `main` releases the mods that changed:
+Every push to `main` releases the mods that changed, through
+[weft-mod-action](https://github.com/Zorro909/weft-mod-action):
 
 - A mod whose version has no release yet is released as that version: a full release
-  (`X.Y.Z`), which needs `Weft/` at a Weft release, or a release candidate (`X.Y.Z-rc.N`).
-- A mod that changed without a new version gets the next release candidate from CI.
+  (`X.Y.Z`) or a release candidate (`X.Y.Z-rc.N`).
+- A mod that changed without a new version gets a release candidate from CI,
+  `X.Y.(Z+1)-rc.<run>.g<commit>`.
 
-Experimental builds follow Weft's upstream `master`. The section below is kept up to date by CI;
-see [`docs/agents/mods.md`](docs/agents/mods.md#releasing) for the details.
+The section below is kept up to date by CI; see
+[`docs/agents/mods.md`](docs/agents/mods.md#releasing) for the details.
 
 <!-- mod-releases:start -->
 ## Downloads
 
 Put a mod's zip as it is into the game's `mods/` folder; each one holds the Windows, Linux and
 macOS builds. A mod loads only into a game with the same mod interface as the Weft it was built
-against. Full releases are built against a released Weft. Release candidates (`X.Y.Z-rc.N`) are builds
-of `main` on the way to the next release, and experimental builds use Weft's upstream `master`
-instead of the Weft this repository pins.
+against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to the next release.
 
-| Mod | Release | Release candidate | Experimental |
-|---|---|---|---|
-| cogwork | [0.2.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.2), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | [0.2.3-rc.3](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.3-rc.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – |
-| showcase | [0.2.1](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.2.1), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – | – |
-| structures | [0.1.3](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – | – |
+| Mod | Release | Release candidate |
+|---|---|---|
+| cogwork | [0.2.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.2), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | [0.2.3-rc.3](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.3-rc.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) |
+| showcase | [0.2.1](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.2.1), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – |
+| structures | [0.1.3](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – |
 
 ## Versions
 

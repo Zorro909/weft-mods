@@ -1,7 +1,6 @@
-# Checks a pull request: its Rust is formatted, every mod's version can be released (a full one
-# only on a tagged Weft), every mod's unit tests and clippy pass, the tests of the CI scripts in
-# `tools/ci` pass, and every mod builds for Windows, Linux and macOS against the Weft the
-# submodule pins.
+# Checks a pull request: its Rust is formatted, every mod's unit tests and clippy pass, the tests
+# of the CI scripts in `tools/ci` pass, and every mod builds for Windows, Linux and macOS against
+# the Weft the submodule pins, as `release.yml` builds it.
 name: Check
 
 on:
@@ -31,19 +30,21 @@ jobs:
             exit 1
           fi
 
-  # What merging would release, by the planner `release.yml` runs, which refuses what it can't.
-  versions:
+  # Players run Weft releases, so every mod is built against one.
+  weft:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
-      - name: Versions can be released
+      - name: Weft is at a release
         run: |
-          plan=$(tools/ci/plan-release.sh)
-          jq . <<<"$plan"
+          url=$(git config -f .gitmodules submodule.Weft.url)
+          commit=$(git rev-parse HEAD:Weft)
+          # Annotated tags show up a second time as `<tag>^{}`, with the commit they point at.
+          if ! git ls-remote --tags "$url" | grep -qE "^$commit\s+refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(\^\{\})?$"; then
+            echo "::error::Weft ${commit:0:7} is no Weft release. Move the submodule to a tag such as v26.11.2."
+            exit 1
+          fi
 
   # Unit tests and clippy of every mod with all features, the films included.
   mods:
@@ -68,5 +69,22 @@ jobs:
       - name: Tests of tools/ci
         run: python3 -m unittest discover -s tools/ci
 
+  # With `release-unchanged`, so that every mod builds, also one that didn't change.
   build:
-    uses: ./.github/workflows/build.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: Zorro909/weft-mod-action/build@feat/mod-manager-v2
+        with:
+          release-unchanged: true
+          mods: |
+            cogwork
+            showcase
+            structures

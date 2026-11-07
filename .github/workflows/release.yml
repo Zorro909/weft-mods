@@ -1,26 +1,23 @@
-# Releases the mods. Each release of a mod holds one `<id>.zip` with its Windows, Linux and macOS
-# builds, and README.md lists the newest of every mod and each version before.
-#   - On every push to main, a mod whose crate version has no release yet gets one: a full release
-#     for `X.Y.Z`, only on a tagged Weft, and a release candidate for `X.Y.Z-rc.N`. A mod that
-#     changed since its version was released gets the next candidate, which this workflow commits
-#     to `Cargo.toml` before building (`tools/ci/plan-release.sh`).
-#   - When the Weft submodule is behind upstream's master, every mod also gets an experimental
-#     prerelease built against that master, once per pair of commits; daily as well, for upstream
-#     commits that come while this repository doesn't change.
-# The version bumps and README.md go to main over SSH with the deploy key in the secret
-# `RELEASE_DEPLOY_KEY`, which the ruleset on main lets through. Their commits say `[skip ci]`, so
-# they start no workflow run.
+# Releases the mods with Zorro909/weft-mod-action on every push to main. Each release holds
+# `<id>.zip`, with the mod's Windows, Linux and macOS builds, its assets and its `weft-mod.toml`,
+# and `<id>.mod.json`, the zip's build provenance attestation, which the Weft launcher checks.
+#   - A mod whose crate version has no release yet is released as it is: a full release for
+#     `X.Y.Z`, a release candidate for `X.Y.Z-rc.N`.
+#   - A mod that changed since its newest release (its folder or the Weft submodule) gets a
+#     release candidate after it, `X.Y.(Z+1)-rc.<run>.g<commit>`. That version goes into the
+#     build only; nothing is committed.
+# Then README.md lists the newest release of every mod and each version before. Its commit goes to
+# main over SSH with the deploy key in the secret `RELEASE_DEPLOY_KEY`, which the ruleset on main
+# lets through, and says `[skip ci]`, so it starts no workflow run.
 name: Release
 
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 # A run plans from the tags the one before it made.
 concurrency:
@@ -28,137 +25,51 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  plan:
-    runs-on: ubuntu-latest
-    outputs:
-      ref: ${{ steps.bump.outputs.ref }}
-      release: ${{ steps.release.outputs.plan }}
-      experimental: ${{ steps.experimental.outputs.plan }}
-      upstream: ${{ steps.upstream.outputs.commit }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
-
-      # For `cargo update` after a version bump.
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Mods to release
-        id: release
-        run: |
-          plan='[]'
-          if [ "$GITHUB_EVENT_NAME" != schedule ]; then
-            plan=$(tools/ci/plan-release.sh)
-          fi
-          echo "plan=$plan" | tee -a "$GITHUB_OUTPUT"
-
-      # Before anything builds, since a mod's library carries its version. Every later job checks
-      # out this commit.
-      - name: Commit version bumps
-        id: bump
-        env:
-          PLAN: ${{ steps.release.outputs.plan }}
-        run: |
-          ref=$(tools/ci/commit-bumps.sh "$PLAN" main)
-          echo "ref=$ref" | tee -a "$GITHUB_OUTPUT"
-
-      - name: Upstream master
-        id: upstream
-        run: |
-          url=$(git config -f .gitmodules submodule.Weft.url)
-          commit=$(git ls-remote "$url" refs/heads/master | cut -f1)
-          echo "commit=$commit" | tee -a "$GITHUB_OUTPUT"
-
-      - name: Mods to build against upstream master
-        id: experimental
-        env:
-          UPSTREAM: ${{ steps.upstream.outputs.commit }}
-        run: |
-          plan='[]'
-          if [ "$UPSTREAM" != "$(git rev-parse HEAD:Weft)" ]; then
-            plan=$(tools/ci/plan-experimental.sh "$UPSTREAM")
-          fi
-          echo "plan=$plan" | tee -a "$GITHUB_OUTPUT"
-
   build:
-    needs: plan
-    if: needs.plan.outputs.release != '[]'
-    uses: ./.github/workflows/build.yml
-    with:
-      ref: ${{ needs.plan.outputs.ref }}
-
-  publish:
-    needs: [plan, build]
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # ubuntu-22.04: a Linux library runs on the glibc it was built with or newer.
+        os: [windows-latest, ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.plan.outputs.ref }}
-          fetch-depth: 0
           submodules: true
 
-      - uses: actions/download-artifact@v8
+      # Every mod folder; a new mod is added here, in check.yml and in index-pr.yml.
+      - uses: Zorro909/weft-mod-action/build@feat/mod-manager-v2
         with:
-          pattern: libraries-*
-          path: libraries
-          merge-multiple: true
+          mods: |
+            cogwork
+            showcase
+            structures
 
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PLAN: ${{ needs.plan.outputs.release }}
-        run: tools/ci/publish.sh "$PLAN" libraries
-
-  build-experimental:
-    needs: plan
-    if: needs.plan.outputs.experimental != '[]'
-    uses: ./.github/workflows/build.yml
-    with:
-      ref: ${{ needs.plan.outputs.ref }}
-      weft: ${{ needs.plan.outputs.upstream }}
-      artifact: experimental
-
-  publish-experimental:
-    needs: [plan, build-experimental]
+  release:
+    needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.plan.outputs.ref }}
-          fetch-depth: 0
           submodules: true
 
-      - name: Weft at upstream master
-        env:
-          UPSTREAM: ${{ needs.plan.outputs.upstream }}
-        run: tools/ci/use-weft.sh "$UPSTREAM"
+      - uses: Zorro909/weft-mod-action/release@feat/mod-manager-v2
 
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: experimental-*
-          path: libraries
-          merge-multiple: true
-
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PLAN: ${{ needs.plan.outputs.experimental }}
-        run: tools/ci/publish.sh "$PLAN" libraries
-
-  # On every run, also when nothing was published or one publish job failed: it commits only
-  # when the section changes. Weft's history tells which experimental builds are still ahead.
+  # Also when nothing was released, or the release failed: it commits only when the section
+  # changes. Not for a run started by hand on another branch, which mustn't push to main. The
+  # tags tell which Weft each release was built against.
   readme:
-    needs: [publish, publish-experimental]
-    if: ${{ !cancelled() }}
+    needs: release
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-          submodules: true
           ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - name: Update README.md
