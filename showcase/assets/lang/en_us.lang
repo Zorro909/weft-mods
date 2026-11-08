@@ -1,5 +1,5 @@
 mod.showcase.name = Showcase
-mod.showcase.description = Plays the films other mods make of their content: a set built in the world and a camera flying around it in orbits, flybys and cranes. {#a0a0a0}/showcase play <mod:film>{/} plays one; started with {#a0a0a0}--showcase <mod:film>{/}, the game plays it once for recording and quits.
+mod.showcase.description = Plays camera films that mods make to show off their content. {#a0a0a0}/showcase play <mod:film>{/} plays one; started with {#a0a0a0}--showcase <mod:film>{/}, the game plays it once for recording and quits.
 showcase.asked = Asked for the film {0}
 showcase.only_players = Only a player can watch a film
 showcase.missing = No mod sent the film {0}: is it loaded, and built with its films?

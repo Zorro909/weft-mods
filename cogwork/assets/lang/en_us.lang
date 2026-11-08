@@ -1,6 +1,6 @@
 language.name = English
 mod.cogwork.name = Cogwork
-mod.cogwork.description = Item tubes you can see into, engines, and machines that take over the big jobs: an excavator that mines out a whole area, an assembly bench that crafts on its own and a leveler that makes land flat. Cuboid loaders keep them working with nobody near.
+mod.cogwork.description = Tubes, engines and machines that automate mining, crafting and leveling land. Cuboid loaders keep them working with nobody near.
 mod.cogwork.authors = Zorro909
 tab.cogwork.cogwork = Cogwork
 
