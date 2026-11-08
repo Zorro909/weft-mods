@@ -64,22 +64,29 @@ pub fn register(r: &mut Registry) {
     // A tag has to name something or the game stops at load: the gantry frame has no item, so
     // the tag is on no item.
     r.tag(NOTHING, &["gantry_frame"]);
-    r.machine(&ASSEMBLY_BENCH, &BENCH_MENU)
-        .block(|b| crate::machine::block(b, "assembly_bench").hardness(3.5))
+    crate::machine::block(r.block(&ASSEMBLY_BENCH), "assembly_bench")
+        .hardness(3.5)
+        .entity(|e| {
+            e.attach(&BENCH)
+                .attach_with(
+                    &ENERGY,
+                    Energy {
+                        stored: 0,
+                        capacity: 4_000,
+                        max_in: 200,
+                        max_out: 0,
+                    },
+                )
+                // The grid, then the output.
+                .inventory(9 + 3)
+        })
+        .opens(&BENCH_MENU);
+    r.menu(&BENCH_MENU)
         // Filled by tubes only, through `insert`; taken from only by crafting.
-        .group("grid", Slots::grid(3, 3).input().accepts(NOTHING))
-        .group("output", Slots::row(3).output())
+        .group("grid", Slots::grid(3, 3).input().accepts(NOTHING).holder())
+        .group("output", Slots::row(3).output().holder())
         .recipes(&CRAFTING)
-        .attach(&BENCH)
-        .attach_with(
-            &ENERGY,
-            Energy {
-                stored: 0,
-                capacity: 4_000,
-                max_in: 200,
-                max_out: 0,
-            },
-        )
+        .player_inventory()
         .screen(screen);
 }
 

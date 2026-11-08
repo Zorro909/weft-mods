@@ -31,9 +31,9 @@ const STALE: u64 = 40;
 pub fn register(r: &mut Registry) {
     r.stack_component(&PICTURE, 0);
     r.entity_component(&IS_PICTURE, 0, component_flags::SAVE);
-    r.attach(&ITEM, &IS_PICTURE);
+    r.edit(&ITEM).attach(&IS_PICTURE);
     // A picture's pickup delay (`spawn`) isn't saved: this keeps loaded ones out of hands too.
-    r.intercept(&actions::PICKUP_ITEM, |q| {
+    r.before_event(&actions::PICKUP_ITEM, |q| {
         if is_picture(&q.world(), q.query().other) {
             Verdict::Deny
         } else {
@@ -115,7 +115,7 @@ pub fn show(w: &World, pos: Pos, m: &mut Motion, stack: ItemStack) {
         .entity(m.visual)
         .is_some_and(|st| m.visual != 0 && st.kind == ITEM.id());
     if shown {
-        w.entity_edit(m.visual).pos(at).velocity(vel);
+        w.entity_modify(m.visual).pos(at).velocity(vel);
     } else {
         m.visual = spawn(w, at, vel, stack);
     }

@@ -12,7 +12,7 @@ mod visual;
 
 pub use extract::inject;
 use shape::Arms;
-pub use shape::connects_to_tube;
+pub use shape::{connects_to_tube, turn_directing};
 pub use sorting::set_sample;
 use weft_sdk::*;
 
@@ -78,20 +78,8 @@ pub fn register(r: &mut Registry) {
     for (block, kind, texture) in PLAIN {
         shape::tube(r.block(block), texture, Arms::Same)
             .tab(&crate::TAB)
-            .inventory(SLOTS as u32);
-        attach_tube(r, block, kind);
+            .entity(move |e| tube_entity(e, kind));
     }
-    // Engines drive the timber tube's pulls.
-    r.attach_with(
-        &EntityKind::named("timber_tube"),
-        &ENERGY,
-        Energy {
-            stored: 0,
-            capacity: 2_000,
-            max_in: 200,
-            max_out: 0,
-        },
-    );
     shape::tube(
         r.block(&DIRECTING_TUBE),
         "tube_directing",
@@ -99,23 +87,35 @@ pub fn register(r: &mut Registry) {
     )
     .on_use(shape::turn_output)
     .tab(&crate::TAB)
-    .inventory(SLOTS as u32);
-    attach_tube(r, &DIRECTING_TUBE, kind::DIRECTING);
+    .entity(|e| tube_entity(e, kind::DIRECTING));
     sorting::register(r);
     visual::register(r);
 }
 
-/// The `Tube` state of a tube's block entity, which `inventory(SLOTS)` gave it for the items it
-/// carries. A block entity's kind is named like its block.
-fn attach_tube(r: &mut Registry, block: &'static Block, kind: u32) {
-    r.attach_with(
-        &EntityKind::named(block.name()),
-        &TUBE,
-        Tube {
-            kind,
-            ..Tube::default()
+/// A tube's block entity: its `Tube` state and slots for the items it carries.
+fn tube_entity(e: EntityBuilder<'_>, kind: u32) -> EntityBuilder<'_> {
+    let e = e
+        .attach_with(
+            &TUBE,
+            Tube {
+                kind,
+                ..Tube::default()
+            },
+        )
+        .inventory(SLOTS as u32);
+    if kind != self::kind::TIMBER {
+        return e;
+    }
+    // Engines drive the timber tube's pulls.
+    e.attach_with(
+        &ENERGY,
+        Energy {
+            stored: 0,
+            capacity: 2_000,
+            max_in: 200,
+            max_out: 0,
         },
-    );
+    )
 }
 
 /// Whether the block at `pos` is a tube. Asked of its block, which is cheaper than reading

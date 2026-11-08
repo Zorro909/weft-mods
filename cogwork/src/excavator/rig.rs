@@ -19,7 +19,7 @@ value! {
     /// The rig's entities: carriage, bit, then shaft pieces, then beams along x and along z.
     pub struct Rig { pub ids: [u64; SLOTS] }
 }
-static RIG: Component<Rig> = Component::named("cogwork:rig");
+pub static RIG: Component<Rig> = Component::named("cogwork:rig");
 
 const SHAFTS: usize = 40;
 /// Whole beam pieces on each axis: enough for the 64 blocks survey markers reach.
@@ -34,7 +34,6 @@ const BIT_HEIGHT: f64 = 0.75;
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
-    r.attach(&EntityKind::named("excavator"), &RIG);
     let body = |lo, size| ModelBox::sized(lo, size).part("body", [0.0, 0.0]);
     let pieces: [(&'static EntityKind, Vec<ModelPart>, [u32; 2]); 4] = [
         (
