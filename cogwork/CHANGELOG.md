@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-08
 
 ### Added
 
@@ -15,9 +15,13 @@
 ### Changed
 
 - A shorter description on the Mods screen.
+- Built for Weft 26.11.3.
+- Machines, engines and loaders break quickest with an axe, and still drop whatever breaks them.
 
 ### Fixed
 
+- The tuning wrench turns an ember engine while sneaking; before, the engine only opened its
+  screen.
 - An engine turned to face west no longer stands its piston askew.
 - An excavator's gantry beams no longer flicker where their pieces met.
 - The lowest piece of a drill's shaft is no longer drawn black.

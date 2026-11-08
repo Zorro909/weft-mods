@@ -18,6 +18,14 @@ impl Area {
         }
     }
 
+    /// The same columns, from height `lo` to `hi`.
+    pub fn heights(&self, lo: i32, hi: i32) -> Area {
+        Area {
+            lo: Pos { y: lo, ..self.lo },
+            hi: Pos { y: hi, ..self.hi },
+        }
+    }
+
     /// The x and z of each column it spans.
     pub fn columns(&self) -> impl Iterator<Item = (i32, i32)> {
         let (lo, hi) = (self.lo, self.hi);
@@ -42,6 +50,17 @@ mod tests {
         let b = Area::between(Pos::new(-1, 2, 4), Pos::new(5, 0, -3));
         assert_eq!(a, b);
         assert_eq!((a.lo, a.hi), (Pos::new(-1, 0, -3), Pos::new(5, 2, 4)));
+    }
+
+    #[test]
+    fn heights_keep_the_columns_and_set_the_layers() {
+        let a = Area::between(Pos::new(-2, 0, 1), Pos::new(3, 5, 4));
+        let below = a.heights(-9, -2);
+        assert_eq!(
+            (below.lo, below.hi),
+            (Pos::new(-2, -9, 1), Pos::new(3, -2, 4))
+        );
+        assert!(below.columns().eq(a.columns()), "the same columns");
     }
 
     #[test]

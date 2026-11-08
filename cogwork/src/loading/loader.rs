@@ -92,24 +92,25 @@ fn loader(
     texture: &'static str,
     range: u32,
 ) {
-    r.machine(block, menu)
-        .block(move |b| {
-            b.texture(texture)
-                .hardness(5.0)
-                .mineable("pickaxe")
-                .sound_group("base:block.stone")
-                .light(7)
-                .on_broken(super::let_go)
-                .tab(&crate::TAB)
+    r.block(block)
+        .texture(texture)
+        .hardness(5.0)
+        .mined_by("axe", tool_tier::HAND)
+        .sound_group("base:block.stone")
+        .light(7)
+        .on_break(super::let_go)
+        .tab(&crate::TAB)
+        .entity(move |e| {
+            e.attach_with(
+                &LOADER,
+                Loader {
+                    range,
+                    ..Loader::default()
+                },
+            )
         })
-        .attach_with(
-            &LOADER,
-            Loader {
-                range,
-                ..Loader::default()
-            },
-        )
-        .screen(screen);
+        .opens(menu);
+    r.menu(menu).screen(screen);
 }
 
 fn tick(b: &mut SystemBatch<Loader>) {

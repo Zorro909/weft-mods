@@ -16,11 +16,11 @@ pub fn register(r: &mut Registry) {
         b = b.prop(d.name(), ["false", "true"]);
     }
     b.states(model)
-        .on_placed(|w, change| refresh(w, change.pos.into()))
+        .on_place(|w, change| refresh(w, change.pos.into()))
         .on_neighbor(|e| refresh(&e.world(), e.pos().into()))
         .tag("conductor")
         .hardness(0.5)
-        .mineable("pickaxe")
+        .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.stone")
         .tab(&crate::TAB);
 }

@@ -1,6 +1,6 @@
 [package]
 name = "showcase"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 # As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
 rust-version = "1.95"
@@ -19,7 +19,7 @@ members = ["api"]
 # The Weft release the mod and its API crate build against, from the game's repository as the
 # mod index wants it; `init.sh` checks out the newest one any mod names into `Weft/`.
 [workspace.dependencies]
-weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.2" }
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
 
 [profile.release]
 debug = "line-tables-only"

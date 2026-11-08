@@ -22,7 +22,7 @@ static TEMPLATES: RwLock<Option<HashMap<String, Arc<Entry>>>> = RwLock::new(None
 /// let house = Structure::decode(include_bytes!("../assets/structures/house.wst")).expect("house.wst");
 /// structures_api::template(r, &HOUSE, house);
 /// ```
-pub fn template(registry: &mut Registry, template: &Template, structure: Structure) {
+pub fn template(registry: &mut Registry, template: &'static Template, structure: Structure) {
     let mut builder = registry.template(template);
     for (pos, block) in structure.blocks() {
         builder = builder.fill(block, pos, pos);

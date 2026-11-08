@@ -3,6 +3,7 @@
 
 use std::sync::Mutex;
 
+use weft_sdk::abi::comp::camera::{DETACHED, NO_INTERACT};
 use weft_sdk::abi::{CameraArgs, CameraPose, PlayerControl, control_mask as cm};
 use weft_sdk::settings::FOV;
 use weft_sdk::*;
@@ -28,7 +29,9 @@ const TITLE_LOW: f64 = 0.78;
 
 pub fn register(r: &mut Registry) {
     // No body, hand, HUD or effects: what is seen is the film's alone, its field of view too.
-    r.camera(&FILM).shot(Shot::new(0, film_shot));
+    // The keys and clicks that would move the player or use blocks do nothing meanwhile.
+    r.camera(&FILM)
+        .shot(Shot::new(&[DETACHED, NO_INTERACT], film_shot));
 }
 
 /// The film camera's frame: what `put` showed last, or the player's eyes before any film. Frame
@@ -39,9 +42,9 @@ fn film_shot(args: &mut CameraArgs) {
             pos: pose.eye.into(),
             yaw: pose.yaw.to_radians() as f32,
             pitch: pose.pitch.to_radians() as f32,
+            roll: pose.roll.to_radians() as f32,
             // The camera's field of view is a multiple of the player's.
             fov: pose.fov / FOV.get(),
-            ..CameraPose::DEFAULT
         },
         None => CameraPose {
             pos: args.eye,
@@ -59,6 +62,7 @@ pub fn camera(c: &Client) -> Pose {
         eye: add(s.pos.into(), [0.0, eye_height(c), 0.0]),
         yaw: (s.yaw as f64).to_degrees(),
         pitch: (s.pitch as f64).to_degrees(),
+        roll: 0.0,
         fov: FOV.get(),
     }
 }
@@ -86,17 +90,27 @@ fn eye_height(c: &Client) -> f64 {
 /// They are drawn as labels in the world in front of the camera, which stay visible while the
 /// HUD is hidden for recording.
 pub fn titles(c: &Client, titles: &[Title], now: f32, pose: Pose) {
-    // The field of view is vertical: this many degrees down is that far down the picture.
-    let down = (TITLE_LOW * (pose.fov as f64 / 2.0).to_radians().tan())
-        .atan()
-        .to_degrees();
-    let ahead = forward(pose.yaw, pose.pitch - down);
-    let at = add(pose.eye, ahead.map(|v| v * TITLE_DISTANCE));
+    let at = title_at(pose);
     let size = title_size(c);
     for title in titles {
         let alpha = (shown(title, now) * 255.0) as u32;
         c.draw_text(None, at, &title.key, &[], 0xFFFFFF00 | alpha, size);
     }
+}
+
+/// Where titles go for the camera at `pose`: below the middle of the picture, toward its
+/// bottom however the camera rolls.
+fn title_at(pose: Pose) -> [f64; 3] {
+    // The field of view is vertical: this angle down is that far down the picture.
+    let down = (TITLE_LOW * (pose.fov as f64 / 2.0).to_radians().tan()).atan();
+    let roll = pose.roll.to_radians();
+    let ahead = forward(pose.yaw, pose.pitch);
+    let up = forward(pose.yaw, pose.pitch + 90.0);
+    let right = forward(pose.yaw - 90.0, 0.0);
+    // The picture's bottom, turned with the camera.
+    let bottom = [0, 1, 2].map(|i| -(up[i] * roll.cos() + right[i] * roll.sin()));
+    let toward = [0, 1, 2].map(|i| ahead[i] * down.cos() + bottom[i] * down.sin());
+    add(pose.eye, toward.map(|v| v * TITLE_DISTANCE))
 }
 
 /// How much of `title` shows at `now`, 0 to 1, fading in from its start and out to its end.
@@ -131,6 +145,34 @@ pub fn missing_notice(c: &Client, film: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_title_stays_at_the_bottom_of_a_banked_picture() {
+        let level = Pose {
+            eye: [0.0; 3],
+            yaw: 0.0,
+            pitch: 0.0,
+            roll: 0.0,
+            fov: 70.0,
+        };
+        let below = title_at(level);
+        assert!(
+            below[0].abs() < 1e-9 && below[1] < 0.0,
+            "under the middle: {below:?}"
+        );
+        // Banked right a quarter turn, the picture's bottom is the world's left (yaw 0 looks
+        // toward -z, so left is -x).
+        let banked = title_at(Pose {
+            roll: 90.0,
+            ..level
+        });
+        assert!(banked[1].abs() < 1e-9, "level with the eye: {banked:?}");
+        assert!(
+            (banked[0] - below[1]).abs() < 1e-9,
+            "as far left as it was down"
+        );
+        assert!((banked[2] - below[2]).abs() < 1e-9, "as far ahead");
+    }
 
     #[test]
     fn a_title_fades_in_and_out_within_its_time() {

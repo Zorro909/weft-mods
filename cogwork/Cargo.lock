@@ -4,15 +4,15 @@ version = 4
 
 [[package]]
 name = "base_api"
-version = "26.11.2"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.2#2db18c2387c1bb09ecb25871072d4d82c3ee0ab4"
+version = "26.11.3"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.3#80d1f6504545b1ce3f6afab0b1df975630a3c7e5"
 dependencies = [
  "weft_sdk",
 ]
 
 [[package]]
 name = "cogwork"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "base_api",
  "showcase_api",
@@ -200,18 +200,18 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 
 [[package]]
 name = "weft_abi"
-version = "26.11.2"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.2#2db18c2387c1bb09ecb25871072d4d82c3ee0ab4"
+version = "26.11.3"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.3#80d1f6504545b1ce3f6afab0b1df975630a3c7e5"
 
 [[package]]
 name = "weft_noise"
-version = "26.11.2"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.2#2db18c2387c1bb09ecb25871072d4d82c3ee0ab4"
+version = "26.11.3"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.3#80d1f6504545b1ce3f6afab0b1df975630a3c7e5"
 
 [[package]]
 name = "weft_sdk"
-version = "26.11.2"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.2#2db18c2387c1bb09ecb25871072d4d82c3ee0ab4"
+version = "26.11.3"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.3#80d1f6504545b1ce3f6afab0b1df975630a3c7e5"
 dependencies = [
  "weft_abi",
  "weft_noise",

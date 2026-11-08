@@ -1,16 +1,21 @@
 //! The film mod's side: registering films, building their sets and talking to the camera while
 //! they play.
 
-use weft_sdk::abi::block_flags::{LIQUID, REPLACEABLE};
+use std::sync::Arc;
+
 use weft_sdk::*;
 
 use crate::film::Film;
 use crate::{
     Area, BlockState, CUE, Name, PLAY, Pos, SIGNAL, SUBJECT, Signal, Subject, TIMELINE, Timeline,
+    Waiting,
 };
 
 /// How deep `Set::level` fills hollows under the ground.
 const HOLLOW_DEPTH: i32 = 8;
+/// What `Set::level` counts as hollow: air, liquids and plants, the blocks the engine flags
+/// replaceable, by the name and tags the engine and the SDK give them.
+const HOLLOW: &str = "core:air #liquids #plantable";
 
 /// Where a film is being built and for whom; positions given to it are from its origin.
 pub struct Set {
@@ -63,31 +68,30 @@ impl Set {
 
     /// Makes the ground flat under `area` (offsets from the origin), for a set in a natural
     /// world: clears `area`, tops the ground right under it with the block under the origin, and
-    /// fills hollows below that, up to 8 deep, with the block under that one.
+    /// fills hollows (air, liquids, plants) up to 8 below that with the block under that one.
+    /// It happens at the end of the tick, as engine fills do, so that the blocks hear of it only
+    /// at its edges: build on it from the next tick, as `FilmOptions::level` and `Waiting` do.
     pub fn level(&self, area: Area) {
         let top = self.get(Pos::new(0, -1, 0));
         let below = self.get(Pos::new(0, -2, 0));
-        self.fill(area, BlockState::AIR);
         let ground = area.lo.y - 1;
-        for (x, z) in area.columns() {
-            self.place(Pos::new(x, ground, z), top);
-            self.fill_hollow(Pos::new(x, ground - 1, z), below);
-        }
+        self.world.fill(self.shape(area), BlockState::AIR.id());
+        self.world
+            .fill(self.shape(area.heights(ground, ground)), top.id());
+        let hollows = area.heights(ground - HOLLOW_DEPTH, ground - 1);
+        self.world
+            .fill(self.shape(hollows), below.id())
+            .only(HOLLOW);
     }
 
     fn get(&self, offset: Pos) -> BlockState {
         self.world.block(self.at(offset)).into()
     }
 
-    /// Fills the column down from `top` to the first block that isn't air, a plant or a liquid.
-    fn fill_hollow(&self, top: Pos, state: BlockState) {
-        for y in (top.y - HOLLOW_DEPTH + 1..=top.y).rev() {
-            let offset = Pos { y, ..top };
-            if self.world.block_flags(self.at(offset)) & (REPLACEABLE | LIQUID) == 0 {
-                return;
-            }
-            self.place(offset, state);
-        }
+    /// `area`, in offsets from the origin, as a shape in the world.
+    fn shape(&self, area: Area) -> Shape {
+        // A shape takes the blocks whose middles are inside it.
+        Shape::cuboid(self.at(area.lo), self.at(area.hi) + Pos::new(1, 1, 1))
     }
 
     /// See `signal`.
@@ -136,7 +140,7 @@ pub fn send(world: &World, player: u64, film: &str, origin: Pos, steps: &Film) {
 }
 
 /// Registers the film `name` of this mod (played as `mymod:name`): `build` puts its set into
-/// the world and returns its steps.
+/// the world and returns its steps, the tick after the film is asked for.
 pub fn film<'a>(
     registry: &'a mut Registry,
     name: &str,
@@ -144,10 +148,16 @@ pub fn film<'a>(
 ) -> FilmOptions<'a> {
     let film = format!("{}:{name}", mod_id());
     let (full, wanted) = (film.clone(), Name::from(film.as_str()));
-    registry.on(&PLAY, move |batch| {
+    let waiting = Arc::new(Waiting::new());
+    let asked = waiting.clone();
+    registry.on_event(&PLAY, move |batch| {
         for play in batch.iter().filter(|play| play.film == wanted) {
-            let set = Set::new(batch.world(), play.player, play.origin);
-            send(&set.world, set.player, &full, set.origin, &build(&set));
+            asked.push(&Set::new(batch.world(), play.player, play.origin), ());
+        }
+    });
+    registry.world_tick(move |world| {
+        for (set, ()) in waiting.ready(world) {
+            send(world, set.player, &full, set.origin, &build(&set));
         }
     });
     FilmOptions { registry, film }
@@ -160,10 +170,22 @@ pub struct FilmOptions<'a> {
 }
 
 impl FilmOptions<'_> {
+    /// Makes the ground flat under `area` when the film is asked for (`Set::level`), so that
+    /// the set is built on it the tick after.
+    pub fn level(self, area: Area) -> Self {
+        let film = Name::from(self.film.as_str());
+        self.registry.on_event(&PLAY, move |batch| {
+            for play in batch.iter().filter(|play| play.film == film) {
+                Set::new(batch.world(), play.player, play.origin).level(area);
+            }
+        });
+        self
+    }
+
     /// Runs `f` on the server when the film reaches `Film::cue(name)`.
     pub fn on_cue(self, cue: &str, f: impl Fn(&Set) + Send + Sync + 'static) -> Self {
         let (film, cue) = (Name::from(self.film.as_str()), Name::from(cue));
-        self.registry.on(&CUE, move |batch| {
+        self.registry.on_event(&CUE, move |batch| {
             for reached in batch.iter().filter(|c| c.film == film && c.name == cue) {
                 f(&Set::new(batch.world(), reached.player, reached.origin));
             }

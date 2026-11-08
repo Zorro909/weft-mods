@@ -112,24 +112,28 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&LEVEL, work::tick);
-    r.machine(&LEVELER, &LEVELER_MENU)
-        .block(|b| {
-            crate::machine::block(b, "leveler")
-                .hardness(4.0)
-                .on_broken(crate::loading::let_go)
+    crate::machine::block(r.block(&LEVELER), "leveler")
+        .hardness(4.0)
+        .on_break(crate::loading::let_go)
+        .entity(|e| {
+            e.attach(&LEVEL)
+                .attach_with(
+                    &ENERGY,
+                    Energy {
+                        stored: 0,
+                        capacity: 10_000,
+                        max_in: 1_000,
+                        max_out: 0,
+                    },
+                )
+                // The input, then the output.
+                .inventory(18 + 9)
         })
-        .group("input", Slots::grid(9, 2))
-        .group("output", Slots::grid(3, 3).output())
-        .attach(&LEVEL)
-        .attach_with(
-            &ENERGY,
-            Energy {
-                stored: 0,
-                capacity: 10_000,
-                max_in: 1_000,
-                max_out: 0,
-            },
-        )
+        .opens(&LEVELER_MENU);
+    r.menu(&LEVELER_MENU)
+        .group("input", Slots::grid(9, 2).holder())
+        .group("output", Slots::grid(3, 3).output().holder())
+        .player_inventory()
         .screen(screen);
 }
 

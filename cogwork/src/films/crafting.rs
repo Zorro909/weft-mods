@@ -72,7 +72,7 @@ pub fn build(set: &Set) {
 /// The wall, redstone along its top, and the lever on its face. The wire powers the wall's top
 /// blocks, and so every engine touching them.
 fn power_line(set: &Set) {
-    let floor_wire = REDSTONE.with(&[("faces", "4")]).into();
+    let floor_wire = REDSTONE.with(&[("down", "true")]).into();
     for x in WALL_X[0]..=WALL_X[1] {
         // The cobblestone's tube runs under the wall.
         let ground = Pos::new(x, 0, WALL_Z);

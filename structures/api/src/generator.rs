@@ -50,13 +50,16 @@ impl Generator {
         }
     }
 
-    /// Registers it as one of the calling mod's decorations, and for `locate`.
+    /// Registers it for `locate`, and as one of the calling mod's decorations, named like the
+    /// structure so another mod can remove it: `r.remove(&Decoration::named("mymod:village"))`.
     pub fn register(self, registry: &mut Registry) {
         let generator = Arc::new(self);
         locate::add(generator.clone());
-        let dimensions = generator.dimensions.clone();
-        let mut decoration = registry.decoration(move |g| generator.generate(g));
-        for dimension in dimensions {
+        let decorate = generator.clone();
+        let mut decoration = registry
+            .decoration(move |g| decorate.generate(g))
+            .named(&generator.name);
+        for &dimension in &generator.dimensions {
             decoration = decoration.dimension(dimension);
         }
     }

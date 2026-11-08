@@ -2,6 +2,10 @@
 
 use weft_sdk::*;
 
+use crate::engines::{EMBER_ENGINE, SPRING_ENGINE};
+use crate::lib::{BlockState, Pos};
+use crate::tube::DIRECTING_TUBE;
+
 pub static WOODEN_COG: Item = Item::named("wooden_cog");
 pub static STONE_COG: Item = Item::named("stone_cog");
 pub static IRON_COG: Item = Item::named("iron_cog");
@@ -19,7 +23,8 @@ pub fn register(r: &mut Registry) {
         .max_stack(1)
         .handheld()
         .tag("wrenches")
-        .tab(&crate::TAB);
+        .tab(&crate::TAB)
+        .on_use(turn_aimed);
 }
 
 /// A cog, tagged `cogs` and `cogs/<material>` so recipes of any mod can ask for one or the
@@ -29,6 +34,24 @@ fn cog(r: &mut Registry, cog: &'static Item, material: &str) {
         .tag("cogs")
         .tag(&format!("cogs/{material}"))
         .tab(&crate::TAB);
+}
+
+/// The tuning wrench used on a block that leaves the click to it, as every block does for a
+/// sneaking player: this is how it turns an ember engine, which opens its screen otherwise.
+fn turn_aimed(u: &mut ItemUse) -> bool {
+    let Some((pos, _)) = u.target_block() else {
+        return false;
+    };
+    let (w, pos) = (u.world(), Pos::from(pos));
+    let block = BlockState::at(&w, pos);
+    if block.is(&SPRING_ENGINE) || block.is(&EMBER_ENGINE) {
+        crate::engines::turn(&w, pos);
+    } else if block.is(&DIRECTING_TUBE) {
+        crate::tube::turn_directing(&w, pos);
+    } else {
+        return false;
+    }
+    true
 }
 
 /// Whether `player` holds a wrench, this mod's or any other tagged `wrenches`.

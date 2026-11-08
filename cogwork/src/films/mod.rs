@@ -21,6 +21,8 @@ pub fn register(r: &mut Registry) {
     // Block entities only exist once the tick they were placed in is over: everything is
     // stocked and started on cues.
     film(r, "showcase", showcase)
+        // Flat ground as far as the camera comes near, the landscape around left as it is.
+        .level(parts::area(Pos::new(-30, 0, -16), Pos::new(42, 20, 30)))
         .on_cue("start", |set| {
             excavators::start(set);
             crafting::start(set);
@@ -36,8 +38,6 @@ pub fn register(r: &mut Registry) {
 }
 
 fn showcase(set: &Set) -> Film {
-    // Flat ground as far as the camera comes near, the landscape around left as it is.
-    set.level(parts::area(Pos::new(-30, 0, -16), Pos::new(42, 20, 30)));
     excavators::build(set);
     crafting::build(set);
     leveling::build(set);

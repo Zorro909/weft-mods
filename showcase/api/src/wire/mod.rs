@@ -12,7 +12,7 @@ use crate::Pos;
 use crate::film::Step;
 
 /// Raised whenever the layout changes; films of any other version are refused.
-pub const TIMELINE_VERSION: u16 = 1;
+pub const TIMELINE_VERSION: u16 = 2;
 
 /// A film as the player's client receives it: its full name (`mymod:tour`), the block its
 /// positions are counted from, and its steps.
@@ -157,7 +157,12 @@ mod tests {
         let along = vec![[10.0, 0.0], [-170.0, 20.0]];
         Film::new()
             .title("mymod.film.title", 3.0)
-            .shot(orbit([1.0, 2.0, 3.0], 8.0).arc(10.0, 200.0).fov(70.0, 50.0))
+            .shot(
+                orbit([1.0, 2.0, 3.0], 8.0)
+                    .arc(10.0, 200.0)
+                    .fov(70.0, 50.0)
+                    .roll(0.0, -15.0),
+            )
             .shot(
                 flyby(&[[0.0; 3], [4.0, 5.0, 6.0], [9.0, 1.0, 2.0]])
                     .ease(Ease::In)
