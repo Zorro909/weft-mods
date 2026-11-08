@@ -24,6 +24,7 @@ declare_mod!(deps: [], init: init);
 
 fn init(r: &mut Registry) {
     server::register(r);
+    gallery::register(r);
     view::register(r);
     director::register(r);
     camera::register(r);

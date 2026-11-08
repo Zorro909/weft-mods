@@ -2,7 +2,7 @@
 //! little around each in turn under its name, after a look at the whole row and before rising
 //! over it. Works for any mod, with films or without.
 
-use showcase_api::{Area, BlockState, Film, Pos, Set, crane, flyby, orbit, send};
+use showcase_api::{Area, BlockState, Film, Pos, Set, Waiting, crane, flyby, orbit, send};
 use weft_sdk::*;
 
 /// Blocks between two plinths' middles.
@@ -12,20 +12,38 @@ const TURN_SECS: f32 = 2.6;
 /// What the blocks stand on: the first of these that exists.
 const PLINTHS: [&str; 2] = ["base:stone_bricks", "base:stone"];
 
-/// Builds the gallery of `mod_id` at `origin` and plays it for `player`; how many blocks it shows.
+/// Galleries on levelled ground, waiting to be built: by the mod they show.
+static WAITING: Waiting<String> = Waiting::new();
+
+pub fn register(r: &mut Registry) {
+    r.world_tick(build_waiting);
+}
+
+/// Levels the ground for the gallery of `mod_id` at `origin`, which is built and played for
+/// `player` the tick after; how many blocks it shows.
 pub fn show(world: &World, player: u64, origin: Pos, mod_id: &str) -> usize {
-    let blocks = blocks_of(mod_id);
-    if !blocks.is_empty() {
-        build(&Set::new(*world, player, origin), &blocks);
+    let count = blocks_of(mod_id).len();
+    if count > 0 {
+        let set = Set::new(*world, player, origin);
+        set.level(ground(count));
+        WAITING.push(&set, mod_id.to_string());
+    }
+    count
+}
+
+fn build_waiting(world: &World) {
+    for (set, mod_id) in WAITING.ready(world) {
+        let blocks = blocks_of(&mod_id);
+        build(&set, &blocks);
+        let film = film(&mod_id, &blocks);
         send(
             world,
-            player,
+            set.player(),
             &format!("gallery:{mod_id}"),
-            origin,
-            &film(mod_id, &blocks),
+            set.origin(),
+            &film,
         );
     }
-    blocks.len()
 }
 
 /// The first state of every block of `mod_id`, and the block's name.
@@ -47,11 +65,15 @@ fn blocks_of(mod_id: &str) -> Vec<(BlockState, &'static str)> {
     out
 }
 
-/// The row on flat ground, with room in front for the camera.
-fn build(set: &Set, blocks: &[(BlockState, &str)]) {
-    let length = row_length(blocks.len());
+/// The flat ground for a row of `count` blocks, with room in front for the camera.
+fn ground(count: usize) -> Area {
+    let length = row_length(count);
     let far = Pos::new(length as i32 + 6, 16, wide(length) as i32 + 3);
-    set.level(Area::between(Pos::new(-6, 0, -4), far));
+    Area::between(Pos::new(-6, 0, -4), far)
+}
+
+/// The row, on the ground levelled for it (`ground`).
+fn build(set: &Set, blocks: &[(BlockState, &str)]) {
     let plinth = PLINTHS.iter().find_map(|name| BlockState::named(name));
     for (i, (state, _)) in blocks.iter().enumerate() {
         let x = i as i32 * SPACING;
