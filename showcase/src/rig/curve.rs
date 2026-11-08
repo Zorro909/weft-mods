@@ -1,23 +1,25 @@
 //! A smooth curve through points, walked at an even speed: a centripetal Catmull-Rom spline,
 //! which never loops or overshoots between points that lie close together.
 
-use super::math::{length, lerp3, sub};
+use weft_sdk::Vec3;
+
+use super::math::{length, lerp3};
 
 /// Samples per stretch between two points; enough that the chords follow the curve closely.
 const SAMPLES: usize = 48;
 
 /// Points along the curve and the distance travelled to each.
 pub struct Curve {
-    points: Vec<[f64; 3]>,
+    points: Vec<Vec3>,
     distance: Vec<f64>,
 }
 
 impl Curve {
-    pub fn new(through: &[[f64; 3]]) -> Curve {
+    pub fn new(through: &[Vec3]) -> Curve {
         let points = sample(through);
         let mut distance = vec![0.0; points.len()];
         for sample in 1..points.len() {
-            let chord = length(sub(points[sample], points[sample - 1]));
+            let chord = length(points[sample] - points[sample - 1]);
             distance[sample] = distance[sample - 1] + chord;
         }
         Curve { points, distance }
@@ -28,7 +30,7 @@ impl Curve {
     }
 
     /// Where the curve is after `u` of its length (0 to 1); `None` for a curve through no points.
-    pub fn at(&self, u: f64) -> Option<[f64; 3]> {
+    pub fn at(&self, u: f64) -> Option<Vec3> {
         let (sample, fraction) = self.locate(u);
         let here = *self.points.get(sample)?;
         Some(match self.points.get(sample + 1) {
@@ -66,7 +68,7 @@ impl Curve {
 }
 
 /// `SAMPLES` points along each stretch between two of `through`, and the last one.
-fn sample(through: &[[f64; 3]]) -> Vec<[f64; 3]> {
+fn sample(through: &[Vec3]) -> Vec<Vec3> {
     let Some(&last) = through.last() else {
         return Vec::new();
     };
@@ -85,14 +87,14 @@ fn sample(through: &[[f64; 3]]) -> Vec<[f64; 3]> {
 }
 
 /// The centripetal Catmull-Rom point `t` (0 to 1) of the way from `p[1]` to `p[2]`.
-fn catmull_rom(p: [[f64; 3]; 4], t: f64) -> [f64; 3] {
+fn catmull_rom(p: [Vec3; 4], t: f64) -> Vec3 {
     // Knot spacing by the square root of the distance; a little floor keeps doubled points apart.
-    let gap = |a: [f64; 3], b: [f64; 3]| length(sub(b, a)).sqrt().max(1e-4);
+    let gap = |a: Vec3, b: Vec3| length(b - a).sqrt().max(1e-4);
     let t1 = gap(p[0], p[1]);
     let t2 = t1 + gap(p[1], p[2]);
     let t3 = t2 + gap(p[2], p[3]);
     let t = t1 + (t2 - t1) * t;
-    let mix = |a: [f64; 3], b: [f64; 3], ta: f64, tb: f64| lerp3(a, b, (t - ta) / (tb - ta));
+    let mix = |a: Vec3, b: Vec3, ta: f64, tb: f64| lerp3(a, b, (t - ta) / (tb - ta));
     let a1 = mix(p[0], p[1], 0.0, t1);
     let a2 = mix(p[1], p[2], t1, t2);
     let a3 = mix(p[2], p[3], t2, t3);
@@ -105,8 +107,13 @@ fn catmull_rom(p: [[f64; 3]; 4], t: f64) -> [f64; 3] {
 mod tests {
     use super::*;
 
-    fn close(a: [f64; 3], b: [f64; 3]) -> bool {
-        length(sub(a, b)) < 1e-6
+    fn close(a: Vec3, b: impl Into<Vec3>) -> bool {
+        length(a - b.into()) < 1e-6
+    }
+
+    fn through(points: &[[f64; 3]]) -> Curve {
+        let points: Vec<Vec3> = points.iter().map(|&p| p.into()).collect();
+        Curve::new(&points)
     }
 
     #[test]
@@ -117,7 +124,7 @@ mod tests {
             [4.0, 1.0, 6.0],
             [0.0, 3.0, 9.0],
         ];
-        let curve = Curve::new(&through);
+        let curve = self::through(&through);
         assert!(
             close(curve.at(0.0).unwrap(), through[0]),
             "starts at the first"
@@ -129,14 +136,14 @@ mod tests {
         let hits = curve
             .points
             .iter()
-            .filter(|point| through.iter().any(|marked| close(**point, *marked)))
+            .filter(|point| through.iter().any(|&marked| close(**point, marked)))
             .count();
         assert_eq!(hits, 4, "goes through the middle ones");
     }
 
     #[test]
     fn a_straight_curve_is_walked_at_an_even_speed() {
-        let curve = Curve::new(&[[0.0; 3], [1.0, 0.0, 0.0], [10.0, 0.0, 0.0]]);
+        let curve = through(&[[0.0; 3], [1.0, 0.0, 0.0], [10.0, 0.0, 0.0]]);
         assert!(
             (curve.length() - 10.0).abs() < 1e-6,
             "length {}",
@@ -148,7 +155,7 @@ mod tests {
 
     #[test]
     fn progress_counts_the_points_passed() {
-        let curve = Curve::new(&[[0.0; 3], [2.0, 0.0, 0.0], [4.0, 0.0, 0.0]]);
+        let curve = through(&[[0.0; 3], [2.0, 0.0, 0.0], [4.0, 0.0, 0.0]]);
         assert!(curve.progress(0.0).abs() < 1e-9, "at the first");
         assert!(
             (curve.progress(0.5) - 1.0).abs() < 1e-6,
@@ -164,8 +171,8 @@ mod tests {
 
     #[test]
     fn one_point_is_a_curve_that_stays() {
-        let curve = Curve::new(&[[1.0, 2.0, 3.0]]);
-        assert_eq!(curve.at(0.7), Some([1.0, 2.0, 3.0]));
+        let curve = through(&[[1.0, 2.0, 3.0]]);
+        assert_eq!(curve.at(0.7), Some(Vec3::new(1.0, 2.0, 3.0)));
     }
 
     #[test]

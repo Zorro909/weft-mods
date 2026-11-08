@@ -12,7 +12,7 @@ use weft_sdk::*;
 use crate::director::play;
 use crate::lock;
 use crate::rig::Pose;
-use crate::rig::math::{add, forward, sub};
+use crate::rig::math::forward;
 use crate::view::camera;
 
 /// The points marked, in order.
@@ -60,7 +60,7 @@ fn play_points(c: &Client, cmd: &mut ClientCommand) {
     let secs = cmd
         .float("secs")
         .unwrap_or(SECS_PER_POINT * (points.len() - 1) as f64);
-    let eyes: Vec<[f64; 3]> = points.iter().map(|p| p.eye).collect();
+    let eyes: Vec<[f64; 3]> = points.iter().map(|p| p.eye.into()).collect();
     let angles = points
         .iter()
         .map(|p| [p.yaw as f32, p.pitch as f32])
@@ -71,12 +71,12 @@ fn play_points(c: &Client, cmd: &mut ClientCommand) {
 
 /// A full turn around the point `radius` blocks in front of `from`, starting where it is.
 fn orbit_ahead(from: Pose, radius: f64, secs: f64) -> Film {
-    let center = add(from.eye, forward(from.yaw, from.pitch).map(|v| v * radius));
-    let [dx, dy, dz] = sub(from.eye, center);
-    let start = dz.atan2(dx).to_degrees();
-    let shot = orbit(center, dx.hypot(dz))
+    let center = from.eye + forward(from.yaw, from.pitch) * radius;
+    let Vec3 { x, y, z } = from.eye - center;
+    let start = z.atan2(x).to_degrees();
+    let shot = orbit(center.into(), x.hypot(z))
         .arc(start, start + 360.0)
-        .height(dy, dy)
+        .height(y, y)
         .secs(secs as f32);
     Film::new().shot(shot)
 }
@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn an_orbit_starts_where_the_camera_is() {
         let from = Pose {
-            eye: [10.0, 70.0, -4.0],
+            eye: Vec3::new(10.0, 70.0, -4.0),
             yaw: 30.0,
             pitch: -20.0,
             roll: 0.0,
@@ -120,17 +120,11 @@ mod tests {
             panic!("an orbit")
         };
         let a = angle[0].to_radians();
-        let eye = [
-            center[0] + a.cos() * radius[0],
-            center[1] + height[0],
-            center[2] + a.sin() * radius[0],
-        ];
+        let center = Vec3::from(*center);
+        let eye = center.offset(a.cos() * radius[0], height[0], a.sin() * radius[0]);
+        assert!(length(eye - from.eye) < 1e-9, "{eye:?}");
         assert!(
-            (0..3).all(|i| (eye[i] - from.eye[i]).abs() < 1e-9),
-            "{eye:?}"
-        );
-        assert!(
-            (length(sub(from.eye, *center)) - 8.0).abs() < 1e-9,
+            (length(from.eye - center) - 8.0).abs() < 1e-9,
             "the point 8 blocks ahead"
         );
     }

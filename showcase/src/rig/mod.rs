@@ -5,14 +5,15 @@ pub mod math;
 mod turn;
 
 use showcase_api::{Ease, Look, Path, Pos, Shot};
+use weft_sdk::Vec3;
 
 use self::curve::Curve;
-use self::math::{add, angles_along, eased, lerp, lerp_angle, lerp3, sub};
+use self::math::{angles_along, eased, lerp, lerp_angle, lerp3};
 
 /// A camera: eye position, and yaw, pitch, roll and field of view in degrees.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pose {
-    pub eye: [f64; 3],
+    pub eye: Vec3,
     pub yaw: f64,
     pub pitch: f64,
     pub roll: f64,
@@ -20,12 +21,12 @@ pub struct Pose {
 }
 
 /// Where a subject of the film is now, in the world; `None` while it is unknown.
-pub type Subjects<'a> = &'a dyn Fn(&str) -> Option<[f64; 3]>;
+pub type Subjects<'a> = &'a dyn Fn(&str) -> Option<Vec3>;
 
 /// One shot made ready to sample.
 pub struct Rig {
     shot: Shot,
-    origin: [f64; 3],
+    origin: Vec3,
     curve: Option<Curve>,
     /// The player's field of view, which a shot's 0 stands for.
     own_fov: f32,
@@ -33,10 +34,13 @@ pub struct Rig {
 
 impl Rig {
     pub fn new(shot: Shot, origin: Pos, own_fov: f32) -> Rig {
-        let origin: [f64; 3] = origin.into();
+        let origin = Vec3::from(origin);
         let curve = match &shot.path {
             Path::Spline(points) => Some(Curve::new(
-                &points.iter().map(|p| add(origin, *p)).collect::<Vec<_>>(),
+                &points
+                    .iter()
+                    .map(|&p| origin + p.into())
+                    .collect::<Vec<_>>(),
             )),
             _ => None,
         };
@@ -83,11 +87,15 @@ impl Rig {
         )
     }
 
-    fn eye(&self, u: f64, subjects: Subjects) -> Option<[f64; 3]> {
-        let at = |p: &[f64; 3]| add(self.origin, *p);
+    /// `offset` from the film's origin, in the world.
+    fn at(&self, offset: [f64; 3]) -> Vec3 {
+        self.origin + offset.into()
+    }
+
+    fn eye(&self, u: f64, subjects: Subjects) -> Option<Vec3> {
         Some(match &self.shot.path {
-            Path::Still(p) => at(p),
-            Path::Line(a, b) => lerp3(at(a), at(b), u),
+            Path::Still(p) => self.at(*p),
+            Path::Line(a, b) => lerp3(self.at(*a), self.at(*b), u),
             Path::Spline(_) => self.curve.as_ref()?.at(u)?,
             Path::Orbit {
                 center,
@@ -97,20 +105,18 @@ impl Rig {
             } => {
                 let a = lerp(angle[0], angle[1], u).to_radians();
                 let r = lerp(radius[0], radius[1], u);
-                add(
-                    at(center),
-                    [a.cos() * r, lerp(height[0], height[1], u), a.sin() * r],
-                )
+                let height = lerp(height[0], height[1], u);
+                self.at(*center).offset(a.cos() * r, height, a.sin() * r)
             }
-            Path::Follow { subject, offset } => add(subjects(subject)?, *offset),
+            Path::Follow { subject, offset } => subjects(subject)? + (*offset).into(),
         })
     }
 
-    fn aim(&self, u: f64, eye: [f64; 3], subjects: Subjects) -> Option<(f64, f64)> {
-        let toward = |p: [f64; 3]| angles_along(sub(p, eye));
+    fn aim(&self, u: f64, eye: Vec3, subjects: Subjects) -> Option<(f64, f64)> {
+        let toward = |p: Vec3| angles_along(p - eye);
         match &self.shot.look {
-            Look::At(p) => toward(add(self.origin, *p)),
-            Look::Pan(a, b) => toward(add(self.origin, lerp3(*a, *b, u))),
+            Look::At(p) => toward(self.at(*p)),
+            Look::Pan(a, b) => toward(lerp3(self.at(*a), self.at(*b), u)),
             Look::Subject(name) => toward(subjects(name)?),
             Look::Angles { yaw, pitch } => Some((*yaw as f64, *pitch as f64)),
             Look::Ahead => self.ahead(u, subjects),
@@ -133,7 +139,7 @@ impl Rig {
         } else {
             (u - STEP, u)
         };
-        angles_along(sub(self.eye(b, subjects)?, self.eye(a, subjects)?))
+        angles_along(self.eye(b, subjects)? - self.eye(a, subjects)?)
     }
 }
 
@@ -155,14 +161,14 @@ mod tests {
     use super::*;
 
     const START: Pose = Pose {
-        eye: [0.0; 3],
+        eye: Vec3::ZERO,
         yaw: 0.0,
         pitch: 0.0,
         roll: 0.0,
         fov: 70.0,
     };
 
-    fn none(_: &str) -> Option<[f64; 3]> {
+    fn none(_: &str) -> Option<Vec3> {
         None
     }
 
@@ -173,10 +179,10 @@ mod tests {
             Pos::new(100, 64, -20),
             70.0,
         );
-        let center = [100.5, 64.0, -19.5];
+        let center = Vec3::new(100.5, 64.0, -19.5);
         for clock in [0.0, 1.0, 2.5, 4.0] {
             let pose = rig.pose(clock, &none, START);
-            let d = sub(center, pose.eye);
+            let d = center - pose.eye;
             assert!((math::length(d) - 8.0).abs() < 1e-9, "distance at {clock}");
             let (yaw, pitch) = angles_along(d).expect("a direction");
             assert!(
@@ -209,7 +215,8 @@ mod tests {
             70.0,
         );
         assert_eq!(rig.pose(0.0, &none, START), START, "at the start");
-        assert_eq!(rig.pose(1.0, &none, START).eye, [5.0; 3], "after the blend");
+        let after = rig.pose(1.0, &none, START).eye;
+        assert_eq!(after, Vec3::new(5.0, 5.0, 5.0), "after the blend");
     }
 
     #[test]
@@ -255,7 +262,7 @@ mod tests {
         let rig = Rig::new(shot, Pos::default(), 70.0);
         let middle = rig.pose(2.5, &none, START);
         assert!(
-            (middle.eye[0] - 5.0).abs() < 1e-3 && middle.eye[2].abs() < 1e-3,
+            (middle.eye.x - 5.0).abs() < 1e-3 && middle.eye.z.abs() < 1e-3,
             "at the second point"
         );
         assert!(
@@ -278,7 +285,7 @@ mod tests {
     #[test]
     fn a_flyby_through_no_points_keeps_the_camera_where_it_was() {
         let before = Pose {
-            eye: [3.0, 70.0, -8.0],
+            eye: Vec3::new(3.0, 70.0, -8.0),
             ..START
         };
         let rig = Rig::new(flyby(&[]), Pos::new(100, 64, -20), 70.0);

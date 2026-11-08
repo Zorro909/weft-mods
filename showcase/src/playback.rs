@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 
 use showcase_api::{Path, Pos, Step, Timeline};
+use weft_sdk::Vec3;
 
 use crate::rig::{Pose, Rig, Subjects};
 
@@ -156,7 +157,7 @@ impl Playback {
 
     /// Eye positions the film's shots pass, to load the world around before it starts: the
     /// start, middle and end of every shot that doesn't follow a subject.
-    pub fn stops(&self) -> Vec<[f64; 3]> {
+    pub fn stops(&self) -> Vec<Vec3> {
         let none = |_: &str| None;
         let mut out = Vec::new();
         for step in &self.steps {
@@ -178,7 +179,7 @@ mod tests {
     use super::*;
 
     const START: Pose = Pose {
-        eye: [0.0; 3],
+        eye: Vec3::ZERO,
         yaw: 0.0,
         pitch: 0.0,
         roll: 0.0,
@@ -200,7 +201,7 @@ mod tests {
         )
     }
 
-    fn none(_: &str) -> Option<[f64; 3]> {
+    fn none(_: &str) -> Option<Vec3> {
         None
     }
 
@@ -327,7 +328,7 @@ mod tests {
             .shot(dolly([0.0; 3], [10.0, 0.0, 0.0]))
             .shot(follow("item", [0.0, 1.0, 0.0]));
         let p = play_at(Pos::new(100, 64, 0), film);
-        let stops = [[100.0, 64.0, 0.0], [105.0, 64.0, 0.0], [110.0, 64.0, 0.0]];
+        let stops = [100.0, 105.0, 110.0].map(|x| Vec3::new(x, 64.0, 0.0));
         assert_eq!(
             p.stops(),
             stops,

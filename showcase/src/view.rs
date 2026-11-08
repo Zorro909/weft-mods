@@ -11,7 +11,7 @@ use weft_sdk::*;
 use crate::lock;
 use crate::playback::Title;
 use crate::rig::Pose;
-use crate::rig::math::{add, forward, sub};
+use crate::rig::math::forward;
 
 /// The camera mode a film is seen through; the server holds the player in it while one plays.
 pub static FILM: CameraMode = CameraMode::named("film");
@@ -39,7 +39,7 @@ pub fn register(r: &mut Registry) {
 fn film_shot(args: &mut CameraArgs) {
     args.out = match *lock(&SHOWN) {
         Some(pose) => CameraPose {
-            pos: pose.eye.into(),
+            pos: pose.eye,
             yaw: pose.yaw.to_radians() as f32,
             pitch: pose.pitch.to_radians() as f32,
             roll: pose.roll.to_radians() as f32,
@@ -59,7 +59,7 @@ fn film_shot(args: &mut CameraArgs) {
 pub fn camera(c: &Client) -> Pose {
     let s = c.state();
     Pose {
-        eye: add(s.pos.into(), [0.0, eye_height(c), 0.0]),
+        eye: s.pos.offset(0.0, eye_height(c), 0.0),
         yaw: (s.yaw as f64).to_degrees(),
         pitch: (s.pitch as f64).to_degrees(),
         roll: 0.0,
@@ -73,7 +73,7 @@ pub fn put(c: &Client, pose: Pose) {
     *lock(&SHOWN) = Some(pose);
     c.control(&PlayerControl {
         mask: cm::POS | cm::VEL | cm::LOOK | cm::FLYING,
-        pos: sub(pose.eye, [0.0, eye_height(c), 0.0]).into(),
+        pos: pose.eye.offset(0.0, -eye_height(c), 0.0),
         vel: Vec3::ZERO,
         yaw: pose.yaw.to_radians() as f32,
         pitch: pose.pitch.to_radians() as f32,
@@ -100,7 +100,7 @@ pub fn titles(c: &Client, titles: &[Title], now: f32, pose: Pose) {
 
 /// Where titles go for the camera at `pose`: below the middle of the picture, toward its
 /// bottom however the camera rolls.
-fn title_at(pose: Pose) -> [f64; 3] {
+fn title_at(pose: Pose) -> Vec3 {
     // The field of view is vertical: this angle down is that far down the picture.
     let down = (TITLE_LOW * (pose.fov as f64 / 2.0).to_radians().tan()).atan();
     let roll = pose.roll.to_radians();
@@ -108,9 +108,9 @@ fn title_at(pose: Pose) -> [f64; 3] {
     let up = forward(pose.yaw, pose.pitch + 90.0);
     let right = forward(pose.yaw - 90.0, 0.0);
     // The picture's bottom, turned with the camera.
-    let bottom = [0, 1, 2].map(|i| -(up[i] * roll.cos() + right[i] * roll.sin()));
-    let toward = [0, 1, 2].map(|i| ahead[i] * down.cos() + bottom[i] * down.sin());
-    add(pose.eye, toward.map(|v| v * TITLE_DISTANCE))
+    let bottom = (up * roll.cos() + right * roll.sin()) * -1.0;
+    let toward = ahead * down.cos() + bottom * down.sin();
+    pose.eye + toward * TITLE_DISTANCE
 }
 
 /// How much of `title` shows at `now`, 0 to 1, fading in from its start and out to its end.
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn a_title_stays_at_the_bottom_of_a_banked_picture() {
         let level = Pose {
-            eye: [0.0; 3],
+            eye: Vec3::ZERO,
             yaw: 0.0,
             pitch: 0.0,
             roll: 0.0,
@@ -157,7 +157,7 @@ mod tests {
         };
         let below = title_at(level);
         assert!(
-            below[0].abs() < 1e-9 && below[1] < 0.0,
+            below.x.abs() < 1e-9 && below.y < 0.0,
             "under the middle: {below:?}"
         );
         // Banked right a quarter turn, the picture's bottom is the world's left (yaw 0 looks
@@ -166,12 +166,12 @@ mod tests {
             roll: 90.0,
             ..level
         });
-        assert!(banked[1].abs() < 1e-9, "level with the eye: {banked:?}");
+        assert!(banked.y.abs() < 1e-9, "level with the eye: {banked:?}");
         assert!(
-            (banked[0] - below[1]).abs() < 1e-9,
+            (banked.x - below.y).abs() < 1e-9,
             "as far left as it was down"
         );
-        assert!((banked[2] - below[2]).abs() < 1e-9, "as far ahead");
+        assert!((banked.z - below.z).abs() < 1e-9, "as far ahead");
     }
 
     #[test]
