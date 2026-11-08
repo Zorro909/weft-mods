@@ -1,6 +1,6 @@
 [package]
 name = "showcase"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 # As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
 rust-version = "1.95"
