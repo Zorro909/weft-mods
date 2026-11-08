@@ -70,7 +70,7 @@ impl Turn {
     }
 }
 
-/// The properties that turn with a block (`Turn::prop`).
+/// The properties `Turn::prop` turns; keep the two in step.
 const TURNING: [&str; 8] = [
     "facing", "front", "attach", "axis", "north", "east", "south", "west",
 ];

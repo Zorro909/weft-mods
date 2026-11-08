@@ -14,7 +14,7 @@ use crate::{save, worldgen};
 const GAP: i32 = 2;
 
 /// What each player's last load replaced, by player entity.
-static REPLACED: LazyLock<Mutex<HashMap<u64, Undo>>> = LazyLock::new(Default::default);
+static UNDOS: LazyLock<Mutex<HashMap<u64, Undo>>> = LazyLock::new(Default::default);
 
 struct Undo {
     dimension: u32,
@@ -120,7 +120,7 @@ fn in_front(feet: [i32; 3], facing: [i32; 2], [sx, _, sz]: [i32; 3]) -> [i32; 3]
 }
 
 fn lock() -> std::sync::MutexGuard<'static, HashMap<u64, Undo>> {
-    REPLACED.lock().unwrap_or_else(|e| e.into_inner())
+    UNDOS.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 #[cfg(test)]

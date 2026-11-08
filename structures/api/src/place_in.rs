@@ -30,9 +30,13 @@ impl fmt::Display for PlaceError {
     }
 }
 
-/// Puts back what `place_in` replaced.
+/// Puts back what `place_in` replaced. A cell that holds it still is left alone, so a chest
+/// keeps what is in it.
 pub fn put_back(world: &World, replaced: &Replaced) {
     for (pos, parts) in replaced {
+        if world.parts(*pos) == *parts {
+            continue;
+        }
         // Emptied first, as `set_block` keeps a cell's other blocks while its block stays.
         world.set_block(*pos, 0);
         for &part in parts {

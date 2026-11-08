@@ -19,8 +19,7 @@ struct Term<W> {
 
 enum Named {
     Tag(Tag<kind::Biome>),
-    /// `u32::MAX` for a name no biome has, which matches nothing.
-    Biome(u32),
+    Biome(Biome),
 }
 
 impl Biomes {
@@ -33,34 +32,26 @@ impl Biomes {
 
     /// Whether biome `id` is one of them.
     pub fn contains(&self, id: u32) -> bool {
-        let terms = self.terms.get_or_init(|| self.resolve());
+        let terms = self.terms.get_or_init(|| resolve(self.text));
         includes(terms, |named| match named {
             Named::Tag(tag) => tag.on_biome(id),
-            Named::Biome(biome) => *biome == id,
+            Named::Biome(biome) => biome.id() == id,
         })
     }
+}
 
-    fn resolve(&self) -> Vec<Term<Named>> {
-        let named = |term: Term<&'static str>| Term {
+/// Each term with its tag or biome; the SDK logs a biome name nothing has.
+fn resolve(text: &'static str) -> Vec<Term<Named>> {
+    let named = |what: &'static str| match what.strip_prefix('#') {
+        Some(tag) => Named::Tag(Tag::named(tag)),
+        None => Named::Biome(Biome::named(what)),
+    };
+    split(text)
+        .map(|term| Term {
             left_out: term.left_out,
-            what: self.lookup(term.what),
-        };
-        split(self.text).map(named).collect()
-    }
-
-    fn lookup(&self, what: &'static str) -> Named {
-        if let Some(tag) = what.strip_prefix('#') {
-            return Named::Tag(Tag::named(tag));
-        }
-        let id = Biome::named(what).id();
-        if id == u32::MAX {
-            error!(
-                "structure biomes \"{}\": no biome is named {what}",
-                self.text
-            );
-        }
-        Named::Biome(id)
-    }
+            what: named(term.what),
+        })
+        .collect()
 }
 
 fn split(text: &'static str) -> impl Iterator<Item = Term<&'static str>> {
@@ -73,14 +64,16 @@ fn split(text: &'static str) -> impl Iterator<Item = Term<&'static str>> {
     })
 }
 
-/// Whether a biome is among `terms`, `matches` telling whether a term names it.
+/// Whether a biome is among `terms`, `matches` telling whether a term names it: everything
+/// when only `!` terms are given, then without what they name.
 fn includes<W>(terms: &[Term<W>], matches: impl Fn(&W) -> bool) -> bool {
-    let mut wanted = terms.iter().filter(|term| !term.left_out).peekable();
-    let picked = wanted.peek().is_none() || wanted.any(|term| matches(&term.what));
-    picked
-        && !terms
+    let any = |left_out| {
+        terms
             .iter()
-            .any(|term| term.left_out && matches(&term.what))
+            .any(|term| term.left_out == left_out && matches(&term.what))
+    };
+    let only_left_out = terms.iter().all(|term| term.left_out);
+    (only_left_out || any(false)) && !any(true)
 }
 
 #[cfg(test)]

@@ -59,6 +59,7 @@ error at the first cube that asks, and matches nothing. `*` patterns aren't supp
 
 Every structure, static or dynamic, generates as a decoration of your mod named like it, so
 another mod can take it out of the world: `r.remove(&Decoration::named("mymod:hut"))`.
+`locate` doesn't know of that and still finds where it would be.
 
 ## Dynamic structures
 

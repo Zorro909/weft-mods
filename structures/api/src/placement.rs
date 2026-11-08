@@ -69,8 +69,8 @@ impl Placement<'_> {
     /// Only where the biome under its middle is one of these, named as anywhere in Weft:
     /// `"#animals"`, `"#forest !base:birch_forest"`.
     pub fn biome(mut self, biomes: &str) -> Self {
-        let biomes = Biomes::named(biomes.to_string().leak());
-        self.fit = self.fit.biome(Box::leak(Box::new(biomes)));
+        let biomes = Box::leak(Box::new(Biomes::named(biomes.to_string().leak())));
+        self.fit = self.fit.biome(biomes);
         self
     }
     /// Fills under its bottom layer down to the ground, so it never floats. Without, the gap stays.
