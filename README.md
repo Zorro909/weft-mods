@@ -28,62 +28,66 @@ only needed to play a film.
 
 ## Building from source
 
-The engine is the submodule `Weft/`, pinned to a Weft release. With Rust and Weft's build
-requirements installed:
+Each mod's `Cargo.toml` takes Weft's SDK from GitHub at a Weft release tag. With Rust and Weft's
+build requirements installed:
 
 ```
-git submodule update --init Weft
-./start.sh              # builds the engine and every mod, installs them and starts the game
+./start.sh              # checks out and builds the engine and every mod, then starts the game
 ./start.sh cogwork      # only this mod
 ```
 
-A mod loads only into an engine built from the same Weft commit, so whenever `Weft/` moves,
-rebuild the engine and the mods. [`docs/agents/mods.md`](docs/agents/mods.md) has the build, load
-and check steps one by one.
+`start.sh` first runs `./init.sh`, which clones the engine into `Weft/` at the newest release
+any mod builds against, or moves it there. A mod loads only into an engine built from the same
+Weft release, so whenever that tag moves, rebuild the engine and the mods.
+[`docs/agents/mods.md`](docs/agents/mods.md) has the build, load and check steps one by one.
 
 ## Repository layout
 
 | Path | What it holds |
 |---|---|
 | `cogwork/`, `structures/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
-| `Weft/` | The engine, as a submodule |
+| `Weft/` | The engine, checked out by `init.sh` and not tracked here |
 | `docs/agents/` | Guides for working on this repository: mods, code style, engine, testing |
 | `tools/` | The mods' tests and clippy (`check-mods.sh`), the headless test run, film recording (`showcase.sh`) and CI scripts |
-| `start.sh` | Builds, installs and starts everything |
+| `init.sh`, `start.sh` | Check out the engine; build, install and start everything |
 
 ## Contributing
 
 Changes come as pull requests to `main`. Commits follow
 [Conventional Commits](https://www.conventionalcommits.org), and Rust is formatted by the root
-`rustfmt.toml` (`git ls-files -z '*.rs' | xargs -0 rustfmt +nightly`). Keep `Weft/` at a Weft release: pull requests that move it
-elsewhere are refused. `tools/check-mods.sh` runs every mod's unit tests and clippy; CI runs
-it too, and builds every mod on Windows, Linux and macOS.
+`rustfmt.toml` (`git ls-files -z '*.rs' | xargs -0 rustfmt +nightly`). Every mod takes Weft at a
+release tag, as the [Weft mod index](https://github.com/Weft-Rust/Weft-Mods-Index) builds it:
+pull requests that don't are refused. `tools/check-mods.sh` runs every mod's unit tests and
+clippy; CI runs it too, and builds every mod on Windows, Linux and macOS.
 
 ## Releases
 
-Every push to `main` releases the mods that changed:
+Every push to `main` releases the mods that changed, through
+[weft-mod-action](https://github.com/Zorro909/weft-mod-action):
 
 - A mod whose version has no release yet is released as that version: a full release
-  (`X.Y.Z`), which needs `Weft/` at a Weft release, or a release candidate (`X.Y.Z-rc.N`).
-- A mod that changed without a new version gets the next release candidate from CI.
+  (`X.Y.Z`) or a release candidate (`X.Y.Z-rc.N`).
+- A mod that changed without a new version gets a release candidate from CI,
+  `X.Y.(Z+1)-rc.<run>.g<commit>`.
 
-Experimental builds follow Weft's upstream `master`. The section below is kept up to date by CI;
-see [`docs/agents/mods.md`](docs/agents/mods.md#releasing) for the details.
+Full releases can go to the [Weft mod index](https://github.com/Weft-Rust/Weft-Mods-Index), which
+builds them itself and lists them in the Weft launcher.
+
+The section below is kept up to date by CI; see
+[`docs/agents/mods.md`](docs/agents/mods.md#releasing) for the details.
 
 <!-- mod-releases:start -->
 ## Downloads
 
 Put a mod's zip as it is into the game's `mods/` folder; each one holds the Windows, Linux and
 macOS builds. A mod loads only into a game with the same mod interface as the Weft it was built
-against. Full releases are built against a released Weft. Release candidates (`X.Y.Z-rc.N`) are builds
-of `main` on the way to the next release, and experimental builds use Weft's upstream `master`
-instead of the Weft this repository pins.
+against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to the next release.
 
-| Mod | Release | Release candidate | Experimental |
-|---|---|---|---|
-| cogwork | [0.2.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.2), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | [0.2.3-rc.3](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.3-rc.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – |
-| showcase | [0.2.1](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.2.1), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – | – |
-| structures | [0.1.3](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – | – |
+| Mod | Release | Release candidate |
+|---|---|---|
+| cogwork | [0.2.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.2), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | [0.2.3-rc.3](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.2.3-rc.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) |
+| showcase | [0.2.1](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.2.1), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – |
+| structures | [0.1.3](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | – |
 
 ## Versions
 

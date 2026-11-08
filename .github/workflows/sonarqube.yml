@@ -1,4 +1,5 @@
-# Lints every mod with clippy and sends the code and clippy's findings to SonarQube Cloud, on
+# Lints every mod with clippy, measures the test coverage of the mods and of the Python scripts in
+# `tools/ci`, and sends the code with clippy's findings and the coverage to SonarQube Cloud, on
 # every pull request and every push to main. A clippy warning in a mod fails the run, after the
 # analysis with it is sent. The analysis needs the secret `SONAR_TOKEN`, which pull requests from
 # forks don't get: theirs skip it. The project's settings are in `sonar-project.properties`.
@@ -22,12 +23,15 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: true
 
       # Third-party actions are pinned to a commit, the tag or branch they track beside it.
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
-          components: clippy
+          components: clippy, llvm-tools-preview
+
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        with:
+          tool: cargo-llvm-cov@0.9.1
 
       - name: Clippy report
         run: tools/ci/clippy-report.sh clippy-report.json
@@ -36,6 +40,14 @@ jobs:
       - name: Clippy finds nothing
         if: ${{ !cancelled() }}
         run: tools/ci/clippy-findings.sh clippy-report.json
+
+      - name: Rust coverage
+        if: ${{ !cancelled() }}
+        run: tools/ci/rust-coverage.sh rust-coverage.lcov
+
+      - name: Python coverage
+        if: ${{ !cancelled() }}
+        run: tools/ci/python-coverage.sh python-coverage.xml
 
       - name: SonarQube analysis
         if: ${{ !cancelled() && env.SONAR_TOKEN != '' }}

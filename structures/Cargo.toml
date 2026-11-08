@@ -2,22 +2,27 @@
 name = "structures"
 version = "0.1.3"
 edition = "2024"
-# As `Weft/Cargo.toml` declares; cargo then picks dependency versions that build with it.
+# As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
 rust-version = "1.95"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-weft_sdk = { path = "../Weft/crates/sdk" }
-base_api = { path = "../Weft/mods/base/api" }
+weft_sdk.workspace = true
+base_api.workspace = true
 structures_api = { path = "api" }
 
-# Its own cargo root, apart from the engine's workspace in `Weft/`. `cargo build` and
-# `cargo test` here cover `structures_api` too.
+# Its own cargo root. `cargo build` and `cargo test` here cover `structures_api` too.
 [workspace]
 members = ["api"]
 default-members = [".", "api"]
+
+# The Weft release the mod and its API crate build against, from the game's repository as the
+# mod index wants it; `init.sh` checks out the newest one any mod names into `Weft/`.
+[workspace.dependencies]
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.2" }
+base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.2" }
 
 [profile.release]
 debug = "line-tables-only"

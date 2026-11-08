@@ -1,7 +1,6 @@
-# Checks a pull request: its Rust is formatted, every mod's version can be released (a full one
-# only on a tagged Weft), every mod's unit tests and clippy pass, the tests of the CI scripts in
-# `tools/ci` pass, and every mod builds for Windows, Linux and macOS against the Weft the
-# submodule pins.
+# Checks a pull request: its Rust is formatted, every mod takes Weft at a release as the mod index
+# needs, every mod's unit tests and clippy pass, the tests of the CI scripts in `tools/ci` pass, and
+# every mod builds for Windows, Linux and macOS, as `release.yml` builds it.
 name: Check
 
 on:
@@ -23,7 +22,7 @@ jobs:
         with:
           components: rustfmt
 
-      # Every Rust file git tracks; the Weft submodule is formatted upstream.
+      # Every Rust file git tracks.
       - name: Rust is formatted
         run: |
           if ! git ls-files -z '*.rs' | xargs -0 rustfmt +nightly --check; then
@@ -31,27 +30,20 @@ jobs:
             exit 1
           fi
 
-  # What merging would release, by the planner `release.yml` runs, which refuses what it can't.
-  versions:
+  # Players run Weft releases, so every mod is built against one, as the mod index takes it.
+  weft:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
-      - name: Versions can be released
-        run: |
-          plan=$(tools/ci/plan-release.sh)
-          jq . <<<"$plan"
+      - name: Every mod takes Weft at a release
+        run: tools/ci/check-weft.sh
 
   # Unit tests and clippy of every mod with all features, the films included.
   mods:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          submodules: true
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -68,5 +60,20 @@ jobs:
       - name: Tests of tools/ci
         run: python3 -m unittest discover -s tools/ci
 
+  # With `release-unchanged`, so that every mod builds, also one that didn't change.
   build:
-    uses: ./.github/workflows/build.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: Zorro909/weft-mod-action/build@main
+        with:
+          release-unchanged: true
+          mods: |
+            cogwork
+            showcase
+            structures

@@ -1,0 +1,34 @@
+# Run from the Actions tab: proposes the newest full release of each mod, or the tags you name, to
+# the Weft mod index with `weft --submit-mod`, one pull request each. Needs a classic personal
+# access token with the scope `public_repo` as the secret `WEFT_INDEX_TOKEN`; see
+# Zorro909/weft-mod-action's README. `release.yml` proposes each full release by itself once the
+# repository variable WEFT_INDEX_PR is `true`.
+name: Propose to the Weft mod index
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: Release tags, separated by spaces (default, the newest full release of each mod)
+        default: ""
+      dry-run:
+        description: Only show what would be proposed
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  index-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Zorro909/weft-mod-action/index-pr@main
+        with:
+          token: ${{ secrets.WEFT_INDEX_TOKEN }}
+          tags: ${{ inputs.tags }}
+          dry-run: ${{ inputs.dry-run }}
+          mods: |
+            cogwork
+            showcase
+            structures

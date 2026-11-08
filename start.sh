@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Builds the engine and this repository's mods, installs the mods into `Weft/run/mods/` and starts
-# the game. A mod is a folder here with a `Cargo.toml` building a `cdylib`.
+# Checks out the engine into `Weft/` with `init.sh`, builds it and this repository's mods, installs
+# the mods into `Weft/run/mods/` and starts the game. A mod is a folder here with a `Cargo.toml`
+# building a `cdylib`.
 #
 #   ./start.sh                  every mod
 #   ./start.sh structures ...   only these; the repository's other mods are taken out of
@@ -10,6 +11,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$root/init.sh"
 mods_dir="$root/Weft/run/mods"
 toolbox_name=weft-build
 

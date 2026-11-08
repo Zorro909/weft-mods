@@ -1,14 +1,16 @@
 [package]
 name = "cogwork"
-version = "0.2.3-rc.3"
+version = "0.2.2"
 edition = "2024"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-weft_sdk = { path = "../Weft/crates/sdk" }
-base_api = { path = "../Weft/mods/base/api" }
+# The Weft release it builds against, from the game's repository as the mod index wants it;
+# `init.sh` checks out the newest one any mod names into `Weft/`.
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.2" }
+base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.2" }
 strum = { version = "0.28", features = ["derive"] }
 # XXH3 alone, for ghost keys.
 twox-hash = { version = "2.1", default-features = false, features = ["xxhash3_64"] }
