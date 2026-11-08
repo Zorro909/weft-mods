@@ -17,7 +17,7 @@ The wand is in creative's Tools tab, or `/give @s structgen:wand`.
 |---|---|
 | `/structure pos1 [at]`, `pos2 [at]` | Sets the same corners as the wand: `at`, else the block you look at (up to 64 blocks away), else where you stand. |
 | `/structure save <name> [from] [to]` | Writes the box between two corners, or your selection, to `structures/<name>.wst`. |
-| `/structure load <name> [turn]` | Places that file, or the one built into the mod if there is none, two blocks in front of you, its floor level with where you stand. `turn` is `none`, `right`, `back` or `left`. |
+| `/structure load <name> [turn] [styles]` | Places that file, or the one built into the mod if there is none, two blocks in front of you, its floor level with where you stand. `turn` is `none`, `right`, `back` or `left`. `styles` fill its [material slots](materials.md#styles): `brick_roof,spruce_frame`. |
 | `/structure undo` | Puts back what your last load replaced. |
 | `/structure locate <name> [radius]` | The nearest structure of this mod, 4096 blocks around you by default, at most 16384. |
 
@@ -40,6 +40,6 @@ side. It sets one block at a time, so big boxes take a moment.
 ### Finding structures
 
 `locate` works the structures' places out from the world's seed, so it finds them whether their
-part of the world was generated yet or not. Its names are the mod's single structures and
-`hamlet`. The position it gives is the corner of the first thing the structure placed: for a
-hamlet, its well. It knows the structures of this mod only.
+part of the world was generated yet or not. Its names are the buildings that stand alone,
+`hamlet` and `village`. The position it gives is the corner of the first thing the structure
+placed: for a hamlet or village, its well. It knows the structures of this mod only.

@@ -6,12 +6,15 @@ bits, and LZ4 around it. Air in the box is stored as `core:air` and clears what 
 
 ## Layout
 
-`WSTR`, a version byte (now 1), then LZ4 with the size prepended (like each cube in a region
+`WSTR`, a version byte (now 2; files of version 1, without slots, still read), then LZ4 with the size prepended (like each cube in a region
 file) around:
 
 - the size along x, y and z, a `u16` each;
 - the palette: a `u16` count, then each state's name as a `u16` byte length and UTF-8, written
-  like the lines of a save's `ids.txt` (`base:furnace[facing=east,lit=false]`);
+  like the lines of a save's `ids.txt` (`base:furnace[facing=east,lit=false]`). An entry
+  `@<slot>[props]` is a [material slot](materials.md);
+- the slots: a `u16` count, then each slot's name and default block, written like palette
+  names. Every slot an entry names is there;
 - one byte with the bits per index: 0, 4, 8 or 16;
 - every block's palette index, x fastest, then z, then y, packed into `u64` words with that
   many bits each: lowest bits first, and an index never straddles two words. A palette of one

@@ -4,6 +4,17 @@
 
 ### Added
 
+- Villages: an inn, a smithy, a chapel or church, market stalls, cottages, farms, fields and a
+  mill around a well, joined by gravel paths. `/structure locate village` finds one.
+- New buildings in one timber-framed style, Hearthwood: cottages, burgher houses, farm
+  buildings, mills, inns, smithies, market stalls and hall, a well and a fountain, workyards,
+  a guildhall and town hall, chapels and churches. `/structure load` places any of them.
+- Material slots: a structure can name a role (`roof/stair`) instead of a block, and the code
+  placing it fills the role: `Materials`, `Structure::with_slots`, `.materials(..)` on plans
+  and static structures. The settlements give their buildings different roofs and frames this
+  way, and `/structure load <name> [turn] [styles]` takes styles such as `brick_roof`.
+- `tools/structure-shots.sh` photographs structures in the game, for checking them without
+  building them by hand.
 - `.biome(..)` takes biome names as well as `#tags`, several apart by spaces and `!` leaving
   one out: `"#forest !base:birch_forest"`. A name no biome has is logged as an error.
 - `structgen_api::put_back` undoes a `place_in`.
@@ -12,6 +23,12 @@
 
 ### Changed
 
+- The hamlet and the buildings that stand alone are the new ones: a draw well with cottages,
+  a granary and fields around it, and lone crofter's cottages, farmhouses, wayside chapels and
+  post mills. The old cottage, watchtower, well, wheat farm and ruined shrine are gone, and with
+  them their names in `/structure load` and `/structure locate`.
+- `.wst` files are version 2, with a table of slots; version 1 files still read. Mods using
+  `structgen_api` have to be rebuilt: `place_in` takes the `Materials` to fill slots with.
 - The mod is now Structgen: its id is `structgen` and its API crate `structgen_api`, so the
   wand is `structgen:wand` and structures are `structgen:<name>`. Mods using `structures_api`
   switch to `structgen_api`. Where structures stand comes from their names, so in a world made

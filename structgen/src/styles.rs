@@ -63,9 +63,17 @@ pub fn named(names: &str) -> Option<Materials> {
         .map(str::trim)
         .filter(|name| !name.is_empty());
     names.try_fold(Materials::new(), |materials, name| {
-        let (_, blocks) = STYLES.iter().find(|(style, _)| *style == name)?;
-        Some(add(materials, blocks))
+        let known = STYLES.iter().any(|(style, _)| *style == name);
+        known.then(|| add(materials, blocks(name)))
     })
+}
+
+/// The blocks of style `name`, none for a name no style has (`""` for the defaults).
+pub fn blocks(name: &str) -> &'static [(&'static str, &'static str)] {
+    STYLES
+        .iter()
+        .find(|(style, _)| *style == name)
+        .map_or(&[], |(_, blocks)| *blocks)
 }
 
 /// `materials` with `blocks` put in their slots.
