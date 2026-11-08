@@ -20,6 +20,7 @@
 - Built for Weft 26.11.3. Mods using `structgen_api` have to be rebuilt: `template` takes a
   `&'static Template`, `Fit::biome` a `&'static Biomes`, and `place_in` gives back every block
   of each cell it replaced.
+- The mod's description opens with a shorter summary, which the Weft mod index also shows.
 
 ### Fixed
 

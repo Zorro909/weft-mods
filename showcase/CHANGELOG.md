@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The mod's description opens with a shorter summary, which the Weft mod index also shows.
+
 ## 0.3.0 - 2026-11-08
 
 ### Added
