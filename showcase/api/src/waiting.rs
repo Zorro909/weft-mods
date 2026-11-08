@@ -1,7 +1,7 @@
 //! Sets put off to the next tick, for those built on ground `Set::level` makes: a fill happens
 //! at the end of the tick it was asked in, and would take whatever was built before then.
 
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use weft_sdk::World;
 
@@ -56,7 +56,7 @@ impl<T> Waiting<T> {
 
     fn lock(&self) -> MutexGuard<'_, Vec<Asked<T>>> {
         // Still usable after a panic elsewhere left it poisoned.
-        self.sets.lock().unwrap_or_else(|e| e.into_inner())
+        self.sets.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }
 
