@@ -64,8 +64,8 @@ fn split(text: &'static str) -> impl Iterator<Item = Term<&'static str>> {
     })
 }
 
-/// Whether a biome is among `terms`, `matches` telling whether a term names it: everything
-/// when only `!` terms are given, then without what they name.
+/// Whether a biome is among `terms`, `matches` telling whether a term names it. With only `!`
+/// terms, every biome but those.
 fn includes<W>(terms: &[Term<W>], matches: impl Fn(&W) -> bool) -> bool {
     let any = |left_out| {
         terms

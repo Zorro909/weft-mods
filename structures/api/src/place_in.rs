@@ -30,18 +30,26 @@ impl fmt::Display for PlaceError {
     }
 }
 
-/// Puts back what `place_in` replaced. A cell that holds it still is left alone, so a chest
-/// keeps what is in it.
+/// Puts back what `place_in` replaced. A cell that holds it still is left alone.
 pub fn put_back(world: &World, replaced: &Replaced) {
     for (pos, parts) in replaced {
-        if world.parts(*pos) == *parts {
-            continue;
+        let now = world.parts(*pos);
+        if now != *parts {
+            write_cell(world, *pos, &now, parts);
         }
-        // Emptied first, as `set_block` keeps a cell's other blocks while its block stays.
-        world.set_block(*pos, 0);
-        for &part in parts {
-            world.part_add(*pos, part);
-        }
+    }
+}
+
+/// Makes the cell at `pos`, holding `now`, hold just `parts`. A single block is replaced in
+/// place, so a chest turned or put back keeps what is in it.
+fn write_cell(world: &World, pos: [i32; 3], now: &[u32], parts: &[u32]) {
+    if now.len() > 1 {
+        // Else `set_block` would keep the other blocks with a block of the same kind.
+        world.set_block(pos, 0);
+    }
+    world.set_block(pos, parts.first().copied().unwrap_or(0));
+    for &part in parts.iter().skip(1) {
+        world.part_add(pos, part);
     }
 }
 
@@ -75,11 +83,7 @@ impl Structure {
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
         for (&(pos, state), (_, had)) in blocks.iter().zip(&replaced) {
-            if had.len() > 1 {
-                // Else the cell's other blocks would stay with a block of the same kind.
-                world.set_block(pos, 0);
-            }
-            world.set_block(pos, state);
+            write_cell(world, pos, had, &[state]);
         }
         Ok(replaced)
     }
