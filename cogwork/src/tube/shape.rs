@@ -119,7 +119,7 @@ fn joined(w: &World, pos: Pos, tube: BlockState) -> BlockState {
 /// Whether `tube` at `pos` reaches toward `d`: to any other tube but two timber tubes, and to
 /// anything holding items.
 fn joins(w: &World, pos: Pos, tube: BlockState, d: Dir) -> bool {
-    let at = pos.neighbor(d.face());
+    let at = pos.toward(d);
     let other = BlockState::at(w, at);
     if other.has(&TUBES) {
         return !(tube.is(&TIMBER_TUBE) && other.is(&TIMBER_TUBE));

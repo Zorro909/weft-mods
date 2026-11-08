@@ -62,8 +62,8 @@ impl Pos {
             .add_z(step.z * blocks)
     }
 
-    /// The block next to this one across its face `face` (in `Dir` order). Tubes, engines,
-    /// shafts and machines all hand things to their neighbors through it.
+    /// The block next to this one across its face `face` (in `Dir` order), for the face
+    /// numbers tubes save.
     pub fn neighbor(self, face: u32) -> Pos {
         self.toward(Dir::from_face(face))
     }
