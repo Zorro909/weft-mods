@@ -34,7 +34,7 @@ impl Keeper {
     fn loading(self) -> Loading {
         match self {
             Keeper::LoaderAll => Loading::All,
-            Keeper::Machine | Keeper::Loader => Loading::Machines,
+            Keeper::Machine | Keeper::Loader => Loading::BlockEntities,
         }
     }
 }

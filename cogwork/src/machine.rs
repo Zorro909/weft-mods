@@ -6,7 +6,8 @@ use weft_sdk::*;
 use crate::lib::Pos;
 
 /// A machine's block, textured `<name>_front` (`<name>_front_on` while it works), `<name>_top`
-/// and `<name>_side`, also underneath. Its front faces the player who places it.
+/// and `<name>_side`, also underneath. Its front faces the player who places it. Any tool breaks
+/// it whole; an axe is quickest.
 pub fn block<'a>(b: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<'a> {
     b.facing(Facings::HORIZONTAL, Toward::Player)
         .prop("working", ["false", "true"])
@@ -14,12 +15,10 @@ pub fn block<'a>(b: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<'a> {
             let (side, top) = (format!("{name}_side"), format!("{name}_top"));
             let on = if p.is("working", "true") { "_on" } else { "" };
             let front = format!("{name}_front{on}");
-            let mut faces = [side.as_str(); 6];
-            faces[Dir::Up.face() as usize] = &top;
-            faces[p.facing().face() as usize] = &front;
-            s.faces(faces)
+            // Written facing north: `facing` turns it.
+            s.faces([&side, &side, &side, &top, &front, &side])
         })
-        .mineable("pickaxe")
+        .mined_by("axe", tool_tier::HAND)
         .sound_group("base:block.stone")
         .tab(&crate::TAB)
 }

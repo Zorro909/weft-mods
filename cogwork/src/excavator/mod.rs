@@ -137,30 +137,34 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&DIG, dig::tick);
-    r.machine(&EXCAVATOR, &EXCAVATOR_MENU)
-        .block(|b| {
-            crate::machine::block(b, "excavator")
-                .hardness(4.0)
-                .on_broken(crate::loading::let_go)
+    crate::machine::block(r.block(&EXCAVATOR), "excavator")
+        .hardness(4.0)
+        .on_break(crate::loading::let_go)
+        .entity(|e| {
+            e.attach(&DIG)
+                .attach(&rig::RIG)
+                .attach_with(
+                    &ENERGY,
+                    Energy {
+                        stored: 0,
+                        capacity: 20_000,
+                        // Any number of engines: standby alone can pass 1000 on a large area.
+                        max_in: 20_000,
+                        max_out: 0,
+                    },
+                )
+                .inventory(9)
         })
-        .group("output", Slots::grid(3, 3).output())
-        .attach(&DIG)
-        .attach_with(
-            &ENERGY,
-            Energy {
-                stored: 0,
-                capacity: 20_000,
-                // Any number of engines: standby alone can pass 1000 on a large area.
-                max_in: 20_000,
-                max_out: 0,
-            },
-        )
+        .opens(&EXCAVATOR_MENU);
+    r.menu(&EXCAVATOR_MENU)
+        .group("output", Slots::grid(3, 3).output().holder())
+        .player_inventory()
         .screen(screen);
     r.block(&GANTRY_FRAME)
         .texture("gantry_frame")
         .cutout()
         .hardness(1.0)
-        .mineable("pickaxe")
+        .mined_by("pickaxe", tool_tier::HAND)
         .drops_nothing()
         .no_item();
     rig::register(r);

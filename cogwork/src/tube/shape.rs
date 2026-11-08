@@ -29,7 +29,7 @@ pub enum Arms {
 pub fn tube<'a>(b: BlockBuilder<'a>, texture: &'static str, arms: Arms) -> BlockBuilder<'a> {
     let mut b = b
         .hardness(0.4)
-        .mineable("pickaxe")
+        .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.glass")
         .tag("cogwork:tubes");
     if matches!(arms, Arms::Output(_)) {
@@ -43,9 +43,9 @@ pub fn tube<'a>(b: BlockBuilder<'a>, texture: &'static str, arms: Arms) -> Block
         }
     }
     b.states(move |p, s| model(p, s, texture, arms))
-        .on_placed(|w, change| refresh(w, change.pos.into()))
+        .on_place(|w, change| refresh(w, change.pos.into()))
         .on_neighbor(|e| refresh(&e.world(), e.pos().into()))
-        .on_broken(|w, change| super::visual::clear_broken(w, change.pos.into()))
+        .on_break(|w, change| super::visual::clear_broken(w, change.pos.into()))
 }
 
 /// The hub and the connected arms, each a box of its own, which is what it collides with too.
@@ -143,19 +143,23 @@ pub fn turn_output(u: &mut Use) -> bool {
     if !crate::cogs::holds_wrench(&w, u.player()) {
         return false;
     }
-    let pos = Pos::from(u.pos());
-    let tube = BlockState::at(&w, pos);
+    turn_directing(&w, Pos::from(u.pos()));
+    true
+}
+
+/// Turns the output of the directing tube at `pos` to its next connected arm.
+pub fn turn_directing(w: &World, pos: Pos) {
+    let tube = BlockState::at(w, pos);
     let Some(now) = output(tube).filter(|_| tube.is(&DIRECTING_TUBE)) else {
-        return true;
+        return;
     };
     let next = (1..6)
         .map(|k| Dir::from_face((now.face() + k) % 6))
-        .find(|d| connects_to_tube(&w, pos, d.face()));
+        .find(|d| connects_to_tube(w, pos, d.face()));
     if let Some(turned) = next.and_then(|d| tube.with_prop("out", d.name())) {
-        joined(&w, pos, turned).place(&w, pos);
+        joined(w, pos, turned).place(w, pos);
         w.play_sound(&crate::sounds::WRENCH, pos.center(), 1.0);
     }
-    true
 }
 
 #[cfg(test)]

@@ -44,21 +44,29 @@ pub fn register(r: &mut Registry) {
         Samples::default(),
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
-    r.machine(&SORTING_TUBE, &SORTING_MENU)
-        .block(|b| {
-            super::shape::tube(b, "tube_sorting", Arms::PerSide(arm_texture)).tab(&crate::TAB)
-        })
+    super::shape::tube(
+        r.block(&SORTING_TUBE),
+        "tube_sorting",
+        Arms::PerSide(arm_texture),
+    )
+    .tab(&crate::TAB)
+    .entity(|e| {
+        e.attach(&SAMPLES)
+            .attach_with(
+                &TUBE,
+                Tube {
+                    kind: kind::SORTING,
+                    ..Tube::default()
+                },
+            )
+            .inventory(SLOTS as u32)
+    })
+    .opens(&SORTING_MENU);
+    r.menu(&SORTING_MENU)
         // So the carried items are slots 0..8 as in every tube; out only, so nothing gets
         // shift-clicked in.
-        .group("transit", Slots::row(SLOTS as u32).output())
-        .attach(&SAMPLES)
-        .attach_with(
-            &TUBE,
-            Tube {
-                kind: kind::SORTING,
-                ..Tube::default()
-            },
-        )
+        .group("transit", Slots::row(SLOTS as u32).output().holder())
+        .player_inventory()
         .screen(screen);
 }
 
