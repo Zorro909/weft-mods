@@ -72,10 +72,11 @@ fn advance(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize) -> bool {
     } else {
         (m.speed * 0.98).max(BASE_SPEED)
     };
-    if m.pos < 0.5 || m.to != NONE {
-        m.pos = (m.pos + m.speed).min(if m.to == NONE { 0.5 } else { 1.0 });
+    let chosen = m.leaves_by().is_some();
+    if m.pos < 0.5 || chosen {
+        m.pos = (m.pos + m.speed).min(if chosen { 1.0 } else { 0.5 });
     }
-    if m.pos >= 0.5 && m.to == NONE {
+    if m.pos >= 0.5 && !chosen {
         decide(w, id, pos, tube, slot, stack);
     }
     let m = &mut tube.moving[slot];
@@ -89,8 +90,8 @@ fn advance(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize) -> bool {
 /// At the hub: where the item goes next.
 fn decide(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize, stack: ItemStack) {
     let m = &mut tube.moving[slot];
-    match route(w, id, pos, tube.kind, m.from, stack) {
-        Route::Out(face) => m.to = face,
+    match route(w, id, pos, tube.kind, m.came_by(), stack) {
+        Route::Out(d) => m.to = d.face(),
         Route::Wait => {}
         Route::Destroy => {
             w.play_sound(&crate::sounds::TUBE_VOID, pos.center(), 1.0);
@@ -99,7 +100,7 @@ fn decide(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize, stack: Ite
             *m = Motion::default();
         }
         Route::Spill => {
-            spill(w, pos, NONE, stack);
+            spill(w, pos, None, stack);
             w.inventory(id).set(slot as u32, ItemStack::EMPTY);
             visual::remove(w, m.visual);
             *m = Motion::default();
@@ -107,13 +108,9 @@ fn decide(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize, stack: Ite
     }
 }
 
-/// Drops `stack` into the world out of the tube's `face` (its hub for `NONE`).
-fn spill(w: &World, pos: Pos, face: u32, stack: ItemStack) {
-    let at = if face == NONE {
-        pos
-    } else {
-        pos.neighbor(face)
-    };
+/// Drops `stack` into the world out of the tube's `side` (its hub for `None`).
+fn spill(w: &World, pos: Pos, side: Option<Dir>, stack: ItemStack) {
+    let at = side.map_or(pos, |d| pos.toward(d));
     w.spawn_item(at.center(), stack);
 }
 
@@ -131,8 +128,11 @@ fn hand_on(
         return false;
     };
     let m = tubes[h.tube].moving[h.slot];
+    let Some(out) = m.leaves_by() else {
+        return false;
+    };
     let stack = w.inventory(id).get(h.slot as u32);
-    let next = pos.neighbor(m.to);
+    let next = pos.toward(out);
     let other = w.block_entity(next);
     if let Some(&j) = index.get(&other) {
         let moved = into_tube(w, next, other, &mut tubes[j], m, stack);
@@ -153,7 +153,7 @@ fn hand_on(
     };
     let m = &mut tubes[h.tube].moving[h.slot];
     if other == 0 {
-        spill(w, pos, m.to, left);
+        spill(w, pos, Some(out), left);
     } else if !left.is_empty() {
         // Full: back the way it came, to be sent somewhere else.
         w.inventory(id).set(h.slot as u32, left);
@@ -166,11 +166,13 @@ fn hand_on(
     true
 }
 
-/// Moves the item `m` into a free slot of the tube `id` at `pos`, entering by the face it came
+/// Moves the item `m` into a free slot of the tube `id` at `pos`, entering by the side it came
 /// toward; false when that tube is full or doesn't connect back.
 fn into_tube(w: &World, pos: Pos, id: u64, tube: &mut Tube, m: Motion, stack: ItemStack) -> bool {
-    let face = m.to ^ 1;
-    if !super::connects_to_tube(w, pos, face) {
+    let Some(side) = m.leaves_by().map(Dir::opposite) else {
+        return false;
+    };
+    if !super::connects_to_tube(w, pos, side) {
         return false;
     }
     let Some(free) = free_slot(w, id, tube) else {
@@ -179,7 +181,7 @@ fn into_tube(w: &World, pos: Pos, id: u64, tube: &mut Tube, m: Motion, stack: It
     w.inventory(id).set(free as u32, stack);
     tube.moving[free] = Motion {
         pos: (m.pos - 1.0).max(0.0),
-        from: face,
+        from: side.face(),
         to: NONE,
         ..m
     };

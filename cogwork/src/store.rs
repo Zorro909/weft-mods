@@ -222,8 +222,8 @@ pub fn eject(w: &World, pos: Pos) {
         return;
     };
     let mut stack = out.get(slot);
-    for face in 0..6 {
-        let other = pos.neighbor(face);
+    for d in Dir::ALL {
+        let other = pos.toward(d);
         stack = if crate::tube::is_tube(w, other) {
             crate::tube::inject(w, other, stack)
         } else {

@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use super::{Motion, NONE, SLOTS, Tube, free_slot, visual};
+use super::{Motion, SLOTS, Tube, free_slot, visual};
 use crate::lib::Pos;
 
 /// Ticks a full tube may go without passing an item on before it drops one, and then between
@@ -37,12 +37,13 @@ pub fn check(w: &World, id: u64, pos: Pos, tube: &mut Tube, passed_on: bool) {
 
 /// Whether an item stands still: at the hub with nowhere to go, or at a face it can't pass.
 fn waiting(m: &Motion) -> bool {
-    m.item != 0 && (m.pos >= 1.0 || (m.to == NONE && m.pos >= 0.5))
+    m.item != 0 && (m.pos >= 1.0 || (m.leaves_by().is_none() && m.pos >= 0.5))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tube::NONE;
 
     #[test]
     fn only_items_standing_still_are_stuck() {

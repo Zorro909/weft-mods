@@ -90,7 +90,7 @@ fn push(w: &World, id: u64, pos: Pos) {
     if stored == 0 {
         return;
     }
-    let moved = w.energy_move(pos.neighbor(out.face()), stored.min(PUSH), false);
+    let moved = w.energy_move(pos.toward(out), stored.min(PUSH), false);
     if let Some(energy) = w.component_mut(id, &ENERGY) {
         energy.stored -= moved;
     }

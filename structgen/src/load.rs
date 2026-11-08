@@ -94,28 +94,25 @@ fn turn_named(name: &str) -> Option<Turn> {
     names.iter().position(|&n| n == name).map(|i| Turn::ALL[i])
 }
 
-/// The way `yaw` (radians) looks, as a step along x or z.
-fn facing(yaw: f32) -> [i32; 2] {
-    let (x, z) = (-(yaw as f64).sin(), -(yaw as f64).cos());
-    if x.abs() > z.abs() {
-        [x.signum() as i32, 0]
-    } else {
-        [0, z.signum() as i32]
-    }
+/// The horizontal direction nearest the way `yaw` (radians) looks.
+fn facing(yaw: f32) -> Dir {
+    let [x, z] = yaw_dir(yaw);
+    Dir::nearest([x, 0.0, z], Facings::HORIZONTAL)
 }
 
-/// The lowest corner that puts a box of `size` `GAP` blocks in front of `feet` along `facing`,
+/// The lowest corner that puts a box of `size` `GAP` blocks in front of `feet` toward `facing`,
 /// centred on the player, its bottom layer taking the place of the block they stand on.
-fn in_front(feet: [i32; 3], facing: [i32; 2], [sx, _, sz]: [i32; 3]) -> [i32; 3] {
+fn in_front(feet: [i32; 3], facing: Dir, [sx, _, sz]: [i32; 3]) -> [i32; 3] {
+    let step = facing.offset();
     let along = |feet: i32, step: i32, side: i32| match step {
         1 => feet + GAP,
         -1 => feet - GAP - side + 1,
         _ => feet - side / 2,
     };
     [
-        along(feet[0], facing[0], sx),
+        along(feet[0], step.x, sx),
         feet[1] - 1,
-        along(feet[2], facing[1], sz),
+        along(feet[2], step.z, sz),
     ]
 }
 
@@ -131,10 +128,10 @@ mod tests {
 
     #[test]
     fn yaw_turns_into_a_step() {
-        assert_eq!(facing(0.0), [0, -1], "north at 0");
-        assert_eq!(facing(FRAC_PI_2), [-1, 0], "west a quarter turn on");
-        assert_eq!(facing(-FRAC_PI_2), [1, 0], "east");
-        assert_eq!(facing(3.0), [0, 1], "south");
+        assert_eq!(facing(0.0), Dir::North, "north at 0");
+        assert_eq!(facing(FRAC_PI_2), Dir::West, "west a quarter turn on");
+        assert_eq!(facing(-FRAC_PI_2), Dir::East, "east");
+        assert_eq!(facing(3.0), Dir::South, "south");
     }
 
     #[test]
@@ -142,17 +139,17 @@ mod tests {
         let size = [5, 3, 4];
         let feet = [10, 64, 10];
         assert_eq!(
-            in_front(feet, [0, -1], size),
+            in_front(feet, Dir::North, size),
             [8, 63, 5],
             "north: ends two blocks ahead"
         );
         assert_eq!(
-            in_front(feet, [1, 0], size),
+            in_front(feet, Dir::East, size),
             [12, 63, 8],
             "east: starts two blocks ahead"
         );
         assert_eq!(
-            in_front(feet, [0, 1], size)[1],
+            in_front(feet, Dir::South, size)[1],
             63,
             "its floor where the player stands"
         );

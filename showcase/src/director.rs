@@ -13,7 +13,7 @@ use crate::lock;
 use crate::menus::Menus;
 use crate::playback::Playback;
 use crate::rig::Pose;
-use crate::rig::math::{add, angles_along, sub};
+use crate::rig::math::angles_along;
 use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
 use crate::view::{camera, missing_notice, put, titles};
 
@@ -48,7 +48,7 @@ enum Phase {
 /// A film waiting for the world along it to load: the camera visits each stop in turn.
 struct Loading {
     playback: Playback,
-    stops: Vec<[f64; 3]>,
+    stops: Vec<Vec3>,
     /// The stop the camera is at, and for how many frames so far.
     at: usize,
     frames: u32,
@@ -57,7 +57,7 @@ struct Loading {
 /// What a film's shots follow or look at.
 enum Subject {
     Entity(u64),
-    Place([f64; 3]),
+    Place(Vec3),
 }
 
 static DIRECTOR: Mutex<Option<Director>> = Mutex::new(None);
@@ -80,7 +80,7 @@ pub fn register(r: &mut Registry) {
     });
     r.client_packet(&SUBJECT, |_, subject| {
         let tracked = match subject.entity {
-            0 => Subject::Place(subject.pos),
+            0 => Subject::Place(subject.pos.into()),
             entity => Subject::Entity(entity),
         };
         with(|d| d.subjects.insert(text(&subject.name), tracked));
@@ -154,8 +154,8 @@ fn load(c: &Client, mut loading: Loading) -> Phase {
         mark("start", &loading.playback.film);
         return Phase::Rolling(loading.playback);
     };
-    let origin = block_center(loading.playback.origin).into();
-    let (yaw, pitch) = angles_along(sub(origin, stop)).unwrap_or_default();
+    let origin = block_center(loading.playback.origin);
+    let (yaw, pitch) = angles_along(origin - stop).unwrap_or_default();
     // The player's own field of view until the film rolls.
     let fov = loading.playback.pose().fov;
     put(
@@ -216,12 +216,12 @@ fn mark(what: &str, film: &str) {
 }
 
 /// Where a subject is now: the middle of its entity, or its place.
-fn locate(c: &Client, subject: &Subject) -> Option<[f64; 3]> {
+fn locate(c: &Client, subject: &Subject) -> Option<Vec3> {
     match *subject {
         Subject::Place(pos) => Some(pos),
         Subject::Entity(entity) => {
             let e = c.entity(entity)?;
-            Some(add(e.pos.into(), [0.0, e.size.height as f64 / 2.0, 0.0]))
+            Some(e.pos.offset(0.0, e.size.height as f64 / 2.0, 0.0))
         }
     }
 }

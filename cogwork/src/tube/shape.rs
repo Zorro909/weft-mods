@@ -119,7 +119,7 @@ fn joined(w: &World, pos: Pos, tube: BlockState) -> BlockState {
 /// Whether `tube` at `pos` reaches toward `d`: to any other tube but two timber tubes, and to
 /// anything holding items.
 fn joins(w: &World, pos: Pos, tube: BlockState, d: Dir) -> bool {
-    let at = pos.neighbor(d.face());
+    let at = pos.toward(d);
     let other = BlockState::at(w, at);
     if other.has(&TUBES) {
         return !(tube.is(&TIMBER_TUBE) && other.is(&TIMBER_TUBE));
@@ -128,9 +128,8 @@ fn joins(w: &World, pos: Pos, tube: BlockState, d: Dir) -> bool {
 }
 
 /// Whether the tube at `pos` has its arm toward `face` out, so a neighbor can hand it items.
-pub fn connects_to_tube(w: &World, pos: Pos, face: u32) -> bool {
+pub fn connects_to_tube(w: &World, pos: Pos, d: Dir) -> bool {
     let tube = BlockState::at(w, pos);
-    let d = Dir::from_face(face);
     match arm_prop(output(tube), d) {
         Some(name) => tube.prop(name) == Some("true"),
         None => joins(w, pos, tube, d),
@@ -155,7 +154,7 @@ pub fn turn_directing(w: &World, pos: Pos) {
     };
     let next = (1..6)
         .map(|k| Dir::from_face((now.face() + k) % 6))
-        .find(|d| connects_to_tube(w, pos, d.face()));
+        .find(|&d| connects_to_tube(w, pos, d));
     if let Some(turned) = next.and_then(|d| tube.with_prop("out", d.name())) {
         joined(w, pos, turned).place(w, pos);
         w.play_sound(&crate::sounds::WRENCH, pos.center(), 1.0);
