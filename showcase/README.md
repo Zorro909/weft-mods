@@ -36,12 +36,13 @@ mod films;
 use showcase_api::{Area, Film, Look, Pos, Set, dolly, film, orbit};
 
 pub fn register(r: &mut Registry) {
-    film(r, "tour", tour).on_cue("start", |set| start_machines(set));
+    film(r, "tour", tour)
+        // Flat ground as far as the camera goes, and 16 blocks of room above it.
+        .level(Area::between(Pos::new(-12, 0, -12), Pos::new(12, 16, 12)))
+        .on_cue("start", |set| start_machines(set));
 }
 
 fn tour(set: &Set) -> Film {
-    // Flat ground as far as the camera goes, and 16 blocks of room above it.
-    set.level(Area::between(Pos::new(-12, 0, -12), Pos::new(12, 16, 12)));
     build(set); // `set.place(offset, state)`, `set.fill(area, state)`, `set.world()`
     Film::new()
         .cue("start")
@@ -54,9 +55,10 @@ fn tour(set: &Set) -> Film {
 Positions are in blocks from the set's origin, the block the player stood in when the film
 started; angles are in degrees. Blocks go by `Pos`, boxes of them by `Area::between(a, b)` (both
 corners included) and blocks with their properties by `BlockState` (`BlockState::of(&MY_BLOCK)`,
-or `.into()` from the SDK's `u32`). Films are made in a natural world, so `set.level(area)` first
-makes the ground flat under the area around the set and clears the area: hills and trees there
-go, hollows are filled, and the landscape beyond stays as the backdrop. A film is a list of
+or `.into()` from the SDK's `u32`). Films are made in a natural world, so `.level(area)` makes
+the ground flat under the area around the set and clears the area: hills and trees there go,
+hollows are filled, and the landscape beyond stays as the backdrop. The engine does that at the
+end of the tick the film is asked for, and your `build` runs in the next. A film is a list of
 steps:
 
 | Step | |
@@ -75,7 +77,9 @@ look at their center, `follow` at its subject, the others ahead. Subjects are wh
 `Look::Subject` point at: `set.subject(name, entity)` or `set.subject_at(name, offset)`.
 
 A mod that starts a film on its own (a command, an item) builds it the same way and plays it
-with `showcase_api::send(world, player, name, origin, &film)`.
+with `showcase_api::send(world, player, name, origin, &film)`. If it calls `set.level(area)`,
+it builds the set a tick later: a `Waiting` takes the set (`push`) and gives it back from
+`r.world_tick` (`ready`), as `/showcase gallery` does.
 
 ## Playing and recording
 
