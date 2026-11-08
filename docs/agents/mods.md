@@ -20,7 +20,7 @@ Before adding or changing content, read `modding.md` and the topic guide for it.
 
 - A new mod starts as a copy of `Weft/examples/examplemod`; the top of its `lib.rs` lists what to rename.
 - It takes the SDK from upstream at a release tag, as the mod index builds it: `weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.2" }`, and `base_api` the same way at the same tag when it uses base's API. Exactly one `weft_sdk` line in the mod's `Cargo.toml` names the tag: the index moves that line to each new Weft release and builds the mod again. See `cogwork/Cargo.toml`.
-- A mod with an API crate of its own (`<mod>/api`) lists it in `[workspace] members` of the mod's `Cargo.toml`, so that its tests run with the mod's, and puts the Weft crates in `[workspace.dependencies]`, which the API crate takes with `weft_sdk.workspace = true`; see `structures/Cargo.toml`.
+- A mod with an API crate of its own (`<mod>/api`) lists it in `[workspace] members` of the mod's `Cargo.toml`, so that its tests run with the mod's, and puts the Weft crates in `[workspace.dependencies]`, which the API crate takes with `weft_sdk.workspace = true`; see `structgen/Cargo.toml`.
 - `./init.sh` checks out into `Weft/` the newest tag any mod names. To move a mod to another Weft release, change the tag of each Weft crate in its `Cargo.toml`, run `./init.sh`, and rebuild the engine and the mod.
 - The ABI is hash-checked: `ABI_VERSION` hashes `Weft/crates/abi/src/lib.rs`, so a mod loads only into an engine built from the same release as the mod's tag.
 - To build the mods against engine work in `Weft/`, add a `.cargo/config.toml` at the repository root, left uncommitted, as are the `Cargo.lock` changes it makes:

@@ -22,7 +22,7 @@ const DEFAULT_REGION: i32 = 512;
 ///     p.structure(&WELL, corner, turn)?.foundation(Foundation::Ground).clear_above();
 ///     Ok(())
 /// }
-/// structures_api::plan(r, "village", village).dimension(&base_api::OVERWORLD).region(512);
+/// structgen_api::plan(r, "village", village).dimension(&base_api::OVERWORLD).region(512);
 /// ```
 pub fn plan<'a>(
     registry: &'a mut Registry,

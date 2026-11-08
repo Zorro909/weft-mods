@@ -7,7 +7,7 @@
 
 use std::path::Path;
 
-use structures_api::Structure;
+use structgen_api::Structure;
 
 fn main() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/structures");

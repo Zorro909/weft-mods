@@ -41,7 +41,7 @@ jobs:
           mods: |
             cogwork
             showcase
-            structures
+            structgen
 
   release:
     needs: build
@@ -69,7 +69,7 @@ jobs:
           mods: |
             cogwork
             showcase
-            structures
+            structgen
 
   # Also when nothing was released, or the release failed: it commits only when the section
   # changes. Not for a run started by hand on another branch, which mustn't push to main. The

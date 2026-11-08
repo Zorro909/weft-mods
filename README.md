@@ -11,10 +11,10 @@ ships as its own mod.
 | | Mod | What it adds |
 |---|---|---|
 | <img src="cogwork/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
-| <img src="structures/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structures](structures/README.md) | Buildings and hamlets across the overworld, a wand and `/structure` command to save and place structures in the game, and `structures_api` for other mods to place their own. |
+| <img src="structgen/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structgen](structgen/README.md) | Buildings and hamlets across the overworld, a wand and `/structure` command to save and place structures in the game, and `structgen_api` for other mods to place their own. |
 | | [Showcase](showcase/README.md) | A tool for mod makers: plays films that mods make of their content in code, and records them to video. |
 
-Each mod's README gives an overview; Cogwork's and Structures' `docs/` folders describe every
+Each mod's README gives an overview; Cogwork's and Structgen's `docs/` folders describe every
 feature, block and item in detail.
 
 ## Playing
@@ -45,7 +45,7 @@ Weft release, so whenever that tag moves, rebuild the engine and the mods.
 
 | Path | What it holds |
 |---|---|
-| `cogwork/`, `structures/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
+| `cogwork/`, `structgen/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
 | `Weft/` | The engine, checked out by `init.sh` and not tracked here |
 | `docs/agents/` | Guides for working on this repository: mods, code style, engine, testing |
 | `tools/` | The mods' tests and clippy (`check-mods.sh`), the headless test run, film recording (`showcase.sh`) and CI scripts |

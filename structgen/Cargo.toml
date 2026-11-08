@@ -1,5 +1,5 @@
 [package]
-name = "structures"
+name = "structgen"
 version = "0.2.0"
 edition = "2024"
 # As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
@@ -11,9 +11,9 @@ crate-type = ["cdylib"]
 [dependencies]
 weft_sdk.workspace = true
 base_api.workspace = true
-structures_api = { path = "api" }
+structgen_api = { path = "api" }
 
-# Its own cargo root. `cargo build` and `cargo test` here cover `structures_api` too.
+# Its own cargo root. `cargo build` and `cargo test` here cover `structgen_api` too.
 [workspace]
 members = ["api"]
 default-members = [".", "api"]

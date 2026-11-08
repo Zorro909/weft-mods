@@ -20,16 +20,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "structures"
+name = "structgen"
 version = "0.2.0"
 dependencies = [
  "base_api",
- "structures_api",
+ "structgen_api",
  "weft_sdk",
 ]
 
 [[package]]
-name = "structures_api"
+name = "structgen_api"
 version = "0.1.0"
 dependencies = [
  "lz4_flex",

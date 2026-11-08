@@ -18,7 +18,7 @@ use crate::turn::Turn;
 ///
 /// ```ignore
 /// let hut = Structure::decode(include_bytes!("../assets/structures/hut.wst")).expect("hut.wst");
-/// structures_api::place(r, "hut", hut)
+/// structgen_api::place(r, "hut", hut)
 ///     .dimension(&base_api::OVERWORLD)
 ///     .spacing(256).chance(0.3).biome("#animals")
 ///     .foundation(Foundation::Ground).max_slope(5);

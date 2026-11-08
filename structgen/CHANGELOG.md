@@ -6,13 +6,18 @@
 
 - `.biome(..)` takes biome names as well as `#tags`, several apart by spaces and `!` leaving
   one out: `"#forest !base:birch_forest"`. A name no biome has is logged as an error.
-- `structures_api::put_back` undoes a `place_in`.
+- `structgen_api::put_back` undoes a `place_in`.
 - Each structure generates as a decoration named like it, so another mod can remove it:
-  `r.remove(&Decoration::named("structures:watchtower"))`.
+  `r.remove(&Decoration::named("structgen:watchtower"))`.
 
 ### Changed
 
-- Built for Weft 26.11.3. Mods using `structures_api` have to be rebuilt: `template` takes a
+- The mod is now Structgen: its id is `structgen` and its API crate `structgen_api`, so the
+  wand is `structgen:wand` and structures are `structgen:<name>`. Mods using `structures_api`
+  switch to `structgen_api`. Where structures stand comes from their names, so in a world made
+  before, they turn up in other places in land not yet generated, and the wand has to be taken
+  again.
+- Built for Weft 26.11.3. Mods using `structgen_api` have to be rebuilt: `template` takes a
   `&'static Template`, `Fit::biome` a `&'static Biomes`, and `place_in` gives back every block
   of each cell it replaced.
 

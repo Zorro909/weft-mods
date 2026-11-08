@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use structures_api::Structure;
+use structgen_api::Structure;
 use weft_sdk::*;
 
 use crate::selection;
@@ -19,26 +19,26 @@ pub fn run(cmd: &mut ServerCommand) {
         return;
     };
     if !valid_name(&name) {
-        return cmd.reply("structures.bad_name", &[Arg::Text(&name)]);
+        return cmd.reply("structgen.bad_name", &[Arg::Text(&name)]);
     }
     let Some((from, to)) = corners(cmd) else {
-        return cmd.reply("structures.no_selection", &[]);
+        return cmd.reply("structgen.no_selection", &[]);
     };
     let (lo, size) = block_box(from, to);
     if size.iter().any(|&side| side > MAX_SIDE) {
-        return cmd.reply("structures.too_big", &[Arg::Int(MAX_SIDE as i64)]);
+        return cmd.reply("structgen.too_big", &[Arg::Int(MAX_SIDE as i64)]);
     }
     let Some(names) = read_box(&cmd.world(), lo, size) else {
-        return cmd.reply("structures.not_loaded", &[]);
+        return cmd.reply("structgen.not_loaded", &[]);
     };
     let Some(structure) = Structure::from_names(size.map(|side| side as u16), names) else {
-        return cmd.reply("structures.too_many_states", &[]);
+        return cmd.reply("structgen.too_many_states", &[]);
     };
     match write_file(&name, &structure) {
         Ok(path) => {
             let [x, y, z] = size.map(|side| Arg::Int(side as i64));
             cmd.reply(
-                "structures.saved",
+                "structgen.saved",
                 &[
                     Arg::Text(&name),
                     x,
@@ -49,7 +49,7 @@ pub fn run(cmd: &mut ServerCommand) {
             );
         }
         Err(e) => cmd.reply(
-            "structures.write_failed",
+            "structgen.write_failed",
             &[Arg::Text(&name), Arg::Text(&e.to_string())],
         ),
     }

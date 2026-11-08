@@ -9,7 +9,7 @@ Hit a block with the wand for the first corner of the selection, use it on one f
 Hitting a block with it marks the block instead of breaking it. Your selection is drawn as an
 outline: the one corner while only one is set, the whole box once both are.
 
-The wand is in creative's Tools tab, or `/give @s structures:wand`.
+The wand is in creative's Tools tab, or `/give @s structgen:wand`.
 
 ## Commands
 

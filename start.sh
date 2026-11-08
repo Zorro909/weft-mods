@@ -4,7 +4,7 @@
 # building a `cdylib`.
 #
 #   ./start.sh                  every mod
-#   ./start.sh structures ...   only these; the repository's other mods are taken out of
+#   ./start.sh structgen ...    only these; the repository's other mods are taken out of
 #                               `run/mods/` so they don't load. The engine's own (base, ...) stay.
 #
 # Where a toolbox named `weft-build` exists, cargo runs inside it; the game itself runs here.

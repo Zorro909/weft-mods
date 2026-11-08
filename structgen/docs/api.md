@@ -1,11 +1,11 @@
-# Using `structures_api`
+# Using `structgen_api`
 
-`structures_api` (in `api/`) is the `.wst` file format and the placing of structures, for any
-mod to use. Your mod does the placing itself, so it needs neither the `structures` mod loaded nor
+`structgen_api` (in `api/`) is the `.wst` file format and the placing of structures, for any
+mod to use. Your mod does the placing itself, so it needs neither the `structgen` mod loaded nor
 an entry in `declare_mod!`. Add the crate and call it from your `init`:
 
 ```toml
-structures_api = { path = "<path to weft-mods>/structures/api" }
+structgen_api = { path = "<path to weft-mods>/structgen/api" }
 ```
 
 ## Structure files
@@ -28,7 +28,7 @@ One template, stood on the ground now and then, turned whichever way the seed sa
 
 ```rust
 let hut = Structure::decode(include_bytes!("../assets/structures/hut.wst")).expect("hut.wst");
-structures_api::place(r, "hut", hut)
+structgen_api::place(r, "hut", hut)
     .dimension(&base_api::OVERWORLD)
     .spacing(256)          // one chance per 256 x 256 blocks
     .chance(0.3)
@@ -71,9 +71,9 @@ static WELL: Template = Template::named("well");
 static HOUSE: Template = Template::named("house");
 static PATH: Block = Block::named("base:gravel");
 
-structures_api::template(r, &WELL, well);    // a template plans may place
-structures_api::template(r, &HOUSE, house);
-structures_api::plan(r, "village", village)
+structgen_api::template(r, &WELL, well);    // a template plans may place
+structgen_api::template(r, &HOUSE, house);
+structgen_api::plan(r, "village", village)
     .dimension(&base_api::OVERWORLD)
     .region(512);                            // one plan per 512 x 512 blocks
 
@@ -123,12 +123,12 @@ wheat farms and gravel paths.
 as a command would: every block of it, or nothing when one of its blocks is unknown
 (`PlaceError::UnknownBlock`) or part of the place isn't loaded (`PlaceError::NotLoaded`). It
 gives back what it replaced, each cell with all it held (`World::parts`), as a slab and the water
-in it; `structures_api::put_back(&world, &replaced)` undoes it.
+in it; `structgen_api::put_back(&world, &replaced)` undoes it.
 
 ## Finding them
 
-`structures_api::locate(&world, "mymod:village", from, radius)` gives the nearest one's
-position, generated yet or not, and `structures_api::names()` the names your mod registered.
+`structgen_api::locate(&world, "mymod:village", from, radius)` gives the nearest one's
+position, generated yet or not, and `structgen_api::names()` the names your mod registered.
 Each mod links its own copy of the crate, so these know only your mod's structures. With
 `--log mod:<your mod>=debug` each plan is logged with its position too. `world.structure_near`
 doesn't know them.
