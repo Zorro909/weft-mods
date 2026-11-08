@@ -1,12 +1,14 @@
-//! A block position that can be saved, for code that works positions out. The SDK takes and
-//! gives `BlockPos`, which is no `Value`; `Pos` goes to SDK calls as it is and comes back from
-//! them with `from`.
+//! A block position that can be saved and sent, for code that works positions out. The SDK
+//! takes and gives `BlockPos`, which is no `Value`; `Pos` goes to SDK calls as it is and comes
+//! back from them with `from`.
+
+use std::ops::Add;
 
 use weft_sdk::*;
 
 value! {
-    /// A block's position. Laid out as the `[i32; 3]` cogwork saved positions as before, so a
-    /// saved `[i32; 3]` loads as one.
+    /// A block's position, or an offset from one. Laid out as `[i32; 3]`, so a saved or sent
+    /// `[i32; 3]` reads as one.
     #[derive(Default, Eq, Hash)]
     pub struct Pos {
         pub x: i32,
@@ -73,9 +75,23 @@ impl Pos {
     }
 }
 
+impl Add for Pos {
+    type Output = Pos;
+
+    fn add(self, by: Pos) -> Pos {
+        Pos::new(self.x + by.x, self.y + by.y, self.z + by.z)
+    }
+}
+
 impl From<[i32; 3]> for Pos {
     fn from([x, y, z]: [i32; 3]) -> Pos {
         Pos { x, y, z }
+    }
+}
+
+impl From<Pos> for [i32; 3] {
+    fn from(Pos { x, y, z }: Pos) -> [i32; 3] {
+        [x, y, z]
     }
 }
 
@@ -95,6 +111,13 @@ impl From<Pos> for BlockPos {
 impl From<Pos> for Vec3 {
     fn from(Pos { x, y, z }: Pos) -> Vec3 {
         Vec3::new(x as f64, y as f64, z as f64)
+    }
+}
+
+/// The block's lowest corner, as a point.
+impl From<Pos> for [f64; 3] {
+    fn from(pos: Pos) -> [f64; 3] {
+        Vec3::from(pos).to_array()
     }
 }
 
@@ -129,6 +152,21 @@ mod tests {
         assert_eq!(Vec3::from(block), Vec3::new(-2.0, 3.0, 0.0), "its corner");
         let edge = Vec3::new(-1.5, 3.0, 0.99);
         assert_eq!(Pos::from(edge.block()), block, "near its edges");
+    }
+
+    #[test]
+    fn offsets_add_axis_by_axis() {
+        let moved = Pos::new(10, 64, -3) + Pos::new(2, 0, -1);
+        assert_eq!(moved, Pos::new(12, 64, -4));
+    }
+
+    #[test]
+    fn it_turns_into_arrays_and_back() {
+        let p = Pos::new(4, -5, 6);
+        let array: [i32; 3] = p.into();
+        assert_eq!(array, [4, -5, 6], "x, y, z in order");
+        assert_eq!(Pos::from(array), p, "and back");
+        assert_eq!(<[f64; 3]>::from(p), [4.0, -5.0, 6.0], "as a point");
     }
 
     #[test]

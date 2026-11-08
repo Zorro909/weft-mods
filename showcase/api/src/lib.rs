@@ -10,22 +10,19 @@
 //! channels below, whose layouts the engine checks when the mods load.
 
 mod area;
-mod block_state;
 mod film;
 mod name;
-mod pos;
 mod set;
 mod waiting;
 mod wire;
 
 pub use area::Area;
-pub use block_state::BlockState;
 pub use film::{Ease, Film, Look, Path, Shot, Step, crane, dolly, flyby, follow, hold, orbit};
 pub use name::Name;
-pub use pos::Pos;
 pub use set::{FilmOptions, Set, film, send, signal, subject};
 pub use waiting::Waiting;
 use weft_sdk::*;
+pub use weftkit::{BlockState, Pos};
 pub use wire::{TIMELINE_VERSION, Timeline};
 
 value! {

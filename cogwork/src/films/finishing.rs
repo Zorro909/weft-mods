@@ -29,10 +29,7 @@ pub fn register(r: &mut Registry) {
 
 /// The excavator, its engines, its frame and its pit.
 pub fn build(set: &Set) {
-    set.place(
-        FINISHER.into(),
-        EXCAVATOR.with(&[("facing", "south")]).into(),
-    );
+    set.place(FINISHER, EXCAVATOR.with(&[("facing", "south")]).into());
     for (at, toward) in engines() {
         engine(set, at, toward);
     }

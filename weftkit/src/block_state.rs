@@ -1,6 +1,6 @@
 //! A block as it stands in the world: which block, and the values of its properties (a tube's
 //! arms, an engine's facing). The SDK passes these around as bare `u32` states; here they are a
-//! `BlockState` that answers what cogwork asks of a block.
+//! `BlockState` that answers what mods ask of a block. `BlockState::from` takes a bare state.
 
 use weft_sdk::abi::block_flags::{LIQUID, OPAQUE, REPLACEABLE, SOLID};
 use weft_sdk::*;
@@ -26,6 +26,12 @@ impl BlockState {
     /// `block` with its properties at their defaults.
     pub fn of(block: &Block) -> BlockState {
         BlockState(block.id())
+    }
+
+    /// The block named `name` (`base:stone`) with its properties at their defaults, if a mod
+    /// registered it.
+    pub fn named(name: &str) -> Option<BlockState> {
+        Block::lookup(name).map(BlockState)
     }
 
     /// The block `item` places, if it places one.
@@ -105,6 +111,12 @@ impl BlockState {
             flags: state_flags(self.0),
             hardness: self.hardness(),
         }
+    }
+}
+
+impl From<u32> for BlockState {
+    fn from(state: u32) -> BlockState {
+        BlockState(state)
     }
 }
 

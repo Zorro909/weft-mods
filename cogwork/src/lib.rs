@@ -11,19 +11,16 @@ mod films;
 mod ghost;
 mod harvest;
 mod leveler;
-/// The types the whole mod builds on: block positions, block states, areas on the ground and
-/// model boxes, and helpers for points in the world, in `src/lib/`.
+/// The types the whole mod builds on: areas on the ground, model boxes and helpers for points in
+/// the world, in `src/lib/`, and block positions and states from `weftkit`.
 mod lib {
     mod area;
-    mod block_state;
     mod model_box;
     pub mod point;
-    mod pos;
 
     pub use area::Area;
-    pub use block_state::BlockState;
     pub use model_box::ModelBox;
-    pub use pos::Pos;
+    pub use weftkit::{BlockState, Pos};
 }
 mod loading;
 mod machine;

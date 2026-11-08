@@ -11,6 +11,8 @@ crate-type = ["cdylib"]
 # `init.sh` checks out the newest one any mod names into `Weft/`.
 weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
 base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
+# Block positions and states, shared with the other mods here.
+weftkit = { path = "../weftkit" }
 strum = { version = "0.28", features = ["derive"] }
 # XXH3 alone, for ghost keys.
 twox-hash = { version = "2.1", default-features = false, features = ["xxhash3_64"] }

@@ -15,7 +15,7 @@ use showcase_api::{Ease, Film, Look, Set, crane, dolly, film, flyby, orbit};
 use weft_sdk::*;
 
 use self::excavators::{AREA_Z, BUILDER, DEEP, DEEP_DEPTH, SHALLOW, SORTER};
-use crate::lib::{BlockState, Pos};
+use crate::lib::Pos;
 
 pub fn register(r: &mut Registry) {
     // Block entities only exist once the tick they were placed in is over: everything is
@@ -128,7 +128,7 @@ fn sorting(film: Film) -> Film {
                 .secs(5.0)
                 .blend(1.5),
         )
-        .menu("cogwork:sorting_tube", SORTER.into(), 4.5)
+        .menu("cogwork:sorting_tube", SORTER, 4.5)
         .shot(
             orbit(sorter, 4.5)
                 .arc(100.0, 150.0)
@@ -163,7 +163,7 @@ fn autocrafting(film: Film) -> Film {
                 .secs(13.0),
         )
         .shot(crane(bench, 4.0, 90.0, [2.1, 1.0]).secs(4.0).blend(0.5))
-        .menu("cogwork:assembly_bench", crafting::STONE_COGS.into(), 5.0)
+        .menu("cogwork:assembly_bench", crafting::STONE_COGS, 5.0)
         .wait(5.0)
 }
 
@@ -221,7 +221,7 @@ fn finishing(film: Film) -> Film {
     .title("cogwork.film.finish", 5.0)
     .wait_for(finishing::FINISHED, 12.0)
     .wait(1.5)
-    .menu("cogwork:excavator", finishing::FINISHER.into(), 4.0)
+    .menu("cogwork:excavator", finishing::FINISHER, 4.0)
     .wait(4.0)
 }
 
@@ -230,24 +230,4 @@ fn closing(film: Film) -> Film {
     let path = [[31.0, 6.5, 15.0], [22.0, 20.0, 32.0], [6.0, 42.0, 50.0]];
     film.title("cogwork.film.end", 5.0)
         .shot(flyby(&path).look_at([8.0, 0.0, 6.0]).secs(11.0).blend(1.5))
-}
-
-// The showcase API has a `Pos` and `BlockState` of its own, laid out alike.
-
-impl From<Pos> for showcase_api::Pos {
-    fn from(p: Pos) -> showcase_api::Pos {
-        showcase_api::Pos::new(p.x, p.y, p.z)
-    }
-}
-
-impl From<showcase_api::Pos> for Pos {
-    fn from(p: showcase_api::Pos) -> Pos {
-        Pos::new(p.x, p.y, p.z)
-    }
-}
-
-impl From<BlockState> for showcase_api::BlockState {
-    fn from(state: BlockState) -> showcase_api::BlockState {
-        state.id().into()
-    }
 }
