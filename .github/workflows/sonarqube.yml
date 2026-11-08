@@ -23,7 +23,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: true
 
       # Third-party actions are pinned to a commit, the tag or branch they track beside it.
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable

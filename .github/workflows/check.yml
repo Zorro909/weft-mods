@@ -1,6 +1,6 @@
-# Checks a pull request: its Rust is formatted, every mod's unit tests and clippy pass, the tests
-# of the CI scripts in `tools/ci` pass, and every mod builds for Windows, Linux and macOS against
-# the Weft the submodule pins, as `release.yml` builds it.
+# Checks a pull request: its Rust is formatted, every mod takes Weft at a release as the mod index
+# needs, every mod's unit tests and clippy pass, the tests of the CI scripts in `tools/ci` pass, and
+# every mod builds for Windows, Linux and macOS, as `release.yml` builds it.
 name: Check
 
 on:
@@ -22,7 +22,7 @@ jobs:
         with:
           components: rustfmt
 
-      # Every Rust file git tracks; the Weft submodule is formatted upstream.
+      # Every Rust file git tracks.
       - name: Rust is formatted
         run: |
           if ! git ls-files -z '*.rs' | xargs -0 rustfmt +nightly --check; then
@@ -30,29 +30,20 @@ jobs:
             exit 1
           fi
 
-  # Players run Weft releases, so every mod is built against one.
+  # Players run Weft releases, so every mod is built against one, as the mod index takes it.
   weft:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Weft is at a release
-        run: |
-          url=$(git config -f .gitmodules submodule.Weft.url)
-          commit=$(git rev-parse HEAD:Weft)
-          # Annotated tags show up a second time as `<tag>^{}`, with the commit they point at.
-          if ! git ls-remote --tags "$url" | grep -qE "^$commit\s+refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(\^\{\})?$"; then
-            echo "::error::Weft ${commit:0:7} is no Weft release. Move the submodule to a tag such as v26.11.2."
-            exit 1
-          fi
+      - name: Every mod takes Weft at a release
+        run: tools/ci/check-weft.sh
 
   # Unit tests and clippy of every mod with all features, the films included.
   mods:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          submodules: true
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -78,10 +69,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          submodules: true
 
-      - uses: Zorro909/weft-mod-action/build@v2
+      - uses: Zorro909/weft-mod-action/build@main
         with:
           release-unchanged: true
           mods: |

@@ -88,6 +88,7 @@ install() {
 }
 
 if [[ $build == 1 ]]; then
+    "$root/init.sh"
     (cd "$root/Weft" && cargo build --release --workspace)
 fi
 install showcase

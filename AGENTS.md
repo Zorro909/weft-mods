@@ -1,15 +1,8 @@
 # Working on weft-mods
 
-This repository holds your user's mods for Weft, a voxel game engine in Rust that sits in the submodule `Weft/`. Game content lives in mods: `cdylib`s built against the SDK (`Weft/crates/sdk`). `Weft/mods/base` is the default mod that makes up the base game. Most work here is a mod; sometimes it is an engine change prepared for the upstream project.
+This repository holds your user's mods for Weft, a voxel game engine in Rust. Game content lives in mods: `cdylib`s built against the SDK (`Weft/crates/sdk`). `Weft/mods/base` is the default mod that makes up the base game. Most work here is a mod; sometimes it is an engine change prepared for the upstream project.
 
-Before you change anything, move the engine to upstream's newest release, the highest `vX.Y.Z` tag on its `master`: pull requests here are refused unless the submodule sits at a release. If `Weft/` is empty, run `git submodule update --init Weft` first; then, in `Weft/`:
-
-```
-git fetch --tags origin
-git checkout "$(git tag --merged origin/master --list 'v*' --sort=-v:refname | grep -xE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
-```
-
-Then rebuild the engine and the mods here as `docs/agents/mods.md` says. If `Weft/` holds engine work of yours, fetch and rebase that onto `origin/master` instead.
+Each mod's `Cargo.toml` takes the SDK from upstream at a release tag, `weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "vX.Y.Z" }`, as the Weft mod index builds it; pull requests here are refused otherwise. Before you change anything, run `./init.sh`: it checks out the engine into `Weft/` (not tracked here) at the newest tag any mod names. Then rebuild the engine and the mods as `docs/agents/mods.md` says. A `Weft/` holding engine work of yours stays as it is; fetch and rebase that onto `origin/master` yourself.
 
 ## The upstream project
 

@@ -2,20 +2,24 @@
 name = "showcase"
 version = "0.2.1"
 edition = "2024"
-# As `Weft/Cargo.toml` declares; cargo then picks dependency versions that build with it.
+# As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
 rust-version = "1.95"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-weft_sdk = { path = "../Weft/crates/sdk" }
+weft_sdk.workspace = true
 showcase_api = { path = "api" }
 
-# Its own cargo root, apart from the engine's workspace in `Weft/`; `cargo test --workspace`
-# tests the API crate too.
+# Its own cargo root; `cargo test --workspace` tests the API crate too.
 [workspace]
 members = ["api"]
+
+# The Weft release the mod and its API crate build against, from the game's repository as the
+# mod index wants it; `init.sh` checks out the newest one any mod names into `Weft/`.
+[workspace.dependencies]
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.2" }
 
 [profile.release]
 debug = "line-tables-only"
