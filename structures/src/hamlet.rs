@@ -1,14 +1,14 @@
 //! The hamlet: a well with cottages and wheat farms around it, joined to it by gravel paths. A
 //! dynamic structure, built from the same files the single structures use.
 
-use structures_api::{Fit, Foundation, Plan, PlanError, Turn};
+use structures_api::{Biomes, Fit, Foundation, Plan, PlanError, Turn};
 use weft_sdk::*;
 
 static WELL: Template = Template::named("well");
 static COTTAGE: Template = Template::named("cottage");
 static FARM: Template = Template::named("wheat_farm");
 static GRAVEL: Block = Block::named("base:gravel");
-static ANIMALS: Tag = Tag::named("animals");
+static ANIMALS: Biomes = Biomes::named("#animals");
 
 /// One hamlet at most per region of this many blocks square.
 const REGION: u32 = 384;
