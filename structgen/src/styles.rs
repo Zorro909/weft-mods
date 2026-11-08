@@ -53,6 +53,54 @@ pub const STYLES: &[(&str, &[(&str, &str)])] = &[
     ("oak_infill", &[("wall/infill", "base:oak_planks")]),
     ("spruce_infill", &[("wall/infill", "base:spruce_planks")]),
     ("white_infill", &[("wall/infill", "base:wool")]),
+    (
+        "gravel_path",
+        &[("path/surface", "base:gravel"), ("path/worn", "base:dirt")],
+    ),
+    (
+        "dirt_path",
+        &[("path/surface", "base:dirt"), ("path/worn", "base:gravel")],
+    ),
+    (
+        "cobble_street",
+        &[
+            ("street/paving", "base:cobblestone"),
+            ("street/patch", "base:mossy_cobblestone"),
+            ("street/kerb", "base:stone_bricks"),
+            ("street/gutter", "base:stone_bricks_slab"),
+            ("street/step", "base:stone_bricks_stairs"),
+        ],
+    ),
+    (
+        "stone_street",
+        &[
+            ("street/paving", "base:stone_bricks"),
+            ("street/patch", "base:cobblestone"),
+            ("street/kerb", "base:stone"),
+            ("street/gutter", "base:stone_slab"),
+            ("street/step", "base:stone_stairs"),
+        ],
+    ),
+    (
+        "brick_street",
+        &[
+            ("street/paving", "base:bricks"),
+            ("street/patch", "base:stone_bricks"),
+            ("street/kerb", "base:stone_bricks"),
+            ("street/gutter", "base:stone_bricks_slab"),
+            ("street/step", "base:bricks_stairs"),
+        ],
+    ),
+    (
+        "sandstone_street",
+        &[
+            ("street/paving", "base:sandstone"),
+            ("street/patch", "base:sand"),
+            ("street/kerb", "base:stone_bricks"),
+            ("street/gutter", "base:sandstone_slab"),
+            ("street/step", "base:sandstone_stairs"),
+        ],
+    ),
 ];
 
 /// The styles named in `names`, each over the one before: `brick_roof,spruce_frame`. `None`

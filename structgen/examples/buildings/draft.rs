@@ -72,6 +72,27 @@ impl Draft {
         self.fill([to[0], y, from[1]], [to[0], y, to[1]], name);
     }
 
+    /// Layer `y` drawn as a map: one row per z from the north, one character per x from the
+    /// west, each standing for the block `legend` gives it. Rows may stop short of the south
+    /// edge, but each spans the box from west to east.
+    pub fn paint(&mut self, y: usize, rows: &[&str], legend: &[(char, &str)]) {
+        let [sx, _, sz] = self.size;
+        assert!(rows.len() <= sz, "{} rows in a box {sz} long", rows.len());
+        for (z, row) in rows.iter().enumerate() {
+            assert_eq!(
+                row.chars().count(),
+                sx,
+                "row {z} of a box {sx} wide: {row:?}"
+            );
+            for (x, c) in row.chars().enumerate() {
+                let Some((_, name)) = legend.iter().find(|(key, _)| *key == c) else {
+                    panic!("no block for {c:?} in the legend");
+                };
+                self.set([x, y, z], name);
+            }
+        }
+    }
+
     /// The structure, with a default for every slot it uses.
     pub fn done(self) -> Structure {
         let used: Vec<&str> = SLOTS

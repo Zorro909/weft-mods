@@ -28,6 +28,15 @@ town's buildings at a distance, follow the ground (pieces stepping up and down a
 turn the corner pieces, put towers at the corners and every so often, and the gatehouse where
 the main road leaves.
 
+## Paths and streets
+
+The tiles are drawn (`examples/buildings/paths.rs` and `streets.rs`, sample layouts in
+`examples/layouts/`): village paths and cart tracks on a grid of 5, town streets and squares on
+a grid of 7, with corners, tees, crossings, ends, slopes and the pieces where one gives way to
+another. Nothing lays them yet; the settlements still draw their gravel lines block by block. A
+network planner would lay the tiles from the centre out, turn each to its neighbours, step them
+up and down slopes with the slope tiles, and leave the buildings room to face onto them.
+
 ## Towns
 
 A town planner, larger than a village: a market square with the town hall or guildhall, the
@@ -43,6 +52,6 @@ side, each turned to the street.
 - **Slots from the game.** `/structure save` writes plain blocks. A way to mark blocks as slots
   while building (a block standing for each slot, or a rule such as "every spruce stair is
   `roof/stair`") would let builders make restylable structures without code.
-- **Leaving ground as it is.** Every cell of a structure is set, so a building's bottom layer
-  covers the ground under its eaves with `path`. A "keep" entry that leaves the world as it is
-  would let the ground show through.
+- **Leaving the world as it is.** Every cell of a structure is set. The `ground` slot puts the
+  ground's own top block back in the bottom layer, but the air above clears the flowers and
+  tall grass there. A "keep" entry that leaves the world as it is would spare them.

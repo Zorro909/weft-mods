@@ -14,7 +14,14 @@
   and static structures. The settlements give their buildings different roofs and frames this
   way, and `/structure load <name> [turn] [styles]` takes styles such as `brick_roof`.
 - `tools/structure-shots.sh` photographs structures in the game, for checking them without
-  building them by hand.
+  building them by hand. `--layout` lays several side by side and shoots them together.
+- Tiles for village paths and cart tracks and for town streets and squares: straights,
+  corners, tees, crossings, ends, slopes, a street lamp, and the pieces where a track meets a
+  path, a path a street and a street a square. Styles pave them in gravel or dirt, and in
+  cobblestone, stone, brick or sandstone. `/structure load` places them; nothing lays them in
+  the world yet.
+- The `ground` slot takes the ground's own top block wherever a structure generates: grass,
+  snow or sand.
 - `.biome(..)` takes biome names as well as `#tags`, several apart by spaces and `!` leaving
   one out: `"#forest !base:birch_forest"`. A name no biome has is logged as an error.
 - `structgen_api::put_back` undoes a `place_in`.
@@ -29,6 +36,7 @@
   a granary and fields around it, and lone crofter's cottages, farmhouses, wayside chapels and
   post mills. The old cottage, watchtower, well, wheat farm and ruined shrine are gone, and with
   them their names in `/structure load` and `/structure locate`.
+- Buildings stand in the grass, not on a pad of gravel.
 - Buildings stand only on open plains above sea level, so none lands in a lake or among trees
   cut through it.
 - `.wst` files are version 2, with a table of slots; version 1 files still read. Mods using

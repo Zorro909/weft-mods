@@ -37,6 +37,15 @@ let brick = Materials::new()
 
 A block in `Materials` the game doesn't have is logged, and the slot's default goes there.
 
+## The ground
+
+Slot `ground` is filled differently: where the world generates a structure, a `ground` cell
+takes the top block the ground has in its column, so grass on plains, snow on snowy plains,
+sand on a beach. A building's bottom layer uses it around its walls, and a path for the grass
+beside it, so the ground looks as it did. Its default goes where the ground has no top block,
+and wherever `place_in` and `/structure load` place it. `Materials` that fill `ground` fill it
+everywhere: `.with("ground", "base:cobblestone")` paves it.
+
 ## This mod's slots
 
 Every building of this mod is drawn with these slots (`examples/buildings/kit.rs`), so one set
@@ -59,7 +68,13 @@ of `Materials` restyles any of them. A building may give a slot its own default:
 | `window` | glass | windows |
 | `chimney` | bricks | chimneys |
 | `light` | torch | lights |
-| `path` | gravel | the ground under eaves and in yards |
+| `ground` | grass | the ground around a building: see [The ground](#the-ground) |
+| `path/surface`, `path/worn` | gravel, dirt | a village path, and its worn patches and cart ruts |
+| `path/step` | cobblestone stairs | the step where a path rises |
+| `street/paving`, `street/patch` | cobblestone, mossy cobblestone | a town street, and its worn patches |
+| `street/kerb` | stone bricks | kerbs, and the lattice of a square |
+| `street/gutter` | stone brick slab | the gutter down a street's middle |
+| `street/step` | stone brick stairs | the steps where a street rises |
 
 ## Styles
 
@@ -71,3 +86,5 @@ by commas, each over the one before: `/structure load crofter_cottage none brick
 | `spruce_roof`, `oak_roof`, `birch_roof`, `brick_roof`, `stone_roof` | `roof/stair`, `roof/slab`, `roof/block` |
 | `oak_frame`, `spruce_frame`, `birch_frame` | `frame/log` |
 | `birch_infill`, `oak_infill`, `spruce_infill`, `white_infill` | `wall/infill` |
+| `gravel_path`, `dirt_path` | `path/surface`, `path/worn` |
+| `cobble_street`, `stone_street`, `brick_street`, `sandstone_street` | `street/paving`, `street/patch`, `street/kerb`, `street/gutter`, `street/step` |

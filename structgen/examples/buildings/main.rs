@@ -13,7 +13,9 @@ mod inns;
 mod kit;
 mod market;
 mod mills;
+mod paths;
 mod smithies;
+mod streets;
 mod townhouses;
 mod workyards;
 
@@ -34,6 +36,8 @@ fn buildings() -> Vec<Building> {
         chapels::BUILDINGS,
         mills::BUILDINGS,
         workyards::BUILDINGS,
+        paths::BUILDINGS,
+        streets::BUILDINGS,
     ]
     .concat()
 }

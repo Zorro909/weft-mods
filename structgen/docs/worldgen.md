@@ -27,6 +27,11 @@ and birch in the next.
 | Chapels | `wayside_chapel`, `village_church`, `town_church` |
 | Mills and yards | `post_mill`, `tower_mill`, `lumberyard`, `storehouse` |
 
+Paths and streets come as tiles to lay side by side: village paths and cart tracks
+(`path_*`, `track_*`, 5 by 5) and town streets and squares (`street_*`, 7 by 7), with styles
+for gravel or dirt paths and cobbled, stone, brick or sandstone streets. Nothing lays them yet;
+see the [roadmap](../ROADMAP.md#paths-and-streets).
+
 The town buildings (`hall_house`, `narrow_gable`, `corner_house`, `coaching_inn`,
 `market_fountain`, `market_hall`, `guildhall`, `town_hall`, `town_church`, `storehouse`) don't
 appear in the world yet: they wait for towns, see the [roadmap](../ROADMAP.md). Every file is

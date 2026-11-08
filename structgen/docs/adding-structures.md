@@ -34,6 +34,8 @@ writes them all again; `-- crofter_cottage longhouse` writes only those.
   `plinth`, `chimney`, `ladder_up`, `light`. Use those, and the slots, so a new building looks
   like the others and takes every style.
 - A family file lists its buildings in `BUILDINGS`; add the family to `main.rs`.
+- `paths.rs` and `streets.rs` are tiles rather than buildings, each drawn as a small map with
+  `Draft::paint`: open to the north, turned to serve the other ways.
 
 To add one to the settlements, give it a `Template` in `src/villages.rs` and put it in a
 `want`.
@@ -43,13 +45,15 @@ To add one to the settlements, give it a `Template` in `src/villages.rs` and put
 `tools/structure-shots.sh <name>...` places each structure in the flatlands at noon and
 photographs it from the front, the back, a side, above and inside, into
 `structgen/out/shots/`. `--styles "brick_roof;birch_roof,white_infill"` shoots it in other
-looks, and `--turn right` turned. Run `--help` for the rest.
+looks, and `--turn right` turned. `--layout structgen/examples/layouts/town_streets.txt` lays
+several side by side, turned as the file says, and shoots them together, to see tiles join up.
+Run `--help` for the rest.
 
 ## Tips
 
 - Draw the front on the north side (z = 0): a settlement turns a building so that side faces
   its well.
 - Air in the box is saved too and clears what was there, so a house keeps its rooms empty when
-  it lands in a hill. Under a roof's overhang, put the `path` slot in the bottom layer rather
+  it lands in a hill. Under a roof's overhang, put the `ground` slot in the bottom layer rather
   than air, or the ground there is dug out.
 - Chests and machines are placed empty: their contents aren't saved yet.

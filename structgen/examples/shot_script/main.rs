@@ -7,6 +7,11 @@
 //! Each `;`-split entry of `--styles` is one look at every structure (`/structure load`'s
 //! styles); without, each is shot once with its defaults. `--turn` places them turned, so
 //! another side faces the front views. A shot is named `<structure>[-<look>]-<view>.png`.
+//!
+//! `--layout <file>` places several structures side by side instead and shoots them together
+//! (see `layout.rs`), as `<layout>[-<look>]-<view>.png`.
+
+mod layout;
 
 use std::path::Path;
 
@@ -15,11 +20,15 @@ use structgen_api::Structure;
 /// Where the player stands for each placing: `/structure load` puts the structure two blocks
 /// north of them, its floor in place of the grass (y 3) they stand on.
 const FEET: [i32; 3] = [0, 4, 0];
+/// How far above the feet `via` puts the eye. A little over the player's 1.62, so the feet
+/// don't round down into the block below and the structure land a block low.
+const EYE: f32 = 1.7;
 
 fn main() {
     let mut looks = vec![String::new()];
     let mut turn = "none".to_string();
     let mut files = Vec::new();
+    let mut layout = None;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -28,11 +37,24 @@ fn main() {
                 looks = list.split(';').map(str::to_string).collect();
             }
             "--turn" => turn = args.next().expect("--turn needs none, right, back or left"),
+            "--layout" => layout = Some(args.next().expect("--layout needs a layout file")),
             _ => files.push(arg),
         }
     }
-    assert!(!files.is_empty(), "name at least one structure file");
+    assert!(
+        !files.is_empty() || layout.is_some(),
+        "name at least one structure file, or a layout"
+    );
     println!("{}", setup());
+    if let Some(file) = &layout {
+        let placed = layout::read_layout(file);
+        let name = Path::new(file)
+            .file_stem()
+            .map_or(String::new(), |s| s.to_string_lossy().into_owned());
+        for look in &looks {
+            println!("{}", layout::shots(&placed, look, &label(&name, look)));
+        }
+    }
     for file in &files {
         let (name, [sx, sy, sz]) = read(file);
         let size = match turn.as_str() {
@@ -74,7 +96,7 @@ fn read(file: &str) -> (String, [i32; 3]) {
 fn shots(name: &str, size: [i32; 3], turn: &str, look: &str) -> String {
     let [x, y, z] = FEET;
     let mut lines = vec![
-        format!("via {x}.5 {} {z}.5 0 0", y as f32 + 1.62),
+        format!("via {x}.5 {} {z}.5 0 0", y as f32 + EYE),
         "travel 0.2".to_string(),
         "look 0 0".to_string(),
         format!("chat /structure load {name} {turn} {look}")
@@ -83,23 +105,35 @@ fn shots(name: &str, size: [i32; 3], turn: &str, look: &str) -> String {
         "wait 1".to_string(),
         "idle".to_string(),
     ];
-    let label = match look {
-        "" => name.to_string(),
-        _ => format!("{name}-{}", look.replace(',', "+")),
-    };
+    let label = label(name, look);
     for (view, eye, target) in views(size) {
-        lines.push(format!(
-            "via {:.1} {:.1} {:.1} @ {:.1} {:.1} {:.1}",
-            eye[0], eye[1], eye[2], target[0], target[1], target[2]
-        ));
-        lines.push("travel 0.3".to_string());
-        lines.push("wait 0.8".to_string());
-        lines.push(format!("shot {label}-{view}.png"));
-        lines.push("wait 0.3".to_string());
+        lines.extend(view_line(&label, view, eye, target));
     }
     lines.push("chat /structure undo".to_string());
     lines.push("wait 0.5".to_string());
     lines.join("\n")
+}
+
+/// What shots of `name` in `look` are called.
+fn label(name: &str, look: &str) -> String {
+    match look {
+        "" => name.to_string(),
+        _ => format!("{name}-{}", look.replace(',', "+")),
+    }
+}
+
+/// Goes to `eye`, looks at `target` and takes shot `<label>-<view>.png`.
+fn view_line(label: &str, view: &str, eye: [f32; 3], target: [f32; 3]) -> Vec<String> {
+    vec![
+        format!(
+            "via {:.1} {:.1} {:.1} @ {:.1} {:.1} {:.1}",
+            eye[0], eye[1], eye[2], target[0], target[1], target[2]
+        ),
+        "travel 0.3".to_string(),
+        "wait 0.8".to_string(),
+        format!("shot {label}-{view}.png"),
+        "wait 0.3".to_string(),
+    ]
 }
 
 /// Each view's name, eye and the point it looks at, for a structure of `size` (turned) placed
@@ -141,4 +175,17 @@ fn views([sx, sy, sz]: [i32; 3]) -> Vec<(&'static str, [f32; 3], [f32; 3])> {
         views.push(("inside_upper", eye, target));
     }
     views
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The game keeps the eye height `via` gives as an f32 and takes the player's 1.62 off it
+    /// as an f64.
+    #[test]
+    fn the_feet_land_on_the_block_meant() {
+        let eye = (FEET[1] as f32 + EYE) as f64;
+        assert_eq!((eye - 1.62).floor() as i32, FEET[1], "not the block below");
+    }
 }

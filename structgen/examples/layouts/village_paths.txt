@@ -1,0 +1,22 @@
+# Every village path tile, laid on a grid of 5: tools/structure-shots.sh --layout this file.
+# name               turn   x   z
+path_corner          right   0   0
+path_straight        right   5   0
+path_tee             right  10   0
+path_straight_worn   right  15   0
+path_corner          back   20   0
+path_straight        none    0   5
+path_straight_wide   none   10   5
+path_straight        none   20   5
+path_tee             none    0  10
+path_straight        right   5  10
+path_cross           none   10  10
+path_straight        right  15  10
+path_tee             back   20  10
+path_straight        none    0  15
+path_straight        none   10  15
+track_to_path        none   20  15
+path_end             none    0  20
+path_slope           back   10  20
+track_straight       right  15  20
+track_corner         left   20  20

@@ -17,7 +17,8 @@ Hamlets and villages grow on the overworld's open plains: cottages, farms and a 
 a draw well, and in a village an inn, a smithy, a chapel, market stalls, barns and a mill as
 well, joined by gravel paths. A few cottages, farms, chapels and mills also stand alone. All 29
 buildings share one timber-framed style, and their roofs, frames and wall panels change from
-one settlement to the next.
+one settlement to the next. Tiles for village paths and town streets are drawn and ready for
+the planners to lay.
 
 ### Making structures in the game
 
@@ -64,8 +65,9 @@ The details are in [`docs/`](docs/README.md):
 | `api/` | `structgen_api`: the file format and the placing, for any mod |
 | `src/` | the mod: world generation, hamlets and villages, styles, the wand and `/structure` |
 | `assets/structures/` | the `.wst` files compiled into the mod |
-| `examples/buildings/` | draws the mod's buildings in code, with the Hearthwood kit |
-| `examples/shot_script.rs` | the game script `tools/structure-shots.sh` photographs them with |
+| `examples/buildings/` | draws the mod's buildings, paths and streets in code, with the Hearthwood kit |
+| `examples/shot_script/` | the game script `tools/structure-shots.sh` photographs them with |
+| `examples/layouts/` | tiles laid side by side, for `structure-shots.sh --layout` |
 
 ## Build and install
 

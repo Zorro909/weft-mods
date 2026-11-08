@@ -1,0 +1,21 @@
+# Every town street tile, laid on a grid of 7: tools/structure-shots.sh --layout this file.
+# name                 turn   x   z
+street_corner          right   0   0
+street_straight        right   7   0
+street_cross           none   14   0
+street_straight_worn   right  21   0
+street_corner          back   28   0
+street_lamp            none    0   7
+street_to_square       back   14   7
+street_straight        none   28   7
+street_tee             none    0  14
+street_to_square       right   7  14
+street_square          none   14  14
+street_to_square       left   21  14
+street_tee             back   28  14
+street_straight        none    0  21
+street_square_plain    none    7  21
+street_to_square       none   14  21
+street_to_path         back   28  21
+street_end             none    0  28
+street_steps           back   14  28

@@ -6,6 +6,7 @@
 #
 #   tools/structure-shots.sh [--gpu 0000:0f:00.0] [--out DIR] [--styles LOOKS] [--turn TURN]
 #                            [--no-build] <name | file.wst>...
+#   tools/structure-shots.sh [--gpu ..] [--out DIR] [--styles LOOKS] [--no-build] --layout FILE
 #
 #   --gpu       PCI address of the card to draw on (see /dev/dri/by-path); default: any card.
 #   --out       Where the pictures go (default structgen/out/shots). The game's folder is
@@ -14,28 +15,34 @@
 #               `/structure load` takes them: "brick_roof;birch_roof,spruce_frame".
 #   --turn      none, right, back or left: places them turned, so the front views show another
 #               side: right turns them clockwise, so their west side faces the camera.
+#   --layout    Places the structures a layout file lists side by side, and shoots them together
+#               from above, the corners and along them (structgen/examples/layouts/ has some;
+#               the format is in structgen/examples/shot_script/layout.rs).
 #   --no-build  Use the engine and mod as built last.
 #
 # A name is a file of structgen/assets/structures. Pictures are DIR/<name>[-<look>]-<view>.png,
 # views being front, front_low, back, side, above, inside_north, inside_south and, for a
 # structure 12 or more blocks tall, inside_upper (about 6 blocks up); the front is
-# the structure's north side, as saved. The game's log is DIR/run/logs/latest.log.
+# the structure's north side, as saved. A layout's are DIR/<layout>[-<look>]-<view>.png, views
+# being above, north_west, north_east, south_east, south_west, along_south and along_west. The game's log is DIR/run/logs/latest.log.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-gpu="" out="$root/structgen/out/shots" styles="" turn=none build=1
+gpu="" out="$root/structgen/out/shots" styles="" turn=none layout="" build=1
 while [[ $# -gt 0 ]]; do
     case $1 in
         --gpu) gpu=$2; shift 2 ;;
         --out) out=$(realpath -m "$2"); shift 2 ;;
         --styles) styles=$2; shift 2 ;;
         --turn) turn=$2; shift 2 ;;
+        --layout) layout=$(realpath "$2"); shift 2 ;;
         --no-build) build=0; shift ;;
         -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1' "$0"; exit 0 ;;
         *) break ;;
     esac
 done
-[[ $# -gt 0 ]] || { echo "structure-shots.sh: name at least one structure (see --help)" >&2; exit 2; }
+[[ $# -gt 0 || -n $layout ]] ||
+    { echo "structure-shots.sh: name at least one structure, or a layout (see --help)" >&2; exit 2; }
 
 files=()
 for name in "$@"; do
@@ -58,11 +65,11 @@ cp "$root/structgen/target/release/libstructgen.so" "$run/mods/structgen/"
 cp -r "$root/structgen/assets" "$run/mods/structgen/"
 # `/structure load` reads `structures/` of the folder the game started in before the files built
 # into the mod, so new drafts need no rebuild.
-cp "${files[@]}" "$root/Weft/structures/"
+[[ ${#files[@]} -eq 0 ]] || cp "${files[@]}" "$root/Weft/structures/"
 
 script="$out/shots.txt"
 "$root/structgen/target/release/examples/shot_script" ${styles:+--styles "$styles"} \
-    --turn "$turn" "${files[@]}" >"$script"
+    --turn "$turn" ${layout:+--layout "$layout"} "${files[@]}" >"$script"
 
 headless=("$root/tools/run-headless.sh")
 [[ -n $gpu ]] && headless+=(--gpu "$gpu")
