@@ -36,6 +36,23 @@ value! {
     pub struct Motion { pub item: u32, pub visual: u64, pub pos: f32, pub speed: f32, pub from: u32, pub to: u32 }
 }
 
+impl Motion {
+    /// The face it came in by; `None` when it was put in at the hub.
+    pub fn came_by(&self) -> Option<Dir> {
+        side(self.from)
+    }
+
+    /// The face it leaves by; `None` while it has yet to choose one.
+    pub fn leaves_by(&self) -> Option<Dir> {
+        side(self.to)
+    }
+}
+
+/// The side a saved face number stands for; `None` for `NONE`.
+fn side(face: u32) -> Option<Dir> {
+    Dir::ALL.get(face as usize).copied()
+}
+
 value! {
     /// A tube's state: its kind, a countdown its kind may use (the timber tube's pulls), the
     /// items in it, and how long it has been full without passing anything on. New fields go
@@ -129,4 +146,20 @@ pub fn is_tube(w: &World, pos: Pos) -> bool {
 fn free_slot(w: &World, at: impl Into<Holder>, tube: &Tube) -> Option<usize> {
     let inv = w.inventory(at);
     (0..SLOTS).find(|&k| inv.get(k as u32).is_empty() && tube.moving[k].item == 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_saved_face_reads_as_its_side() {
+        let m = Motion {
+            from: Dir::North.face(),
+            to: NONE,
+            ..Motion::default()
+        };
+        assert_eq!(m.came_by(), Some(Dir::North), "the face it came by");
+        assert_eq!(m.leaves_by(), None, "no side chosen yet");
+    }
 }

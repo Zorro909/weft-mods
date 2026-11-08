@@ -62,12 +62,6 @@ impl Pos {
             .add_z(step.z * blocks)
     }
 
-    /// The block next to this one across its face `face` (in `Dir` order), for the face
-    /// numbers tubes save.
-    pub fn neighbor(self, face: u32) -> Pos {
-        self.toward(Dir::from_face(face))
-    }
-
     /// The middle of this block.
     pub fn center(self) -> Vec3 {
         BlockPos::from(self).center()
@@ -124,11 +118,6 @@ mod tests {
         assert_eq!(p.with_y(-64), Pos::new(1, -64, 3), "same column");
         assert_eq!(p.toward(Dir::Down), Pos::new(1, 1, 3), "one block down");
         assert_eq!(p.toward_by(Dir::East, -4), Pos::new(-3, 2, 3), "four west");
-        assert_eq!(
-            p.neighbor(Dir::Up.face()),
-            Pos::new(1, 3, 3),
-            "across the top"
-        );
     }
 
     #[test]

@@ -104,23 +104,24 @@ pub fn set_sample(w: &World, owner: u64, cell: u32, item: u32) {
     *sample = ghost::key_of(item);
 }
 
-/// Whether the row of `face` names the item.
-pub fn passes(w: &World, id: u64, face: u32, stack: ItemStack) -> bool {
+/// Whether the row of side `d` names the item.
+pub fn passes(w: &World, id: u64, d: Dir, stack: ItemStack) -> bool {
     let Some(samples) = w.component(id, &SAMPLES) else {
         return false;
     };
-    samples.rows[face as usize].contains(&ghost::key_of(stack.item))
+    samples.rows[d.face() as usize].contains(&ghost::key_of(stack.item))
 }
 
-/// The faces whose rows are empty, or name only items no loaded mod has: they take whatever no
+/// The sides whose rows are empty, or name only items no loaded mod has: they take whatever no
 /// row names.
-pub fn unfiltered(w: &World, id: u64) -> Vec<u32> {
+pub fn unfiltered(w: &World, id: u64) -> Vec<Dir> {
     let Some(samples) = w.component(id, &SAMPLES) else {
-        return (0..6).collect();
+        return Dir::ALL.to_vec();
     };
-    (0..6)
-        .filter(|&f| {
-            samples.rows[f as usize]
+    Dir::ALL
+        .into_iter()
+        .filter(|&d| {
+            samples.rows[d.face() as usize]
                 .iter()
                 .all(|&key| ghost::item_of(key) == 0)
         })

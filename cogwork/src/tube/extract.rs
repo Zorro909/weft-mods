@@ -34,11 +34,11 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
         .map_or(0, |e| std::mem::take(&mut e.stored));
     let paid_for = items_for(energy);
     let mut left = paid_for;
-    for face in 0..6 {
+    for d in Dir::ALL {
         let Some(slot) = free_slot(w, id, tube).filter(|_| left > 0) else {
             break;
         };
-        let Some(from) = source(w, pos, face) else {
+        let Some(from) = source(w, pos, d) else {
             continue;
         };
         let stack = crate::store::extract(w, from, left);
@@ -52,7 +52,7 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
             visual: 0,
             pos: 0.0,
             speed: BASE_SPEED,
-            from: face,
+            from: d.face(),
             to: NONE,
         };
     }
@@ -61,10 +61,10 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
     }
 }
 
-/// The machine (not a tube) the tube at `pos` touches through `face`.
-fn source(w: &World, pos: Pos, face: u32) -> Option<Pos> {
-    let other = pos.neighbor(face);
-    let machine = super::connects_to_tube(w, pos, face) && !super::is_tube(w, other);
+/// The machine (not a tube) the tube at `pos` touches toward `d`.
+fn source(w: &World, pos: Pos, d: Dir) -> Option<Pos> {
+    let other = pos.toward(d);
+    let machine = super::connects_to_tube(w, pos, d) && !super::is_tube(w, other);
     machine.then_some(other)
 }
 

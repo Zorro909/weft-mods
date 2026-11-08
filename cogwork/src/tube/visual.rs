@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use weft_sdk::*;
 
-use super::{Motion, NONE, TUBES};
+use super::{Motion, TUBES};
 use crate::lib::{BlockState, Pos, point};
 
 /// Marks a picture's stack, a different value for neighbors, so two pictures of the same item
@@ -85,15 +85,14 @@ fn sweep(w: &World) {
 /// Where in the world an item at `m` in the tube at `pos` is, and how fast it goes there
 /// (blocks per second).
 fn place_of(pos: Pos, m: &Motion) -> (Vec3, Vec3) {
-    let (face, along, sign) = if m.pos < 0.5 {
-        (m.from, 0.5 - m.pos, -1.0)
+    let (side, along, sign) = if m.pos < 0.5 {
+        (m.came_by(), 0.5 - m.pos, -1.0)
     } else {
-        (m.to, m.pos - 0.5, 1.0)
+        (m.leaves_by(), m.pos - 0.5, 1.0)
     };
-    if face == NONE {
+    let Some(dir) = side else {
         return (pos.center(), Vec3::ZERO);
-    }
-    let dir = Dir::from_face(face);
+    };
     let at = point::toward(pos.center(), dir, along as f64);
     // Ticks are a twentieth of a second.
     let vel = point::toward(Vec3::ZERO, dir, sign * m.speed as f64 * 20.0);
@@ -164,6 +163,7 @@ pub fn clear_broken(w: &World, pos: Pos) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tube::NONE;
 
     fn at(pos: f32, from: u32, to: u32) -> Motion {
         Motion {
