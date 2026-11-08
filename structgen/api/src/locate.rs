@@ -4,6 +4,7 @@
 use std::sync::{Arc, RwLock};
 
 use weft_sdk::*;
+use weftkit::Pos;
 
 use crate::fit::Columns;
 use crate::generator::Generator;
@@ -29,7 +30,7 @@ pub fn names() -> Vec<String> {
 /// dimension, seen from above: the lowest corner of the first thing its plan placed. Its cubes
 /// needn't be generated yet. `None` also for a name this mod didn't register, or a dimension the
 /// structure isn't in.
-pub fn locate(world: &World, name: &str, from: [i32; 3], radius: i32) -> Option<[i32; 3]> {
+pub fn locate(world: &World, name: &str, from: Pos, radius: i32) -> Option<Pos> {
     let generator = find(name)?;
     let dimension_id = world.dimension();
     let allowed = generator.dimensions.is_empty()
@@ -54,12 +55,12 @@ fn nearest(
     generator: &Generator,
     seed: u64,
     dimension: u32,
-    from: [i32; 3],
+    from: Pos,
     radius: i32,
     ground: Columns,
-) -> Option<[i32; 3]> {
-    let [x, _, z] = from;
-    let mut best: Option<([i32; 3], i64)> = None;
+) -> Option<Pos> {
+    let Pos { x, z, .. } = from;
+    let mut best: Option<(Pos, i64)> = None;
     for (index, distance) in region::around(x, z, radius, generator.region) {
         if best.is_some_and(|(_, found)| distance > found) {
             break;
@@ -68,7 +69,7 @@ fn nearest(
         let Some(anchor) = slot.get().and_then(Option::as_ref).and_then(|p| p.anchor()) else {
             continue;
         };
-        let (dx, dz) = ((anchor[0] - x) as i64, (anchor[2] - z) as i64);
+        let (dx, dz) = ((anchor.x - x) as i64, (anchor.z - z) as i64);
         let distance = dx * dx + dz * dz;
         let closer = best.is_none_or(|(_, found)| distance < found);
         if closer && distance <= radius as i64 * radius as i64 {

@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
 
-use structgen_api::{PlaceError, Replaced, Structure, Turn};
+use structgen_api::{PlaceError, Pos, Replaced, Structure, Turn};
 use weft_sdk::*;
 
 use crate::{save, worldgen};
@@ -67,7 +67,7 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
         replaced,
     };
     lock().insert(player, undo);
-    let [x, y, z] = corner.map(|v| Arg::Int(v as i64));
+    let [x, y, z] = <[i32; 3]>::from(corner).map(|v| Arg::Int(v as i64));
     cmd.reply("structgen.loaded", &[Arg::Text(name), x, y, z]);
 }
 
@@ -102,18 +102,18 @@ fn facing(yaw: f32) -> Dir {
 
 /// The lowest corner that puts a box of `size` `GAP` blocks in front of `feet` toward `facing`,
 /// centred on the player, its bottom layer taking the place of the block they stand on.
-fn in_front(feet: [i32; 3], facing: Dir, [sx, _, sz]: [i32; 3]) -> [i32; 3] {
+fn in_front(feet: Pos, facing: Dir, [sx, _, sz]: [i32; 3]) -> Pos {
     let step = facing.offset();
     let along = |feet: i32, step: i32, side: i32| match step {
         1 => feet + GAP,
         -1 => feet - GAP - side + 1,
         _ => feet - side / 2,
     };
-    [
-        along(feet[0], step.x, sx),
-        feet[1] - 1,
-        along(feet[2], step.z, sz),
-    ]
+    Pos::new(
+        along(feet.x, step.x, sx),
+        feet.y - 1,
+        along(feet.z, step.z, sz),
+    )
 }
 
 fn lock() -> MutexGuard<'static, HashMap<u64, Undo>> {
@@ -123,6 +123,8 @@ fn lock() -> MutexGuard<'static, HashMap<u64, Undo>> {
 #[cfg(test)]
 mod tests {
     use std::f32::consts::FRAC_PI_2;
+
+    use structgen_api::BlockState;
 
     use super::*;
 
@@ -137,19 +139,19 @@ mod tests {
     #[test]
     fn the_structure_goes_in_front() {
         let size = [5, 3, 4];
-        let feet = [10, 64, 10];
+        let feet = Pos::new(10, 64, 10);
         assert_eq!(
             in_front(feet, Dir::North, size),
-            [8, 63, 5],
+            Pos::new(8, 63, 5),
             "north: ends two blocks ahead"
         );
         assert_eq!(
             in_front(feet, Dir::East, size),
-            [12, 63, 8],
+            Pos::new(12, 63, 8),
             "east: starts two blocks ahead"
         );
         assert_eq!(
-            in_front(feet, Dir::South, size)[1],
+            in_front(feet, Dir::South, size).y,
             63,
             "its floor where the player stands"
         );
@@ -157,7 +159,7 @@ mod tests {
 
     #[test]
     fn an_undo_waits_in_its_own_dimension() {
-        let replaced = vec![([0, 64, 0], vec![1])];
+        let replaced = vec![(Pos::new(0, 64, 0), vec![BlockState::from(1)])];
         let undo = Undo {
             dimension: 2,
             replaced,

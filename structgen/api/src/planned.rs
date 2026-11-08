@@ -3,6 +3,8 @@
 
 use std::collections::HashMap;
 
+use weftkit::Pos;
+
 use crate::part::Part;
 use crate::stamp::{self, Surface};
 
@@ -17,8 +19,8 @@ impl Planned {
         let mut columns: HashMap<[i32; 2], Vec<usize>> = HashMap::new();
         for (i, part) in parts.iter().enumerate() {
             let (from, to) = part.bounds();
-            for z in from[2].div_euclid(16)..=to[2].div_euclid(16) {
-                for x in from[0].div_euclid(16)..=to[0].div_euclid(16) {
+            for z in from.z.div_euclid(16)..=to.z.div_euclid(16) {
+                for x in from.x.div_euclid(16)..=to.x.div_euclid(16) {
                     columns.entry([x, z]).or_default().push(i);
                 }
             }
@@ -31,25 +33,25 @@ impl Planned {
     }
 
     /// The lowest corner of what was added first: where `locate` points.
-    pub fn anchor(&self) -> Option<[i32; 3]> {
+    pub fn anchor(&self) -> Option<Pos> {
         self.parts.first().map(|part| part.bounds().0)
     }
 
     /// Calls `set` for every block the plan puts into the cube at `origin`, later parts after
     /// earlier ones.
-    pub fn stamp(&self, origin: [i32; 3], surface: Surface, set: &mut dyn FnMut([usize; 3], u32)) {
+    pub fn stamp(&self, origin: Pos, surface: Surface, set: &mut dyn FnMut([usize; 3], u32)) {
         for &i in self.parts_in(origin) {
             stamp::stamp(&self.parts[i], origin, surface, set);
         }
     }
 
     /// Whether anything of it may be in the cube at `origin`.
-    pub fn reaches(&self, origin: [i32; 3]) -> bool {
+    pub fn reaches(&self, origin: Pos) -> bool {
         self.parts_in(origin).next().is_some()
     }
 
-    fn parts_in(&self, origin: [i32; 3]) -> impl Iterator<Item = &usize> {
-        let column = [origin[0].div_euclid(16), origin[2].div_euclid(16)];
+    fn parts_in(&self, origin: Pos) -> impl Iterator<Item = &usize> {
+        let column = [origin.x.div_euclid(16), origin.z.div_euclid(16)];
         self.columns.get(&column).into_iter().flatten()
     }
 }
@@ -59,10 +61,15 @@ mod tests {
     use super::*;
 
     fn fill(from: [i32; 3], to: [i32; 3], state: u32) -> Part {
-        Part::Fill { from, to, state }
+        Part::Fill {
+            from: from.into(),
+            to: to.into(),
+            state,
+        }
     }
 
     fn states(planned: &Planned, origin: [i32; 3]) -> Vec<u32> {
+        let origin = Pos::from(origin);
         let mut out = Vec::new();
         planned.stamp(origin, &|_, _| 0, &mut |_, state| out.push(state));
         out
@@ -91,7 +98,11 @@ mod tests {
             fill([5, 1, 7], [9, 1, 9], 1),
             fill([0, 0, 0], [1, 1, 1], 2),
         ]);
-        assert_eq!(planned.anchor(), Some([5, 1, 7]), "its lowest corner");
+        assert_eq!(
+            planned.anchor(),
+            Some(Pos::new(5, 1, 7)),
+            "its lowest corner"
+        );
         assert_eq!(Planned::new(Vec::new()).anchor(), None, "nothing planned");
     }
 }

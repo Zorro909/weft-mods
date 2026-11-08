@@ -1,7 +1,7 @@
 //! The hamlet: a well with cottages and wheat farms around it, joined to it by gravel paths. A
 //! dynamic structure, built from the same files the single structures use.
 
-use structgen_api::{Biomes, Fit, Foundation, Plan, PlanError, Turn};
+use structgen_api::{Biomes, Fit, Foundation, Plan, PlanError, Pos, Turn};
 use weft_sdk::*;
 
 static WELL: Template = Template::named("well");
@@ -123,7 +123,7 @@ fn path(p: &mut Plan, from: [i32; 2], to: [i32; 2], areas: &[Area]) -> Result<()
             continue;
         }
         if let Some(ground) = p.ground(x, z) {
-            p.set([x, ground.height, z], &GRAVEL)?;
+            p.set(Pos::new(x, ground.height, z), &GRAVEL)?;
         }
     }
     Ok(())

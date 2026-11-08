@@ -13,6 +13,8 @@
 
 use std::collections::HashMap;
 
+use weftkit::Pos;
+
 use crate::packing;
 
 const MAGIC: &[u8] = b"WSTR";
@@ -74,14 +76,14 @@ impl Structure {
     }
 
     /// Each block's position from the lowest corner, and its state name.
-    pub fn blocks(&self) -> impl Iterator<Item = ([i32; 3], &str)> {
+    pub fn blocks(&self) -> impl Iterator<Item = (Pos, &str)> {
         let [sx, _, sz] = self.size.map(|v| v as usize);
         self.indices.iter().enumerate().map(move |(i, &p)| {
-            let pos = [
+            let pos = Pos::new(
                 (i % sx) as i32,
                 (i / (sx * sz)) as i32,
                 (i / sx % sz) as i32,
-            ];
+            );
             (pos, self.palette[p as usize].as_str())
         })
     }
@@ -203,11 +205,11 @@ mod tests {
     #[test]
     fn blocks_run_x_then_z_then_y() {
         let hut = Structure::from_names([2, 3, 2], ["a"; 12]).expect("one name per block");
-        let positions: Vec<[i32; 3]> = hut.blocks().map(|(pos, _)| pos).collect();
-        assert_eq!(positions[1], [1, 0, 0], "x first");
-        assert_eq!(positions[2], [0, 0, 1], "then z");
-        assert_eq!(positions[4], [0, 1, 0], "then y");
-        assert_eq!(positions[11], [1, 2, 1], "the far corner last");
+        let positions: Vec<Pos> = hut.blocks().map(|(pos, _)| pos).collect();
+        assert_eq!(positions[1], Pos::new(1, 0, 0), "x first");
+        assert_eq!(positions[2], Pos::new(0, 0, 1), "then z");
+        assert_eq!(positions[4], Pos::new(0, 1, 0), "then y");
+        assert_eq!(positions[11], Pos::new(1, 2, 1), "the far corner last");
     }
 
     #[test]

@@ -34,6 +34,7 @@ version = "0.1.0"
 dependencies = [
  "lz4_flex",
  "weft_sdk",
+ "weftkit",
 ]
 
 [[package]]
@@ -59,4 +60,11 @@ source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.3#80d1f6504545b1ce3f6
 dependencies = [
  "weft_abi",
  "weft_noise",
+]
+
+[[package]]
+name = "weftkit"
+version = "0.1.0"
+dependencies = [
+ "weft_sdk",
 ]

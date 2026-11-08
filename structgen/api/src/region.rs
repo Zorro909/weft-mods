@@ -3,6 +3,8 @@
 
 use std::ops::RangeInclusive;
 
+use weftkit::Pos;
+
 /// A square of the world one plan may fill, in blocks, both corners included. Plans may reach
 /// any height.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -30,8 +32,8 @@ impl Region {
     }
 
     /// Whether the box from `from` to `to` (included) lies inside, seen from above.
-    pub fn holds(&self, from: [i32; 3], to: [i32; 3]) -> bool {
-        self.contains(from[0], from[2]) && self.contains(to[0], to[2])
+    pub fn holds(&self, from: Pos, to: Pos) -> bool {
+        self.contains(from.x, from.z) && self.contains(to.x, to.z)
     }
 
     /// The squared distance from (`x`, `z`) to the nearest column of the region.
@@ -84,9 +86,10 @@ mod tests {
     #[test]
     fn a_box_holds_only_when_all_of_it_is_inside() {
         let region = Region::at([0, 0], 32);
-        assert!(region.holds([0, -50, 0], [31, 300, 31]), "any height");
+        let (low, high) = (Pos::new(0, -50, 0), Pos::new(31, 300, 31));
+        assert!(region.holds(low, high), "any height");
         assert!(
-            !region.holds([20, 0, 20], [32, 0, 25]),
+            !region.holds(Pos::new(20, 0, 20), Pos::new(32, 0, 25)),
             "one block over the edge"
         );
     }

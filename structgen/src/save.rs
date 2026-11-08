@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use structgen_api::Structure;
+use structgen_api::{Pos, Structure};
 use weft_sdk::*;
 
 use crate::selection;
@@ -56,7 +56,7 @@ pub fn run(cmd: &mut ServerCommand) {
 }
 
 /// The blocks at the two corners given, else the player's selection.
-fn corners(cmd: &ServerCommand) -> Option<([i32; 3], [i32; 3])> {
+fn corners(cmd: &ServerCommand) -> Option<(Pos, Pos)> {
     if let (Some(from), Some(to)) = (cmd.pos("from"), cmd.pos("to")) {
         return Some((from.block().into(), to.block().into()));
     }
@@ -77,19 +77,18 @@ pub fn valid_name(name: &str) -> bool {
 }
 
 /// The lowest block of the box between two corner blocks, and its size in blocks.
-fn block_box(from: [i32; 3], to: [i32; 3]) -> (BlockPos, [i32; 3]) {
-    let lo = [0, 1, 2].map(|i| from[i].min(to[i])).into();
-    let size = [0, 1, 2].map(|i| (from[i] - to[i]).abs() + 1);
-    (lo, size)
+fn block_box(from: Pos, to: Pos) -> (Pos, [i32; 3]) {
+    let (lo, hi) = Pos::corners(from, to);
+    (lo, [hi.x - lo.x + 1, hi.y - lo.y + 1, hi.z - lo.z + 1])
 }
 
 /// Each block's state name, in `Structure::blocks` order; `None` if any of it isn't loaded.
-fn read_box(world: &World, lo: BlockPos, size: [i32; 3]) -> Option<Vec<&'static str>> {
+fn read_box(world: &World, lo: Pos, size: [i32; 3]) -> Option<Vec<&'static str>> {
     let mut names = Vec::with_capacity(size.iter().product::<i32>() as usize);
     for y in 0..size[1] {
         for z in 0..size[2] {
             for x in 0..size[0] {
-                let state = world.block_loaded(lo.offset(x, y, z))?;
+                let state = world.block_loaded(lo + Pos::new(x, y, z))?;
                 names.push(block_name(state));
             }
         }
@@ -112,12 +111,8 @@ mod tests {
 
     #[test]
     fn a_box_covers_both_corners_in_any_order() {
-        let (lo, size) = block_box([3, 64, -2], [1, 62, -4]);
-        assert_eq!(
-            lo,
-            BlockPos::new(1, 62, -4),
-            "the lowest block of each axis"
-        );
+        let (lo, size) = block_box(Pos::new(3, 64, -2), Pos::new(1, 62, -4));
+        assert_eq!(lo, Pos::new(1, 62, -4), "the lowest block of each axis");
         assert_eq!(size, [3, 3, 3], "both corner blocks inside");
     }
 

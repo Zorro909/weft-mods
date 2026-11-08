@@ -21,6 +21,10 @@
   `&'static Template`, `Fit::biome` a `&'static Biomes`, and `place_in` gives back every block
   of each cell it replaced.
 - The mod's description opens with a shorter summary, which the Weft mod index also shows.
+- For mods using `structgen_api`: block positions are now `Pos` and block states `BlockState`
+  instead of `[i32; 3]` and `u32`, in `Plan`, `Structure::place_in`, `Structure::blocks`,
+  `Replaced`, `locate`, `Turn::pos` and `PlanError::OutsideRegion`. Both are re-exported from
+  the crate; sizes stay `[i32; 3]` and columns `[i32; 2]`.
 
 ### Fixed
 

@@ -8,6 +8,11 @@ an entry in `declare_mod!`. Add the crate and call it from your `init`:
 structgen_api = { path = "<path to weft-mods>/structgen/api" }
 ```
 
+Block positions are `Pos` (`Pos::new(x, y, z)`, `.x`, `.y`, `.z`) and block states `BlockState`,
+both from this repository's `weftkit` and re-exported as `structgen_api::{Pos, BlockState}`.
+A `Pos` goes to any SDK call taking a `BlockPos` as it is; `Pos::from` takes one back. Sizes are
+`[i32; 3]` along x, y and z, and columns `[x, z]`.
+
 ## Structure files
 
 A `Structure` is a box of block states, the contents of a [`.wst` file](file-format.md):
@@ -17,7 +22,7 @@ A `Structure` is a box of block states, the contents of a [`.wst` file](file-for
 | `Structure::decode(bytes)` | reads a file; `None` for anything that isn't a whole `.wst` file of this version |
 | `Structure::from_names(size, names)` | builds one in code from each block's state name, x fastest, then z, then y; `None` unless there is one name per block |
 | `structure.encode()` | the file's bytes |
-| `structure.size()`, `structure.blocks()` | its size along x, y and z, and each block's position and state name |
+| `structure.size()`, `structure.blocks()` | its size along x, y and z, and each block's position (a `Pos` from the lowest corner) and state name |
 
 `from_names` and `decode` refuse a box of more than 256 x 256 x 256 blocks, or of more than
 65535 different states, so every `Structure` encodes to a file that decodes again.
@@ -87,7 +92,7 @@ fn village(p: &mut Plan) -> Result<(), PlanError> {
     };
     p.structure(&WELL, corner, Turn::None)?.foundation(Foundation::Ground).clear_above();
     if let Some(ground) = p.ground(x - 1, z) {
-        p.set([x - 1, ground.height, z], &PATH)?;
+        p.set(Pos::new(x - 1, ground.height, z), &PATH)?;
     }
     Ok(())
 }
@@ -102,10 +107,10 @@ What a planner has:
 | `p.spot(margin)` | a random column at least `margin` blocks inside the region |
 | `p.ground(x, z)` | the column's height and biome (`weft_sdk::terrain::Column`), `None` at a cave mouth |
 | `p.size(&T, turn)` | a template's size once turned |
-| `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None`. `Fit::biome(&FORESTS)` takes `static FORESTS: Biomes = Biomes::named("#forest")` |
-| `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned |
+| `p.fit(&T, [x, z], turn, &fit)` | the `Pos` where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None`. `Fit::biome(&FORESTS)` takes `static FORESTS: Biomes = Biomes::named("#forest")` |
+| `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned; `corner` is a `Pos` |
 | `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it and `.clear_above()` cuts away ground above it, neither unless called |
-| `p.set(pos, &B)?`, `p.set_state(..)?`, `p.fill(from, to, &B)?` | blocks |
+| `p.set(pos, &B)?`, `p.set_state(pos, state)?`, `p.fill(from, to, &B)?` | blocks, at `Pos`es; `set_state` takes a `BlockState` |
 
 Later parts win where two overlap. A planner must be pure: it runs on the server and on every
 client, in any order, so it may use only the seed (`p.random()`) and the ground.
@@ -119,19 +124,20 @@ wheat farms and gravel paths.
 
 ## Placing one now
 
-`structure.place_in(&world, corner, turn)` puts a structure into the world straight away, turned,
-as a command would: every block of it, or nothing when one of its blocks is unknown
-(`PlaceError::UnknownBlock`) or part of the place isn't loaded (`PlaceError::NotLoaded`). It
-gives back what it replaced, each cell with all it held (`World::parts`), as a slab and the water
-in it; `structgen_api::put_back(&world, &replaced)` undoes it.
+`structure.place_in(&world, corner, turn)` puts a structure into the world straight away,
+turned, with the lowest corner of the turned box at the `Pos` `corner`, as a command would:
+every block of it, or nothing when one of its blocks is unknown (`PlaceError::UnknownBlock`) or
+part of the place isn't loaded (`PlaceError::NotLoaded`). It gives back what it replaced: each
+cell's `Pos` with all it held (`World::parts`) as `BlockState`s, as a slab and the water in it.
+`structgen_api::put_back(&world, &replaced)` undoes it.
 
 ## Finding them
 
-`structgen_api::locate(&world, "mymod:village", from, radius)` gives the nearest one's
-position, generated yet or not, and `structgen_api::names()` the names your mod registered.
-Each mod links its own copy of the crate, so these know only your mod's structures. With
-`--log mod:<your mod>=debug` each plan is logged with its position too. `world.structure_near`
-doesn't know them.
+`structgen_api::locate(&world, "mymod:village", from, radius)` gives the `Pos` of the nearest
+one to the `Pos` `from`, generated yet or not, and `structgen_api::names()` the names your mod
+registered. Each mod links its own copy of the crate, so these know only your mod's
+structures. With `--log mod:<your mod>=debug` each plan is logged with its position too.
+`world.structure_near` doesn't know them.
 
 How the ground, the foundation and the turn are worked out is in
 [How a place is chosen](placement.md).

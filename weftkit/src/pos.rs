@@ -46,6 +46,14 @@ impl Pos {
         }
     }
 
+    /// The lowest and the highest corner of the box with `a` and `b` at opposite corners, both
+    /// taken axis by axis.
+    pub fn corners(a: Pos, b: Pos) -> (Pos, Pos) {
+        let lowest = Pos::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z));
+        let highest = Pos::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z));
+        (lowest, highest)
+    }
+
     /// The same column at the height `y`.
     pub const fn with_y(self, y: i32) -> Pos {
         Pos { y, ..self }
@@ -158,6 +166,15 @@ mod tests {
     fn offsets_add_axis_by_axis() {
         let moved = Pos::new(10, 64, -3) + Pos::new(2, 0, -1);
         assert_eq!(moved, Pos::new(12, 64, -4));
+    }
+
+    #[test]
+    fn corners_come_lowest_first_axis_by_axis() {
+        let (lowest, highest) = Pos::corners(Pos::new(5, 64, -2), Pos::new(1, 70, -9));
+        assert_eq!(lowest, Pos::new(1, 64, -9), "each axis's lowest");
+        assert_eq!(highest, Pos::new(5, 70, -2), "each axis's highest");
+        let one = Pos::new(3, 3, 3);
+        assert_eq!(Pos::corners(one, one), (one, one), "a box of one block");
     }
 
     #[test]
