@@ -75,13 +75,10 @@ impl Set {
         let top = self.get(Pos::new(0, -1, 0));
         let below = self.get(Pos::new(0, -2, 0));
         let ground = area.lo.y - 1;
-        let layer = |lo: i32, hi: i32| Area {
-            lo: Pos { y: lo, ..area.lo },
-            hi: Pos { y: hi, ..area.hi },
-        };
         self.world.fill(self.shape(area), BlockState::AIR.id());
-        self.world.fill(self.shape(layer(ground, ground)), top.id());
-        let hollows = layer(ground - HOLLOW_DEPTH, ground - 1);
+        self.world
+            .fill(self.shape(area.heights(ground, ground)), top.id());
+        let hollows = area.heights(ground - HOLLOW_DEPTH, ground - 1);
         self.world
             .fill(self.shape(hollows), below.id())
             .only(HOLLOW);

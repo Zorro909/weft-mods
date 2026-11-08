@@ -123,3 +123,42 @@ fn film(mod_id: &str, blocks: &[(BlockState, &str)]) -> Film {
     ];
     film.shot(flyby(&away).look_at(row).secs(6.0).blend(1.0))
 }
+
+#[cfg(test)]
+mod tests {
+    use showcase_api::Step;
+
+    use super::*;
+
+    #[test]
+    fn the_ground_reaches_past_the_row_and_under_the_camera() {
+        let length = row_length(5);
+        let ground = ground(5);
+        assert!(
+            ground.lo.x < 0 && ground.hi.x as f64 > length,
+            "past both ends"
+        );
+        assert!(ground.lo.z < 0, "behind the row");
+        assert!(ground.hi.z as f64 > wide(length), "out to the wide shot");
+    }
+
+    #[test]
+    fn the_film_names_the_mod_then_each_block_in_turn() {
+        let blocks = [
+            (BlockState::from(1), "mymod:press"),
+            (2.into(), "mymod:mill"),
+        ];
+        let titles: Vec<String> = film("mymod", &blocks)
+            .steps
+            .into_iter()
+            .filter_map(|step| match step {
+                Step::Title { key, .. } => Some(key),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            titles,
+            ["mod.mymod.name", "block.mymod.press", "block.mymod.mill"]
+        );
+    }
+}
