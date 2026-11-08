@@ -37,7 +37,7 @@ jobs:
           submodules: true
 
       # Every mod folder; a new mod is added here, in check.yml and in index-pr.yml.
-      - uses: Zorro909/weft-mod-action/build@feat/mod-manager-v2
+      - uses: Zorro909/weft-mod-action/build@v2
         with:
           mods: |
             cogwork
@@ -56,7 +56,7 @@ jobs:
         with:
           submodules: true
 
-      - uses: Zorro909/weft-mod-action/release@feat/mod-manager-v2
+      - uses: Zorro909/weft-mod-action/release@v2
 
   # Also when nothing was released, or the release failed: it commits only when the section
   # changes. Not for a run started by hand on another branch, which mustn't push to main. The
