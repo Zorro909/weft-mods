@@ -60,7 +60,7 @@ impl Turn {
     }
 
     /// Property `name=value` once turned: directions and axes turn, and so do sides.
-    pub(crate) fn prop<'a>(self, name: &'a str, value: &'a str) -> (&'a str, &'a str) {
+    fn prop<'a>(self, name: &'a str, value: &'a str) -> (&'a str, &'a str) {
         match name {
             "facing" | "front" | "attach" => (name, self.direction(value)),
             "axis" => (name, self.axis(value)),

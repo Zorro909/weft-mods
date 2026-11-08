@@ -40,12 +40,11 @@ pub fn put_back(world: &World, replaced: &Replaced) {
     }
 }
 
-/// Makes the cell at `pos`, holding `now`, hold just `parts`. A single block is replaced in
+/// Makes the cell at `pos`, holding `now`, hold just `parts`. Its first block is replaced in
 /// place, so a chest turned or put back keeps what is in it.
 fn write_cell(world: &World, pos: [i32; 3], now: &[u32], parts: &[u32]) {
-    if now.len() > 1 {
-        // Else `set_block` would keep the other blocks with a block of the same kind.
-        world.set_block(pos, 0);
+    for &extra in now.iter().skip(1) {
+        world.part_remove(pos, extra);
     }
     world.set_block(pos, parts.first().copied().unwrap_or(0));
     for &part in parts.iter().skip(1) {
@@ -75,10 +74,8 @@ impl Structure {
         let replaced: Option<Replaced> = blocks
             .iter()
             .map(|&(pos, _)| {
-                world
-                    .block_loaded(pos)
-                    .is_some()
-                    .then(|| (pos, world.parts(pos)))
+                world.block_loaded(pos)?;
+                Some((pos, world.parts(pos)))
             })
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
