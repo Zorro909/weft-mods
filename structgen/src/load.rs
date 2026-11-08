@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
 
-use structures_api::{PlaceError, Replaced, Structure, Turn};
+use structgen_api::{PlaceError, Replaced, Structure, Turn};
 use weft_sdk::*;
 
 use crate::{save, worldgen};
@@ -26,22 +26,22 @@ pub fn run(cmd: &mut ServerCommand) {
         return;
     };
     if !save::valid_name(&name) {
-        return cmd.reply("structures.bad_name", &[Arg::Text(&name)]);
+        return cmd.reply("structgen.bad_name", &[Arg::Text(&name)]);
     }
     let Some(turn) = turn_named(cmd.text("turn").unwrap_or("none")) else {
-        return cmd.reply("structures.bad_turn", &[]);
+        return cmd.reply("structgen.bad_turn", &[]);
     };
     let path = save::path_of(&name);
     let file = std::fs::read(&path).ok();
     let Some(bytes) = file.as_deref().or_else(|| worldgen::embedded(&name)) else {
         let shown = path.to_string_lossy();
-        return cmd.reply("structures.no_file", &[Arg::Text(&name), Arg::Text(&shown)]);
+        return cmd.reply("structgen.no_file", &[Arg::Text(&name), Arg::Text(&shown)]);
     };
     let Some(structure) = Structure::decode(bytes) else {
-        return cmd.reply("structures.bad_file", &[Arg::Text(&name)]);
+        return cmd.reply("structgen.bad_file", &[Arg::Text(&name)]);
     };
     if structure.size().iter().any(|&side| side > save::MAX_SIDE) {
-        return cmd.reply("structures.too_big", &[Arg::Int(save::MAX_SIDE as i64)]);
+        return cmd.reply("structgen.too_big", &[Arg::Int(save::MAX_SIDE as i64)]);
     }
     place(cmd, &name, &structure, turn);
 }
@@ -50,7 +50,7 @@ pub fn run(cmd: &mut ServerCommand) {
 fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn) {
     let (world, player) = (cmd.world(), cmd.player());
     let Some(me) = world.entity(player) else {
-        return cmd.reply("structures.no_player", &[]);
+        return cmd.reply("structgen.no_player", &[]);
     };
     let size = turn.size(structure.size());
     let corner = in_front(me.pos.block().into(), facing(me.yaw), size);
@@ -58,9 +58,9 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
         Ok(replaced) => replaced,
         Err(PlaceError::UnknownBlock(block)) => {
             let args = [Arg::Text(name), Arg::Text(&block)];
-            return cmd.reply("structures.unknown_block", &args);
+            return cmd.reply("structgen.unknown_block", &args);
         }
-        Err(PlaceError::NotLoaded) => return cmd.reply("structures.not_loaded", &[]),
+        Err(PlaceError::NotLoaded) => return cmd.reply("structgen.not_loaded", &[]),
     };
     let undo = Undo {
         dimension: world.dimension(),
@@ -68,18 +68,18 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
     };
     lock().insert(player, undo);
     let [x, y, z] = corner.map(|v| Arg::Int(v as i64));
-    cmd.reply("structures.loaded", &[Arg::Text(name), x, y, z]);
+    cmd.reply("structgen.loaded", &[Arg::Text(name), x, y, z]);
 }
 
 /// `/structure undo`.
 pub fn undo(cmd: &mut ServerCommand) {
     let (world, player) = (cmd.world(), cmd.player());
     let Some(undo) = take_undo(player, world.dimension()) else {
-        return cmd.reply("structures.nothing_to_undo", &[]);
+        return cmd.reply("structgen.nothing_to_undo", &[]);
     };
-    structures_api::put_back(&world, &undo.replaced);
+    structgen_api::put_back(&world, &undo.replaced);
     let count = Arg::Int(undo.replaced.len() as i64);
-    cmd.reply("structures.undone", &[count]);
+    cmd.reply("structgen.undone", &[count]);
 }
 
 /// What `player`'s last load replaced, if that was in `dimension`. Kept for later otherwise.

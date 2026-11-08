@@ -1,7 +1,7 @@
 //! The hamlet: a well with cottages and wheat farms around it, joined to it by gravel paths. A
 //! dynamic structure, built from the same files the single structures use.
 
-use structures_api::{Biomes, Fit, Foundation, Plan, PlanError, Turn};
+use structgen_api::{Biomes, Fit, Foundation, Plan, PlanError, Turn};
 use weft_sdk::*;
 
 static WELL: Template = Template::named("well");
@@ -26,7 +26,7 @@ const COTTAGES: f32 = 0.6;
 const GAP: i32 = 3;
 
 pub fn register(r: &mut Registry) {
-    structures_api::plan(r, "hamlet", hamlet)
+    structgen_api::plan(r, "hamlet", hamlet)
         .dimension(&base_api::OVERWORLD)
         .region(REGION);
 }

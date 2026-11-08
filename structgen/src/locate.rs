@@ -12,36 +12,33 @@ pub fn run(cmd: &mut ServerCommand) {
     let Some(name) = cmd.text("structure").map(full_name) else {
         return;
     };
-    if !structures_api::names().contains(&name) {
+    if !structgen_api::names().contains(&name) {
         let known = short_names().join(", ");
-        return cmd.reply("structures.unknown", &[Arg::Text(&name), Arg::Text(&known)]);
+        return cmd.reply("structgen.unknown", &[Arg::Text(&name), Arg::Text(&known)]);
     }
     let radius = cmd.int("radius").unwrap_or(DEFAULT_RADIUS);
     if !(1..=MAX_RADIUS).contains(&radius) {
-        return cmd.reply("structures.bad_radius", &[Arg::Int(MAX_RADIUS)]);
+        return cmd.reply("structgen.bad_radius", &[Arg::Int(MAX_RADIUS)]);
     }
     let world = cmd.world();
     // From the world's middle when no player ran it.
     let from = world
         .entity(cmd.player())
         .map_or([0; 3], |player| player.pos.block().into());
-    match structures_api::locate(&world, &name, from, radius as i32) {
+    match structgen_api::locate(&world, &name, from, radius as i32) {
         Some(found) => {
             let [x, y, z] = found.map(|v| Arg::Int(v as i64));
             let distance = Arg::Int(horizontal_distance(from, found));
-            cmd.reply("structures.located", &[Arg::Text(&name), x, y, z, distance]);
+            cmd.reply("structgen.located", &[Arg::Text(&name), x, y, z, distance]);
         }
-        None => cmd.reply(
-            "structures.not_found",
-            &[Arg::Text(&name), Arg::Int(radius)],
-        ),
+        None => cmd.reply("structgen.not_found", &[Arg::Text(&name), Arg::Int(radius)]),
     }
 }
 
 /// The structures this mod registered, without its namespace: what the command completes.
 pub fn short_names() -> Vec<String> {
     let prefix = format!("{}:", mod_id());
-    let names = structures_api::names();
+    let names = structgen_api::names();
     names
         .iter()
         .map(|name| name.strip_prefix(&prefix).unwrap_or(name).to_string())

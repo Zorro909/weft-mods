@@ -76,4 +76,4 @@ jobs:
           mods: |
             cogwork
             showcase
-            structures
+            structgen

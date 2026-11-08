@@ -92,12 +92,12 @@ fn set(cmd: &mut ServerCommand, corner: usize) {
         })
         .or_else(|| world.entity(player).map(|me| me.pos.block()));
     let Some(at) = at else {
-        return cmd.reply("structures.no_player", &[]);
+        return cmd.reply("structgen.no_player", &[]);
     };
     set_corner(&world, player, corner, at);
     let [x, y, z] = at.to_array().map(|v| Arg::Int(v as i64));
     cmd.reply(
-        "structures.corner_set",
+        "structgen.corner_set",
         &[Arg::Int(corner as i64 + 1), x, y, z],
     );
 }

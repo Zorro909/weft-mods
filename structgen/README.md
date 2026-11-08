@@ -1,12 +1,12 @@
 <img src="assets/textures/gui/icon.png" width="64" height="64" alt="">
 
-# Structures
+# Structgen
 
 A Weft mod that fills the overworld with buildings, and gives players and mod authors the tools
 to make their own. Structures are boxes of blocks saved as `.wst` files; the mod places them
 while the world generates, alone and gathered into hamlets.
 
-It needs the base game (`base`). Its placing lives in a crate of its own, `structures_api`, that
+It needs the base game (`base`). Its placing lives in a crate of its own, `structgen_api`, that
 any mod can use without this mod being loaded.
 
 ## Features
@@ -23,7 +23,7 @@ way.
 The Structure Wand selects a box of the world, and `/structure` saves it to a file, places a
 file in front of you to look at, takes it back again, and finds the nearest structure of a kind.
 
-### For other mods: `structures_api`
+### For other mods: `structgen_api`
 
 - **Static structures:** one template, placed now and then where the ground and biome suit it.
 - **Dynamic structures:** a planner of your own lays out villages, ruins or anything else from
@@ -48,7 +48,7 @@ The details are in [`docs/`](docs/README.md):
 - [In the world](docs/worldgen.md): which structures appear, where, and how hamlets are laid out
 - [Wand and commands](docs/commands.md)
 - [Adding a structure to this mod](docs/adding-structures.md)
-- [Using `structures_api`](docs/api.md) from another mod
+- [Using `structgen_api`](docs/api.md) from another mod
 - [How a place is chosen](docs/placement.md)
 - [The `.wst` file](docs/file-format.md)
 
@@ -56,7 +56,7 @@ The details are in [`docs/`](docs/README.md):
 
 | Folder | What it holds |
 |---|---|
-| `api/` | `structures_api`: the file format and the placing, for any mod |
+| `api/` | `structgen_api`: the file format and the placing, for any mod |
 | `src/` | the mod: world generation, hamlets, the wand and `/structure` |
 | `assets/structures/` | the `.wst` files compiled into the mod |
 | `examples/samples.rs` | draws the sample structures in code |
@@ -70,13 +70,13 @@ from this folder, with the engine built in `../Weft` (see
 ```
 cargo build --release
 cargo test --release
-mkdir -p ../Weft/run/mods/structures
-cp target/release/libstructures.so ../Weft/run/mods/structures/
-cp -r assets ../Weft/run/mods/structures/
+mkdir -p ../Weft/run/mods/structgen
+cp target/release/libstructgen.so ../Weft/run/mods/structgen/
+cp -r assets ../Weft/run/mods/structgen/
 ```
 
-The library is `libstructures.so` on Linux; on Windows it is `structures.dll`, on macOS
-`libstructures.dylib`. `../start.sh structures` builds the engine and the mod, installs it and starts the
+The library is `libstructgen.so` on Linux; on Windows it is `structgen.dll`, on macOS
+`libstructgen.dylib`. `../start.sh structgen` builds the engine and the mod, installs it and starts the
 game, on any of the three.
 
 ## Status

@@ -27,7 +27,7 @@ pub enum PlanError {
         from: [i32; 3],
         to: [i32; 3],
     },
-    /// A template this mod didn't register with `structures_api::template` or `place`.
+    /// A template this mod didn't register with `structgen_api::template` or `place`.
     UnknownTemplate(String),
 }
 
@@ -42,7 +42,7 @@ impl fmt::Display for PlanError {
             }
             PlanError::UnknownTemplate(name) => write!(
                 f,
-                "template {name} is not registered with structures_api::template or place"
+                "template {name} is not registered with structgen_api::template or place"
             ),
         }
     }

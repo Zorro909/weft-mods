@@ -1,6 +1,6 @@
 //! Puts every structure compiled into the mod into base's overworld, all the same way.
 
-use structures_api::{Foundation, Structure};
+use structgen_api::{Foundation, Structure};
 use weft_sdk::*;
 
 /// One chance per cell of this many blocks square.
@@ -35,7 +35,7 @@ pub fn register(r: &mut Registry) {
             );
             continue;
         };
-        structures_api::place(r, name, structure)
+        structgen_api::place(r, name, structure)
             .dimension(&base_api::OVERWORLD)
             .spacing(SPACING)
             .chance(CHANCE)

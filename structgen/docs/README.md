@@ -1,6 +1,6 @@
-# Structures documentation
+# Structgen documentation
 
-Everything about the `structures` mod and the `structures_api` crate. For a short overview, see
+Everything about the `structgen` mod and the `structgen_api` crate. For a short overview, see
 the [README](../README.md).
 
 ## For players
@@ -15,7 +15,7 @@ the [README](../README.md).
 | Page | Covers |
 |---|---|
 | [Adding a structure to this mod](adding-structures.md) | From a box in the game to a structure that generates |
-| [Using `structures_api`](api.md) | Static and dynamic structures, placing one now, finding them |
+| [Using `structgen_api`](api.md) | Static and dynamic structures, placing one now, finding them |
 | [How a place is chosen](placement.md) | Regions, ground, foundation and turning |
 | [The `.wst` file](file-format.md) | The file format |
 

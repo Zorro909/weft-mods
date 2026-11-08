@@ -1,6 +1,6 @@
 //! Structures for any mod: the `.wst` file format, and placing structures while the world
 //! generates. A mod links this crate and calls it from its own `init`; it needs neither the
-//! `structures` mod loaded nor an entry in `declare_mod!`.
+//! `structgen` mod loaded nor an entry in `declare_mod!`.
 //!
 //! - `place`: a static structure, one template stood on the ground now and then, turned
 //!   whichever way the seed says, where the ground meets its conditions.
