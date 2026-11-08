@@ -14,6 +14,7 @@ structgen.no_selection = Give both corners, or select a box first with /structur
 structgen.corner_set = Corner {0} at {1} {2} {3}
 structgen.no_player = Only a player can do that
 structgen.bad_turn = A turn is none, right, back or left
+structgen.bad_style = No such style. Styles are {0}, several split by commas
 structgen.no_file = There is no structure {0}: no file {1}, and none built in
 structgen.bad_file = {0} is not a structure file of this version
 structgen.unknown_block = {0} has {1}, which is no block of this game

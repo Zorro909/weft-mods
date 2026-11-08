@@ -18,6 +18,7 @@ impl Plan<'_> {
             template: entry,
             corner,
             turn,
+            materials: Default::default(),
             foundation: None,
             clear_above: false,
             ground: Vec::new(),

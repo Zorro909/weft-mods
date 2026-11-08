@@ -8,6 +8,7 @@ use weft_sdk::*;
 use weftkit::{BlockState, Pos, TypedWorld};
 
 use crate::format::Structure;
+use crate::materials::{self, Materials};
 use crate::turn::{Turn, turn_state};
 
 /// What `place_in` replaced: each cell's position and all it held (`World::parts`).
@@ -56,11 +57,19 @@ fn write_cell(world: &World, pos: Pos, parts: &[BlockState]) {
 }
 
 impl Structure {
-    /// Puts it into `world` turned by `turn`, the lowest corner of the turned box at `corner`.
-    /// Every block is set, air too. On an error nothing is. Gives back what it replaced, for
-    /// `put_back`.
-    pub fn place_in(&self, world: &World, corner: Pos, turn: Turn) -> Result<Replaced, PlaceError> {
-        let states = self.states(turn)?;
+    /// Puts it into `world` turned by `turn`, the lowest corner of the turned box at `corner`,
+    /// its slots filled with `materials`. Every block is set, air too. On an error nothing is.
+    /// Gives back what it replaced, for `put_back`.
+    pub fn place_in(
+        &self,
+        world: &World,
+        corner: Pos,
+        turn: Turn,
+        materials: &Materials,
+    ) -> Result<Replaced, PlaceError> {
+        let states: HashMap<&str, BlockState> = (self.palette.iter().map(String::as_str))
+            .zip(self.states(turn, materials)?)
+            .collect();
         let size = self.size();
         let blocks: Vec<(Pos, BlockState)> = self
             .blocks()
@@ -80,14 +89,19 @@ impl Structure {
         Ok(replaced)
     }
 
-    /// Each block name as a state, turned.
-    fn states(&self, turn: Turn) -> Result<HashMap<&str, BlockState>, PlaceError> {
-        self.palette
-            .iter()
-            .map(|name| match BlockState::named(name) {
-                Some(state) => Ok((name.as_str(), turn_state(state.id(), turn).into())),
-                None => Err(PlaceError::UnknownBlock(name.clone())),
-            })
-            .collect()
+    /// Each palette entry as a state, turned.
+    fn states(&self, turn: Turn, materials: &Materials) -> Result<Vec<BlockState>, PlaceError> {
+        let states = materials::states("a structure", &self.palette, &self.slots, materials);
+        let Some(states) = states else {
+            let defaults = materials::default_names(&self.palette, &self.slots);
+            let unknown = defaults
+                .into_iter()
+                .find(|name| Block::lookup(name).is_none());
+            return Err(PlaceError::UnknownBlock(unknown.unwrap_or_default()));
+        };
+        Ok(states
+            .into_iter()
+            .map(|state| turn_state(state, turn).into())
+            .collect())
     }
 }

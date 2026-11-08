@@ -8,6 +8,7 @@ mod load;
 mod locate;
 mod save;
 mod selection;
+mod styles;
 mod wand;
 mod worldgen;
 

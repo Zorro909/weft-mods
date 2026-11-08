@@ -7,6 +7,7 @@ use crate::biomes::Biomes;
 use crate::fit::Fit;
 use crate::format::Structure;
 use crate::generator::Generator;
+use crate::materials::Materials;
 use crate::part::Foundation;
 use crate::plan::{Plan, PlanError};
 use crate::templates;
@@ -31,6 +32,7 @@ pub fn place<'a>(registry: &'a mut Registry, name: &str, structure: Structure) -
         dimensions: Vec::new(),
         fit: Fit::new(),
         foundation: None,
+        materials: Vec::new(),
         spacing: 256,
         chance: 0.3,
         turns: true,
@@ -45,12 +47,19 @@ pub struct Placement<'a> {
     dimensions: Vec<&'static Dimension>,
     fit: Fit,
     foundation: Option<Foundation>,
+    materials: Vec<Materials>,
     spacing: i32,
     chance: f32,
     turns: bool,
 }
 
 impl Placement<'_> {
+    /// One set of blocks its slots may be filled with (call again for more); the seed picks one
+    /// for each place. Without, the slots' defaults.
+    pub fn materials(mut self, materials: Materials) -> Self {
+        self.materials.push(materials);
+        self
+    }
     /// Only in this dimension (call again for more). Without, in every dimension but bare ones.
     pub fn dimension(mut self, dimension: &'static Dimension) -> Self {
         self.dimensions.push(dimension);
@@ -109,6 +118,7 @@ impl Drop for Placement<'_> {
             size,
             fit: self.fit,
             foundation: self.foundation,
+            materials: std::mem::take(&mut self.materials),
             chance: self.chance,
             turns: self.turns,
         };
@@ -128,6 +138,7 @@ struct Single {
     size: [i32; 3],
     fit: Fit,
     foundation: Option<Foundation>,
+    materials: Vec<Materials>,
     chance: f32,
     turns: bool,
 }
@@ -148,11 +159,24 @@ impl Single {
         let Some(corner) = p.fit(self.template, [x - sx / 2, z - sz / 2], turn, &self.fit) else {
             return Ok(());
         };
-        let placed = p.structure(self.template, corner, turn)?.clear_above();
+        let materials = self.materials(p);
+        let mut placed = p.structure(self.template, corner, turn)?.clear_above();
+        if let Some(materials) = &materials {
+            placed = placed.materials(materials);
+        }
         if let Some(foundation) = self.foundation {
             placed.foundation(foundation);
         }
         Ok(())
+    }
+
+    /// One of its material sets, `None` when it has none.
+    fn materials(&self, p: &mut Plan) -> Option<Materials> {
+        if self.materials.is_empty() {
+            return None;
+        }
+        let i = p.random().below(self.materials.len() as u64) as usize;
+        Some(self.materials[i].clone())
     }
 }
 
@@ -183,6 +207,7 @@ mod tests {
             size,
             fit: Fit::new(),
             foundation: None,
+            materials: Vec::new(),
             chance: 1.0,
             turns: true,
         };

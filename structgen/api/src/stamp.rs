@@ -19,8 +19,8 @@ pub(crate) fn stamp(
 ) {
     match part {
         Part::Piece(piece) => {
-            if let Some(resolved) = piece.template.resolved() {
-                stamp_piece(piece, resolved, origin, surface, set);
+            if let Some(resolved) = piece.template.resolved(&piece.materials) {
+                stamp_piece(piece, &resolved, origin, surface, set);
             }
         }
         Part::Fill { area, state } => {
@@ -128,6 +128,7 @@ mod tests {
             template: templates::add("test:stamp", template),
             corner,
             turn: Turn::None,
+            materials: Default::default(),
             foundation: Some(Foundation::Ground),
             clear_above: true,
             ground: ground.into_iter().map(Some).collect(),
