@@ -6,9 +6,10 @@ use structgen_api::{Biomes, Fit, Foundation, Materials, Plan, PlanError, Turn};
 use weft_sdk::*;
 
 use crate::styles;
+use crate::worldgen::{OPEN, SEA};
 
 static GRAVEL: Block = Block::named("base:gravel");
-static ANIMALS: Biomes = Biomes::named("#animals");
+static OPEN_LAND: Biomes = Biomes::named(OPEN);
 
 /// Spots tried for each building before it is left out.
 const TRIES: usize = 12;
@@ -80,7 +81,7 @@ fn place_centre(
         return Ok(None);
     };
     let corner = [centre[0] - sx / 2, centre[1] - sz / 2];
-    let fit = Fit::new().biome(&ANIMALS).max_slope(3);
+    let fit = Fit::new().biome(&OPEN_LAND).max_slope(3).min_height(SEA);
     let Some(at) = p.fit(template, corner, Turn::None, &fit) else {
         return Ok(None);
     };
@@ -113,7 +114,8 @@ fn building(
         if areas.iter().any(|other| other.near(&area, GAP)) {
             continue;
         }
-        let Some(at) = p.fit(template, corner, turn, &Fit::new().max_slope(4)) else {
+        let fit = Fit::new().biome(&OPEN_LAND).max_slope(4).min_height(SEA);
+        let Some(at) = p.fit(template, corner, turn, &fit) else {
             continue;
         };
         let materials = look.for_building(p);
@@ -179,7 +181,7 @@ fn one_of(p: &mut Plan, names: &[&'static str]) -> &'static str {
 }
 
 /// Gravel along the ground from `from` to `to`: first across, then straight in, so it meets a
-/// building facing the centre at its front. Not inside any building.
+/// building facing the centre at its front. Not inside any building, nor under water.
 fn path(p: &mut Plan, from: [i32; 2], to: [i32; 2], areas: &[Area]) -> Result<(), PlanError> {
     let across_x = (to[0] - from[0]).abs() <= (to[1] - from[1]).abs();
     let bend = if across_x {
@@ -191,7 +193,7 @@ fn path(p: &mut Plan, from: [i32; 2], to: [i32; 2], areas: &[Area]) -> Result<()
         if areas.iter().any(|area| area.contains(x, z)) {
             continue;
         }
-        if let Some(ground) = p.ground(x, z) {
+        if let Some(ground) = p.ground(x, z).filter(|ground| ground.height >= SEA) {
             p.set([x, ground.height, z], &GRAVEL)?;
         }
     }

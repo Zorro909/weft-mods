@@ -93,6 +93,12 @@ impl Placement<'_> {
         self.fit = self.fit.max_slope(blocks);
         self
     }
+    /// Only where the ground under every column is at least at height `y`: a world's sea level
+    /// keeps it out of lakes and the sea. Without, at any height.
+    pub fn min_height(mut self, y: i32) -> Self {
+        self.fit = self.fit.min_height(y);
+        self
+    }
     /// How much further down its bottom layer goes (0 by default: level with the ground).
     pub fn buried(mut self, blocks: i32) -> Self {
         self.fit = self.fit.buried(blocks);

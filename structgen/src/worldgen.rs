@@ -6,8 +6,12 @@ use weft_sdk::*;
 
 use crate::styles;
 
-/// Biomes on land with room to build: plains, forests, taiga, snowy plains and mountains.
-const BIOME: &str = "#animals";
+/// Open land to build on: plains and snowy plains, without the trees of forests, which would
+/// stand cut through a building.
+pub const OPEN: &str = "#animals !#forest !#mountain";
+/// Base's sea level: lakes and the sea fill the ground below it, so buildings stand at least
+/// this high.
+pub const SEA: i32 = 63;
 /// How much the ground under a lone building may rise and fall.
 const MAX_SLOPE: i32 = 5;
 /// The buildings that also stand alone: each file, one chance per square of this many blocks,
@@ -57,7 +61,8 @@ fn alone(r: &mut Registry, name: &str, structure: Structure, spacing: u32, chanc
         .dimension(&base_api::OVERWORLD)
         .spacing(spacing)
         .chance(chance)
-        .biome(BIOME)
+        .biome(OPEN)
+        .min_height(SEA)
         .foundation(Foundation::Ground)
         .max_slope(MAX_SLOPE);
     for roof in ROOFS {
