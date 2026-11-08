@@ -49,6 +49,23 @@ looks, and `--turn right` turned. `--layout structgen/examples/layouts/town_stre
 several side by side, turned as the file says, and shoots them together, to see tiles join up.
 Run `--help` for the rest.
 
+## Sketching a settlement
+
+`examples/sketch/` turns a hand-drawn plan of a whole settlement into something to look at:
+roads as curves through a few points, squares, strip fields, gardens and hedges drawn onto the
+ground, and buildings and trees placed by their middle and turn. `examples/sketches/` has two
+villages and two towns.
+
+```text
+cargo run --release --example sketch -- examples/sketches/green_village.txt out/green_village
+tools/structure-shots.sh --layout structgen/out/green_village/green_village.txt
+```
+
+It writes the ground in pieces of at most 64 by 64, a layout of the pieces and buildings for
+the shot tool, and `<sketch>.map`, the plan as text from above with each building a letter;
+buildings that overlap are named as it runs. A sketch's `view` lines add shots of their own,
+from street level say. The format is at the top of `examples/sketch/parse.rs`.
+
 ## Tips
 
 - Draw the front on the north side (z = 0): a settlement turns a building so that side faces

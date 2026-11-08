@@ -68,6 +68,7 @@ The details are in [`docs/`](docs/README.md):
 | `examples/buildings/` | draws the mod's buildings, paths and streets in code, with the Hearthwood kit |
 | `examples/shot_script/` | the game script `tools/structure-shots.sh` photographs them with |
 | `examples/layouts/` | tiles laid side by side, for `structure-shots.sh --layout` |
+| `examples/sketch/`, `examples/sketches/` | hand-drawn settlements turned into ground and layouts to shoot |
 
 ## Build and install
 

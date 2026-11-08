@@ -20,6 +20,8 @@
   path, a path a street and a street a square. Styles pave them in gravel or dirt, and in
   cobblestone, stone, brick or sandstone. `/structure load` places them; nothing lays them in
   the world yet.
+- Trees and a bush to plant on greens and in orchards: `oak_tree`, `oak_tree_large`,
+  `birch_tree`, `fruit_tree`, `bush`. Style `cobble_ground` paves a building's surroundings.
 - The `ground` slot takes the ground's own top block wherever a structure generates: grass,
   snow or sand.
 - `.biome(..)` takes biome names as well as `#tags`, several apart by spaces and `!` leaving

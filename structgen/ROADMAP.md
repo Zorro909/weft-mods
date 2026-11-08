@@ -37,6 +37,32 @@ another. Nothing lays them yet; the settlements still draw their gravel lines bl
 network planner would lay the tiles from the centre out, turn each to its neighbours, step them
 up and down slopes with the slope tiles, and leave the buildings room to face onto them.
 
+## What the sketched settlements show
+
+Two villages and two towns were laid out by hand (`examples/sketches/`, see
+[Sketching a settlement](docs/adding-structures.md#sketching-a-settlement)) to learn what a
+generator has to do:
+
+- **Roads are curves, not tiles.** A few points smoothed into a curve and drawn onto the ground
+  looks old; tiles on a grid look planned. The tiles suit a planned grid only.
+- **A settlement grows round one centre**: a green between two lanes, a fork with the tavern
+  and an old tree, a market that is a widened street or the triangle where three roads meet.
+  The church stands apart, on its own square or in a hedged yard; the mill stands outside.
+- **Buildings keep four turns and still follow a curve**: each faces its road, the turn
+  nearest the road's direction. In a village they stand back 2 to 6 blocks, at uneven
+  distances; in a town they stand shoulder to shoulder on the street line, each stepped a
+  block or two to follow the curve. That stepping, more than anything, makes a town look old.
+- **The plot is the unit, not the building**: the house at the road, its garden or yard behind,
+  barns at the back of a farm, the fields in strips beyond. Hedges and orchards between gardens
+  and fields, trees on the green.
+- **To fix before generating**: grass is left between kerbs and house fronts where nothing
+  reaches (a street should pave out to its building line); a gutter or kerb at an angle steps
+  like a staircase; worn patches every tenth block of a path read as spots; field strips always
+  run north to south rather than across their plot. Roads go down before buildings, so a
+  building's eaves keep the ground's own block unless it is paved (`cobble_ground`).
+- **Size**: a village of 15 buildings takes about 130 by 120 blocks, a small town of 35 to 40
+  about 140 by 130 without its fields.
+
 ## Towns
 
 A town planner, larger than a village: a market square with the town hall or guildhall, the

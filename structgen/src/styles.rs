@@ -53,6 +53,7 @@ pub const STYLES: &[(&str, &[(&str, &str)])] = &[
     ("oak_infill", &[("wall/infill", "base:oak_planks")]),
     ("spruce_infill", &[("wall/infill", "base:spruce_planks")]),
     ("white_infill", &[("wall/infill", "base:wool")]),
+    ("cobble_ground", &[("ground", "base:cobblestone")]),
     (
         "gravel_path",
         &[("path/surface", "base:gravel"), ("path/worn", "base:dirt")],

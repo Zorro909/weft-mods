@@ -87,4 +87,5 @@ by commas, each over the one before: `/structure load crofter_cottage none brick
 | `oak_frame`, `spruce_frame`, `birch_frame` | `frame/log` |
 | `birch_infill`, `oak_infill`, `spruce_infill`, `white_infill` | `wall/infill` |
 | `gravel_path`, `dirt_path` | `path/surface`, `path/worn` |
+| `cobble_ground` | `ground`: cobblestone, for a building on a paved street |
 | `cobble_street`, `stone_street`, `brick_street`, `sandstone_street` | `street/paving`, `street/patch`, `street/kerb`, `street/gutter`, `street/step` |

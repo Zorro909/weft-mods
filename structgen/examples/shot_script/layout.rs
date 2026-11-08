@@ -1,14 +1,18 @@
 //! Layouts: several structures placed side by side and photographed together, to see tiles
-//! such as paths and streets join up. A layout file has one structure a line:
+//! such as paths and streets join up, or a whole settlement. A layout file has one structure a
+//! line, and may name views of its own:
 //!
 //! ```text
-//! # name           turn   x   z
+//! # name           turn   x   z   [styles]
 //! path_corner      right  0   0
-//! path_straight    right  5   0
+//! path_straight    right  5   0   dirt_path
+//! # view name  eye x y z   target x y z    (y above the ground)
+//! view  green  30 2 50     40 0 30
 //! ```
 //!
 //! `x` and `z` are the north-west corner of the structure as placed (turned), on the
-//! flatlands; `#` starts a comment.
+//! flatlands; `#` starts a comment. A structure is a file of this mod's `assets/structures/`,
+//! or of the layout's own folder.
 
 use std::path::Path;
 
@@ -19,71 +23,112 @@ const GAP: i32 = 2;
 /// Where a player stands on the flatlands: on the grass, at y 3.
 const FEET_Y: i32 = 4;
 
+pub struct Layout {
+    placed: Vec<Placed>,
+    views: Vec<(String, [f32; 3], [f32; 3])>,
+}
+
 /// One structure of a layout.
-pub struct Placed {
+struct Placed {
     name: String,
     turn: String,
     corner: [i32; 2],
     /// As turned.
     size: [i32; 3],
+    styles: String,
 }
 
-/// The structures of layout `file`, their sizes read from this mod's `assets/structures/`.
-pub fn read_layout(file: &str) -> Vec<Placed> {
+/// The layout in `file`.
+pub fn read_layout(file: &str) -> Layout {
     let text =
         std::fs::read_to_string(file).unwrap_or_else(|e| panic!("could not read {file}: {e}"));
-    let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/structures");
-    let lines = text
+    let folders = [
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/structures"),
+        Path::new(file)
+            .parent()
+            .unwrap_or(Path::new("."))
+            .to_path_buf(),
+    ];
+    let mut layout = Layout {
+        placed: Vec::new(),
+        views: Vec::new(),
+    };
+    for line in text
         .lines()
-        .map(|line| line.split('#').next().unwrap_or("").trim());
-    lines
-        .filter(|line| !line.is_empty())
-        .map(|line| {
-            let words: Vec<&str> = line.split_whitespace().collect();
-            let [name, turn, x, z] = words[..] else {
-                panic!("{file}: {line:?} is not `name turn x z`");
-            };
-            let number = |v: &str| {
-                v.parse()
-                    .unwrap_or_else(|_| panic!("{file}: {v} in {line:?}"))
-            };
-            let (_, [sx, sy, sz]) = read(&assets.join(format!("{name}.wst")).to_string_lossy());
-            Placed {
-                name: name.to_string(),
-                turn: turn.to_string(),
-                corner: [number(x), number(z)],
-                size: match turn {
-                    "right" | "left" => [sz, sy, sx],
-                    _ => [sx, sy, sz],
-                },
+        .map(|line| line.split('#').next().unwrap_or("").trim())
+    {
+        let words: Vec<&str> = line.split_whitespace().collect();
+        let number = |v: &str| {
+            v.parse::<f32>()
+                .unwrap_or_else(|_| panic!("{file}: {v} in {line:?}"))
+        };
+        match words[..] {
+            [] => {}
+            ["view", name, ex, ey, ez, tx, ty, tz] => {
+                let lift = |y: &str| number(y) + FEET_Y as f32;
+                let eye = [number(ex), lift(ey), number(ez)];
+                layout
+                    .views
+                    .push((name.to_string(), eye, [number(tx), lift(ty), number(tz)]));
             }
-        })
-        .collect()
+            [name, turn, x, z, ref styles @ ..] => {
+                let file = folders
+                    .iter()
+                    .map(|f| f.join(format!("{name}.wst")))
+                    .find(|f| f.exists());
+                let file = file.unwrap_or_else(|| panic!("no structure file for {name}"));
+                let (_, [sx, sy, sz]) = read(&file.to_string_lossy());
+                layout.placed.push(Placed {
+                    name: name.to_string(),
+                    turn: turn.to_string(),
+                    corner: [number(x) as i32, number(z) as i32],
+                    size: match turn {
+                        "right" | "left" => [sz, sy, sx],
+                        _ => [sx, sy, sz],
+                    },
+                    styles: styles.join(","),
+                });
+            }
+            _ => panic!("{file}: {line:?} is not `name turn x z [styles]`, nor a view"),
+        }
+    }
+    layout
 }
 
 /// Places every structure of the layout in one look, then photographs all of it: from above,
-/// from each corner, and along it at eye height. Shots are `<label>-<view>.png`.
-pub fn shots(layout: &[Placed], look: &str, label: &str) -> String {
+/// from each corner, along it at eye height, and from the layout's own views. Shots are
+/// `<label>-<view>.png`.
+pub fn shots(layout: &Layout, look: &str, label: &str) -> String {
     let mut lines = Vec::new();
-    for placed in layout {
+    for placed in &layout.placed {
         lines.extend(place(placed, look));
     }
     lines.push("wait 1".to_string());
     lines.push("idle".to_string());
-    for (view, eye, target) in views(layout) {
-        lines.extend(view_line(label, view, eye, target));
+    for (view, eye, target) in views(&layout.placed)
+        .into_iter()
+        .chain(layout.views.clone())
+    {
+        lines.extend(view_line(label, &view, eye, target));
     }
     lines.join("\n")
 }
 
-/// Stands so that `/structure load` puts `placed` at its corner, and loads it.
+/// Stands so that `/structure load` puts `placed` at its corner, and loads it in its own
+/// styles over `look`.
 fn place(placed: &Placed, look: &str) -> Vec<String> {
     let [x, z] = placed.corner;
     let [sx, _, sz] = placed.size;
     let feet = [x + sx / 2, FEET_Y, z + GAP + sz - 1];
+    let styles: Vec<&str> = [look, placed.styles.as_str()]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect();
     let load = format!(
-        "chat /structure load {} {} {look}",
-        placed.name, placed.turn
+        "chat /structure load {} {} {}",
+        placed.name,
+        placed.turn,
+        styles.join(",")
     );
     vec![
         format!(
@@ -101,51 +146,38 @@ fn place(placed: &Placed, look: &str) -> Vec<String> {
     ]
 }
 
-/// The views of a layout: above it, from its four corners, and along it at eye height.
-fn views(layout: &[Placed]) -> Vec<(&'static str, [f32; 3], [f32; 3])> {
-    let low = [0, 1].map(|i| layout.iter().map(|p| p.corner[i]).min().unwrap_or(0) as f32);
+/// The views every layout gets: above it, from its four corners, and along it at eye height.
+fn views(placed: &[Placed]) -> Vec<(String, [f32; 3], [f32; 3])> {
+    let low = [0, 1].map(|i| placed.iter().map(|p| p.corner[i]).min().unwrap_or(0) as f32);
     let high = [0, 1].map(|i| {
-        let ends = layout.iter().map(|p| p.corner[i] + p.size[i * 2]);
+        let ends = placed.iter().map(|p| p.corner[i] + p.size[i * 2]);
         ends.max().unwrap_or(0) as f32
     });
-    let middle = [
-        (low[0] + high[0]) / 2.0,
-        FEET_Y as f32,
-        (low[1] + high[1]) / 2.0,
-    ];
+    let ground = FEET_Y as f32;
+    let middle = [(low[0] + high[0]) / 2.0, ground, (low[1] + high[1]) / 2.0];
     let span = (high[0] - low[0]).max(high[1] - low[1]);
     let corner = |dx: f32, dz: f32| {
-        let reach = span * 0.55;
+        let reach = span * 0.42;
         [
             middle[0] + dx * reach,
-            FEET_Y as f32 + span * 0.35,
+            ground + span * 0.25,
             middle[2] + dz * reach,
         ]
     };
-    let eye = FEET_Y as f32 + EYE;
-    vec![
+    let eye = ground + EYE;
+    [
         (
             "above",
-            [
-                middle[0],
-                FEET_Y as f32 + span * 0.9,
-                middle[2] + 0.1 * span,
-            ],
+            [middle[0], ground + span * 0.75, middle[2] + 0.1 * span],
             middle,
         ),
         ("north_west", corner(-1.0, -1.0), middle),
         ("north_east", corner(1.0, -1.0), middle),
         ("south_east", corner(1.0, 1.0), middle),
         ("south_west", corner(-1.0, 1.0), middle),
-        (
-            "along_south",
-            [middle[0], eye, high[1] + 2.0],
-            [middle[0], FEET_Y as f32, middle[2]],
-        ),
-        (
-            "along_west",
-            [low[0] - 2.0, eye, middle[2]],
-            [middle[0], FEET_Y as f32, middle[2]],
-        ),
+        ("along_south", [middle[0], eye, high[1] + 2.0], middle),
+        ("along_west", [low[0] - 2.0, eye, middle[2]], middle),
     ]
+    .map(|(name, eye, target)| (name.to_string(), eye, target))
+    .into()
 }

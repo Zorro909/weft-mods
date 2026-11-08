@@ -14,6 +14,7 @@ mod kit;
 mod market;
 mod mills;
 mod paths;
+mod props;
 mod smithies;
 mod streets;
 mod townhouses;
@@ -37,6 +38,7 @@ fn buildings() -> Vec<Building> {
         mills::BUILDINGS,
         workyards::BUILDINGS,
         paths::BUILDINGS,
+        props::BUILDINGS,
         streets::BUILDINGS,
     ]
     .concat()

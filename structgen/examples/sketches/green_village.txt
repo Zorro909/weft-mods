@@ -1,0 +1,74 @@
+# A green village (Angerdorf): two lanes part around a long green with the church, the well
+# and an old oak on it, the farmsteads face the green from both sides, gardens and orchards
+# behind them, strip fields beyond, and a post mill on the edge.
+
+# The lanes round the green, and the roads out at either end.
+path 3   0,62 10,58 35,44 65,40 95,44 120,56 136,52
+path 3   10,58 35,68 65,72 95,68 120,56
+# Tracks out to the fields, between the farmsteads.
+track    64,41 64,28 60,14 62,-4
+track    62,71 62,92 58,104 60,118
+track    120,56 116,30 112,12
+# Footpaths from the lanes to the doors.
+path 2   22,48 22,46
+path 2   57,40 57,37
+path 2   41,70 41,72
+path 2   86,71 86,73
+path 2   85,56 76,56 70,55
+# The strip fields, each a furlong of its own.
+field    2,2 50,0 52,18 4,20
+field    68,-2 100,-4 98,14 70,16
+field    6,93 55,94 54,114 8,112
+field    70,96 100,97 98,116 72,114
+# Kitchen gardens behind the houses.
+garden   18,78 29,78 29,86 18,86
+garden   37,80 45,80 45,88 37,88
+garden   81,83 91,83 91,90 81,90
+garden   52,20 62,20 62,26 52,26
+garden   13,30 22,30 22,37 13,37
+# Hedges between the gardens and the fields.
+hedge    14,91 50,92 58,91
+hedge    68,93 96,94
+hedge    4,23 30,22 33,20
+hedge    70,19 96,18
+
+# North of the green, fronts facing it.
+place crofter_cottage back  22,43  spruce_roof
+place staddle_granary none  27,28
+place hof             back  40,30  oak_roof
+place dormer_cottage  back  57,32  spruce_roof,white_infill
+place longhouse       back  75,31  oak_roof
+place crofter_cottage back  91,35  brick_roof
+place great_barn      left  106,36 spruce_roof
+# South of the green.
+place longhouse       none  24,72  spruce_roof
+place crofter_cottage none  41,75  oak_roof,spruce_frame
+place open_forge      none  55,78
+place wayside_tavern  none  70,82  brick_roof
+place dormer_cottage  none  86,77  oak_roof
+place hof             none  104,78 spruce_roof,spruce_frame
+place stable          none  112,94 oak_roof
+# On the green.
+place village_church  left  85,56  stone_roof
+place draw_well       none  55,56
+place oak_tree_large  none  40,56
+place oak_tree        none  68,63
+place bush            none  30,55
+place bush            none  101,56
+# Orchards and trees about the farmsteads.
+place fruit_tree      none  86,24
+place fruit_tree      none  93,22
+place fruit_tree      none  99,20
+place fruit_tree      none  80,22
+place birch_tree      none  9,44
+place oak_tree        none  48,86
+place oak_tree        none  122,74
+place birch_tree      none  33,90
+# The mill on the edge of the fields.
+place post_mill       none  112,4  oak_roof
+
+view green_west   14,3,57    60,2,56
+view church       60,2,60    85,6,56
+view north_lane   30,2,47    80,3,42
+view south_lane   110,2,66   60,3,72
+view from_fields  60,14,118  62,2,56

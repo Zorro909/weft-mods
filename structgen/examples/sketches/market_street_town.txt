@@ -1,0 +1,78 @@
+# A market-street town (Straßenmarkt): the main road swells into a long spindle of a market,
+# narrow gabled houses packed shoulder to shoulder along both sides with their gables to it,
+# each stepped to follow the curve. The town hall fronts the market, the market hall and the
+# fountain stand in it, a side street climbs north to the church on a square of its own, and
+# another leaves south to the fields.
+
+# The main street, west and east of the market, and the market itself.
+street 5   -6,52 22,50
+street 5   108,50 142,46
+square     18,47 35,40 50,37 65,36 80,37 95,40 110,47 110,53 95,60 80,63 65,64 50,63 35,60 18,53
+# Side streets: north to the church square, south to the fields.
+street 5   58,39 57,24 59,6
+street 5   65,62 66,85 62,108
+square     36,-14 78,-16 80,8 38,10
+# A back lane behind the south row, gardens between.
+path 3     8,84 30,82 50,82 64,84
+garden     21,66 28,66 28,72 21,72
+garden     29,72 35,72 35,79 29,79
+garden     36,73 46,73 46,79 36,79
+garden     91,74 97,74 97,80 91,80
+# Fields outside.
+field      -2,92 40,90 42,116 0,118
+field      74,90 130,86 132,112 76,114
+
+# The north row, fronts south to the market.
+place corner_house    back  24,40  cobble_ground,brick_roof,white_infill
+place narrow_gable    back  32,35  cobble_ground,spruce_roof
+place narrow_gable    back  39,33  cobble_ground,brick_roof,birch_infill
+place hall_house      back  48,33  cobble_ground,oak_roof,white_infill
+place narrow_gable    back  66,30  cobble_ground,brick_roof
+place narrow_gable    back  73,30  cobble_ground,spruce_roof,white_infill
+place hall_house      back  82,32  cobble_ground,brick_roof,spruce_frame
+place narrow_gable    back  91,33  cobble_ground,oak_roof
+place corner_house    back  99,37  cobble_ground,spruce_roof,white_infill
+# The south row, fronts north.
+place corner_house    none  24,59  cobble_ground,spruce_roof
+place narrow_gable    none  32,64  cobble_ground,brick_roof,white_infill
+place hall_house      none  41,66  cobble_ground,spruce_roof,spruce_frame
+place narrow_gable    none  50,69  cobble_ground,oak_roof,birch_infill
+place narrow_gable    none  57,69  cobble_ground,brick_roof
+place town_hall       none  80,71  cobble_ground,stone_roof
+place narrow_gable    none  94,66  cobble_ground,spruce_roof,white_infill
+place corner_house    none  102,61 cobble_ground,brick_roof
+# In the market.
+place market_fountain none  40,50  cobble_ground
+place market_hall     none  64,50  cobble_ground,brick_roof
+place market_stall    none  50,44  cobble_ground
+place market_stall_large none 88,53 cobble_ground
+place market_stall    none  86,46  cobble_ground
+place market_stall    none  29,49  cobble_ground
+# West and east of the market.
+place narrow_gable    back  13,41  cobble_ground,oak_roof
+place hall_house      none  13,61  cobble_ground,brick_roof,white_infill
+place narrow_gable    back  115,38 cobble_ground,brick_roof
+place hall_house      back  124,38 cobble_ground,spruce_roof
+place coaching_inn    none  120,60 cobble_ground,brick_roof
+place storehouse      none  136,60 cobble_ground,spruce_roof
+# Up the side street, and round the church square.
+place narrow_gable    right 48,19  cobble_ground,spruce_roof,white_infill
+place narrow_gable    left  68,19  cobble_ground,brick_roof
+place town_church     left  58,-3  cobble_ground,stone_roof
+place corner_house    right 31,0   cobble_ground,oak_roof
+place narrow_gable    left  86,-2  cobble_ground,spruce_roof
+place oak_tree_large  none  42,0
+# Down the south side street.
+place narrow_gable    right 55,88  spruce_roof
+place hall_house      left  76,94  oak_roof
+place oak_tree        none  16,76
+place birch_tree      none  100,80
+place tower_mill      none  142,98 brick_roof
+
+view market_west   20,2,50     80,5,50
+view market_east   104,2,50    40,5,50
+view town_hall     72,2,57     82,8,68
+view to_church     58,2,40     58,10,-4
+view church_square 76,2,8      52,8,-3
+view east_gate     140,2,46    100,5,50
+view over_market   64,34,96    64,0,44

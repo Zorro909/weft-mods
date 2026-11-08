@@ -66,6 +66,12 @@ cp -r "$root/structgen/assets" "$run/mods/structgen/"
 # `/structure load` reads `structures/` of the folder the game started in before the files built
 # into the mod, so new drafts need no rebuild.
 [[ ${#files[@]} -eq 0 ]] || cp "${files[@]}" "$root/Weft/structures/"
+# A layout's own structures, such as a sketch's ground, sit next to it.
+if [[ -n $layout ]]; then
+    for own in "$(dirname "$layout")"/*.wst; do
+        [[ -e $own ]] && cp "$own" "$root/Weft/structures/"
+    done
+fi
 
 script="$out/shots.txt"
 "$root/structgen/target/release/examples/shot_script" ${styles:+--styles "$styles"} \
