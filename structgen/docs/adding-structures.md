@@ -1,7 +1,14 @@
 # Adding a structure to this mod
 
-Every `.wst` file in `assets/structures/` is compiled into the mod and appears in the world as
-described in [In the world](worldgen.md#single-structures). To add one:
+Every `.wst` file in `assets/structures/` is compiled into the mod and becomes a template of
+it (`structgen:<name>`). Which of them appear in the world, and where, is set in
+`src/worldgen.rs` (buildings alone) and `src/villages.rs` (hamlets and villages); see
+[In the world](worldgen.md).
+
+There are two ways to make one: build it in the game and save it, or draw it in code with the
+kit, as this mod's own buildings are.
+
+## Saved in the game
 
 1. In the game, select a box with the wand (or `/structure pos1` and `pos2`) and run
    `/structure save <name>`, or give the two corners: `/structure save <name> <from> <to>`
@@ -12,18 +19,37 @@ described in [In the world](worldgen.md#single-structures). To add one:
 3. Copy it into `assets/structures/` and rebuild. `build.rs` compiles every file there in;
    a file not named in lowercase letters, digits and underscores fails the build.
 
-See [Wand and commands](commands.md) for the limits on saving.
+See [Wand and commands](commands.md) for the limits on saving. A saved structure has no
+[material slots](materials.md), so styles don't change it.
+
+## Drawn in code
+
+The buildings in `assets/structures/` are drawn in `examples/buildings/`, one file per family
+(`cottages.rs`, `farmstead/`, `inns/`, ...), and `cargo run --release --example buildings`
+writes them all again; `-- crofter_cottage longhouse` writes only those.
+
+- `draft.rs` is the box being drawn: `set`, `fill` and `ring` put block names or slots into it.
+- `kit.rs` is the Hearthwood kit: the [slots](materials.md#this-mods-slots) with their
+  defaults, and the parts every building shares: `gable_roof`, `timber_wall`, `window`,
+  `plinth`, `chimney`, `ladder_up`, `light`. Use those, and the slots, so a new building looks
+  like the others and takes every style.
+- A family file lists its buildings in `BUILDINGS`; add the family to `main.rs`.
+
+To add one to the settlements, give it a `Template` in `src/villages.rs` and put it in a
+`want`.
+
+## Looking at it
+
+`tools/structure-shots.sh <name>...` places each structure in the flatlands at noon and
+photographs it from the front, the back, a side, above and inside, into
+`structgen/out/shots/`. `--styles "brick_roof;birch_roof,white_infill"` shoots it in other
+looks, and `--turn right` turned. Run `--help` for the rest.
 
 ## Tips
 
+- Draw the front on the north side (z = 0): a settlement turns a building so that side faces
+  its well.
 - Air in the box is saved too and clears what was there, so a house keeps its rooms empty when
-  it lands in a hill.
-- Hamlets are built from `well`, `cottage` and `wheat_farm` only. Replacing `cottage.wst`
-  changes the hamlets' houses too; keep its door on the north side, since a hamlet turns a
-  cottage so that side faces the well.
+  it lands in a hill. Under a roof's overhang, put the `path` slot in the bottom layer rather
+  than air, or the ground there is dug out.
 - Chests and machines are placed empty: their contents aren't saved yet.
-
-## The samples
-
-The samples in `assets/structures/` (cottage, watchtower, well, wheat farm, ruined shrine) are
-drawn in code in `examples/samples.rs`; `cargo run --example samples` writes them again.

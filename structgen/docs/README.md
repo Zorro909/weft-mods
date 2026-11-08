@@ -28,9 +28,9 @@ What is planned for the buildings and settlements is in the [roadmap](../ROADMAP
   are placed empty. World saves keep them as entity data beside the cube (engine
   `server/persist.rs`), and generation only writes block states, so this needs an SDK change.
 - **Overlaps.** Structures don't know about each other, so two can land on the same spot, a
-  single cottage inside a hamlet for one.
-- **Water.** The SDK tells a mod no sea level, so the biome tag is what keeps structures out of
-  the sea.
+  lone cottage inside a village for one.
+- **Water.** The SDK tells a mod no sea level, so the mod keeps base's (63) itself:
+  `Fit::min_height` and `.min_height` keep buildings above it.
 - **Structures from outside the mod.** Files are compiled in. Reading them from a folder at
   runtime needs the SDK to tell a mod where the game keeps its files.
 - **Leaving blocks as they are.** Every block of the box is set; there is no "keep" entry

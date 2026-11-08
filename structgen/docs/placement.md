@@ -8,7 +8,8 @@ every client gets the same answer:
    blocks.
 2. A static structure takes its region with `chance`, at a spot and a turn from the seed. The
    biome under its middle must be one of its biomes; the ground under all of it may vary by at most
-   `max_slope` blocks and must have no cave mouth.
+   `max_slope` blocks and must have no cave mouth. With `min_height`, the ground under it may be
+   no lower than that.
 3. The bottom layer is the structure's floor: it takes the place of the ground's top block at
    the median ground height, so doors are level with the ground around it (`buried(n)` sinks it
    further). Under it the foundation fills down to the ground, only below blocks of the bottom

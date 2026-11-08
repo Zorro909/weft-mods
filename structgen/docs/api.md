@@ -55,6 +55,7 @@ Every call after `place` is optional:
 | `.foundation(..)` | no foundation: a gap under it stays |
 | `.max_slope(blocks)` | 6 |
 | `.buried(blocks)` | 0: the bottom layer level with the ground |
+| `.min_height(y)` | any height: the lowest ground under it may be this low and no lower |
 | `.keep_facing()` | turned whichever way the seed says |
 | `.materials(m)` | its slots' defaults; call again for more sets, and the seed picks one per place |
 
@@ -110,7 +111,7 @@ What a planner has:
 | `p.spot(margin)` | a random column at least `margin` blocks inside the region |
 | `p.ground(x, z)` | the column's height and biome (`weft_sdk::terrain::Column`), `None` at a cave mouth |
 | `p.size(&T, turn)` | a template's size once turned |
-| `p.fit(&T, [x, z], turn, &fit)` | the `Pos` where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None`. `Fit::biome(&FORESTS)` takes `static FORESTS: Biomes = Biomes::named("#forest")` |
+| `p.fit(&T, [x, z], turn, &fit)` | the `Pos` where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `min_height`, `buried`) and it stays inside the region; else `None`. `Fit::biome(&FORESTS)` takes `static FORESTS: Biomes = Biomes::named("#forest")` |
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned; `corner` is a `Pos` |
 | `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it, `.clear_above()` cuts away ground above it and `.materials(&m)` fills its slots, none unless called |
 | `p.set(pos, &B)?`, `p.set_state(pos, state)?`, `p.fill(from, to, &B)?` | blocks, at `Pos`es; `fill` takes two opposite corners in either order, and `set_state` a `BlockState` |

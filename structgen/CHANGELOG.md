@@ -18,8 +18,10 @@
 - `.biome(..)` takes biome names as well as `#tags`, several apart by spaces and `!` leaving
   one out: `"#forest !base:birch_forest"`. A name no biome has is logged as an error.
 - `structgen_api::put_back` undoes a `place_in`.
+- `Fit::min_height` and `.min_height(y)` keep a structure off ground lower than `y`, such as
+  the bed of a lake.
 - Each structure generates as a decoration named like it, so another mod can remove it:
-  `r.remove(&Decoration::named("structgen:watchtower"))`.
+  `r.remove(&Decoration::named("structgen:crofter_cottage"))`.
 
 ### Changed
 
@@ -27,6 +29,8 @@
   a granary and fields around it, and lone crofter's cottages, farmhouses, wayside chapels and
   post mills. The old cottage, watchtower, well, wheat farm and ruined shrine are gone, and with
   them their names in `/structure load` and `/structure locate`.
+- Buildings stand only on open plains above sea level, so none lands in a lake or among trees
+  cut through it.
 - `.wst` files are version 2, with a table of slots; version 1 files still read. Mods using
   `structgen_api` have to be rebuilt: `place_in` takes the `Materials` to fill slots with.
 - The mod is now Structgen: its id is `structgen` and its API crate `structgen_api`, so the

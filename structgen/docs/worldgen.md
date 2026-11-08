@@ -1,47 +1,77 @@
 # In the world
 
-The mod adds structures to the base game's overworld while it generates: single buildings now
-and then, and hamlets of several. They appear in new parts of a world, in any world, old or new.
+The mod adds buildings to the base game's overworld while it generates: hamlets, villages, and
+now and then a building on its own. They appear in new parts of a world, in any world, old or
+new.
 
-## Single structures
+All of them stand on open land: plains and snowy plains (biome tag `#animals`, without
+`#forest` and `#mountain`), so no tree stands cut through a wall. None stands lower than sea
+level (63), so none lands in a lake. Each sits on a foundation of the ground's own top block, and
+ground that rises above it is cut away.
 
-Every structure built into the mod appears on its own:
+## The buildings
 
-| Structure | |
+Every building is drawn in one style, Hearthwood: timber frames over cobblestone plinths,
+steep roofs, brick chimneys. Their roofs, frames and wall panels are
+[material slots](materials.md), so the same house is built of spruce in one place and of brick
+and birch in the next.
+
+| Kind | Buildings |
 |---|---|
-| `cottage` | Plank walls with log corners and glass windows, a spruce roof with a brick chimney, and a workbench, furnace and chest inside. |
-| `watchtower` | A stone tower with a ladder up to a railed lookout under a roof. |
-| `well` | A cobblestone well with water in it, log posts and a peaked roof. |
-| `wheat_farm` | Ripe wheat on farmland around a water channel, framed by logs with torches at the corners. |
-| `ruined_shrine` | A worn stone platform with broken pillars, rubble and a glowing stone on a pedestal. |
+| Houses | `crofter_cottage`, `longhouse`, `dormer_cottage`, `hall_house`, `narrow_gable`, `corner_house` |
+| Farms | `wheat_field`, `staddle_granary`, `great_barn`, `hof`, `stable` |
+| Inns | `wayside_tavern`, `coaching_inn` |
+| Smithies | `open_forge`, `smithy_house` |
+| Market | `draw_well`, `market_stall`, `market_stall_large`, `market_fountain`, `market_hall` |
+| Halls | `guildhall`, `town_hall` |
+| Chapels | `wayside_chapel`, `village_church`, `town_church` |
+| Mills and yards | `post_mill`, `tower_mill`, `lumberyard`, `storehouse` |
 
-They all follow the same rules:
+The town buildings (`hall_house`, `narrow_gable`, `corner_house`, `coaching_inn`,
+`market_fountain`, `market_hall`, `guildhall`, `town_hall`, `town_church`, `storehouse`) don't
+appear in the world yet: they wait for towns, see the [roadmap](../ROADMAP.md). Every file is
+still a template, so `/structure load` and other mods' plans can place them.
 
-- the world is split into squares of 192 by 192 blocks, and each structure has a 30% chance of
-  one in each square;
-- only in biomes on land with room to build (tag `#animals`: plains, forests, taiga, snowy
-  plains and mountains);
-- only where the ground under it rises and falls by at most 5 blocks, with no cave mouth;
-- turned whichever way the world's seed says, standing on a foundation of the ground's own top
-  block.
+## Alone
 
-## Hamlets
+A few buildings also stand alone in the country. The world is split into squares, and each
+square has a chance of one:
 
-A hamlet is a well with cottages and wheat farms around it, joined to it by gravel paths. The
-world is split into squares of 384 by 384 blocks, and each square has a 50% chance of a hamlet:
+| Building | Square | Chance |
+|---|---|---|
+| `crofter_cottage` | 256 | 25% |
+| `hof` | 320 | 20% |
+| `wayside_chapel` | 384 | 20% |
+| `post_mill` | 384 | 15% |
 
-1. The well goes on a spot well inside the square, where the biome has the `#animals` tag and
-   the ground varies by at most 3 blocks.
-2. Up to 16 spots within 40 blocks of the well are tried for buildings, up to six of them:
-   about 60% cottages, the rest farms. A cottage turns its door toward the well. A building
-   keeps 3 blocks from the others and goes only where the ground varies by at most 4.
-3. A gravel path runs from the well to each building, first across and then straight in, so it
-   meets a cottage at its door.
+The ground under one rises and falls by at most 5 blocks, it is turned whichever way the seed
+says, and its roof is spruce, oak or birch.
 
-Ground that rises above a building is cut away, so hamlets sit in hillsides too.
+## Hamlets and villages
+
+Both are laid out around a draw well:
+
+| | Hamlet | Village |
+|---|---|---|
+| One per square of | 384 blocks, 50% | 512 blocks, 35% |
+| Buildings | 4 cottages, a granary, 2 wheat fields | 2 market stalls, a tavern, a smithy, a chapel or church, 7 cottages, 2 barns, hofs or stables, a granary or lumberyard, 4 wheat fields, a mill |
+| Roofs | spruce or oak | spruce, oak or brick |
+| Frames and panels | oak or spruce frames | oak, spruce or birch frames; birch or white panels |
+
+1. The well goes on a spot well inside the square, where the ground varies by at most 3
+   blocks.
+2. Then each building, the ones that matter most first: the stalls close to the well, the
+   cottages around them, the barns and fields further out, the mill last at the edge. Each is
+   tried at up to 12 spots within its own distance of the well, keeps 3 blocks from the others,
+   and goes only where the ground varies by at most 4. One that finds no spot is left out.
+3. Every building but the fields turns its front toward the well. A settlement takes one frame
+   and panel for all its buildings, and a roof for each.
+4. A gravel path runs from the well to each building, first across and then straight in, so it
+   meets a building at its front. It goes round buildings and stops at water.
 
 ## Finding them
 
-`/structure locate <name>` gives the nearest one, generated yet or not; see
+`/structure locate <name>` gives the nearest one, generated yet or not:
+`/structure locate village`, `/structure locate hof`. See
 [Wand and commands](commands.md#finding-structures). How the ground and turn are worked out is in
 [How a place is chosen](placement.md).

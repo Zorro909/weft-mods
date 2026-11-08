@@ -13,10 +13,11 @@ any mod can use without this mod being loaded.
 
 ### In the world
 
-Cottages, watchtowers, wells, wheat farms and ruined shrines appear on their own across the
-overworld's land. Hamlets gather a well, cottages and farms, joined by gravel paths. Structures
-sit level with the ground on a foundation of its own top block, and are turned to face every
-way.
+Hamlets and villages grow on the overworld's open plains: cottages, farms and a granary around
+a draw well, and in a village an inn, a smithy, a chapel, market stalls, barns and a mill as
+well, joined by gravel paths. A few cottages, farms, chapels and mills also stand alone. All 29
+buildings share one timber-framed style, and their roofs, frames and wall panels change from
+one settlement to the next.
 
 ### Making structures in the game
 
@@ -28,6 +29,8 @@ file in front of you to look at, takes it back again, and finds the nearest stru
 - **Static structures:** one template, placed now and then where the ground and biome suit it.
 - **Dynamic structures:** a planner of your own lays out villages, ruins or anything else from
   any number of templates and blocks.
+- **Material slots:** a structure names roles such as `roof/stair`, and code fills them with
+  other blocks, so one drawing is built of spruce, oak or brick.
 - **Placing and finding:** put a structure into the world straight away, or find the nearest
   one, generated yet or not.
 
@@ -36,7 +39,7 @@ on where structures are without sending them.
 
 ## Getting started
 
-1. Find a hamlet: `/structure locate hamlet`, then go there.
+1. Find a village: `/structure locate village`, then go there.
 2. Make a structure of your own: take the wand from creative's Tools tab, hit one corner of a
    building and use the wand on the opposite corner, then `/structure save my_house`.
 3. Look at it again elsewhere with `/structure load my_house`; `/structure undo` takes it away.
@@ -45,7 +48,9 @@ on where structures are without sending them.
 
 The details are in [`docs/`](docs/README.md):
 
-- [In the world](docs/worldgen.md): which structures appear, where, and how hamlets are laid out
+- [In the world](docs/worldgen.md): which buildings appear, where, and how hamlets and villages
+  are laid out
+- [Material slots](docs/materials.md): restyling a structure with other blocks
 - [Wand and commands](docs/commands.md)
 - [Adding a structure to this mod](docs/adding-structures.md)
 - [Using `structgen_api`](docs/api.md) from another mod
@@ -57,9 +62,10 @@ The details are in [`docs/`](docs/README.md):
 | Folder | What it holds |
 |---|---|
 | `api/` | `structgen_api`: the file format and the placing, for any mod |
-| `src/` | the mod: world generation, hamlets, the wand and `/structure` |
+| `src/` | the mod: world generation, hamlets and villages, styles, the wand and `/structure` |
 | `assets/structures/` | the `.wst` files compiled into the mod |
-| `examples/samples.rs` | draws the sample structures in code |
+| `examples/buildings/` | draws the mod's buildings in code, with the Hearthwood kit |
+| `examples/shot_script.rs` | the game script `tools/structure-shots.sh` photographs them with |
 
 ## Build and install
 
