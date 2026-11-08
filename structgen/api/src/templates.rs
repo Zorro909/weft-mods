@@ -95,17 +95,24 @@ impl Entry {
             );
             return None;
         };
+        let follows: Vec<bool> = (self.structure.palette.iter())
+            .map(|entry| materials::follows_ground(entry, materials))
+            .collect();
         let palettes = Turn::ALL.map(|turn| {
-            palette
-                .iter()
-                .map(|&state| turn_state(state, turn))
+            (palette.iter().zip(&follows))
+                .map(|(&state, &follows)| match follows {
+                    true => FOLLOWS_GROUND,
+                    false => turn_state(state, turn),
+                })
                 .collect()
         });
+        let ground = (palette.iter().zip(&follows)).find(|(_, follows)| **follows);
         Some(Resolved {
             size: self.size(),
             indices: self.structure.indices.clone(),
             palettes,
             air,
+            ground: ground.map_or(air, |(&state, _)| state),
         })
     }
 }
@@ -118,9 +125,15 @@ pub(crate) struct Resolved {
     /// Every block's palette index, unturned: x fastest, then z, then y.
     pub indices: Vec<u16>,
     /// The state of each palette entry under each turn, in `Turn::ALL` order.
+    /// `FOLLOWS_GROUND` for the cells that take the ground's top block.
     pub palettes: [Vec<u32>; 4],
     pub air: u32,
+    /// What a `FOLLOWS_GROUND` cell gets where the ground has no top block.
+    pub ground: u32,
 }
+
+/// The state of a cell that takes the top block of the ground in its column.
+pub(crate) const FOLLOWS_GROUND: u32 = u32::MAX - 1;
 
 impl Resolved {
     /// The state at `pos` of the template turned by `turn`, `pos` counted in the turned box.
@@ -144,6 +157,7 @@ mod tests {
             indices: (0..6).collect(),
             palettes: [0, 1, 2, 3].map(|_| palette.clone()),
             air: 0,
+            ground: 0,
         }
     }
 

@@ -52,7 +52,7 @@ fn furnish_forge(d: &mut Draft) {
 fn smithy_house() -> Structure {
     let mut d = Draft::new([12, 14, 15]);
     plinth(&mut d, [1, 7], [10, 13], 1);
-    d.fill([0, 0, 0], [11, 0, 5], &slot("path"));
+    d.fill([0, 0, 0], [11, 0, 5], &slot("ground"));
     d.fill([1, 0, 1], [10, 0, 6], &slot("plinth"));
     forge_wing(&mut d);
     smith_house(&mut d);

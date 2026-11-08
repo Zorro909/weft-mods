@@ -91,6 +91,16 @@ pub(crate) fn with_props(block: &str, props: &str) -> String {
     }
 }
 
+/// The slot that takes the ground's own top block in its column wherever the structure is
+/// placed (grass on plains, snow on snowy plains), unless `Materials` fill it. Its default goes
+/// where the ground is unknown, as with `place_in`.
+pub(crate) const GROUND: &str = "ground";
+
+/// Whether palette `entry` follows the ground when placed with `materials` (see `GROUND`).
+pub(crate) fn follows_ground(entry: &str, materials: &Materials) -> bool {
+    slot_of(entry).is_some_and(|(slot, _)| slot == GROUND) && materials.get(GROUND).is_none()
+}
+
 /// Each palette entry of a structure as the state name it is placed as with the slots'
 /// defaults: the names the game checks when it loads.
 pub(crate) fn default_names(palette: &[String], slots: &BTreeMap<String, String>) -> Vec<String> {
@@ -184,6 +194,19 @@ mod tests {
             with_props("base:oak_planks_stairs", "half=top"),
             "base:oak_planks_stairs[half=top]",
             "added"
+        );
+    }
+
+    #[test]
+    fn the_ground_slot_follows_the_ground_unless_filled() {
+        let plain = Materials::new();
+        assert!(follows_ground("@ground", &plain), "the ground's own block");
+        assert!(!follows_ground("@path", &plain), "another slot");
+        assert!(!follows_ground("base:grass", &plain), "a plain block");
+        let paved = Materials::new().with("ground", "base:cobblestone");
+        assert!(
+            !follows_ground("@ground", &paved),
+            "filled with cobblestone"
         );
     }
 

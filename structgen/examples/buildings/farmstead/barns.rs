@@ -90,7 +90,7 @@ fn furnish_barn(d: &mut Draft) {
 pub fn staddle_granary() -> Structure {
     let mut d = Draft::new([7, 11, 11]);
     d.default("wall/infill", "base:oak_planks");
-    d.fill([0, 0, 0], [6, 0, 10], &slot("path"));
+    d.fill([0, 0, 0], [6, 0, 10], &slot("ground"));
     staddles(&mut d);
     granary_body(&mut d);
     gable_roof(&mut d, Ridge::Z, [2, 10], [0, 6], 7);

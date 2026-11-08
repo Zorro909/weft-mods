@@ -10,7 +10,7 @@ use crate::kit::{Ridge, gable_end, gable_roof, ladder, log, plinth, slab, slot, 
 /// it, and a square tower at the front, 25 tall with battlements, the doorway at its foot.
 pub fn town_church() -> Structure {
     let mut d = Draft::new([13, 25, 23]);
-    d.fill([0, 0, 0], [12, 0, 22], &slot("path"));
+    d.fill([0, 0, 0], [12, 0, 22], &slot("ground"));
     plinth(&mut d, [1, 5], [11, 17], 0);
     plinth(&mut d, [3, 17], [9, 21], 0);
     stone_walls(&mut d, [1, 5], [11, 17], [1, 7]);

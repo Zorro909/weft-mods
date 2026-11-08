@@ -105,7 +105,7 @@ fn byre(d: &mut Draft) {
     }
     d.fill([9, 1, 1], [11, 2, 1], AIR);
     d.fill([9, 3, 1], [11, 3, 1], &log("x"));
-    d.fill([9, 0, 2], [11, 0, 6], &slot("path"));
+    d.fill([9, 0, 2], [11, 0, 6], &slot("ground"));
     d.fill([9, 0, 6], [11, 0, 6], "base:water");
     d.fill([9, 1, 5], [11, 1, 5], &slab("plinth/slab", "bottom"));
     d.set([11, 2, 2], "@light[facing=west]");

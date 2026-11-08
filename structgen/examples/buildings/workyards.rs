@@ -17,7 +17,7 @@ const LADDER_ON_SOUTH: &str = "base:ladder[north=false,east=false,south=true,wes
 fn lumberyard() -> Structure {
     let mut d = Draft::new([11, 8, 11]);
     d.default("wall/infill", "base:oak_planks");
-    d.fill([0, 0, 0], [10, 0, 10], &slot("path"));
+    d.fill([0, 0, 0], [10, 0, 10], &slot("ground"));
     log_shed(&mut d);
     gable_roof(&mut d, Ridge::X, [0, 10], [4, 10], 4);
     for x in [1, 9] {
@@ -73,7 +73,7 @@ fn yard(d: &mut Draft) {
 /// timber-framed loft jutting out over it with a loft door under a hoist beam out of the gable.
 fn storehouse() -> Structure {
     let mut d = Draft::new([11, 14, 18]);
-    d.fill([0, 0, 0], [10, 0, 17], &slot("path"));
+    d.fill([0, 0, 0], [10, 0, 17], &slot("ground"));
     plinth(&mut d, [1, 3], [9, 16], 1);
     stone_ground_floor(&mut d);
     loft_storey(&mut d);

@@ -49,7 +49,7 @@ fn wayside_chapel() -> Structure {
 /// with a tall pyramid spire rides the front of the nave's ridge.
 fn village_church() -> Structure {
     let mut d = Draft::new([11, 18, 18]);
-    d.fill([0, 0, 0], [10, 0, 17], &slot("path"));
+    d.fill([0, 0, 0], [10, 0, 17], &slot("ground"));
     plinth(&mut d, [1, 1], [9, 11], 0);
     plinth(&mut d, [3, 11], [7, 16], 0);
     stone_walls(&mut d, [1, 1], [9, 11], [1, 5]);

@@ -18,7 +18,7 @@ const MILLSTONE: &str = "base:stone_slab[type=bottom]";
 fn post_mill() -> Structure {
     let mut d = Draft::new([15, 20, 9]);
     d.default("wall/infill", "base:oak_planks");
-    d.fill([0, 0, 0], [14, 0, 8], &slot("path"));
+    d.fill([0, 0, 0], [14, 0, 8], &slot("ground"));
     roundhouse(&mut d);
     mill_body(&mut d);
     gable_roof(&mut d, Ridge::Z, [1, 8], [4, 10], 12);
@@ -82,7 +82,7 @@ fn mill_body(d: &mut Draft) {
 /// two floors.
 fn tower_mill() -> Structure {
     let mut d = Draft::new([13, 22, 9]);
-    d.fill([0, 0, 0], [12, 0, 8], &slot("path"));
+    d.fill([0, 0, 0], [12, 0, 8], &slot("ground"));
     tower(&mut d);
     tower_cap(&mut d);
     sails(&mut d, [6, 15, 0], 6);

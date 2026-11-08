@@ -41,7 +41,7 @@ fn paddock(d: &mut Draft) {
         d.set([x, 1, 0], &slot("plinth/corner"));
     }
     d.fill([7, 1, 0], [9, 2, 0], AIR);
-    d.fill([7, 0, 0], [9, 0, 3], &slot("path"));
+    d.fill([7, 0, 0], [9, 0, 3], &slot("ground"));
 }
 
 /// Posts along the open front under a lying beam, timber end walls following the slope, and the

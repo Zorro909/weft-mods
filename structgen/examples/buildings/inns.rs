@@ -22,7 +22,7 @@ pub const BUILDINGS: &[Building] = &[
 /// the door in the middle of the front, and a beer garden under a log pergola before it.
 fn wayside_tavern() -> Structure {
     let mut d = Draft::new([11, 16, 15]);
-    d.fill([0, 0, 0], [10, 0, 4], &slot("path"));
+    d.fill([0, 0, 0], [10, 0, 4], &slot("ground"));
     plinth(&mut d, [1, 5], [9, 13], 1);
     stone_walls(&mut d, [1, 5], [9, 13], [1, 3]);
     floor_line(&mut d, [1, 5], [9, 13], 4);

@@ -27,7 +27,15 @@ pub const SLOTS: &[(&str, &str)] = &[
     ("window", "base:glass"),
     ("chimney", "base:bricks"),
     ("light", "base:torch"),
-    ("path", "base:gravel"),
+    ("ground", "base:grass"),
+    ("path/surface", "base:gravel"),
+    ("path/worn", "base:dirt"),
+    ("path/step", "base:cobblestone_stairs"),
+    ("street/paving", "base:cobblestone"),
+    ("street/patch", "base:mossy_cobblestone"),
+    ("street/kerb", "base:stone_bricks"),
+    ("street/gutter", "base:stone_bricks_slab"),
+    ("street/step", "base:stone_bricks_stairs"),
 ];
 
 /// Slot `name` as a block name.
@@ -193,14 +201,14 @@ pub fn window(d: &mut Draft, pos: [usize; 3], height: usize, outward: &str) {
 }
 
 /// A plinth of `plinth` under walls from `from` to `to` (x, z), with `plinth/corner` corners,
-/// a `floor` inside, and a ring of `path` `eaves` blocks wide around it, so the ground under the
-/// roof's overhang is not left open.
+/// a `floor` inside, and a ring of `ground` `eaves` blocks wide around it, so the ground under
+/// the roof's overhang stays as it was rather than dug out.
 pub fn plinth(d: &mut Draft, from: [usize; 2], to: [usize; 2], eaves: usize) {
     let low = [from[0].saturating_sub(eaves), from[1].saturating_sub(eaves)];
     d.fill(
         [low[0], 0, low[1]],
         [to[0] + eaves, 0, to[1] + eaves],
-        &slot("path"),
+        &slot("ground"),
     );
     d.fill([from[0], 0, from[1]], [to[0], 0, to[1]], &slot("floor"));
     d.ring(0, from, to, &slot("plinth"));

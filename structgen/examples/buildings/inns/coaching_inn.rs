@@ -31,7 +31,7 @@ pub fn coaching_inn() -> Structure {
 /// The ground before, under and behind the inn, the yard's wall with a back gate, and a
 /// trough.
 fn yard(d: &mut Draft) {
-    d.fill([0, 0, 0], [16, 0, 16], &slot("path"));
+    d.fill([0, 0, 0], [16, 0, 16], &slot("ground"));
     d.fill([1, 1, 15], [10, 2, 15], &slot("plinth"));
     d.fill([1, 1, 10], [1, 2, 15], &slot("plinth"));
     d.fill([6, 1, 15], [7, 2, 15], AIR);
@@ -130,7 +130,7 @@ fn dormer(d: &mut Draft, x: usize, z: usize, slope: [usize; 2]) {
 
 /// A carriage arch through the west end of the range into the yard, walled off from the taproom.
 fn carriage_arch(d: &mut Draft) {
-    d.fill([2, 0, 3], [4, 0, 9], &slot("path"));
+    d.fill([2, 0, 3], [4, 0, 9], &slot("ground"));
     d.fill([2, 1, 3], [4, 3, 9], AIR);
     d.fill([5, 1, 3], [5, 3, 9], &slot("plinth"));
     for z in [3, 9] {

@@ -24,7 +24,7 @@ pub const BUILDINGS: &[Building] = &[
 /// roof with a chimney at the back of the ridge.
 fn narrow_gable() -> Structure {
     let mut d = Draft::new([7, 20, 13]);
-    d.fill([0, 0, 0], [6, 0, 12], &slot("path"));
+    d.fill([0, 0, 0], [6, 0, 12], &slot("ground"));
     plinth(&mut d, [1, 3], [5, 11], 1);
     stone_storey(&mut d, [1, 3], [5, 11], 3);
     framed_storey(&mut d, [1, 2], [5, 11], 4);
@@ -86,7 +86,7 @@ fn furnish_narrow_gable(d: &mut Draft) {
 /// and two dormers in the front slope.
 fn hall_house() -> Structure {
     let mut d = Draft::new([11, 16, 11]);
-    d.fill([0, 0, 0], [10, 0, 10], &slot("path"));
+    d.fill([0, 0, 0], [10, 0, 10], &slot("ground"));
     plinth(&mut d, [1, 2], [9, 9], 1);
     stone_storey(&mut d, [1, 2], [9, 9], 3);
     framed_storey(&mut d, [1, 1], [9, 9], 4);
@@ -154,7 +154,7 @@ fn furnish_hall_house(d: &mut Draft) {
 /// both streets on a corner post, and two crossing roofs give it gables to the north and east.
 fn corner_house() -> Structure {
     let mut d = Draft::new([9, 14, 9]);
-    d.fill([0, 0, 0], [8, 0, 8], &slot("path"));
+    d.fill([0, 0, 0], [8, 0, 8], &slot("ground"));
     plinth(&mut d, [1, 2], [6, 7], 1);
     stone_storey(&mut d, [1, 2], [6, 7], 3);
     framed_storey(&mut d, [1, 1], [7, 7], 4);

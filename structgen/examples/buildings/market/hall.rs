@@ -28,7 +28,7 @@ pub fn market_hall() -> Structure {
 /// The paving, under the eaves too, and the posts that carry the hall on stone feet: set one
 /// block in on the long sides, with brackets under the jutting floor.
 fn arcade(d: &mut Draft) {
-    d.fill([0, 0, 0], [EAST + 1, 0, 10], &slot("path"));
+    d.fill([0, 0, 0], [EAST + 1, 0, 10], &slot("ground"));
     d.fill([1, 0, 1], [EAST, 0, 9], &slot("plinth"));
     for x in (1..=EAST).step_by(4) {
         post(d, [x, 2]);

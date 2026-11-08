@@ -4,7 +4,7 @@
 use weftkit::Pos;
 
 use crate::part::{Foundation, Part, Piece};
-use crate::templates::Resolved;
+use crate::templates::{FOLLOWS_GROUND, Resolved};
 
 /// The block the ground has on top of column (`x`, `z`), 0 where there is none.
 pub(crate) type Surface<'a> = &'a dyn Fn(i32, i32) -> u32;
@@ -51,15 +51,16 @@ fn stamp_piece(
     } = piece.corner;
     for (dz, z) in overlap(cz, sz, origin.z) {
         for (dx, x) in overlap(cx, sx, origin.x) {
+            let world = [origin.x + x as i32, origin.z + z as i32];
             for (dy, y) in overlap(cy, sy, origin.y) {
-                set([x, y, z], resolved.state(piece.turn, Pos::new(dx, dy, dz)));
+                let state = resolved.state(piece.turn, Pos::new(dx, dy, dz));
+                set([x, y, z], on_ground(state, resolved, surface, world));
             }
             let ground = piece.ground.get((dz * sx + dx) as usize).copied().flatten();
             let Some(ground) = ground else {
                 continue;
             };
             let floor = resolved.state(piece.turn, Pos::new(dx, 0, dz));
-            let world = [origin.x + x as i32, origin.z + z as i32];
             if let Some(state) = foundation(piece, resolved, floor, surface, world) {
                 for (_, y) in overlap(ground + 1, cy - ground - 1, origin.y) {
                     set([x, y, z], state);
@@ -71,6 +72,17 @@ fn stamp_piece(
                 }
             }
         }
+    }
+}
+
+/// `state`, or for a cell that follows the ground the top block of world column (`x`, `z`).
+fn on_ground(state: u32, resolved: &Resolved, surface: Surface, [x, z]: [i32; 2]) -> u32 {
+    if state != FOLLOWS_GROUND {
+        return state;
+    }
+    match surface(x, z) {
+        0 | u32::MAX => resolved.ground,
+        top => top,
     }
 }
 
@@ -119,6 +131,7 @@ mod tests {
             indices: vec![1, 1, 1, 0, 2, 2, 2, 2],
             palettes: [0, 1, 2, 3].map(|_| vec![AIR, FLOOR, WALL]),
             air: AIR,
+            ground: FLOOR,
         }
     }
 
@@ -199,6 +212,27 @@ mod tests {
             &mut |p, _| set += (p[1] < 5) as u32,
         );
         assert_eq!(set, 0, "no foundation where the ground has no top block");
+    }
+
+    #[test]
+    fn a_cell_following_the_ground_takes_its_columns_top_block() {
+        let mut lawn = resolved();
+        lawn.palettes = [0, 1, 2, 3].map(|_| vec![AIR, FOLLOWS_GROUND, WALL]);
+        let piece = piece(Pos::new(3, 5, 3), vec![4; 4]);
+        let sand_at_x3 = |x: i32, _: i32| if x == 3 { 12 } else { 0 };
+        let mut floor = Vec::new();
+        stamp_piece(&piece, &lawn, Pos::default(), &sand_at_x3, &mut |p, s| {
+            if p[1] == 5 {
+                floor.push((p, s))
+            }
+        });
+        floor.sort();
+        let states: Vec<u32> = floor.iter().map(|(_, s)| *s).collect();
+        assert_eq!(
+            states,
+            [12, 12, FLOOR, AIR],
+            "sand at x 3, the default at x 4 where the ground has none, and the gap"
+        );
     }
 
     #[test]

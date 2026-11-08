@@ -22,7 +22,7 @@ const WATER: &str = "base:water";
 /// roof that runs east to west over the water.
 fn draw_well() -> Structure {
     let mut d = Draft::new([7, 8, 7]);
-    d.fill([0, 0, 0], [6, 0, 6], &slot("path"));
+    d.fill([0, 0, 0], [6, 0, 6], &slot("ground"));
     round_curb(&mut d);
     d.fill([2, 0, 2], [4, 0, 4], WATER);
     for x in [1, 5] {
@@ -53,7 +53,7 @@ fn round_curb(d: &mut Draft) {
 /// column with a carved capital and a light on top.
 fn market_fountain() -> Structure {
     let mut d = Draft::new([9, 6, 9]);
-    d.fill([0, 0, 0], [8, 0, 8], &slot("path"));
+    d.fill([0, 0, 0], [8, 0, 8], &slot("ground"));
     d.fill([1, 0, 1], [7, 0, 7], &slot("plinth"));
     d.ring(1, [1, 1], [7, 7], &slot("plinth"));
     d.ring(2, [1, 1], [7, 7], &slab("plinth/slab", "bottom"));
@@ -106,7 +106,7 @@ fn market_stall_large() -> Structure {
 /// reaching to `far` (x, z).
 fn stall_frame(d: &mut Draft, far: [usize; 2], posts: &[usize]) {
     let [fx, fz] = far;
-    d.fill([0, 0, 0], [fx, 0, fz], &slot("path"));
+    d.fill([0, 0, 0], [fx, 0, fz], &slot("ground"));
     for &x in posts {
         for z in [0, fz] {
             d.fill([x, 1, z], [x, 2, z], &log("y"));

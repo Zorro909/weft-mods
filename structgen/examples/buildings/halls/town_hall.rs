@@ -16,7 +16,7 @@ use crate::kit::{
 pub fn town_hall() -> Structure {
     let mut d = Draft::new([21, 30, 18]);
     civic_roof(&mut d);
-    d.fill([0, 0, 0], [20, 0, 17], &slot("path"));
+    d.fill([0, 0, 0], [20, 0, 17], &slot("ground"));
     plinth(&mut d, [1, 3], [19, 16], 0);
     stone_walls(&mut d, [1, 3], [19, 16], [1, 4]);
     upper_storey(&mut d, [1, 2], [19, 16], 5);
