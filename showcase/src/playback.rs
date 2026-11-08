@@ -181,6 +181,7 @@ mod tests {
         eye: [0.0; 3],
         yaw: 0.0,
         pitch: 0.0,
+        roll: 0.0,
         fov: 70.0,
     };
 

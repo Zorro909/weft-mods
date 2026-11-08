@@ -46,6 +46,9 @@ pub struct Shot {
     pub ease: Ease,
     /// Field of view at the start and end, in degrees; 0 keeps the player's own.
     pub fov: [f32; 2],
+    /// Tilt around the way the camera looks at the start and end, in degrees; more than 0
+    /// banks it right, as a plane turning right.
+    pub roll: [f32; 2],
     /// Seconds at the start in which the camera comes over from where the last shot ended;
     /// 0 cuts.
     pub blend: f32,
@@ -159,6 +162,7 @@ fn shot(path: Path, look: Look) -> Shot {
         secs: 5.0,
         ease: Ease::Smooth,
         fov: [0.0; 2],
+        roll: [0.0; 2],
         blend: 0.0,
     }
 }
@@ -234,6 +238,11 @@ impl Shot {
 
     pub fn fov(mut self, from: f32, to: f32) -> Shot {
         self.fov = [from, to];
+        self
+    }
+
+    pub fn roll(mut self, from: f32, to: f32) -> Shot {
+        self.roll = [from, to];
         self
     }
 

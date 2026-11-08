@@ -9,12 +9,13 @@ use showcase_api::{Ease, Look, Path, Pos, Shot};
 use self::curve::Curve;
 use self::math::{add, angles_along, eased, lerp, lerp_angle, lerp3, sub};
 
-/// A camera: eye position, and yaw, pitch and field of view in degrees.
+/// A camera: eye position, and yaw, pitch, roll and field of view in degrees.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pose {
     pub eye: [f64; 3],
     pub yaw: f64,
     pub pitch: f64,
+    pub roll: f64,
     pub fov: f32,
 }
 
@@ -64,10 +65,12 @@ impl Rig {
             .fov
             .map(|v| if v == 0.0 { self.own_fov } else { v });
         let fov = lerp(fov[0] as f64, fov[1] as f64, u) as f32;
+        let [from, to] = self.shot.roll;
         let pose = Pose {
             eye,
             yaw,
             pitch,
+            roll: lerp(from as f64, to as f64, u),
             fov,
         };
         if clock >= self.shot.blend {
@@ -140,6 +143,7 @@ pub fn blend(from: Pose, to: Pose, u: f64) -> Pose {
         eye: lerp3(from.eye, to.eye, u),
         yaw: lerp_angle(from.yaw, to.yaw, u),
         pitch: lerp(from.pitch, to.pitch, u),
+        roll: lerp(from.roll, to.roll, u),
         fov: lerp(from.fov as f64, to.fov as f64, u) as f32,
     }
 }
@@ -154,6 +158,7 @@ mod tests {
         eye: [0.0; 3],
         yaw: 0.0,
         pitch: 0.0,
+        roll: 0.0,
         fov: 70.0,
     };
 
@@ -225,6 +230,20 @@ mod tests {
             plain.pose(0.5, &none, START).fov,
             70.0,
             "a shot without a zoom"
+        );
+    }
+
+    #[test]
+    fn a_roll_tilts_through_the_shot_and_blends_in_from_level() {
+        let shot = hold([0.0; 3]).roll(10.0, 30.0).ease(Ease::Linear);
+        let rig = Rig::new(shot.clone(), Pos::default(), 70.0);
+        assert_eq!(rig.pose(2.5, &none, START).roll, 20.0, "halfway");
+        let rig = Rig::new(shot.blend(1.0), Pos::default(), 70.0);
+        assert_eq!(rig.pose(0.0, &none, START).roll, 0.0, "level as it was");
+        let after = rig.pose(1.0, &none, START).roll;
+        assert!(
+            (after - 14.0).abs() < 1e-6,
+            "the shot's own after the blend: {after}"
         );
     }
 

@@ -144,7 +144,7 @@ pub fn film<'a>(
 ) -> FilmOptions<'a> {
     let film = format!("{}:{name}", mod_id());
     let (full, wanted) = (film.clone(), Name::from(film.as_str()));
-    registry.on(&PLAY, move |batch| {
+    registry.on_event(&PLAY, move |batch| {
         for play in batch.iter().filter(|play| play.film == wanted) {
             let set = Set::new(batch.world(), play.player, play.origin);
             send(&set.world, set.player, &full, set.origin, &build(&set));
@@ -163,7 +163,7 @@ impl FilmOptions<'_> {
     /// Runs `f` on the server when the film reaches `Film::cue(name)`.
     pub fn on_cue(self, cue: &str, f: impl Fn(&Set) + Send + Sync + 'static) -> Self {
         let (film, cue) = (Name::from(self.film.as_str()), Name::from(cue));
-        self.registry.on(&CUE, move |batch| {
+        self.registry.on_event(&CUE, move |batch| {
             for reached in batch.iter().filter(|c| c.film == film && c.name == cue) {
                 f(&Set::new(batch.world(), reached.player, reached.origin));
             }
