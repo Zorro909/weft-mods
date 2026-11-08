@@ -3,7 +3,7 @@
 
 use std::sync::OnceLock;
 
-use weft_sdk::*;
+use weft_sdk::{Biome, Tag, kind};
 
 /// Biome names and `#tags` apart by spaces, `!` in front of one leaving it out. No `*` patterns.
 pub struct Biomes {

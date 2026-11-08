@@ -3,7 +3,7 @@
 //! `/structure undo` puts back what the player's last load replaced.
 
 use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
 
 use structures_api::{PlaceError, Replaced, Structure, Turn};
 use weft_sdk::*;
@@ -119,8 +119,8 @@ fn in_front(feet: [i32; 3], facing: [i32; 2], [sx, _, sz]: [i32; 3]) -> [i32; 3]
     ]
 }
 
-fn lock() -> std::sync::MutexGuard<'static, HashMap<u64, Undo>> {
-    UNDOS.lock().unwrap_or_else(|e| e.into_inner())
+fn lock() -> MutexGuard<'static, HashMap<u64, Undo>> {
+    UNDOS.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 #[cfg(test)]
