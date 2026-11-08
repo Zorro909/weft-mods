@@ -87,7 +87,8 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 |---|---|---|
 | cogwork | [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.3.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | – |
 | showcase | [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | – |
-| structures | [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.2.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | – |
+| structgen | [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.2.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | – |
+| structures | [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.2.0), Weft unknown | – |
 
 ## Versions
 
@@ -112,11 +113,17 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 | [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.2.0) | 2026-11-04 | 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) |
 | [0.1.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.1.0) | 2026-11-02 | 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) |
 
+### structgen
+
+| Version | Released | Weft |
+|---|---|---|
+| [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.2.0) | 2026-11-08 | 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
+
 ### structures
 
 | Version | Released | Weft |
 |---|---|---|
-| [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.2.0) | 2026-11-08 | 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
+| [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.2.0) | 2026-11-08 | unknown |
 | [0.1.3](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3) | 2026-11-05 | 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) |
 | [0.1.2](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.2) | 2026-11-02 | 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) |
 | [0.1.1](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.1) | 2026-11-02 | 26.11.1 [ff9c712](https://github.com/Weft-Rust/Weft/commit/ff9c7128511fc0dce7719b67c9a59274d70bdd5a) |
