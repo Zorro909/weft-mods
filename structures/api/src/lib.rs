@@ -37,7 +37,7 @@ pub use fit::Fit;
 pub use format::Structure;
 pub use locate::{locate, names};
 pub use part::{Foundation, Placed};
-pub use place_in::{PlaceError, Replaced};
+pub use place_in::{PlaceError, Replaced, put_back};
 pub use placement::{Placement, place};
 pub use plan::{Plan, PlanError};
 pub use planning::{Planning, plan};

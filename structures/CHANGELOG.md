@@ -6,6 +6,7 @@
 
 - `.biome(..)` takes biome names as well as `#tags`, several apart by spaces and `!` leaving
   one out: `"#forest !base:birch_forest"`. A name no biome has is logged as an error.
+- `structures_api::put_back` undoes a `place_in`.
 - Each structure generates as a decoration named like it, so another mod can remove it:
   `r.remove(&Decoration::named("structures:watchtower"))`.
 
@@ -22,3 +23,4 @@
   hang the way the structure turned.
 - `/structure undo` puts back everything a cell held, such as the water in a slab or the snow
   on a flower, not only its first block.
+- A loaded structure replaces all of a cell, so no water stays behind in a slab it puts there.

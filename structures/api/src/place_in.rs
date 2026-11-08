@@ -30,10 +30,21 @@ impl fmt::Display for PlaceError {
     }
 }
 
+/// Puts back what `place_in` replaced.
+pub fn put_back(world: &World, replaced: &Replaced) {
+    for (pos, parts) in replaced {
+        // Emptied first, as `set_block` keeps a cell's other blocks while its block stays.
+        world.set_block(*pos, 0);
+        for &part in parts {
+            world.part_add(*pos, part);
+        }
+    }
+}
+
 impl Structure {
     /// Puts it into `world` turned by `turn`, the lowest corner of the turned box at `corner`.
-    /// Every block is set, air too. On an error nothing is. Gives back what it replaced, to put
-    /// back for an undo.
+    /// Every block is set, air too. On an error nothing is. Gives back what it replaced, for
+    /// `put_back`.
     pub fn place_in(
         &self,
         world: &World,
@@ -51,10 +62,19 @@ impl Structure {
             .collect();
         let replaced: Option<Replaced> = blocks
             .iter()
-            .map(|&(pos, _)| world.block_loaded(pos).map(|_| (pos, world.parts(pos))))
+            .map(|&(pos, _)| {
+                world
+                    .block_loaded(pos)
+                    .is_some()
+                    .then(|| (pos, world.parts(pos)))
+            })
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
-        for &(pos, state) in &blocks {
+        for (&(pos, state), (_, had)) in blocks.iter().zip(&replaced) {
+            if had.len() > 1 {
+                // Else the cell's other blocks would stay with a block of the same kind.
+                world.set_block(pos, 0);
+            }
             world.set_block(pos, state);
         }
         Ok(replaced)

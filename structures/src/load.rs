@@ -62,14 +62,11 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
         }
         Err(PlaceError::NotLoaded) => return cmd.reply("structures.not_loaded", &[]),
     };
-    let dimension = world.dimension();
-    lock().insert(
-        player,
-        Undo {
-            dimension,
-            replaced,
-        },
-    );
+    let undo = Undo {
+        dimension: world.dimension(),
+        replaced,
+    };
+    lock().insert(player, undo);
     let [x, y, z] = corner.map(|v| Arg::Int(v as i64));
     cmd.reply("structures.loaded", &[Arg::Text(name), x, y, z]);
 }
@@ -80,21 +77,9 @@ pub fn undo(cmd: &mut ServerCommand) {
     let Some(undo) = take_undo(player, world.dimension()) else {
         return cmd.reply("structures.nothing_to_undo", &[]);
     };
-    for (pos, parts) in &undo.replaced {
-        put_back(&world, *pos, parts);
-    }
+    structures_api::put_back(&world, &undo.replaced);
     let count = Arg::Int(undo.replaced.len() as i64);
     cmd.reply("structures.undone", &[count]);
-}
-
-/// Fills the cell at `pos` with `parts` again: a slab and the water in it, a flower and the
-/// snow on it. No parts is air, state 0.
-fn put_back(world: &World, pos: [i32; 3], parts: &[u32]) {
-    let (first, rest) = parts.split_first().unwrap_or((&0, &[]));
-    world.set_block(pos, *first);
-    for &part in rest {
-        world.part_add(pos, part);
-    }
 }
 
 /// What `player`'s last load replaced, if that was in `dimension`. Kept for later otherwise.

@@ -59,14 +59,13 @@ impl Turn {
         }
     }
 
-    /// Property `name` set to `value`, turned: a direction the block faces, points or hangs
-    /// from turns, an axis swaps, and a side moves round (`north=true` turned right is
-    /// `east=true`). Other properties stay.
+    /// Property `name=value` once turned: directions and axes turn, and so do sides.
     pub(crate) fn prop<'a>(self, name: &'a str, value: &'a str) -> (&'a str, &'a str) {
         match name {
             "facing" | "front" | "attach" => (name, self.direction(value)),
             "axis" => (name, self.axis(value)),
-            side => (self.direction(side), value),
+            "north" | "east" | "south" | "west" => (self.direction(name), value),
+            _ => (name, value),
         }
     }
 }

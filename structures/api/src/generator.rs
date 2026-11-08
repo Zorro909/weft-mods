@@ -55,11 +55,11 @@ impl Generator {
     pub fn register(self, registry: &mut Registry) {
         let generator = Arc::new(self);
         locate::add(generator.clone());
-        let (name, dimensions) = (generator.name.clone(), generator.dimensions.clone());
+        let planned = generator.clone();
         let mut decoration = registry
-            .decoration(move |g| generator.generate(g))
-            .named(&name);
-        for dimension in dimensions {
+            .decoration(move |g| planned.generate(g))
+            .named(&generator.name);
+        for &dimension in &generator.dimensions {
             decoration = decoration.dimension(dimension);
         }
     }

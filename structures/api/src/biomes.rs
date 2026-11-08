@@ -1,12 +1,11 @@
-//! Which biomes a structure may stand in, named as anywhere in Weft: `"#forest !base:birch_forest"`
-//! is any biome tagged `forest` but the birch forest. Resolved at the first use, once the game
-//! has loaded.
+//! Which biomes a structure may stand in: `"#forest !base:birch_forest"`, resolved at the first
+//! use, once the game has loaded.
 
 use std::sync::OnceLock;
 
 use weft_sdk::*;
 
-/// Biome names and `#tags` apart by spaces, `!` in front of one leaving out what it names.
+/// Biome names and `#tags` apart by spaces, `!` in front of one leaving it out. No `*` patterns.
 pub struct Biomes {
     text: &'static str,
     terms: OnceLock<Vec<Term<Named>>>,
@@ -34,17 +33,37 @@ impl Biomes {
 
     /// Whether biome `id` is one of them.
     pub fn contains(&self, id: u32) -> bool {
-        let terms = self
-            .terms
-            .get_or_init(|| split(self.text).map(resolve).collect());
+        let terms = self.terms.get_or_init(|| self.resolve());
         includes(terms, |named| match named {
             Named::Tag(tag) => tag.on_biome(id),
             Named::Biome(biome) => *biome == id,
         })
     }
+
+    fn resolve(&self) -> Vec<Term<Named>> {
+        let named = |term: Term<&'static str>| Term {
+            left_out: term.left_out,
+            what: self.lookup(term.what),
+        };
+        split(self.text).map(named).collect()
+    }
+
+    fn lookup(&self, what: &'static str) -> Named {
+        if let Some(tag) = what.strip_prefix('#') {
+            return Named::Tag(Tag::named(tag));
+        }
+        let id = Biome::named(what).id();
+        if id == u32::MAX {
+            error!(
+                "structure biomes \"{}\": no biome is named {what}",
+                self.text
+            );
+        }
+        Named::Biome(id)
+    }
 }
 
-fn split(text: &str) -> impl Iterator<Item = Term<&str>> {
+fn split(text: &'static str) -> impl Iterator<Item = Term<&'static str>> {
     text.split_whitespace().map(|word| {
         let left_out = word.strip_prefix('!');
         Term {
@@ -54,31 +73,14 @@ fn split(text: &str) -> impl Iterator<Item = Term<&str>> {
     })
 }
 
-fn resolve(term: Term<&str>) -> Term<Named> {
-    let what = match term.what.strip_prefix('#') {
-        Some(tag) => Named::Tag(Tag::named(tag.to_string().leak())),
-        None => Named::Biome(biome_id(term.what)),
-    };
-    Term {
-        left_out: term.left_out,
-        what,
-    }
-}
-
-fn biome_id(name: &str) -> u32 {
-    let id = Biome::generated(name.to_string()).id();
-    if id == u32::MAX {
-        error!("a structure's biomes name {name}, which is no biome of this game");
-    }
-    id
-}
-
-/// Whether a biome is among `terms`, `is` telling whether it is what a term names: one of
-/// those not left out (any, when there are none) and none of those left out.
-fn includes<W>(terms: &[Term<W>], is: impl Fn(&W) -> bool) -> bool {
-    let named = |left_out| terms.iter().filter(move |t| t.left_out == left_out);
-    let wanted = named(false).next().is_none() || named(false).any(|t| is(&t.what));
-    wanted && !named(true).any(|t| is(&t.what))
+/// Whether a biome is among `terms`, `matches` telling whether a term names it.
+fn includes<W>(terms: &[Term<W>], matches: impl Fn(&W) -> bool) -> bool {
+    let mut wanted = terms.iter().filter(|term| !term.left_out).peekable();
+    let picked = wanted.peek().is_none() || wanted.any(|term| matches(&term.what));
+    picked
+        && !terms
+            .iter()
+            .any(|term| term.left_out && matches(&term.what))
 }
 
 #[cfg(test)]
@@ -86,7 +88,7 @@ mod tests {
     use super::*;
 
     /// Whether a biome that has `names` is in `text`.
-    fn fits(text: &str, names: &[&str]) -> bool {
+    fn fits(text: &'static str, names: &[&str]) -> bool {
         let terms: Vec<_> = split(text).collect();
         includes(&terms, |what| names.contains(what))
     }
