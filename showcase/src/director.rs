@@ -164,6 +164,7 @@ fn load(c: &Client, mut loading: Loading) -> Phase {
             eye: stop,
             yaw,
             pitch,
+            roll: 0.0,
             fov,
         },
     );

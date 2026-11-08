@@ -21,7 +21,7 @@ impl Menus {
             return;
         }
         if self.open.take().is_some() {
-            c.screen_close();
+            c.menu_close();
         }
         if let Some((menu, at)) = &wanted {
             let menu = Name::from(menu.as_str());

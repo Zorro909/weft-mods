@@ -69,6 +69,7 @@ impl Wire for Shot {
         self.secs.put(out);
         self.ease.put(out);
         self.fov.put(out);
+        self.roll.put(out);
         self.blend.put(out);
     }
 
@@ -79,6 +80,7 @@ impl Wire for Shot {
             secs: Wire::get(bytes)?,
             ease: Wire::get(bytes)?,
             fov: Wire::get(bytes)?,
+            roll: Wire::get(bytes)?,
             blend: Wire::get(bytes)?,
         })
     }

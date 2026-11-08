@@ -103,6 +103,7 @@ mod tests {
             eye: [10.0, 70.0, -4.0],
             yaw: 30.0,
             pitch: -20.0,
+            roll: 0.0,
             fov: 70.0,
         };
         let film = orbit_ahead(from, 8.0, 12.0);
