@@ -32,7 +32,7 @@ structures_api::place(r, "hut", hut)
     .dimension(&base_api::OVERWORLD)
     .spacing(256)          // one chance per 256 x 256 blocks
     .chance(0.3)
-    .biome("#animals")     // only where the biome has this tag
+    .biome("#animals")     // only in biomes with this tag
     .foundation(Foundation::Ground) // fill under it with the ground's own top block
     .max_slope(5);         // skip places where the ground varies more
 ```
@@ -44,7 +44,7 @@ Every call after `place` is optional:
 | `.dimension(&D)` | every dimension but bare ones; call again for more than one |
 | `.spacing(blocks)` | 256 |
 | `.chance(p)` | 0.3 |
-| `.biome("#tag")` | any biome |
+| `.biome("#forest !base:birch_forest")` | any biome; names and `#tags` apart by spaces, `!` leaving one out, as anywhere in Weft. A name no biome has is logged as an error |
 | `.foundation(..)` | no foundation: a gap under it stays |
 | `.max_slope(blocks)` | 6 |
 | `.buried(blocks)` | 0: the bottom layer level with the ground |
@@ -53,6 +53,9 @@ Every call after `place` is optional:
 A static structure always clears the ground that rises above it. `place` also registers the structure as a
 template of your mod (`mymod:hut`), so its blocks are checked when the game loads,
 `world.place(..)` puts it anywhere, and plans can use it.
+
+Every structure, static or dynamic, generates as a decoration of your mod named like it, so
+another mod can take it out of the world: `r.remove(&Decoration::named("mymod:hut"))`.
 
 ## Dynamic structures
 
@@ -95,7 +98,7 @@ What a planner has:
 | `p.spot(margin)` | a random column at least `margin` blocks inside the region |
 | `p.ground(x, z)` | the column's height and biome (`weft_sdk::terrain::Column`), `None` at a cave mouth |
 | `p.size(&T, turn)` | a template's size once turned |
-| `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None` |
+| `p.fit(&T, [x, z], turn, &fit)` | where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None`. `Fit::biome` takes a `static FORESTS: Biomes = Biomes::named("#forest")` |
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned |
 | `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it and `.clear_above()` cuts away ground above it, neither unless called |
 | `p.set(pos, &B)?`, `p.set_state(..)?`, `p.fill(from, to, &B)?` | blocks |
@@ -115,7 +118,8 @@ wheat farms and gravel paths.
 `structure.place_in(&world, corner, turn)` puts a structure into the world straight away, turned,
 as a command would: every block of it, or nothing when one of its blocks is unknown
 (`PlaceError::UnknownBlock`) or part of the place isn't loaded (`PlaceError::NotLoaded`). It
-gives back the blocks it replaced, for an undo.
+gives back what it replaced, for an undo: each cell with all it held (`World::parts`), as a slab
+and the water in it.
 
 ## Finding them
 

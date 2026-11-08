@@ -9,6 +9,9 @@ use weft_sdk::*;
 use crate::format::Structure;
 use crate::turn::{Turn, turn_state};
 
+/// What `place_in` replaced: each cell's position and all it held (`World::parts`).
+pub type Replaced = Vec<([i32; 3], Vec<u32>)>;
+
 /// Why `place_in` placed nothing.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlaceError {
@@ -29,14 +32,14 @@ impl fmt::Display for PlaceError {
 
 impl Structure {
     /// Puts it into `world` turned by `turn`, the lowest corner of the turned box at `corner`.
-    /// Every block is set, air too. On an error nothing is. Gives back the blocks it replaced,
-    /// to put back for an undo.
+    /// Every block is set, air too. On an error nothing is. Gives back what it replaced, to put
+    /// back for an undo.
     pub fn place_in(
         &self,
         world: &World,
         corner: [i32; 3],
         turn: Turn,
-    ) -> Result<Vec<([i32; 3], u32)>, PlaceError> {
+    ) -> Result<Replaced, PlaceError> {
         let states = self.states(turn)?;
         let (size, corner) = (self.size(), BlockPos::from(corner));
         let blocks: Vec<([i32; 3], u32)> = self
@@ -46,9 +49,9 @@ impl Structure {
                 (pos.to_array(), states[name])
             })
             .collect();
-        let replaced: Option<Vec<([i32; 3], u32)>> = blocks
+        let replaced: Option<Replaced> = blocks
             .iter()
-            .map(|&(pos, _)| world.block_loaded(pos).map(|state| (pos, state)))
+            .map(|&(pos, _)| world.block_loaded(pos).map(|_| (pos, world.parts(pos))))
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
         for &(pos, state) in &blocks {

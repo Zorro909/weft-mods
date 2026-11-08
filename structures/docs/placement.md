@@ -7,7 +7,7 @@ every client gets the same answer:
    needs a region's plan works it out; every cube in it shares that plan and writes only its own
    blocks.
 2. A static structure takes its region with `chance`, at a spot and a turn from the seed. The
-   biome under its middle must have the tag; the ground under all of it may vary by at most
+   biome under its middle must be one of its biomes; the ground under all of it may vary by at most
    `max_slope` blocks and must have no cave mouth.
 3. The bottom layer is the structure's floor: it takes the place of the ground's top block at
    the median ground height, so doors are level with the ground around it (`buried(n)` sinks it

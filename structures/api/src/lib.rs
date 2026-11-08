@@ -14,6 +14,7 @@
 //! every cube and every client gets the same answer. Structures don't know about each other,
 //! so two can overlap.
 
+mod biomes;
 mod fit;
 mod format;
 mod generator;
@@ -31,11 +32,12 @@ mod stamp;
 mod templates;
 mod turn;
 
+pub use biomes::Biomes;
 pub use fit::Fit;
 pub use format::Structure;
 pub use locate::{locate, names};
 pub use part::{Foundation, Placed};
-pub use place_in::PlaceError;
+pub use place_in::{PlaceError, Replaced};
 pub use placement::{Placement, place};
 pub use plan::{Plan, PlanError};
 pub use planning::{Planning, plan};

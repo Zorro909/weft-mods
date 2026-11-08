@@ -58,31 +58,34 @@ impl Turn {
             _ => axis,
         }
     }
-}
 
-/// `state` turned: its `facing`, its `axis` and the sides it connects to (`north=true`) follow
-/// the turn. Properties the block doesn't have are left alone, and so is a value it can't take.
-pub(crate) fn turn_state(state: u32, turn: Turn) -> u32 {
-    if turn == Turn::None {
-        return state;
-    }
-    let mut turned = state;
-    if let Some(facing) = state_prop(state, "facing") {
-        turned = with(turned, "facing", turn.direction(facing));
-    }
-    if let Some(axis) = state_prop(state, "axis") {
-        turned = with(turned, "axis", turn.axis(axis));
-    }
-    for side in CLOCKWISE {
-        if let Some(value) = state_prop(state, side) {
-            turned = with(turned, turn.direction(side), value);
+    /// Property `name` set to `value`, turned: a direction the block faces, points or hangs
+    /// from turns, an axis swaps, and a side moves round (`north=true` turned right is
+    /// `east=true`). Other properties stay.
+    pub(crate) fn prop<'a>(self, name: &'a str, value: &'a str) -> (&'a str, &'a str) {
+        match name {
+            "facing" | "front" | "attach" => (name, self.direction(value)),
+            "axis" => (name, self.axis(value)),
+            side => (self.direction(side), value),
         }
     }
-    turned
 }
 
-fn with(state: u32, name: &str, value: &str) -> u32 {
-    state_with(state, name, value).unwrap_or(state)
+/// The properties that turn with a block (`Turn::prop`).
+const TURNING: [&str; 8] = [
+    "facing", "front", "attach", "axis", "north", "east", "south", "west",
+];
+
+/// `state` turned. A property the block doesn't have is left alone, and so is a value it can't
+/// take.
+pub(crate) fn turn_state(state: u32, turn: Turn) -> u32 {
+    TURNING.iter().fold(state, |turned, &name| {
+        let Some(value) = state_prop(state, name) else {
+            return turned;
+        };
+        let (name, value) = turn.prop(name, value);
+        state_with(turned, name, value).unwrap_or(turned)
+    })
 }
 
 #[cfg(test)]
@@ -139,5 +142,26 @@ mod tests {
         assert_eq!(Turn::Left.axis("x"), "z", "quarter");
         assert_eq!(Turn::Back.axis("x"), "x", "half");
         assert_eq!(Turn::Right.axis("y"), "y", "upright stays");
+    }
+
+    #[test]
+    fn devices_turn_where_they_point_and_hang() {
+        let repeater = Turn::Right.prop("front", "north");
+        assert_eq!(repeater, ("front", "east"), "a repeater's front");
+        let lever = Turn::Back.prop("attach", "west");
+        assert_eq!(lever, ("attach", "east"), "a lever on a wall");
+        let button = Turn::Left.prop("attach", "down");
+        assert_eq!(button, ("attach", "down"), "one on the floor stays");
+    }
+
+    #[test]
+    fn sides_move_round() {
+        let ladder = Turn::Right.prop("north", "true");
+        assert_eq!(ladder, ("east", "true"), "the side moves");
+        assert_eq!(
+            Turn::Right.prop("lit", "true"),
+            ("lit", "true"),
+            "others stay"
+        );
     }
 }

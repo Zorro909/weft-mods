@@ -114,7 +114,11 @@ fn watchtower() -> Structure {
         d.set([x, 6, z], "core:air");
     }
     d.fill([0, 11, 0], [6, 11, 6], "base:spruce_planks");
-    d.fill([3, 1, 4], [3, 11, 4], "base:ladder[facing=north]");
+    d.fill(
+        [3, 1, 4],
+        [3, 11, 4],
+        "base:ladder[west=false,east=false,north=false,south=true]",
+    );
     for [x, z] in [[0, 0], [6, 0], [0, 6], [6, 6]] {
         d.fill([x, 12, z], [x, 13, z], "base:spruce_log[axis=y]");
     }

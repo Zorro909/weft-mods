@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
-use structures_api::{PlaceError, Structure, Turn};
+use structures_api::{PlaceError, Replaced, Structure, Turn};
 use weft_sdk::*;
 
 use crate::{save, worldgen};
@@ -14,11 +14,11 @@ use crate::{save, worldgen};
 const GAP: i32 = 2;
 
 /// What each player's last load replaced, by player entity.
-static REPLACED: LazyLock<Mutex<HashMap<u64, Replaced>>> = LazyLock::new(Default::default);
+static REPLACED: LazyLock<Mutex<HashMap<u64, Undo>>> = LazyLock::new(Default::default);
 
-struct Replaced {
+struct Undo {
     dimension: u32,
-    blocks: Vec<([i32; 3], u32)>,
+    replaced: Replaced,
 }
 
 pub fn run(cmd: &mut ServerCommand) {
@@ -54,8 +54,8 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
     };
     let size = turn.size(structure.size());
     let corner = in_front(me.pos.block().into(), facing(me.yaw), size);
-    let blocks = match structure.place_in(&world, corner, turn) {
-        Ok(blocks) => blocks,
+    let replaced = match structure.place_in(&world, corner, turn) {
+        Ok(replaced) => replaced,
         Err(PlaceError::UnknownBlock(block)) => {
             let args = [Arg::Text(name), Arg::Text(&block)];
             return cmd.reply("structures.unknown_block", &args);
@@ -63,7 +63,13 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
         Err(PlaceError::NotLoaded) => return cmd.reply("structures.not_loaded", &[]),
     };
     let dimension = world.dimension();
-    lock().insert(player, Replaced { dimension, blocks });
+    lock().insert(
+        player,
+        Undo {
+            dimension,
+            replaced,
+        },
+    );
     let [x, y, z] = corner.map(|v| Arg::Int(v as i64));
     cmd.reply("structures.loaded", &[Arg::Text(name), x, y, z]);
 }
@@ -71,18 +77,28 @@ fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn)
 /// `/structure undo`.
 pub fn undo(cmd: &mut ServerCommand) {
     let (world, player) = (cmd.world(), cmd.player());
-    let Some(replaced) = take_undo(player, world.dimension()) else {
+    let Some(undo) = take_undo(player, world.dimension()) else {
         return cmd.reply("structures.nothing_to_undo", &[]);
     };
-    for &(pos, state) in &replaced.blocks {
-        world.set_block(pos, state);
+    for (pos, parts) in &undo.replaced {
+        put_back(&world, *pos, parts);
     }
-    let count = Arg::Int(replaced.blocks.len() as i64);
+    let count = Arg::Int(undo.replaced.len() as i64);
     cmd.reply("structures.undone", &[count]);
 }
 
+/// Fills the cell at `pos` with `parts` again: a slab and the water in it, a flower and the
+/// snow on it. No parts is air, state 0.
+fn put_back(world: &World, pos: [i32; 3], parts: &[u32]) {
+    let (first, rest) = parts.split_first().unwrap_or((&0, &[]));
+    world.set_block(pos, *first);
+    for &part in rest {
+        world.part_add(pos, part);
+    }
+}
+
 /// What `player`'s last load replaced, if that was in `dimension`. Kept for later otherwise.
-fn take_undo(player: u64, dimension: u32) -> Option<Replaced> {
+fn take_undo(player: u64, dimension: u32) -> Option<Undo> {
     let mut all = lock();
     let here = all.get(&player)?.dimension == dimension;
     if here { all.remove(&player) } else { None }
@@ -118,7 +134,7 @@ fn in_front(feet: [i32; 3], facing: [i32; 2], [sx, _, sz]: [i32; 3]) -> [i32; 3]
     ]
 }
 
-fn lock() -> std::sync::MutexGuard<'static, HashMap<u64, Replaced>> {
+fn lock() -> std::sync::MutexGuard<'static, HashMap<u64, Undo>> {
     REPLACED.lock().unwrap_or_else(|e| e.into_inner())
 }
 
@@ -159,14 +175,12 @@ mod tests {
 
     #[test]
     fn an_undo_waits_in_its_own_dimension() {
-        let blocks = vec![([0, 64, 0], 1)];
-        lock().insert(
-            77,
-            Replaced {
-                dimension: 2,
-                blocks,
-            },
-        );
+        let replaced = vec![([0, 64, 0], vec![1])];
+        let undo = Undo {
+            dimension: 2,
+            replaced,
+        };
+        lock().insert(77, undo);
         assert!(
             take_undo(77, 3).is_none(),
             "nothing to undo in another dimension"

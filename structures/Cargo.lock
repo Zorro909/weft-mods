@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "base_api"
-version = "26.11.2"
+version = "26.11.3"
 dependencies = [
  "weft_sdk",
 ]
@@ -20,7 +20,7 @@ dependencies = [
 
 [[package]]
 name = "structures"
-version = "0.1.3"
+version = "0.2.0"
 dependencies = [
  "base_api",
  "structures_api",
@@ -43,15 +43,15 @@ checksum = "86a801b3cea342a06d468c8710662aa29e5e05e4f5c0d62f00bbb7f2ad7941c2"
 
 [[package]]
 name = "weft_abi"
-version = "26.11.2"
+version = "26.11.3"
 
 [[package]]
 name = "weft_noise"
-version = "26.11.2"
+version = "26.11.3"
 
 [[package]]
 name = "weft_sdk"
-version = "26.11.2"
+version = "26.11.3"
 dependencies = [
  "weft_abi",
  "weft_noise",
