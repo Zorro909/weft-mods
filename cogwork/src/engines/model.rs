@@ -1,7 +1,6 @@
 //! An engine's block: a base plate on the side it was placed against and a trunk pointing the
 //! other way that glows with its heat. The piston riding the trunk is an entity (`piston`).
 
-use weft_sdk::signal::Orientation;
 use weft_sdk::*;
 
 use crate::lib::{ModelBox, Pos};
@@ -31,14 +30,8 @@ pub fn engine<'a>(b: BlockBuilder<'a>, kind: &'static str) -> BlockBuilder<'a> {
 
 /// The boxes for one state, written lying on the floor with the trunk up.
 fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
-    let orientation = Orientation::new(
-        p.facing(),
-        if p.facing().horizontal() {
-            Dir::Up
-        } else {
-            Dir::North
-        },
-    );
+    // Its trunk, the model's top, points away from the facing.
+    let orientation = Orientation::up(p.facing().opposite());
     let (plate_top, plate_side) = (
         format!("engine_{kind}_plate_top"),
         format!("engine_{kind}_plate_side"),
@@ -47,7 +40,7 @@ fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
     const WHOLE: [f32; 4] = [0.0, 0.0, 16.0, 16.0];
     const EDGE: [f32; 4] = [0.0, 0.0, 16.0, 4.0];
     s.texture(&plate_top)
-        .oriented(orientation)
+        .orientation(orientation)
         .model_box_faces(
             PLATE.lo,
             PLATE.hi,
@@ -90,11 +83,7 @@ fn use_wrench(u: &mut Use) -> bool {
 
 /// The tuning wrench on the engine at `pos`: its trunk points the next way round.
 pub fn turn(w: &World, pos: Pos) {
-    let now = w
-        .prop(pos, "facing")
-        .and_then(Dir::from_name)
-        .map_or(0, Dir::face);
-    w.prop_set(pos, "facing", Dir::from_face((now + 1) % 6).name());
+    w.prop_cycle(pos, "facing");
     w.play_sound(&crate::sounds::WRENCH, pos.center(), 1.0);
 }
 

@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "base_api"
-version = "26.11.2"
+version = "26.11.3"
 dependencies = [
  "weft_sdk",
 ]
@@ -199,15 +199,15 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 
 [[package]]
 name = "weft_abi"
-version = "26.11.2"
+version = "26.11.3"
 
 [[package]]
 name = "weft_noise"
-version = "26.11.2"
+version = "26.11.3"
 
 [[package]]
 name = "weft_sdk"
-version = "26.11.2"
+version = "26.11.3"
 dependencies = [
  "weft_abi",
  "weft_noise",

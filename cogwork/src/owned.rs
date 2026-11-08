@@ -52,7 +52,7 @@ pub fn place(w: &World, owner: u64, id: u64, kind: &EntityKind, pos: Vec3, yaw: 
     // it on `pos`, and it stands still once there. Placing it as well would overshoot.
     let vel = (pos - st.pos) * 20.0;
     if vel != st.vel {
-        w.entity_edit(id).velocity(vel);
+        w.entity_modify(id).velocity(vel);
     }
     id
 }
