@@ -7,10 +7,10 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall, window,
+    Building, Ridge, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall, window,
 };
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] = &[
+pub const BUILDINGS: &[Building] = &[
     ("wayside_chapel", wayside_chapel),
     ("village_church", village_church),
     ("town_church", town_church::town_church),
@@ -156,12 +156,6 @@ pub fn pew(d: &mut Draft, x: [usize; 2], z: usize) {
         [x[1], 1, z],
         &stair("trim/stair", "north", "bottom"),
     );
-}
-
-/// A ladder against the wall on its `side`.
-pub fn ladder(side: &str) -> String {
-    let sides = ["north", "east", "south", "west"].map(|s| format!("{s}={}", s == side));
-    format!("base:ladder[{}]", sides.join(","))
 }
 
 /// A spire over the square `size` wide from `corner` (x, z), from height `y` up: an eave of

@@ -2,9 +2,8 @@
 
 use structgen_api::Structure;
 
-use super::{ladder, light};
 use crate::draft::{AIR, Draft};
-use crate::kit::{chimney, plinth, slab, slot, stair, timber_wall, window};
+use crate::kit::{chimney, ladder, light, plinth, slab, slot, stair, timber_wall, window};
 
 /// 11 x 15 inside its walls: house and barn under one huge hipped roof whose eaves come down to
 /// the top of the ground floor. The house end faces the front with its door and windows, the

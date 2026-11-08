@@ -2,9 +2,9 @@
 
 use structgen_api::Structure;
 
-use super::{altar, ladder, pew, stone_walls};
+use super::{altar, pew, stone_walls};
 use crate::draft::{AIR, Draft};
-use crate::kit::{Ridge, gable_end, gable_roof, log, plinth, slab, slot, stair, window};
+use crate::kit::{Ridge, gable_end, gable_roof, ladder, log, plinth, slab, slot, stair, window};
 
 /// An 11 x 13 nave of stone between buttresses, lit by tall pointed windows, a chancel behind
 /// it, and a square tower at the front, 25 tall with battlements, the doorway at its foot.

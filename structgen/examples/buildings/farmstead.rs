@@ -7,33 +7,15 @@ mod stable;
 use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
-use crate::kit::log;
+use crate::kit::{Building, light, log};
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] = &[
+pub const BUILDINGS: &[Building] = &[
     ("great_barn", barns::great_barn),
     ("staddle_granary", barns::staddle_granary),
     ("stable", stable::stable),
     ("hof", hof::hof),
     ("wheat_field", wheat_field),
 ];
-
-/// A `light` leaning out from the wall behind it toward `facing`, or standing on the block
-/// below (`up`).
-fn light(facing: &str) -> String {
-    format!("@light[facing={facing}]")
-}
-
-/// A ladder against the `side` of its cell.
-fn ladder(side: &str) -> String {
-    let on = |s: &str| s == side;
-    format!(
-        "base:ladder[north={},south={},west={},east={}]",
-        on("north"),
-        on("south"),
-        on("west"),
-        on("east")
-    )
-}
 
 /// 7 x 7 of ripe wheat on farmland, split by a water channel and edged with logs lying on the
 /// ground, a torch on two corner posts. Its bottom layer is the farmland, level with the ground.

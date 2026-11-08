@@ -4,14 +4,16 @@
 # side, above and inside, then taken away again. The game runs headless (run-headless.sh), in a
 # folder of its own with the structgen mod as built now.
 #
-#   tools/structure-shots.sh [--gpu 0000:0f:00.0] [--out DIR] [--styles LOOKS] [--no-build]
-#                            <name | file.wst>...
+#   tools/structure-shots.sh [--gpu 0000:0f:00.0] [--out DIR] [--styles LOOKS] [--turn TURN]
+#                            [--no-build] <name | file.wst>...
 #
 #   --gpu       PCI address of the card to draw on (see /dev/dri/by-path); default: any card.
 #   --out       Where the pictures go (default structgen/out/shots). The game's folder is
 #               DIR/run, so runs with different --out can go at the same time.
 #   --styles    Looks to shoot each structure in, split by `;`, each a list of styles as
 #               `/structure load` takes them: "brick_roof;birch_roof,spruce_frame".
+#   --turn      none, right, back or left: places them turned, so the front views show another
+#               side: right turns them clockwise, so their west side faces the camera.
 #   --no-build  Use the engine and mod as built last.
 #
 # A name is a file of structgen/assets/structures. Pictures are DIR/<name>[-<look>]-<view>.png,
@@ -21,12 +23,13 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-gpu="" out="$root/structgen/out/shots" styles="" build=1
+gpu="" out="$root/structgen/out/shots" styles="" turn=none build=1
 while [[ $# -gt 0 ]]; do
     case $1 in
         --gpu) gpu=$2; shift 2 ;;
         --out) out=$(realpath -m "$2"); shift 2 ;;
         --styles) styles=$2; shift 2 ;;
+        --turn) turn=$2; shift 2 ;;
         --no-build) build=0; shift ;;
         -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1' "$0"; exit 0 ;;
         *) break ;;
@@ -59,7 +62,7 @@ cp "${files[@]}" "$root/Weft/structures/"
 
 script="$out/shots.txt"
 "$root/structgen/target/release/examples/shot_script" ${styles:+--styles "$styles"} \
-    "${files[@]}" >"$script"
+    --turn "$turn" "${files[@]}" >"$script"
 
 headless=("$root/tools/run-headless.sh")
 [[ -n $gpu ]] && headless+=(--gpu "$gpu")

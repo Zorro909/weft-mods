@@ -19,10 +19,10 @@ mod workyards;
 
 use std::path::Path;
 
-use structgen_api::Structure;
+use kit::Building;
 
 /// Every building: its file name and how it is drawn.
-fn buildings() -> Vec<(&'static str, fn() -> Structure)> {
+fn buildings() -> Vec<Building> {
     [
         cottages::BUILDINGS,
         townhouses::BUILDINGS,

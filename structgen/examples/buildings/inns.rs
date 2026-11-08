@@ -9,11 +9,11 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, chimney, gable_end, gable_roof, log, opposite, plinth, slab, slot, stair, step,
-    timber_wall, window,
+    Building, Ridge, chimney, gable_end, gable_roof, ladder_up, light_at, log, opposite, plinth,
+    slab, slot, stair, step, timber_wall, window,
 };
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] = &[
+pub const BUILDINGS: &[Building] = &[
     ("wayside_tavern", wayside_tavern),
     ("coaching_inn", coaching_inn::coaching_inn),
 ];
@@ -62,7 +62,7 @@ fn tavern_roof(d: &mut Draft) {
 fn tavern_openings(d: &mut Draft) {
     d.fill([5, 1, 5], [5, 2, 5], AIR);
     for x in [4, 6] {
-        light(d, [x, 2, 4], "north");
+        light_at(d, [x, 2, 4], "north");
     }
     for x in [3, 7] {
         window(d, [x, 2, 5], 1, "north");
@@ -95,10 +95,10 @@ fn beer_garden(d: &mut Draft) {
         d.fill([x, 3, 2], [x, 3, 4], &log("z"));
     }
     for x in [1, 9] {
-        light(d, [x, 2, 0], "north");
+        light_at(d, [x, 2, 0], "north");
     }
     for x in [3, 7] {
-        light(d, [x, 4, 1], "up");
+        light_at(d, [x, 4, 1], "up");
     }
     table(d, [2, 3], 1, 3);
     table(d, [7, 8], 1, 3);
@@ -114,13 +114,13 @@ fn furnish_taproom(d: &mut Draft) {
     }
     d.set([4, 1, 12], "base:crafting_table");
     d.set([8, 1, 9], "base:furnace[facing=west,lit=true]");
-    ladder(d, [8, 12], [1, 5], "east");
+    ladder_up(d, [8, 12], [1, 5], "east");
     for (pos, facing) in [
         ([3, 2, 6], "south"),
         ([7, 2, 6], "south"),
         ([3, 2, 12], "north"),
     ] {
-        light(d, pos, facing);
+        light_at(d, pos, facing);
     }
 }
 
@@ -137,8 +137,8 @@ fn furnish_tavern_rooms(d: &mut Draft) {
     d.set([5, 5, 4], "base:chest[facing=south]");
     d.set([5, 5, 12], "base:chest[facing=north]");
     for x in [3, 7] {
-        light(d, [x, 6, 8], "north");
-        light(d, [x, 6, 10], "south");
+        light_at(d, [x, 6, 8], "north");
+        light_at(d, [x, 6, 10], "south");
     }
 }
 
@@ -267,21 +267,6 @@ pub fn bed(d: &mut Draft, foot: [usize; 3], facing: &str) {
     if let Some(head) = step(foot, opposite(facing)) {
         d.set(head, &format!("base:bed[facing={facing},part=head]"));
     }
-}
-
-/// A `light` at `pos`, facing away from what holds it: `up` stands on the floor.
-pub fn light(d: &mut Draft, pos: [usize; 3], facing: &str) {
-    d.set(pos, &format!("@light[facing={facing}]"));
-}
-
-/// A ladder up column (`x`, `z`) from `y[0]` to `y[1]`, on the wall on its `wall` side.
-pub fn ladder(d: &mut Draft, [x, z]: [usize; 2], y: [usize; 2], wall: &str) {
-    let sides = ["north", "east", "south", "west"].map(|side| format!("{side}={}", side == wall));
-    d.fill(
-        [x, y[0], z],
-        [x, y[1], z],
-        &format!("base:ladder[{}]", sides.join(",")),
-    );
 }
 
 fn corners(from: [usize; 2], to: [usize; 2]) -> [[usize; 2]; 4] {

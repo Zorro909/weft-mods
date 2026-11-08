@@ -1,11 +1,12 @@
 //! Writes the game script `tools/structure-shots.sh` runs: each structure file given is placed
 //! in the flatlands and photographed from around it, above it and inside it.
 //!
-//! `cargo run --example shot_script -- [--styles "brick_roof;birch_roof,spruce_frame"] <file.wst>...`
+//! `cargo run --example shot_script -- [--styles "brick_roof;birch_roof,spruce_frame"]
+//! [--turn right] <file.wst>...`
 //!
 //! Each `;`-split entry of `--styles` is one look at every structure (`/structure load`'s
-//! styles); without, each is shot once with its defaults. A shot is named
-//! `<structure>[-<look>]-<view>.png`.
+//! styles); without, each is shot once with its defaults. `--turn` places them turned, so
+//! another side faces the front views. A shot is named `<structure>[-<look>]-<view>.png`.
 
 use std::path::Path;
 
@@ -17,6 +18,7 @@ const FEET: [i32; 3] = [0, 4, 0];
 
 fn main() {
     let mut looks = vec![String::new()];
+    let mut turn = "none".to_string();
     let mut files = Vec::new();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -25,15 +27,20 @@ fn main() {
                 let list = args.next().expect("--styles needs a list of looks");
                 looks = list.split(';').map(str::to_string).collect();
             }
+            "--turn" => turn = args.next().expect("--turn needs none, right, back or left"),
             _ => files.push(arg),
         }
     }
     assert!(!files.is_empty(), "name at least one structure file");
     println!("{}", setup());
     for file in &files {
-        let (name, size) = read(file);
+        let (name, [sx, sy, sz]) = read(file);
+        let size = match turn.as_str() {
+            "right" | "left" => [sz, sy, sx],
+            _ => [sx, sy, sz],
+        };
         for look in &looks {
-            println!("{}", shots(&name, size, look));
+            println!("{}", shots(&name, size, &turn, look));
         }
     }
     println!("quit");
@@ -64,13 +71,13 @@ fn read(file: &str) -> (String, [i32; 3]) {
 }
 
 /// Places one structure in one look, takes every view of it, and takes it away again.
-fn shots(name: &str, size: [i32; 3], look: &str) -> String {
+fn shots(name: &str, size: [i32; 3], turn: &str, look: &str) -> String {
     let [x, y, z] = FEET;
     let mut lines = vec![
         format!("via {x}.5 {} {z}.5 0 0", y as f32 + 1.62),
         "travel 0.2".to_string(),
         "look 0 0".to_string(),
-        format!("chat /structure load {name} none {look}")
+        format!("chat /structure load {name} {turn} {look}")
             .trim_end()
             .to_string(),
         "wait 1".to_string(),
@@ -95,8 +102,8 @@ fn shots(name: &str, size: [i32; 3], look: &str) -> String {
     lines.join("\n")
 }
 
-/// Each view's name, eye and the point it looks at, for a structure of `size` placed from
-/// `FEET`. Its front is the north side, as saved.
+/// Each view's name, eye and the point it looks at, for a structure of `size` (turned) placed
+/// from `FEET`. The front views look at its north side.
 fn views([sx, sy, sz]: [i32; 3]) -> Vec<(&'static str, [f32; 3], [f32; 3])> {
     let lowest = [FEET[0] - sx / 2, FEET[1] - 1, FEET[2] - 1 - sz];
     let [sx, sy, sz] = [sx, sy, sz].map(|v| v as f32);

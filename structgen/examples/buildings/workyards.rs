@@ -3,11 +3,11 @@
 use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
-use crate::kit::{Ridge, gable_end, gable_roof, log, plinth, slot, stair, timber_wall, window};
+use crate::kit::{
+    Building, Ridge, gable_end, gable_roof, log, plinth, slot, stair, timber_wall, window,
+};
 
 /// A building's file name and how it is drawn.
-type Building = (&'static str, fn() -> Structure);
-
 pub const BUILDINGS: &[Building] = &[("lumberyard", lumberyard), ("storehouse", storehouse)];
 
 const LADDER_ON_SOUTH: &str = "base:ladder[north=false,east=false,south=true,west=false]";

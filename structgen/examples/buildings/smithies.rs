@@ -3,13 +3,13 @@
 use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
-use crate::inns::{bed, floor_line, ladder, light, open_side, stone_walls, table, timber_storey};
+use crate::inns::{bed, floor_line, open_side, stone_walls, table, timber_storey};
 use crate::kit::{
-    Ridge, chimney, gable_end, gable_roof, opposite, plinth, slab, slot, stair, step, window,
+    Building, Ridge, chimney, gable_end, gable_roof, ladder_up, light_at, opposite, plinth, slab,
+    slot, stair, step, window,
 };
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] =
-    &[("open_forge", open_forge), ("smithy_house", smithy_house)];
+pub const BUILDINGS: &[Building] = &[("open_forge", open_forge), ("smithy_house", smithy_house)];
 
 /// 7 x 7: a smith's shed on a cobbled floor, open to the north and west on log posts; its stone
 /// back walls hold a lava hearth under a brick hood with a tall chimney, and the tools.
@@ -43,8 +43,8 @@ fn furnish_forge(d: &mut Draft) {
     d.fill([2, 2, 6], [3, 2, 6], &stair("trim/stair", "south", "top"));
     d.set([2, 1, 6], "base:chest[facing=north]");
     d.set([3, 1, 6], "base:crafting_table");
-    light(d, [6, 2, 3], "west");
-    light(d, [2, 2, 4], "east");
+    light_at(d, [6, 2, 3], "west");
+    light_at(d, [2, 2, 4], "east");
 }
 
 /// 10 x 13: a stone forge open to the street and a cobbled work yard beside it, and behind both
@@ -77,7 +77,7 @@ fn forge_wing(d: &mut Draft) {
     d.set([6, 1, 6], "base:furnace[facing=west,lit=true]");
     d.fill([6, 2, 2], [6, 2, 3], &stair("trim/stair", "east", "top"));
     d.set([6, 1, 2], "base:chest[facing=west]");
-    light(d, [6, 2, 5], "west");
+    light_at(d, [6, 2, 5], "west");
 }
 
 /// Two timber-framed storeys under a roof gabled east and west, a chimney in the east gable.
@@ -119,9 +119,9 @@ fn work_yard(d: &mut Draft) {
     d.set([10, 2, 1], AIR);
     d.fill([10, 1, 5], [10, 1, 6], "base:coal_block");
     for x in [8, 10] {
-        light(d, [x, 2, 6], "north");
+        light_at(d, [x, 2, 6], "north");
     }
-    light(d, [8, 2, 2], "east");
+    light_at(d, [8, 2, 2], "east");
 }
 
 /// A kitchen below with a table, the cooking hearth and a ladder; a bedroom above.
@@ -130,7 +130,7 @@ fn furnish_smith_house(d: &mut Draft) {
     table(d, [4, 5], 1, 10);
     d.set([2, 1, 12], "base:chest[facing=north]");
     d.set([3, 1, 12], "base:crafting_table");
-    ladder(d, [2, 8], [1, 5], "west");
+    ladder_up(d, [2, 8], [1, 5], "west");
     for x in [6, 8] {
         bed(d, [x, 5, 11], "north");
     }
@@ -141,7 +141,7 @@ fn furnish_smith_house(d: &mut Draft) {
         ([5, 6, 8], "south"),
         ([7, 6, 12], "north"),
     ] {
-        light(d, pos, facing);
+        light_at(d, pos, facing);
     }
 }
 

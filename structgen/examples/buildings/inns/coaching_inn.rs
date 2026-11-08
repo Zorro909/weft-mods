@@ -2,12 +2,11 @@
 
 use structgen_api::Structure;
 
-use super::{
-    bed, cross_gable, floor_line, ladder, light, open_side, stone_walls, table, timber_storey,
-};
+use super::{bed, cross_gable, floor_line, open_side, stone_walls, table, timber_storey};
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, chimney, gable_end, gable_roof, plinth, slab, slot, stair, timber_wall, window,
+    Ridge, chimney, gable_end, gable_roof, ladder_up, light_at, plinth, slab, slot, stair,
+    timber_wall, window,
 };
 
 /// 15 x 15 in an L: a range of three storeys on the street, jettied twice, with three dormers in
@@ -38,7 +37,7 @@ fn yard(d: &mut Draft) {
     d.fill([6, 1, 15], [7, 2, 15], AIR);
     d.fill([7, 0, 12], [8, 0, 12], "base:water");
     for pos in [[1, 3, 12], [5, 3, 15], [8, 3, 15]] {
-        light(d, pos, "up");
+        light_at(d, pos, "up");
     }
 }
 
@@ -70,12 +69,12 @@ fn furnish_stable(d: &mut Draft) {
         d.set([14, 0, z], "base:water");
     }
     d.fill([12, 1, 12], [14, 1, 12], &slab("trim/slab", "top"));
-    light(d, [14, 2, 13], "west");
+    light_at(d, [14, 2, 13], "west");
     for z in [11, 13] {
         bed(d, [13, 5, z], "west");
     }
     d.set([12, 5, 14], "base:chest[facing=east]");
-    light(d, [12, 6, 10], "south");
+    light_at(d, [12, 6, 10], "south");
 }
 
 /// Stone below and two timber-framed storeys above, each jutting a block further over the street
@@ -138,7 +137,7 @@ fn carriage_arch(d: &mut Draft) {
         d.set([2, 3, z], &stair("plinth/stair", "west", "top"));
         d.set([4, 3, z], &stair("plinth/stair", "east", "top"));
     }
-    light(d, [4, 2, 6], "west");
+    light_at(d, [4, 2, 6], "west");
 }
 
 /// The door in the middle of the front between two torches, windows in every storey, and a
@@ -146,7 +145,7 @@ fn carriage_arch(d: &mut Draft) {
 fn range_openings(d: &mut Draft) {
     d.fill([9, 1, 3], [9, 2, 3], AIR);
     for x in [8, 10] {
-        light(d, [x, 2, 2], "north");
+        light_at(d, [x, 2, 2], "north");
     }
     for x in [7, 11, 13] {
         window(d, [x, 2, 3], 1, "north");
@@ -182,13 +181,13 @@ fn furnish_taproom(d: &mut Draft) {
     }
     d.set([7, 1, 8], "base:crafting_table");
     d.set([14, 1, 6], "base:furnace[facing=west,lit=true]");
-    ladder(d, [14, 7], [1, 12], "east");
+    ladder_up(d, [14, 7], [1, 12], "east");
     for (pos, facing) in [
         ([6, 2, 4], "south"),
         ([12, 2, 4], "south"),
         ([8, 2, 8], "north"),
     ] {
-        light(d, pos, facing);
+        light_at(d, pos, facing);
     }
 }
 
@@ -206,7 +205,7 @@ fn furnish_first_floor(d: &mut Draft) {
         ([8, 6, 4], "west"),
         ([10, 6, 8], "north"),
     ] {
-        light(d, pos, facing);
+        light_at(d, pos, facing);
     }
 }
 
@@ -214,8 +213,8 @@ fn furnish_first_floor(d: &mut Draft) {
 fn furnish_second_floor(d: &mut Draft) {
     for x in [5, 10] {
         partition(d, x, [2, 8], [9, 11]);
-        light(d, [x - 1, 10, 6], "west");
-        light(d, [x + 1, 10, 6], "east");
+        light_at(d, [x - 1, 10, 6], "west");
+        light_at(d, [x + 1, 10, 6], "east");
     }
     for x in [3, 7, 9, 12] {
         bed(d, [x, 9, 3], "south");
@@ -230,7 +229,7 @@ fn furnish_attic(d: &mut Draft) {
         d.set([x + 1, 13, 7], "base:chest[facing=north]");
     }
     for x in [6, 10] {
-        light(d, [x, 13, 6], "up");
+        light_at(d, [x, 13, 6], "up");
     }
 }
 

@@ -2,7 +2,12 @@
 //! the parts the style repeats (45° roofs, timber-framed walls, windows, chimneys). See
 //! `docs/materials.md` for what each slot is for.
 
+use structgen_api::Structure;
+
 use crate::draft::Draft;
+
+/// One building of a family: its file name and how it is drawn.
+pub type Building = (&'static str, fn() -> Structure);
 
 /// Every slot a building may use, with its default block.
 pub const SLOTS: &[(&str, &str)] = &[
@@ -43,6 +48,29 @@ pub fn slab(slot: &str, kind: &str) -> String {
 /// A log of the frame lying along `axis` (`y` standing).
 pub fn log(axis: &str) -> String {
     format!("@frame/log[axis={axis}]")
+}
+
+/// A `light` facing away from what holds it: leaning out from the wall behind it, or `up`,
+/// standing on the block below.
+pub fn light(facing: &str) -> String {
+    format!("@light[facing={facing}]")
+}
+
+/// A `light` at `pos` (see `light`).
+pub fn light_at(d: &mut Draft, pos: [usize; 3], facing: &str) {
+    d.set(pos, &light(facing));
+}
+
+/// A ladder hung on the wall on its `side`. Every side is written, or a ladder keeps its
+/// default plate on the north side as well.
+pub fn ladder(side: &str) -> String {
+    let sides = ["north", "east", "south", "west"].map(|s| format!("{s}={}", s == side));
+    format!("base:ladder[{}]", sides.join(","))
+}
+
+/// A ladder up column (`x`, `z`) from height `y[0]` to `y[1]`, hung on the wall on its `side`.
+pub fn ladder_up(d: &mut Draft, [x, z]: [usize; 2], y: [usize; 2], side: &str) {
+    d.fill([x, y[0], z], [x, y[1], z], &ladder(side));
 }
 
 /// Which way a roof's ridge runs.

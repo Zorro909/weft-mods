@@ -6,11 +6,14 @@ mod roofs;
 use roofs::{cross_roof, fill_up, steep_roof};
 use structgen_api::Structure;
 
-use crate::cottages::{dormer, ladder};
+use crate::cottages::dormer;
 use crate::draft::{AIR, Draft};
-use crate::kit::{Ridge, chimney, gable_roof, log, plinth, slab, slot, stair, timber_wall, window};
+use crate::kit::{
+    Building, Ridge, chimney, gable_roof, ladder_up, log, plinth, slab, slot, stair, timber_wall,
+    window,
+};
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] = &[
+pub const BUILDINGS: &[Building] = &[
     ("narrow_gable", narrow_gable),
     ("hall_house", hall_house),
     ("corner_house", corner_house),
@@ -46,7 +49,7 @@ fn narrow_gable() -> Structure {
     window(&mut d, [4, 2, 11], 1, "south");
     window(&mut d, [4, 6, 11], 2, "south");
     window(&mut d, [4, 10, 11], 2, "south");
-    ladder(&mut d, [2, 10], [1, 12], "west");
+    ladder_up(&mut d, [2, 10], [1, 12], "west");
     furnish_narrow_gable(&mut d);
     d.done()
 }
@@ -110,7 +113,7 @@ fn hall_house() -> Structure {
     for x in [4, 6] {
         window(&mut d, [x, 6, 9], 2, "south");
     }
-    ladder(&mut d, [2, 5], [1, 8], "west");
+    ladder_up(&mut d, [2, 5], [1, 8], "west");
     furnish_hall_house(&mut d);
     d.done()
 }
@@ -179,7 +182,7 @@ fn corner_house() -> Structure {
     }
     window(&mut d, [4, 9, 1], 2, "north");
     window(&mut d, [7, 9, 4], 2, "east");
-    ladder(&mut d, [3, 6], [1, 8], "south");
+    ladder_up(&mut d, [3, 6], [1, 8], "south");
     furnish_corner_house(&mut d);
     d.done()
 }

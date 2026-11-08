@@ -7,10 +7,11 @@ use structgen_api::Structure;
 use crate::chapels::stone_walls;
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, chimney, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall, window,
+    Building, Ridge, chimney, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall,
+    window,
 };
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] = &[
+pub const BUILDINGS: &[Building] = &[
     ("guildhall", guildhall),
     ("town_hall", town_hall::town_hall),
 ];

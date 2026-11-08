@@ -3,10 +3,11 @@
 use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
-use crate::kit::{Ridge, gable_end, gable_roof, log, slab, slot, timber_wall, window};
+use crate::kit::{
+    Building, Ridge, gable_end, gable_roof, ladder, light, log, slab, slot, timber_wall, window,
+};
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] =
-    &[("post_mill", post_mill), ("tower_mill", tower_mill)];
+pub const BUILDINGS: &[Building] = &[("post_mill", post_mill), ("tower_mill", tower_mill)];
 
 const SAILCLOTH: &str = "base:wool";
 const MILLSTONE: &str = "base:stone_slab[type=bottom]";
@@ -196,21 +197,4 @@ fn in_disk(centre: [usize; 2], cell: [usize; 2], reach: usize) -> bool {
     let dx = cell[0].abs_diff(centre[0]);
     let dz = cell[1].abs_diff(centre[1]);
     dx * dx + dz * dz <= reach
-}
-
-/// A `light` leaning out from the wall behind it toward `facing`.
-fn light(facing: &str) -> String {
-    format!("@light[facing={facing}]")
-}
-
-/// A ladder against the `side` of its cell.
-fn ladder(side: &str) -> String {
-    let on = |s: &str| s == side;
-    format!(
-        "base:ladder[north={},south={},west={},east={}]",
-        on("north"),
-        on("south"),
-        on("west"),
-        on("east")
-    )
 }

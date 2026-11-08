@@ -4,10 +4,11 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, chimney, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall, window,
+    Building, Ridge, chimney, gable_end, gable_roof, ladder_up, log, plinth, slab, slot, stair,
+    timber_wall, window,
 };
 
-pub const BUILDINGS: &[(&str, fn() -> Structure)] = &[
+pub const BUILDINGS: &[Building] = &[
     ("crofter_cottage", crofter_cottage),
     ("longhouse", longhouse),
     ("dormer_cottage", dormer_cottage),
@@ -169,7 +170,7 @@ fn dormer_cottage() -> Structure {
     }
     window(&mut d, [1, 6, 4], 1, "west");
     chimney(&mut d, [9, 4], [1, 10]);
-    ladder(&mut d, [2, 4], [1, 4], "west");
+    ladder_up(&mut d, [2, 4], [1, 4], "west");
     furnish_dormer_cottage(&mut d);
     d.done()
 }
@@ -221,19 +222,6 @@ pub fn dormer(d: &mut Draft, [x, y, z]: [usize; 3]) {
         [x, y + 2, z + 1],
         &slab("roof/slab", "bottom"),
     );
-}
-
-/// A ladder at column (`x`, `z`) from height `y[0]` to `y[1]`, hung on the wall to its `side`.
-pub fn ladder(d: &mut Draft, [x, z]: [usize; 2], y: [usize; 2], side: &str) {
-    let on = |s: &str| s == side;
-    let name = format!(
-        "base:ladder[north={},east={},south={},west={}]",
-        on("north"),
-        on("east"),
-        on("south"),
-        on("west")
-    );
-    d.fill([x, y[0], z], [x, y[1], z], &name);
 }
 
 /// A `roof/stair` facing `east` or `west` where its slope meets a slope rising southward: an

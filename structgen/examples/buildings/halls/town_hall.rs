@@ -3,10 +3,11 @@
 use structgen_api::Structure;
 
 use super::{civic_roof, cross_gable, upper_storey};
-use crate::chapels::{ladder, spire, stone_walls};
+use crate::chapels::{spire, stone_walls};
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, chimney, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall, window,
+    Ridge, chimney, gable_end, gable_roof, ladder, log, plinth, slab, slot, stair, timber_wall,
+    window,
 };
 
 /// 19 x 15, a timber storey jutting over a stone hall: a double stair climbs the front to the council

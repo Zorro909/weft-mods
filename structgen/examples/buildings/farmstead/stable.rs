@@ -2,9 +2,8 @@
 
 use structgen_api::Structure;
 
-use super::light;
 use crate::draft::{AIR, Draft};
-use crate::kit::{log, plinth, slab, slot, stair, timber_wall, window};
+use crate::kit::{light, log, plinth, slab, slot, stair, timber_wall, window};
 
 /// 15 x 4 under a single roof sloping down to the front, its three stalls open to a paddock
 /// walled with low stone walls, a tack room with its own door at the east end. The paddock's
