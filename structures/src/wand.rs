@@ -20,7 +20,7 @@ pub fn register(r: &mut Registry) {
             true
         });
     // Hitting a block with the wand marks it instead of breaking it.
-    r.intercept(&actions::BREAK_BLOCK, |hit| {
+    r.before_event(&actions::BREAK_BLOCK, |hit| {
         if hit.entity() == 0 || hit.item() != WAND.id() {
             return Verdict::Abstain;
         }

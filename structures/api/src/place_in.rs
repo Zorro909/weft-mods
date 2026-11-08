@@ -9,6 +9,9 @@ use weft_sdk::*;
 use crate::format::Structure;
 use crate::turn::{Turn, turn_state};
 
+/// What `place_in` replaced: each cell's position and all it held (`World::parts`).
+pub type Replaced = Vec<([i32; 3], Vec<u32>)>;
+
 /// Why `place_in` placed nothing.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlaceError {
@@ -27,16 +30,39 @@ impl fmt::Display for PlaceError {
     }
 }
 
+/// Puts back what `place_in` replaced.
+pub fn put_back(world: &World, replaced: &Replaced) {
+    for (pos, parts) in replaced {
+        write_cell(world, *pos, parts);
+    }
+}
+
+/// Makes the cell at `pos` hold just `parts`, left alone if it does. Its first block is
+/// replaced in place, so a chest turned or put back keeps what is in it.
+fn write_cell(world: &World, pos: [i32; 3], parts: &[u32]) {
+    let now = world.parts(pos);
+    if now == parts {
+        return;
+    }
+    for &extra in now.iter().skip(1) {
+        world.part_remove(pos, extra);
+    }
+    world.set_block(pos, parts.first().copied().unwrap_or(0));
+    for &part in parts.iter().skip(1) {
+        world.part_add(pos, part);
+    }
+}
+
 impl Structure {
     /// Puts it into `world` turned by `turn`, the lowest corner of the turned box at `corner`.
-    /// Every block is set, air too. On an error nothing is. Gives back the blocks it replaced,
-    /// to put back for an undo.
+    /// Every block is set, air too. On an error nothing is. Gives back what it replaced, for
+    /// `put_back`.
     pub fn place_in(
         &self,
         world: &World,
         corner: [i32; 3],
         turn: Turn,
-    ) -> Result<Vec<([i32; 3], u32)>, PlaceError> {
+    ) -> Result<Replaced, PlaceError> {
         let states = self.states(turn)?;
         let (size, corner) = (self.size(), BlockPos::from(corner));
         let blocks: Vec<([i32; 3], u32)> = self
@@ -46,13 +72,16 @@ impl Structure {
                 (pos.to_array(), states[name])
             })
             .collect();
-        let replaced: Option<Vec<([i32; 3], u32)>> = blocks
+        let replaced: Option<Replaced> = blocks
             .iter()
-            .map(|&(pos, _)| world.block_loaded(pos).map(|state| (pos, state)))
+            .map(|&(pos, _)| {
+                world.block_loaded(pos)?;
+                Some((pos, world.parts(pos)))
+            })
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
         for &(pos, state) in &blocks {
-            world.set_block(pos, state);
+            write_cell(world, pos, &[state]);
         }
         Ok(replaced)
     }

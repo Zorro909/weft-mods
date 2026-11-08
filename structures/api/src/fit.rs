@@ -1,8 +1,9 @@
 //! Whether a structure fits the ground at a spot, and at what height. Worked out from the
 //! terrain's columns alone, so every cube and every client gets the same answer.
 
-use weft_sdk::Tag;
 use weft_sdk::terrain::Column;
+
+use crate::biomes::Biomes;
 
 /// The ground of column (`x`, `z`): `None` where nothing may stand (no terrain, a cave mouth).
 pub(crate) type Columns<'a> = &'a dyn Fn(i32, i32) -> Option<Column>;
@@ -10,7 +11,7 @@ pub(crate) type Columns<'a> = &'a dyn Fn(i32, i32) -> Option<Column>;
 /// The conditions a spot must meet, shared by static structures and plans.
 #[derive(Clone, Copy)]
 pub struct Fit {
-    biome: Option<&'static Tag>,
+    biomes: Option<&'static Biomes>,
     max_slope: i32,
     sink: i32,
 }
@@ -25,14 +26,14 @@ impl Fit {
     /// Any biome, ground varying by at most 6 blocks, the bottom layer level with it.
     pub const fn new() -> Fit {
         Fit {
-            biome: None,
+            biomes: None,
             max_slope: 6,
             sink: 0,
         }
     }
-    /// Only where the biome under its middle has this tag.
-    pub fn biome(mut self, tag: &'static Tag) -> Fit {
-        self.biome = Some(tag);
+    /// Only where the biome under its middle is one of `biomes`.
+    pub fn biome(mut self, biomes: &'static Biomes) -> Fit {
+        self.biomes = Some(biomes);
         self
     }
     /// How much the ground under it may rise and fall, in blocks.
@@ -50,7 +51,7 @@ impl Fit {
     /// `corner`, if the ground there meets the conditions. The bottom layer takes the place of
     /// the ground's top block, so a structure's own floor is level with the ground around it.
     pub(crate) fn floor(&self, corner: [i32; 2], size: [i32; 2], ground: Columns) -> Option<i32> {
-        let fits_biome = |biome| self.biome.is_none_or(|tag| tag.on_biome(biome));
+        let fits_biome = |biome| self.biomes.is_none_or(|biomes| biomes.contains(biome));
         floor(self.max_slope, self.sink, corner, size, ground, &fits_biome)
     }
 }
