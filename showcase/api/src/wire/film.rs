@@ -88,13 +88,17 @@ impl Wire for Shot {
 
 impl Wire for Ease {
     fn put(&self, out: &mut Vec<u8>) {
-        let tag: u8 = match self {
-            Ease::Linear => 0,
-            Ease::Smooth => 1,
-            Ease::In => 2,
-            Ease::Out => 3,
-        };
-        tag.put(out);
+        match self {
+            Ease::Linear => 0u8.put(out),
+            Ease::Smooth => 1u8.put(out),
+            Ease::In => 2u8.put(out),
+            Ease::Out => 3u8.put(out),
+            Ease::Speeds { from, to } => {
+                4u8.put(out);
+                from.put(out);
+                to.put(out);
+            }
+        }
     }
 
     fn get(bytes: &mut &[u8]) -> Option<Ease> {
@@ -103,6 +107,10 @@ impl Wire for Ease {
             1 => Ease::Smooth,
             2 => Ease::In,
             3 => Ease::Out,
+            4 => Ease::Speeds {
+                from: Wire::get(bytes)?,
+                to: Wire::get(bytes)?,
+            },
             _ => return None,
         })
     }

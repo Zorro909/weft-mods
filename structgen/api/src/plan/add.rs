@@ -18,6 +18,7 @@ impl Plan<'_> {
             template: entry,
             corner,
             turn,
+            materials: Default::default(),
             foundation: None,
             clear_above: false,
             ground: Vec::new(),
@@ -46,14 +47,41 @@ impl Plan<'_> {
         self.fill_state(from, to, BlockState::of(block))
     }
 
+    /// Every block from `from` to `to` that has `tag` as the world generates there becomes
+    /// `block`: leaves to air beside a road, so a tree it cut leaves no crown floating.
+    pub fn replace(
+        &mut self,
+        from: Pos,
+        to: Pos,
+        tag: &'static Tag,
+        block: &Block,
+    ) -> Result<(), PlanError> {
+        self.fill_where(from, to, BlockState::of(block), Some(tag))
+    }
+
+    pub(crate) fn fill_state(
+        &mut self,
+        a: Pos,
+        b: Pos,
+        state: BlockState,
+    ) -> Result<(), PlanError> {
+        self.fill_where(a, b, state, None)
+    }
+
     /// An unknown block (`u32::MAX`) is left out; the SDK has already said so.
-    fn fill_state(&mut self, a: Pos, b: Pos, state: BlockState) -> Result<(), PlanError> {
+    fn fill_where(
+        &mut self,
+        a: Pos,
+        b: Pos,
+        state: BlockState,
+        only: Option<&'static Tag>,
+    ) -> Result<(), PlanError> {
         self.check()?;
         let area = Area::between(a, b);
         self.inside("blocks", area)?;
         let state = state.id();
         if state != u32::MAX {
-            self.parts.push(Part::Fill { area, state });
+            self.parts.push(Part::Fill { area, state, only });
         }
         Ok(())
     }

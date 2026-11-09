@@ -1,0 +1,58 @@
+# A town grown where three roads meet: the market is the triangle between them. Its houses step
+# along the slanting sides, each a block or two off its neighbour, fronts to the market; the
+# guildhall and the fountain stand in it. The church has its own square off the south road, a
+# lane runs round the back of the west row past its gardens.
+
+# The market, and the three roads leaving its corners.
+square     34,26 70,22 74,28 56,60 51,60 30,32
+street 5   32,29 16,22 -4,24
+street 5   73,24 90,16 108,18
+street 5   53,60 50,80 55,100
+# The church square off the south road.
+square     53,64 80,62 82,72 56,74
+# The back lane behind the west row, and its gardens.
+path 3     18,25 15,44 22,58 36,64 49,63
+garden     19,40 27,40 27,49 19,49
+garden     26,52 33,52 33,58 26,58
+# Two small fields outside.
+field      0,70 16,69 16,80 0,81
+field      90,44 104,43 104,54 90,55
+
+# The north side, fronts south to the market.
+place corner_house    back  39,20  cobble_ground,brick_roof,white_infill
+place narrow_gable    back  47,17  cobble_ground,spruce_roof
+place hall_house      back  56,17  cobble_ground,brick_roof,spruce_frame
+place narrow_gable    back  65,15  cobble_ground,oak_roof,white_infill
+# The east side, fronts west.
+place narrow_gable    left  78,32  cobble_ground,spruce_roof,white_infill
+place hall_house      left  72,41  cobble_ground,brick_roof
+place narrow_gable    left  68,50  cobble_ground,oak_roof,birch_infill
+place corner_house    left  62,58  cobble_ground,spruce_roof
+# The west side, fronts east.
+place narrow_gable    right 27,36  cobble_ground,brick_roof
+place hall_house      right 34,45  cobble_ground,spruce_roof,white_infill
+place narrow_gable    right 40,54  cobble_ground,oak_roof
+# In the market.
+place guildhall       none  52,36  cobble_ground,stone_roof
+place market_fountain none  52,50  cobble_ground
+place market_stall    none  41,37  cobble_ground
+place market_stall    none  64,34  cobble_ground
+# Along the roads out.
+place narrow_gable    back  20,13  cobble_ground,spruce_roof
+place hall_house      back  8,13   cobble_ground,oak_roof
+place storehouse      none  10,37  spruce_roof
+place narrow_gable    back  78,11  cobble_ground,brick_roof,white_infill
+place coaching_inn    none  95,28  cobble_ground,brick_roof
+place hall_house      right 41,72  cobble_ground,oak_roof
+# The church and its square.
+place town_church     none  70,85  cobble_ground,stone_roof
+place oak_tree        none  58,68
+place birch_tree      none  22,64
+
+view from_west     16,2,23     55,5,38
+view from_east     86,2,18     45,5,40
+view south_corner  53,2,60     52,7,22
+view church_square 64,2,64     70,10,82
+view south_road    51,2,96     53,6,60
+view over_market   92,32,78    50,0,38
+view back_lane     16,2,30     30,4,62

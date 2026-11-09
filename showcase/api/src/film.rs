@@ -105,6 +105,14 @@ pub enum Ease {
     In,
     /// Gently at the end only.
     Out,
+    /// At `from` blocks a second along the path at the start and `to` at the end, changing
+    /// smoothly between: shots that follow on from each other meet at one speed, without
+    /// stopping between. Each is held to at most three times the shot's average speed; a
+    /// shot that stands still, or follows a subject, eases as `Smooth` does.
+    Speeds {
+        from: f32,
+        to: f32,
+    },
 }
 
 impl Film {

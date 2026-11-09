@@ -14,6 +14,7 @@ structgen.no_selection = Give both corners, or select a box first with /structur
 structgen.corner_set = Corner {0} at {1} {2} {3}
 structgen.no_player = Only a player can do that
 structgen.bad_turn = A turn is none, right, back or left
+structgen.bad_style = No such style. Styles are {0}, several split by commas
 structgen.no_file = There is no structure {0}: no file {1}, and none built in
 structgen.bad_file = {0} is not a structure file of this version
 structgen.unknown_block = {0} has {1}, which is no block of this game
@@ -22,3 +23,16 @@ structgen.nothing_to_undo = Nothing to undo here
 structgen.undone = Put back {0} blocks
 item.structgen.wand = Structure Wand
 item.structgen.wand.tooltip = Hit a block for the first corner of a box, use it on one for the second. /structure save <name> saves the box.
+
+# Film titles (the film itself is only built with the showcase feature)
+structgen.film.hamlet = A hamlet: a few cottages and a farm round a well
+structgen.film.inside = Every house is furnished inside
+structgen.film.village = Up in the hills, a village round its green
+structgen.film.tavern = Its tavern
+structgen.film.church = Its church
+structgen.film.town = A town of cobbled streets round a market square
+structgen.film.inn = Through the coaching inn's yard
+structgen.film.hall = Into the town hall
+structgen.film.smithy = Out on the plain, a village and its smithy
+structgen.film.mountains = Over the mountains to one last hamlet
+structgen.film.end = None of them is drawn beforehand: each is laid out from the land it stands on

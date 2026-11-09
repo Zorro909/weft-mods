@@ -5,20 +5,23 @@
 //! - the size along x, y and z, a `u16` each
 //! - the palette: a `u16` count, then each state's name as a `u16` byte length and UTF-8,
 //!   written like the lines of a save's `ids.txt` (`base:furnace[facing=east,lit=false]`).
-//!   `core:air` clears what is there
+//!   `core:air` clears what is there. An entry `@<slot>[props]` is a material slot (`materials`)
+//! - the slots: a `u16` count, then each slot's name and default block, written
+//!   like palette names
 //! - every block's palette index (`packing`), x fastest, then z, then y
 //!
 //! Numbers are little-endian. Block entity contents (a chest's items, a machine's state) are
 //! not stored yet: those blocks are placed empty.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use weftkit::Pos;
 
+use crate::materials::{slot_of, valid_slot};
 use crate::packing;
 
 const MAGIC: &[u8] = b"WSTR";
-const VERSION: u8 = 1;
+const VERSION: u8 = 2;
 /// The most blocks a structure holds (256 x 256 x 256), so a small file can't claim a box too
 /// big to keep in memory.
 const MAX_VOLUME: usize = 1 << 24;
@@ -26,12 +29,14 @@ const MAX_VOLUME: usize = 1 << 24;
 const MAX_STATES: usize = u16::MAX as usize;
 
 /// A box of block states. Its parts always agree: one palette index per block, each inside the
-/// palette, so it encodes to a file that decodes again.
+/// palette, and a slot for every slot entry, so it encodes to a file that decodes again.
 #[derive(Debug, Default, PartialEq)]
 pub struct Structure {
     /// Blocks along x, y and z.
     pub(crate) size: [u16; 3],
     pub(crate) palette: Vec<String>,
+    /// Each slot's default block, by slot name.
+    pub(crate) slots: BTreeMap<String, String>,
     /// Each block's position in `palette`, x fastest, then z, then y.
     pub(crate) indices: Vec<u16>,
 }
@@ -39,10 +44,22 @@ pub struct Structure {
 impl Structure {
     /// A structure of `size` from each block's state name, in `blocks` order. `None` unless
     /// there is one name per block, at most `MAX_VOLUME` of them, and at most 65535 different
-    /// names, none longer than 65535 bytes.
+    /// names, none longer than 65535 bytes, and none a slot.
     pub fn from_names<'a>(
         size: [u16; 3],
         names: impl IntoIterator<Item = &'a str>,
+    ) -> Option<Structure> {
+        Structure::with_slots(size, names, &[])
+    }
+
+    /// Like `from_names`, where names may also be slots of `slots`, each a slot's name and its
+    /// default block: `("roof/stair", "base:spruce_planks_stairs")` lets a name be
+    /// `@roof/stair[facing=north]`. `None` for a slot name of anything but lowercase letters,
+    /// digits, `_` and `/`, and for a name using a slot not among `slots`.
+    pub fn with_slots<'a>(
+        size: [u16; 3],
+        names: impl IntoIterator<Item = &'a str>,
+        slots: &[(&str, &str)],
     ) -> Option<Structure> {
         let volume = volume(size)?;
         let mut palette: Vec<String> = Vec::new();
@@ -63,11 +80,38 @@ impl Structure {
             }
             indices.push(index);
         }
-        (indices.len() == volume).then_some(Structure {
+        let slots = slots
+            .iter()
+            .map(|&(slot, block)| (slot.to_string(), block.to_string()))
+            .collect();
+        let structure = Structure {
             size,
             palette,
+            slots,
             indices,
-        })
+        };
+        (structure.indices.len() == volume && structure.slots_agree()).then_some(structure)
+    }
+
+    /// Each slot's name and default block.
+    pub fn slots(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.slots
+            .iter()
+            .map(|(slot, block)| (slot.as_str(), block.as_str()))
+    }
+
+    /// Whether every slot is named well with a plain block, and every slot entry has its slot.
+    fn slots_agree(&self) -> bool {
+        let named = |text: &str| !text.is_empty() && text.len() <= u16::MAX as usize;
+        let slots_fine = self.slots.len() <= MAX_STATES
+            && self.slots.iter().all(|(slot, block)| {
+                named(slot) && valid_slot(slot) && named(block) && slot_of(block).is_none()
+            });
+        slots_fine
+            && self.palette.iter().all(|entry| match slot_of(entry) {
+                Some((slot, _)) => self.slots.contains_key(slot),
+                None => true,
+            })
     }
 
     /// Blocks along x, y and z.
@@ -75,7 +119,7 @@ impl Structure {
         self.size.map(|side| side as i32)
     }
 
-    /// Each block's position from the lowest corner, and its state name.
+    /// Each block's position from the lowest corner, and its state name (`@slot[..]` for a slot).
     pub fn blocks(&self) -> impl Iterator<Item = (Pos, &str)> {
         let [sx, _, sz] = self.size.map(|v| v as usize);
         self.indices.iter().enumerate().map(move |(i, &p)| {
@@ -95,8 +139,12 @@ impl Structure {
         }
         body.extend_from_slice(&(self.palette.len() as u16).to_le_bytes());
         for name in &self.palette {
-            body.extend_from_slice(&(name.len() as u16).to_le_bytes());
-            body.extend_from_slice(name.as_bytes());
+            write_name(&mut body, name);
+        }
+        body.extend_from_slice(&(self.slots.len() as u16).to_le_bytes());
+        for (slot, block) in &self.slots {
+            write_name(&mut body, slot);
+            write_name(&mut body, block);
         }
         packing::write(&mut body, &self.indices, self.palette.len());
         let mut file = MAGIC.to_vec();
@@ -118,13 +166,24 @@ impl Structure {
         let palette = (0..count)
             .map(|_| reader.name())
             .collect::<Option<Vec<String>>>()?;
+        let count = reader.u16()?;
+        let slots = (0..count)
+            .map(|_| Some((reader.name()?, reader.name()?)))
+            .collect::<Option<BTreeMap<String, String>>>()?;
         let indices = packing::read(reader.0, volume(size)?, palette.len())?;
-        Some(Structure {
+        let structure = Structure {
             size,
             palette,
+            slots,
             indices,
-        })
+        };
+        structure.slots_agree().then_some(structure)
     }
+}
+
+fn write_name(body: &mut Vec<u8>, name: &str) {
+    body.extend_from_slice(&(name.len() as u16).to_le_bytes());
+    body.extend_from_slice(name.as_bytes());
 }
 
 /// The blocks in a box of `size`, `None` past `MAX_VOLUME`.
@@ -223,7 +282,14 @@ mod tests {
         );
         let mut newer = file.clone();
         newer[MAGIC.len()] = VERSION + 1;
-        assert_eq!(Structure::decode(&newer), None, "another version");
+        assert_eq!(Structure::decode(&newer), None, "a newer version");
+        let mut older = file.clone();
+        older[MAGIC.len()] = VERSION - 1;
+        assert_eq!(
+            Structure::decode(&older),
+            None,
+            "version 1, from before slots"
+        );
     }
 
     #[test]
@@ -232,6 +298,7 @@ mod tests {
         let huge = Structure {
             size: [u16::MAX; 3],
             palette: vec!["core:air".to_string()],
+            slots: BTreeMap::new(),
             indices: Vec::new(),
         };
         assert_eq!(

@@ -1,3 +1,5 @@
 __pycache__/
 # The engine, which init.sh checks out.
 /Weft/
+# JetBrains IDE settings.
+.idea/

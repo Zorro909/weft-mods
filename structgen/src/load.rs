@@ -1,14 +1,15 @@
-//! `/structure load <name> [turn]` places a structure in front of the player: the file
-//! `structures/<name>.wst` that `save` writes, or else the one built into the mod.
+//! `/structure load <name> [turn] [styles]` places a structure in front of the player: the file
+//! `structures/<name>.wst` that `save` writes, or else the one built into the mod, its material
+//! slots filled with the styles named (`brick_roof,spruce_frame`).
 //! `/structure undo` puts back what the player's last load replaced.
 
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
 
-use structgen_api::{PlaceError, Pos, Replaced, Structure, Turn};
+use structgen_api::{Materials, PlaceError, Pos, Replaced, Structure, Turn};
 use weft_sdk::*;
 
-use crate::{save, worldgen};
+use crate::{save, styles, worldgen};
 
 /// How many blocks ahead of the player the structure starts.
 const GAP: i32 = 2;
@@ -31,6 +32,10 @@ pub fn run(cmd: &mut ServerCommand) {
     let Some(turn) = turn_named(cmd.text("turn").unwrap_or("none")) else {
         return cmd.reply("structgen.bad_turn", &[]);
     };
+    let Some(materials) = styles::named(cmd.text("styles").unwrap_or("")) else {
+        let all: Vec<&str> = styles::names().collect();
+        return cmd.reply("structgen.bad_style", &[Arg::Text(&all.join(", "))]);
+    };
     let path = save::path_of(&name);
     let file = std::fs::read(&path).ok();
     let Some(bytes) = file.as_deref().or_else(|| worldgen::embedded(&name)) else {
@@ -43,18 +48,24 @@ pub fn run(cmd: &mut ServerCommand) {
     if structure.size().iter().any(|&side| side > save::MAX_SIDE) {
         return cmd.reply("structgen.too_big", &[Arg::Int(save::MAX_SIDE as i64)]);
     }
-    place(cmd, &name, &structure, turn);
+    place(cmd, &name, &structure, turn, &materials);
 }
 
 /// Places it in front of the player, if every block it covers is loaded.
-fn place(cmd: &mut ServerCommand, name: &str, structure: &Structure, turn: Turn) {
+fn place(
+    cmd: &mut ServerCommand,
+    name: &str,
+    structure: &Structure,
+    turn: Turn,
+    materials: &Materials,
+) {
     let (world, player) = (cmd.world(), cmd.player());
     let Some(me) = world.entity(player) else {
         return cmd.reply("structgen.no_player", &[]);
     };
     let size = turn.size(structure.size());
     let corner = in_front(me.pos.block().into(), facing(me.yaw), size);
-    let replaced = match structure.place_in(&world, corner, turn) {
+    let replaced = match structure.place_in(&world, corner, turn, materials) {
         Ok(replaced) => replaced,
         Err(PlaceError::UnknownBlock(block)) => {
             let args = [Arg::Text(name), Arg::Text(&block)];

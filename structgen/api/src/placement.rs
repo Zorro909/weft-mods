@@ -7,6 +7,7 @@ use crate::biomes::Biomes;
 use crate::fit::Fit;
 use crate::format::Structure;
 use crate::generator::Generator;
+use crate::materials::Materials;
 use crate::part::Foundation;
 use crate::plan::{Plan, PlanError};
 use crate::templates;
@@ -31,9 +32,11 @@ pub fn place<'a>(registry: &'a mut Registry, name: &str, structure: Structure) -
         dimensions: Vec::new(),
         fit: Fit::new(),
         foundation: None,
+        materials: Vec::new(),
         spacing: 256,
         chance: 0.3,
         turns: true,
+        priority: 0,
     }
 }
 
@@ -45,12 +48,20 @@ pub struct Placement<'a> {
     dimensions: Vec<&'static Dimension>,
     fit: Fit,
     foundation: Option<Foundation>,
+    materials: Vec<Materials>,
     spacing: i32,
     chance: f32,
     turns: bool,
+    priority: i32,
 }
 
 impl Placement<'_> {
+    /// One set of blocks its slots may be filled with (call again for more); the seed picks one
+    /// for each place. Without, the slots' defaults.
+    pub fn materials(mut self, materials: Materials) -> Self {
+        self.materials.push(materials);
+        self
+    }
     /// Only in this dimension (call again for more). Without, in every dimension but bare ones.
     pub fn dimension(mut self, dimension: &'static Dimension) -> Self {
         self.dimensions.push(dimension);
@@ -84,6 +95,12 @@ impl Placement<'_> {
         self.fit = self.fit.max_slope(blocks);
         self
     }
+    /// Only where the ground under every column is at least at height `y`: a world's sea level
+    /// keeps it out of lakes and the sea. Without, at any height.
+    pub fn min_height(mut self, y: i32) -> Self {
+        self.fit = self.fit.min_height(y);
+        self
+    }
     /// How much further down its bottom layer goes (0 by default: level with the ground).
     pub fn buried(mut self, blocks: i32) -> Self {
         self.fit = self.fit.buried(blocks);
@@ -92,6 +109,11 @@ impl Placement<'_> {
     /// Always faces the way it was saved, instead of a way the seed picks.
     pub fn keep_facing(mut self) -> Self {
         self.turns = false;
+        self
+    }
+    /// Not within 8 blocks of a structure with a higher priority; see `Planning::priority`.
+    pub fn priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
         self
     }
 }
@@ -109,6 +131,7 @@ impl Drop for Placement<'_> {
             size,
             fit: self.fit,
             foundation: self.foundation,
+            materials: std::mem::take(&mut self.materials),
             chance: self.chance,
             turns: self.turns,
         };
@@ -117,6 +140,7 @@ impl Drop for Placement<'_> {
         let dimensions = std::mem::take(&mut self.dimensions);
         let planner = Box::new(move |p: &mut Plan| single.plan(p));
         Generator::new(template.name().to_string(), region, dimensions, planner)
+            .with_priority(self.priority)
             .register(self.registry);
     }
 }
@@ -128,6 +152,7 @@ struct Single {
     size: [i32; 3],
     fit: Fit,
     foundation: Option<Foundation>,
+    materials: Vec<Materials>,
     chance: f32,
     turns: bool,
 }
@@ -148,11 +173,24 @@ impl Single {
         let Some(corner) = p.fit(self.template, [x - sx / 2, z - sz / 2], turn, &self.fit) else {
             return Ok(());
         };
-        let placed = p.structure(self.template, corner, turn)?.clear_above();
+        let materials = self.materials(p);
+        let mut placed = p.structure(self.template, corner, turn)?.clear_above();
+        if let Some(materials) = &materials {
+            placed = placed.materials(materials);
+        }
         if let Some(foundation) = self.foundation {
             placed.foundation(foundation);
         }
         Ok(())
+    }
+
+    /// One of its material sets, `None` when it has none.
+    fn materials(&self, p: &mut Plan) -> Option<Materials> {
+        if self.materials.is_empty() {
+            return None;
+        }
+        let i = p.random().below(self.materials.len() as u64) as usize;
+        Some(self.materials[i].clone())
     }
 }
 
@@ -183,6 +221,7 @@ mod tests {
             size,
             fit: Fit::new(),
             foundation: None,
+            materials: Vec::new(),
             chance: 1.0,
             turns: true,
         };

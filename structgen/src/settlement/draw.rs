@@ -1,0 +1,105 @@
+//! The grid's roads, squares and fields laid onto the ground at each column's own height:
+//! gravel lanes worn in patches, cobbled streets between stone kerbs, wheat on farmland. Above
+//! each, the air is cleared, and the leaves beside it, so no tree the world grew there stands
+//! in the way or leaves a crown floating.
+
+use structgen_api::{BlockState, Plan, PlanError, Pos};
+use weft_sdk::*;
+
+use super::grid::{Cell, Grid};
+use super::shape::noise;
+
+static AIR: Block = Block::named("core:air");
+static GRAVEL: Block = Block::named("base:gravel");
+static DIRT: Block = Block::named("base:dirt");
+static COBBLESTONE: Block = Block::named("base:cobblestone");
+static MOSSY: Block = Block::named("base:mossy_cobblestone");
+static KERB: Block = Block::named("base:stone_bricks");
+static FARMLAND: Block = Block::named("base:farmland");
+static WHEAT: Block = Block::named("base:wheat");
+static LEAVES: Tag = Tag::named("leaves");
+static LOGS: Tag = Tag::named("logs");
+
+pub fn draw(p: &mut Plan, grid: &Grid) -> Result<(), PlanError> {
+    for ([x, z], cell) in grid.columns() {
+        let Some(y) = grid.height([x, z]) else {
+            continue;
+        };
+        let (from, to) = (Pos::new(x, y + 2, z), Pos::new(x, y + CLEAR, z));
+        if let Some((floor, above)) = surface(cell, patch(x, z)) {
+            p.set(Pos::new(x, y, z), floor)?;
+            p.set_state(Pos::new(x, y + 1, z), above)?;
+            p.fill(from, to, &AIR)?;
+        } else if beside(grid, [x, z], cell) {
+            // Leaves only: a trunk standing here keeps the crown it still holds up, unless it is
+            // so near that none would be left.
+            p.replace(from, to, &LEAVES, &AIR)?;
+            if grid.near([x, z], 1, laid) {
+                p.replace(Pos::new(x, y + 1, z), to, &LOGS, &AIR)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The floor and the block above it of a road or field column, `worn` in patches; `None` for
+/// a column nothing is laid on.
+fn surface(cell: Cell, worn: bool) -> Option<(&'static Block, BlockState)> {
+    Some(match cell {
+        Cell::Lane if worn => (&DIRT, BlockState::AIR),
+        Cell::Lane => (&GRAVEL, BlockState::AIR),
+        Cell::Kerb => (&KERB, BlockState::AIR),
+        Cell::Street | Cell::Square if worn => (&MOSSY, BlockState::AIR),
+        Cell::Street | Cell::Square => (&COBBLESTONE, BlockState::AIR),
+        Cell::Furrow => (&DIRT, BlockState::AIR),
+        Cell::Crop(age) => {
+            let wheat = BlockState::of(&WHEAT).with_prop("age", &age.to_string());
+            (&FARMLAND, wheat.unwrap_or(BlockState::AIR))
+        }
+        Cell::Free | Cell::Green | Cell::Building | Cell::Blocked => return None,
+    })
+}
+
+/// Whether open ground at `at` is near enough a road or field that the crown of a tree cut
+/// off there could hang over it.
+fn beside(grid: &Grid, at: [i32; 2], cell: Cell) -> bool {
+    matches!(cell, Cell::Free | Cell::Green) && grid.near(at, CROWN, laid)
+}
+
+/// Whether a road or field is laid on a column of `cell`.
+fn laid(cell: Cell) -> bool {
+    cell.is_road() || matches!(cell, Cell::Furrow | Cell::Crop(_))
+}
+
+/// How high above a road or field the air is cleared: a tall spruce's height.
+const CLEAR: i32 = 11;
+/// How far beside a road or field leaves are cleared: an oak's crown, so one rooted on the road
+/// leaves none behind and one two or more off keeps a trimmed crown. One a block off loses its
+/// trunk too, which would stand bare, but may leave a slab of leaves; no width avoids that for
+/// every tree, and wider strips trees beside the road bare.
+const CROWN: i32 = 2;
+
+/// Whether column (`x`, `z`) is worn, in patches of a few blocks rather than single spots.
+fn patch(x: i32, z: i32) -> bool {
+    noise(x.div_euclid(3), z.div_euclid(3) + 9000) > 0.86 && noise(x, z) > 0.3
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settlement::grid::row;
+
+    #[test]
+    fn crowns_are_cleared_beside_a_lane_but_not_off_a_house() {
+        let mut grid = row(&[Some(64); 6]);
+        grid.put([0, 0], Cell::Lane);
+        grid.put([1, 0], Cell::Building);
+        assert!(
+            !beside(&grid, [0, 0], Cell::Lane),
+            "the lane is cleared as a lane"
+        );
+        assert!(!beside(&grid, [1, 0], Cell::Building), "not the house");
+        assert!(beside(&grid, [2, 0], Cell::Free), "two from the lane");
+        assert!(!beside(&grid, [3, 0], Cell::Free), "three from it");
+    }
+}

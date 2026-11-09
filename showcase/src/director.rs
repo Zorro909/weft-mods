@@ -19,6 +19,8 @@ use crate::view::{camera, missing_notice, put, titles};
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
 const STOP_FRAMES: u32 = 20;
+/// Frames the camera stays where the film opens, the last stop, before it rolls.
+const OPENING_FRAMES: u32 = 120;
 /// Most seconds the film moves on in one frame: a hitch slows the film instead of making the
 /// camera jump.
 const MAX_DT: f32 = 0.1;
@@ -158,17 +160,27 @@ fn load(c: &Client, mut loading: Loading) -> Phase {
     let (yaw, pitch) = angles_along(origin - stop).unwrap_or_default();
     // The player's own field of view until the film rolls.
     let fov = loading.playback.pose().fov;
-    put(
-        c,
-        Pose {
-            eye: stop,
-            yaw,
-            pitch,
-            roll: 0.0,
-            fov,
-        },
-    );
-    if loading.frames >= STOP_FRAMES && c.state().flags & cf::LOADED != 0 {
+    let mut pose = Pose {
+        eye: stop,
+        yaw,
+        pitch,
+        roll: 0.0,
+        fov,
+    };
+    // At the last stop, the film's opening: the camera already looks the way the film starts,
+    // and stays long enough for the far land in view to be drawn.
+    let last = loading.at + 1 == loading.stops.len();
+    let opening = loading.playback.opening().filter(|_| last);
+    if let Some(opening) = opening {
+        pose = Pose { fov, ..opening };
+    }
+    put(c, pose);
+    let frames = if opening.is_some() {
+        OPENING_FRAMES
+    } else {
+        STOP_FRAMES
+    };
+    if loading.frames >= frames && c.state().flags & cf::LOADED != 0 {
         loading.at += 1;
         loading.frames = 0;
     } else {

@@ -4,15 +4,18 @@
 use std::sync::{Arc, OnceLock};
 
 use weft_sdk::*;
-use weftkit::Pos;
+use weftkit::{Area, Pos};
 
 use crate::fit::Columns;
 use crate::locate;
 use crate::plan::{Plan, PlanError};
-use crate::planned::Planned;
+use crate::planned::{Planned, widened};
 use crate::random::Random;
 use crate::region::{self, Region};
 
+/// Blocks kept between a structure and one of higher priority, so a lone cottage doesn't stand
+/// against a village's houses.
+const ROOM: i32 = 8;
 /// Plans worked out per region; each is shared by every cube in it.
 const CACHED_REGIONS: usize = 1024;
 
@@ -31,6 +34,9 @@ pub(crate) struct Generator {
     pub dimensions: Vec<&'static Dimension>,
     /// The side of a region, in blocks.
     pub region: i32,
+    /// Where its plan would come within `ROOM` of the plan of one with a higher priority, it
+    /// gives way.
+    pub priority: i32,
     planner: Box<Planner>,
     plans: ColumnCache<Slot>,
 }
@@ -46,9 +52,20 @@ impl Generator {
             name,
             dimensions,
             region: region.max(1),
+            priority: 0,
             planner,
             plans: ColumnCache::new(CACHED_REGIONS),
         }
+    }
+
+    pub fn with_priority(mut self, priority: i32) -> Generator {
+        self.priority = priority;
+        self
+    }
+
+    /// Whether it generates in dimension `id`.
+    pub fn is_in(&self, id: u32) -> bool {
+        self.dimensions.is_empty() || self.dimensions.iter().any(|d| d.id() == id)
     }
 
     /// Registers it for `locate`, and as one of the calling mod's decorations, named like the
@@ -101,7 +118,13 @@ impl Generator {
         match plan.finish(result) {
             Ok(parts) => {
                 let planned = Planned::new(parts);
-                if let Some(anchor) = planned.anchor() {
+                if self.gives_way(seed, dimension, &planned, ground) {
+                    return None;
+                }
+                // The log needs the game, which unit tests run without.
+                if let Some(anchor) = planned.anchor()
+                    && !cfg!(test)
+                {
                     debug!(
                         "structure {} at {anchor:?} in dimension {dimension}, {} parts",
                         self.name,
@@ -119,10 +142,31 @@ impl Generator {
             }
         }
     }
+
+    /// Whether `planned` would come within `ROOM` of the plan of a structure with a higher
+    /// priority. Theirs have given way in turn where they had to, so only what is really placed
+    /// counts.
+    fn gives_way(&self, seed: u64, dimension: u32, planned: &Planned, ground: Columns) -> bool {
+        let Some(bounds) = planned.bounds() else {
+            return false;
+        };
+        let Area { lo, hi } = widened(bounds, ROOM);
+        let higher = locate::all().into_iter();
+        let mut higher = higher.filter(|g| g.priority > self.priority && g.is_in(dimension));
+        higher.any(|other| {
+            let mut regions = region::indices(lo.z, hi.z, other.region)
+                .flat_map(|iz| region::indices(lo.x, hi.x, other.region).map(move |ix| [ix, iz]));
+            regions.any(|index| {
+                let slot = other.planned(seed, dimension, index, ground);
+                matches!(slot.get(), Some(Some(theirs)) if planned.near(theirs, ROOM))
+            })
+        })
+    }
 }
 
-/// Writes the plan's blocks into the cube. They are gathered first: reading the ground's top
-/// blocks and writing the cube both go through `g`.
+/// Writes the plan's blocks into the cube, in order, each that names a tag only over a block
+/// that has it. They are gathered first: reading the ground's top blocks and writing the cube
+/// both go through `g`.
 fn stamp(planned: &Planned, g: &mut Gen) {
     let origin = Pos::from(g.origin());
     if !planned.reaches(origin) {
@@ -130,11 +174,13 @@ fn stamp(planned: &Planned, g: &mut Gen) {
     }
     let mut blocks = Vec::new();
     let surface = |x, z| g.surface_block(x, z);
-    planned.stamp(origin, &surface, &mut |pos, state| {
-        blocks.push((pos, state))
+    planned.stamp(origin, &surface, &mut |pos, state, only| {
+        blocks.push((pos, state, only))
     });
-    for ([x, y, z], state) in blocks {
-        g.set(x, y, z, state);
+    for ([x, y, z], state, only) in blocks {
+        if only.is_none_or(|tag| tag.on_block(g.get(x, y, z))) {
+            g.set(x, y, z, state);
+        }
     }
 }
 
@@ -149,4 +195,62 @@ fn salt(name: &str) -> u64 {
 fn ground(g: &Gen, x: i32, z: i32) -> Option<terrain::Column> {
     let column = g.column(x, z);
     (column.height != i32::MIN && !g.surface_carved(x, z)).then_some(column)
+}
+
+#[cfg(test)]
+mod tests {
+    use weftkit::BlockState;
+
+    use super::*;
+
+    /// A generator of `priority` whose plan fills from `from` to `to` in the region holding
+    /// them; registered for the others to see. Each test plans in a region of its own.
+    fn filling(name: &str, priority: i32, from: [i32; 3], to: [i32; 3]) -> Arc<Generator> {
+        let planner = move |p: &mut Plan| match p.region().contains(from[0], from[2]) {
+            true => p.fill_state(from.into(), to.into(), BlockState::from(5)),
+            false => Ok(()),
+        };
+        let generator = Generator::new(name.to_string(), 512, Vec::new(), Box::new(planner));
+        let generator = Arc::new(generator.with_priority(priority));
+        locate::add(generator.clone());
+        generator
+    }
+
+    fn placed(generator: &Generator, region: [i32; 2]) -> bool {
+        let none = |_: i32, _: i32| None;
+        generator.make(42, 0, region, &none).is_some()
+    }
+
+    #[test]
+    fn a_plan_gives_way_where_it_would_touch_a_higher_one() {
+        filling("m:village", 2, [100, 70, 100], [110, 70, 110]);
+        let on_it = filling("m:cottage", 0, [105, 70, 105], [105, 70, 105]);
+        let against = filling("m:cottage2", 0, [115, 70, 100], [115, 70, 100]);
+        let beside = filling("m:cottage3", 0, [120, 70, 100], [120, 70, 100]);
+        let level = filling("m:hamlet", 2, [105, 70, 105], [105, 70, 105]);
+        assert!(!placed(&on_it, [0, 0]), "a cottage in the village");
+        assert!(!placed(&against, [0, 0]), "a cottage up against it");
+        assert!(placed(&beside, [0, 0]), "a cottage with room between");
+        assert!(placed(&level, [0, 0]), "the same priority: both stand");
+        let round = move |p: &mut Plan| {
+            let stone = BlockState::from(5);
+            p.fill_state(Pos::new(80, 70, 100), Pos::new(80, 70, 100), stone)?;
+            p.fill_state(Pos::new(130, 70, 100), Pos::new(130, 70, 100), stone)
+        };
+        let round = Generator::new("m:hamlet3".into(), 512, Vec::new(), Box::new(round));
+        assert!(
+            placed(&round.with_priority(1), [0, 0]),
+            "parts either side, none near it"
+        );
+    }
+
+    #[test]
+    fn a_plan_that_gave_way_leaves_the_ground_to_lower_ones() {
+        let at = |x| [x, 70, 2600];
+        filling("m:town2", 3, at(2600), at(2600));
+        let village = filling("m:village2", 2, at(2600), at(2700));
+        let hamlet = filling("m:hamlet2", 1, at(2700), at(2700));
+        assert!(!placed(&village, [5, 5]), "the town has it");
+        assert!(placed(&hamlet, [5, 5]), "no village there after all");
+    }
 }

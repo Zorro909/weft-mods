@@ -4,19 +4,21 @@
 //! Every mod links its own copy of this crate, so a plan sees only its own mod's templates.
 
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::{Arc, RwLock};
 
 use weft_sdk::*;
 use weftkit::Pos;
 
 use crate::format::Structure;
+use crate::materials::{self, Materials};
 use crate::turn::{Turn, turn_state};
 
 /// By full name (`mymod:hut`).
 static TEMPLATES: RwLock<Option<HashMap<String, Arc<Entry>>>> = RwLock::new(None);
 
 /// Registers `structure` as `template`: its blocks are checked when the game loads,
-/// `world.place(&TEMPLATE, pos)` puts it anywhere, and plans place it with `p.structure(..)`.
+/// `world.place(&TEMPLATE, pos)` puts it anywhere (its slots filled with their defaults), and
+/// plans place it with `p.structure(..)`.
 ///
 /// ```ignore
 /// static HOUSE: Template = Template::named("house");
@@ -24,9 +26,14 @@ static TEMPLATES: RwLock<Option<HashMap<String, Arc<Entry>>>> = RwLock::new(None
 /// structgen_api::template(r, &HOUSE, house);
 /// ```
 pub fn template(registry: &mut Registry, template: &'static Template, structure: Structure) {
+    let defaults = materials::default_names(&structure.palette, &structure.slots);
+    let names: HashMap<&str, &str> = (structure.palette.iter())
+        .zip(&defaults)
+        .map(|(entry, name)| (entry.as_str(), name.as_str()))
+        .collect();
     let mut builder = registry.template(template);
-    for (pos, block) in structure.blocks() {
-        builder = builder.fill(block, pos, pos);
+    for (pos, entry) in structure.blocks() {
+        builder = builder.fill(names[entry], pos, pos);
     }
     drop(builder);
     add(template.name(), structure);
@@ -41,7 +48,7 @@ pub(crate) fn add(name: &str, structure: Structure) -> Arc<Entry> {
     let entry = Arc::new(Entry {
         name: name.to_string(),
         structure,
-        resolved: OnceLock::new(),
+        resolved: RwLock::new(HashMap::new()),
     });
     let mut templates = TEMPLATES.write().unwrap_or_else(|e| e.into_inner());
     templates
@@ -54,8 +61,9 @@ pub(crate) fn add(name: &str, structure: Structure) -> Arc<Entry> {
 pub(crate) struct Entry {
     pub name: String,
     structure: Structure,
-    /// Ids exist only once the game has loaded, so this is filled at the first cube.
-    resolved: OnceLock<Option<Resolved>>,
+    /// By the materials it is placed with. Ids exist only once the game has loaded, so each is
+    /// filled at the first cube that needs it.
+    resolved: RwLock<HashMap<Materials, Option<Arc<Resolved>>>>,
 }
 
 impl Entry {
@@ -64,18 +72,22 @@ impl Entry {
         self.structure.size()
     }
 
-    /// `None` (said once) if a block is unknown; the template check at load should have caught it.
-    pub fn resolved(&self) -> Option<&Resolved> {
-        self.resolved.get_or_init(|| self.resolve()).as_ref()
+    /// Its states with `materials`. `None` (said once) if a block is unknown; the template check
+    /// at load should have caught it.
+    pub fn resolved(&self, materials: &Materials) -> Option<Arc<Resolved>> {
+        let known = self.resolved.read().unwrap_or_else(|e| e.into_inner());
+        if let Some(resolved) = known.get(materials) {
+            return resolved.clone();
+        }
+        drop(known);
+        let resolved = self.resolve(materials).map(Arc::new);
+        let mut known = self.resolved.write().unwrap_or_else(|e| e.into_inner());
+        known.entry(materials.clone()).or_insert(resolved).clone()
     }
 
-    fn resolve(&self) -> Option<Resolved> {
-        let palette: Option<Vec<u32>> = self
-            .structure
-            .palette
-            .iter()
-            .map(|name| Block::lookup(name))
-            .collect();
+    fn resolve(&self, materials: &Materials) -> Option<Resolved> {
+        let (palette, slots) = (&self.structure.palette, &self.structure.slots);
+        let palette = materials::states(&self.name, palette, slots, materials);
         let (Some(palette), Some(air)) = (palette, Block::lookup("core:air")) else {
             error!(
                 "structure {}: a block in it is unknown, so it is not placed",
@@ -83,17 +95,24 @@ impl Entry {
             );
             return None;
         };
+        let follows: Vec<bool> = (self.structure.palette.iter())
+            .map(|entry| materials::follows_ground(entry, materials))
+            .collect();
         let palettes = Turn::ALL.map(|turn| {
-            palette
-                .iter()
-                .map(|&state| turn_state(state, turn))
+            (palette.iter().zip(&follows))
+                .map(|(&state, &follows)| match follows {
+                    true => FOLLOWS_GROUND,
+                    false => turn_state(state.id(), turn),
+                })
                 .collect()
         });
+        let ground = (palette.iter().zip(&follows)).find(|(_, follows)| **follows);
         Some(Resolved {
             size: self.size(),
             indices: self.structure.indices.clone(),
             palettes,
             air,
+            ground: ground.map_or(air, |(state, _)| state.id()),
         })
     }
 }
@@ -106,9 +125,15 @@ pub(crate) struct Resolved {
     /// Every block's palette index, unturned: x fastest, then z, then y.
     pub indices: Vec<u16>,
     /// The state of each palette entry under each turn, in `Turn::ALL` order.
+    /// `FOLLOWS_GROUND` for the cells that take the ground's top block.
     pub palettes: [Vec<u32>; 4],
     pub air: u32,
+    /// What a `FOLLOWS_GROUND` cell gets where the ground has no top block.
+    pub ground: u32,
 }
+
+/// The state of a cell that takes the top block of the ground in its column.
+pub(crate) const FOLLOWS_GROUND: u32 = u32::MAX - 1;
 
 impl Resolved {
     /// The state at `pos` of the template turned by `turn`, `pos` counted in the turned box.
@@ -132,6 +157,7 @@ mod tests {
             indices: (0..6).collect(),
             palettes: [0, 1, 2, 3].map(|_| palette.clone()),
             air: 0,
+            ground: 0,
         }
     }
 

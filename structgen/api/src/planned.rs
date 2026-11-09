@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use weftkit::{Area, Pos};
 
 use crate::part::Part;
-use crate::stamp::{self, Surface};
+use crate::stamp::{self, Set, Surface};
 
 pub(crate) struct Planned {
     parts: Vec<Part>,
@@ -37,9 +37,39 @@ impl Planned {
         self.parts.first().map(|part| part.bounds().lo)
     }
 
+    /// The box round every part; `None` for an empty plan.
+    pub fn bounds(&self) -> Option<Area> {
+        let mut parts = self.parts.iter().map(Part::bounds);
+        let mut all = parts.next()?;
+        for area in parts {
+            all.grow_to(area.lo);
+            all.grow_to(area.hi);
+        }
+        Some(all)
+    }
+
+    /// Whether any of its parts comes within `room` blocks of one of `other`'s, seen from above.
+    pub fn near(&self, other: &Planned, room: i32) -> bool {
+        (self.parts.iter()).any(|part| other.reaches_into(&widened(part.bounds(), room)))
+    }
+
+    /// Whether any part reaches into the columns of `area`, seen from above.
+    fn reaches_into(&self, area: &Area) -> bool {
+        let columns = area.heights(i32::MIN, i32::MAX);
+        let cubes = |lo: i32, hi: i32| lo.div_euclid(16)..=hi.div_euclid(16);
+        let (lo, hi) = (area.lo, area.hi);
+        let cube_columns = cubes(lo.z, hi.z).flat_map(|z| cubes(lo.x, hi.x).map(move |x| [x, z]));
+        let nearby = cube_columns
+            .filter_map(|column| self.columns.get(&column))
+            .flatten();
+        nearby
+            .map(|&i| self.parts[i].bounds())
+            .any(|bounds| columns.overlaps(&bounds))
+    }
+
     /// Calls `set` for every block the plan puts into the cube at `origin`, later parts after
     /// earlier ones.
-    pub fn stamp(&self, origin: Pos, surface: Surface, set: &mut dyn FnMut([usize; 3], u32)) {
+    pub fn stamp(&self, origin: Pos, surface: Surface, set: Set) {
         for &i in self.parts_in(origin) {
             stamp::stamp(&self.parts[i], origin, surface, set);
         }
@@ -56,6 +86,12 @@ impl Planned {
     }
 }
 
+/// `area` with `room` more blocks on every side.
+pub(crate) fn widened(area: Area, room: i32) -> Area {
+    let (out, back) = (Pos::new(room, room, room), Pos::new(-room, -room, -room));
+    Area::between(area.lo + back, area.hi + out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,13 +100,14 @@ mod tests {
         Part::Fill {
             area: Area::between(from.into(), to.into()),
             state,
+            only: None,
         }
     }
 
     fn states(planned: &Planned, origin: [i32; 3]) -> Vec<u32> {
         let origin = Pos::from(origin);
         let mut out = Vec::new();
-        planned.stamp(origin, &|_, _| 0, &mut |_, state| out.push(state));
+        planned.stamp(origin, &|_, _| 0, &mut |_, state, _| out.push(state));
         out
     }
 

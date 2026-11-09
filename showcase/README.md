@@ -63,7 +63,7 @@ steps:
 
 | Step | |
 |---|---|
-| `shot(..)` | A camera move: `orbit`, `flyby` (a smooth curve through points), `dolly` (a straight line), `crane` (up or down beside a point), `hold` (still), `follow` (a subject). Each takes `.secs` (5 unless told), `.ease` (`Ease::Smooth` unless told; `Linear`, `In`, `Out`), `.look(..)` or `.look_at(point)`, `.fov(from, to)` (the player's own unless told), `.roll(from, to)` in degrees (level unless told; more than 0 banks the camera right) and `.blend(secs)`, which brings the camera over from where the shot before ended instead of cutting. Orbits and cranes also take `.arc(from, to)` in degrees, `.radius(from, to)` and `.height(from, to)`. |
+| `shot(..)` | A camera move: `orbit`, `flyby` (a smooth curve through points), `dolly` (a straight line), `crane` (up or down beside a point), `hold` (still), `follow` (a subject). Each takes `.secs` (5 unless told), `.ease` (`Ease::Smooth` unless told; `Linear`, `In`, `Out`, or `Speeds { from, to }` in blocks a second at its two ends, so shots that follow on from each other go on without stopping between), `.look(..)` or `.look_at(point)`, `.fov(from, to)` (the player's own unless told), `.roll(from, to)` in degrees (level unless told; more than 0 banks the camera right) and `.blend(secs)`, which brings the camera over from where the shot before ended instead of cutting. Orbits and cranes also take `.arc(from, to)` in degrees, `.radius(from, to)` and `.height(from, to)`. |
 | `wait(secs)` | The camera stays. |
 | `wait_for(name, max)` | The camera stays until your mod calls `signal(world, player, name)` (or `set.signal(name)`), at most `max` seconds. |
 | `title(key, secs)` | A line from your lang files on screen while the film goes on. |

@@ -8,7 +8,7 @@ use showcase_api::{Ease, Look, Path, Pos, Shot};
 use weft_sdk::Vec3;
 
 use self::curve::Curve;
-use self::math::{angles_along, eased, lerp, lerp_angle, lerp3};
+use self::math::{angles_along, eased, length, lerp, lerp_angle, lerp3, paced};
 
 /// A camera: eye position, and yaw, pitch, roll and field of view in degrees.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -28,6 +28,8 @@ pub struct Rig {
     shot: Shot,
     origin: Vec3,
     curve: Option<Curve>,
+    /// A shot eased by `Speeds`: its speeds at the start and end, as shares of its average.
+    pace: Option<[f64; 2]>,
     /// The player's field of view, which a shot's 0 stands for.
     own_fov: f32,
 }
@@ -44,11 +46,45 @@ impl Rig {
             )),
             _ => None,
         };
-        Rig {
+        let mut rig = Rig {
             shot,
             origin,
             curve,
+            pace: None,
             own_fov,
+        };
+        rig.pace = rig.pace();
+        rig
+    }
+
+    /// The speeds a `Speeds` shot starts and ends at, as shares of its average along its path.
+    fn pace(&self) -> Option<[f64; 2]> {
+        let Ease::Speeds { from, to } = self.shot.ease else {
+            return None;
+        };
+        let length = self.length()?;
+        if length < 1e-6 {
+            return None;
+        }
+        let average = length / self.shot.secs.max(1e-3) as f64;
+        Some([from, to].map(|speed| speed as f64 / average))
+    }
+
+    /// How far the eye goes over the shot; `None` for one that follows a subject.
+    fn length(&self) -> Option<f64> {
+        const STEPS: usize = 64;
+        let eyes = (0..=STEPS)
+            .map(|i| self.eye(i as f64 / STEPS as f64, &|_| None))
+            .collect::<Option<Vec<_>>>()?;
+        Some(eyes.windows(2).map(|w| length(w[1] - w[0])).sum())
+    }
+
+    /// Progress through the shot `clock` seconds into it, after easing.
+    fn progress(&self, clock: f32) -> f64 {
+        let u = (clock / self.shot.secs.max(1e-3)) as f64;
+        match self.pace {
+            Some([from, to]) => paced(from, to, u),
+            None => eased(self.shot.ease, u),
         }
     }
 
@@ -59,7 +95,7 @@ impl Rig {
     /// The camera `clock` seconds into the shot. `before` is where the camera was when it
     /// began, which a blend starts from and a shot without a direction keeps looking along.
     pub fn pose(&self, clock: f32, subjects: Subjects, before: Pose) -> Pose {
-        let u = eased(self.shot.ease, (clock / self.shot.secs.max(1e-3)) as f64);
+        let u = self.progress(clock);
         let eye = self.eye(u, subjects).unwrap_or(before.eye);
         let (yaw, pitch) = self
             .aim(u, eye, subjects)
@@ -237,6 +273,33 @@ mod tests {
             plain.pose(0.5, &none, START).fov,
             70.0,
             "a shot without a zoom"
+        );
+    }
+
+    #[test]
+    fn a_shot_with_speeds_starts_and_ends_at_them() {
+        let shot = dolly([0.0; 3], [10.0, 0.0, 0.0])
+            .secs(5.0)
+            .ease(Ease::Speeds { from: 1.0, to: 3.0 });
+        let rig = Rig::new(shot, Pos::default(), 70.0);
+        let speed = |clock: f32| {
+            (rig.pose(clock + 0.01, &none, START).eye.x - rig.pose(clock, &none, START).eye.x)
+                / 0.01
+        };
+        assert!(
+            (speed(0.0) - 1.0).abs() < 0.05,
+            "at the start: {}",
+            speed(0.0)
+        );
+        assert!(
+            (speed(4.99) - 3.0).abs() < 0.05,
+            "at the end: {}",
+            speed(4.99)
+        );
+        assert_eq!(
+            rig.pose(5.0, &none, START).eye,
+            Vec3::new(10.0, 0.0, 0.0),
+            "arrives"
         );
     }
 

@@ -1,0 +1,49 @@
+# A green village (Angerdorf): two lanes part around a green with the chapel, the well and an
+# old oak on it, and the houses face the green from both sides, gardens behind them and two
+# small strip fields beyond.
+
+# The lanes round the green, and the road out at either end.
+path 3   -4,53 12,50 30,40 55,37 75,42 90,51 104,48
+path 3   12,50 30,60 55,64 75,60 90,51
+# A track out to the fields between the farmsteads.
+track    54,37 54,26 52,12
+# Footpaths from the lanes to the doors.
+path 2   28,39 28,41
+path 2   62,35 62,38
+path 2   47,66 47,64
+path 2   62,52 58,52
+# Two small fields, and kitchen gardens.
+field    8,14 22,13 22,23 8,24
+field    66,12 80,12 80,22 66,22
+garden   23,73 30,73 30,78 23,78
+garden   74,73 81,73 81,78 74,78
+garden   84,30 90,30 90,36 84,36
+hedge    6,26 24,25
+hedge    64,24 82,24
+
+# North of the green, fronts facing it.
+place crofter_cottage back  28,35  spruce_roof
+place hof             back  45,27  oak_roof
+place dormer_cottage  back  62,30  spruce_roof,white_infill
+place crofter_cottage back  77,36  brick_roof
+# South of the green.
+place longhouse       none  30,67  spruce_roof
+place open_forge      none  47,71
+place wayside_tavern  none  62,74  oak_roof
+place dormer_cottage  none  79,67  oak_roof,spruce_frame
+# On the green.
+place wayside_chapel  left  66,50  stone_roof
+place draw_well       none  48,50
+place oak_tree_large  none  32,50
+place bush            none  80,51
+# Trees about the houses.
+place fruit_tree      none  16,32
+place fruit_tree      none  13,39
+place birch_tree      none  92,60
+place oak_tree        none  70,88
+
+view green_west   8,3,51     55,2,50
+view chapel       48,2,57    68,5,50
+view north_lane   18,2,46    70,3,40
+view south_lane   88,2,58    40,3,63
+view from_fields  12,12,6    50,2,50

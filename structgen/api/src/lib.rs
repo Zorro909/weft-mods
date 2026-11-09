@@ -9,6 +9,7 @@
 //!   (`template` registers them) and blocks, anywhere inside the region.
 //! - `locate`: the nearest structure of a name, generated yet or not.
 //! - `Structure::place_in`: puts a structure into the world now, turned, as a command would.
+//! - `Materials`: the blocks a structure's material slots are filled with, where it is placed.
 //!
 //! Everything is worked out from the seed and the terrain's columns, never from blocks, so
 //! every cube and every client gets the same answer. Structures don't know about each other,
@@ -19,6 +20,7 @@ mod fit;
 mod format;
 mod generator;
 mod locate;
+mod materials;
 mod packing;
 mod part;
 mod place_in;
@@ -36,6 +38,7 @@ pub use biomes::Biomes;
 pub use fit::Fit;
 pub use format::Structure;
 pub use locate::{locate, names};
+pub use materials::Materials;
 pub use part::{Foundation, Placed};
 pub use place_in::{PlaceError, Replaced, put_back};
 pub use placement::{Placement, place};

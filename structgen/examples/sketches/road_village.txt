@@ -1,0 +1,48 @@
+# A road village: the country road bends through, a lane forks north to the chapel in its hedged
+# yard and one south to the farms. The tavern and an old oak stand at the fork; the houses keep
+# to the road at whatever distance their plot gave them, two small fields behind.
+
+# The country road, and the lanes off it.
+path 4   -4,58 15,54 35,56 52,48 75,45 98,52
+path 3   52,48 56,30 52,12
+path 3   35,56 32,74 38,92
+# Tracks to the fields.
+track    20,52 18,40 14,31
+track    90,51 98,60
+# To the chapel door, and to some houses.
+path 2   68,33 66,40 60,44
+path 2   30,51 31,53
+# Fields and gardens.
+field    3,18 20,17 20,29 4,30
+field    97,59 111,58 111,69 98,70
+garden   2,40 8,40 8,46 2,46
+garden   72,62 80,62 80,67 72,67
+# The chapel yard's hedge, open toward the lane.
+hedge    64,37 61,36 61,19 76,19 76,36 72,37
+
+# North of the road.
+place crofter_cottage back  12,46  spruce_roof
+place dormer_cottage  back  30,47  oak_roof
+place wayside_tavern  back  42,41  brick_roof
+place longhouse       back  88,38  oak_roof
+# The chapel.
+place wayside_chapel  back  68,28  stone_roof
+place birch_tree      none  64,21
+# South of the road.
+place hof             none  20,66  spruce_roof
+place smithy_house    none  64,58  spruce_roof
+place crofter_cottage none  82,56  oak_roof,birch_frame
+place oak_tree_large  none  48,58
+# Down the lane south.
+place lumberyard      left  44,78
+place great_barn      none  20,88  oak_roof
+# Trees.
+place fruit_tree      none  4,52
+place oak_tree        none  100,42
+place bush            none  58,36
+
+view fork        30,2,61     58,4,47
+view road_east   62,2,49     98,3,52
+view chapel_yard 63,3,45     68,6,28
+view lane_south  36,2,60     36,3,92
+view from_field  10,12,24    55,2,55

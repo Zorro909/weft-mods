@@ -1,34 +1,36 @@
 //! A part's blocks that fall into one cube: a template with its foundation pillars and the
 //! ground cut away above it, or a box of blocks. Each cube writes only its own share.
 
+use weft_sdk::Tag;
 use weftkit::Pos;
 
 use crate::part::{Foundation, Part, Piece};
-use crate::templates::Resolved;
+use crate::templates::{FOLLOWS_GROUND, Resolved};
 
 /// The block the ground has on top of column (`x`, `z`), 0 where there is none.
 pub(crate) type Surface<'a> = &'a dyn Fn(i32, i32) -> u32;
 
+/// Where a block goes: the position inside the cube, its state, and the tag the block already
+/// there must have for it to go there, if any.
+pub(crate) type Set<'a> = &'a mut dyn FnMut([usize; 3], u32, Option<&'static Tag>);
+
 /// Calls `set` with the position inside the cube at `origin` and the state of everything
 /// `part` puts there.
-pub(crate) fn stamp(
-    part: &Part,
-    origin: Pos,
-    surface: Surface,
-    set: &mut dyn FnMut([usize; 3], u32),
-) {
+pub(crate) fn stamp(part: &Part, origin: Pos, surface: Surface, set: Set) {
     match part {
         Part::Piece(piece) => {
-            if let Some(resolved) = piece.template.resolved() {
-                stamp_piece(piece, resolved, origin, surface, set);
+            if let Some(resolved) = piece.template.resolved(&piece.materials) {
+                stamp_piece(piece, &resolved, origin, surface, &mut |at, state| {
+                    set(at, state, None)
+                });
             }
         }
-        Part::Fill { area, state } => {
+        Part::Fill { area, state, only } => {
             let ([sx, sy, sz], lo) = (area.size(), area.lo);
             for (_, z) in overlap(lo.z, sz, origin.z) {
                 for (_, y) in overlap(lo.y, sy, origin.y) {
                     for (_, x) in overlap(lo.x, sx, origin.x) {
-                        set([x, y, z], *state);
+                        set([x, y, z], *state, *only);
                     }
                 }
             }
@@ -51,15 +53,16 @@ fn stamp_piece(
     } = piece.corner;
     for (dz, z) in overlap(cz, sz, origin.z) {
         for (dx, x) in overlap(cx, sx, origin.x) {
+            let world = [origin.x + x as i32, origin.z + z as i32];
             for (dy, y) in overlap(cy, sy, origin.y) {
-                set([x, y, z], resolved.state(piece.turn, Pos::new(dx, dy, dz)));
+                let state = resolved.state(piece.turn, Pos::new(dx, dy, dz));
+                set([x, y, z], on_ground(state, resolved, surface, world));
             }
             let ground = piece.ground.get((dz * sx + dx) as usize).copied().flatten();
             let Some(ground) = ground else {
                 continue;
             };
             let floor = resolved.state(piece.turn, Pos::new(dx, 0, dz));
-            let world = [origin.x + x as i32, origin.z + z as i32];
             if let Some(state) = foundation(piece, resolved, floor, surface, world) {
                 for (_, y) in overlap(ground + 1, cy - ground - 1, origin.y) {
                     set([x, y, z], state);
@@ -71,6 +74,17 @@ fn stamp_piece(
                 }
             }
         }
+    }
+}
+
+/// `state`, or for a cell that follows the ground the top block of world column (`x`, `z`).
+fn on_ground(state: u32, resolved: &Resolved, surface: Surface, [x, z]: [i32; 2]) -> u32 {
+    if state != FOLLOWS_GROUND {
+        return state;
+    }
+    match surface(x, z) {
+        0 | u32::MAX => resolved.ground,
+        top => top,
     }
 }
 
@@ -119,6 +133,7 @@ mod tests {
             indices: vec![1, 1, 1, 0, 2, 2, 2, 2],
             palettes: [0, 1, 2, 3].map(|_| vec![AIR, FLOOR, WALL]),
             air: AIR,
+            ground: FLOOR,
         }
     }
 
@@ -128,6 +143,7 @@ mod tests {
             template: templates::add("test:stamp", template),
             corner,
             turn: Turn::None,
+            materials: Default::default(),
             foundation: Some(Foundation::Ground),
             clear_above: true,
             ground: ground.into_iter().map(Some).collect(),
@@ -201,6 +217,27 @@ mod tests {
     }
 
     #[test]
+    fn a_cell_following_the_ground_takes_its_columns_top_block() {
+        let mut lawn = resolved();
+        lawn.palettes = [0, 1, 2, 3].map(|_| vec![AIR, FOLLOWS_GROUND, WALL]);
+        let piece = piece(Pos::new(3, 5, 3), vec![4; 4]);
+        let sand_at_x3 = |x: i32, _: i32| if x == 3 { 12 } else { 0 };
+        let mut floor = Vec::new();
+        stamp_piece(&piece, &lawn, Pos::default(), &sand_at_x3, &mut |p, s| {
+            if p[1] == 5 {
+                floor.push((p, s))
+            }
+        });
+        floor.sort();
+        let states: Vec<u32> = floor.iter().map(|(_, s)| *s).collect();
+        assert_eq!(
+            states,
+            [12, 12, FLOOR, AIR],
+            "sand at x 3, the default at x 4 where the ground has none, and the gap"
+        );
+    }
+
+    #[test]
     fn ground_above_the_structure_is_cut() {
         let cut: Vec<usize> = placed(&piece(Pos::new(3, 5, 3), vec![9, 4, 4, 4]), Pos::default())
             .iter()
@@ -247,9 +284,25 @@ mod tests {
         let fill = Part::Fill {
             area: Area::between(Pos::new(14, 0, 0), Pos::new(17, 0, 0)),
             state: STONE,
+            only: None,
         };
         let mut here = 0;
-        stamp(&fill, Pos::default(), &|_, _| 0, &mut |_, _| here += 1);
+        stamp(&fill, Pos::default(), &|_, _| 0, &mut |_, _, _| here += 1);
         assert_eq!(here, 2, "two of its four blocks are in this cube");
+    }
+
+    #[test]
+    fn a_replacing_fill_names_what_it_replaces() {
+        static LEAVES: Tag = Tag::named("leaves");
+        let fill = Part::Fill {
+            area: Area::between(Pos::new(1, 2, 3), Pos::new(1, 2, 3)),
+            state: AIR,
+            only: Some(&LEAVES),
+        };
+        let mut only = Vec::new();
+        stamp(&fill, Pos::default(), &|_, _| 0, &mut |_, _, tag| {
+            only.push(tag.map(Tag::name))
+        });
+        assert_eq!(only, [Some("leaves")]);
     }
 }

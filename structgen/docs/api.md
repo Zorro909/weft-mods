@@ -22,8 +22,9 @@ A `Structure` is a box of block states, the contents of a [`.wst` file](file-for
 |---|---|
 | `Structure::decode(bytes)` | reads a file; `None` for anything that isn't a whole `.wst` file of this version |
 | `Structure::from_names(size, names)` | builds one in code from each block's state name, x fastest, then z, then y; `None` unless there is one name per block |
+| `Structure::with_slots(size, names, slots)` | the same with [material slots](materials.md): names may be `@roof/stair[facing=north]`, and `slots` gives each slot's default block |
 | `structure.encode()` | the file's bytes |
-| `structure.size()`, `structure.blocks()` | its size along x, y and z, and each block's position (a `Pos` from the lowest corner) and state name |
+| `structure.size()`, `structure.blocks()`, `structure.slots()` | its size along x, y and z, each block's position (a `Pos` from the lowest corner) and state name, and each slot's name and default |
 
 `from_names` and `decode` refuse a box of more than 256 x 256 x 256 blocks, or of more than
 65535 different states, so every `Structure` encodes to a file that decodes again.
@@ -54,7 +55,9 @@ Every call after `place` is optional:
 | `.foundation(..)` | no foundation: a gap under it stays |
 | `.max_slope(blocks)` | 6 |
 | `.buried(blocks)` | 0: the bottom layer level with the ground |
+| `.min_height(y)` | any height: the lowest ground under it may be this low and no lower |
 | `.keep_facing()` | turned whichever way the seed says |
+| `.materials(m)` | its slots' defaults; call again for more sets, and the seed picks one per place |
 
 A static structure always clears the ground that rises above it. `place` also registers the structure as a
 template of your mod (`mymod:hut`), so its blocks are checked when the game loads,
@@ -99,6 +102,12 @@ fn village(p: &mut Plan) -> Result<(), PlanError> {
 }
 ```
 
+Where structures would overlap, `.priority(n)` decides, on `plan(..)` and `place(..)` alike:
+a plan that would come within 8 blocks of the plan of a structure with a higher priority isn't
+placed. Only
+what really stands counts, so a hamlet the village gave way to doesn't keep a cottage out.
+Both stand where the priorities are the same (0 by default).
+
 What a planner has:
 
 | Call | What it does |
@@ -108,10 +117,11 @@ What a planner has:
 | `p.spot(margin)` | a random column at least `margin` blocks inside the region |
 | `p.ground(x, z)` | the column's height and biome (`weft_sdk::terrain::Column`), `None` at a cave mouth |
 | `p.size(&T, turn)` | a template's size once turned |
-| `p.fit(&T, [x, z], turn, &fit)` | the `Pos` where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None`. `Fit::biome(&FORESTS)` takes `static FORESTS: Biomes = Biomes::named("#forest")` |
+| `p.fit(&T, [x, z], turn, &fit)` | the `Pos` where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `min_height`, `buried`) and it stays inside the region; else `None`. `Fit::biome(&FORESTS)` takes `static FORESTS: Biomes = Biomes::named("#forest")` |
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned; `corner` is a `Pos` |
-| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it and `.clear_above()` cuts away ground above it, neither unless called |
+| `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it, `.clear_above()` cuts away ground above it and `.materials(&m)` fills its slots, none unless called |
 | `p.set(pos, &B)?`, `p.set_state(pos, state)?`, `p.fill(from, to, &B)?` | blocks, at `Pos`es; `fill` takes two opposite corners in either order, and `set_state` a `BlockState` |
+| `p.replace(from, to, &TAG, &B)?` | every block with a tag, as the world generates there, becomes `B` |
 
 Later parts win where two overlap. A planner must be pure: it runs on the server and on every
 client, in any order, so it may use only the seed (`p.random()`) and the ground.
@@ -120,16 +130,18 @@ Anything that would reach outside the region returns `PlanError::OutsideRegion`,
 was and the `Area` it would cover, and `?` stops the planner there. That region's plan is then given up whole, nothing of it is placed, and the log says
 what reached out and where. A template that wasn't registered fails the plan the same way.
 
-`src/hamlet.rs` in this mod is a whole dynamic structure: a well with cottages facing it,
-wheat farms and gravel paths.
+`src/settlement/` in this mod is a whole dynamic structure, laid out from tables in
+`src/villages.rs`: a heart, winding roads, buildings facing them, gardens and fields, each
+building's slots filled from a few styles.
 
 ## Placing one now
 
-`structure.place_in(&world, corner, turn)` puts a structure into the world straight away,
-turned, with the lowest corner of the turned box at the `Pos` `corner`, as a command would:
-every block of it, or nothing when one of its blocks is unknown (`PlaceError::UnknownBlock`) or
-part of the place isn't loaded (`PlaceError::NotLoaded`). It gives back what it replaced: each
-cell's `Pos` with all it held (`World::parts`) as `BlockState`s, as a slab and the water in it.
+`structure.place_in(&world, corner, turn, &materials)` puts a structure into the world straight
+away, turned, with the lowest corner of the turned box at the `Pos` `corner` and its slots filled
+with `materials` (`Materials::new()` for the defaults), as a command would: every block of it, or
+nothing when one of its blocks is unknown (`PlaceError::UnknownBlock`) or part of the place isn't
+loaded (`PlaceError::NotLoaded`). It gives back what it replaced: each cell's `Pos` with all it
+held (`World::parts`) as `BlockState`s, as a slab and the water in it.
 `structgen_api::put_back(&world, &replaced)` undoes it.
 
 ## Finding them

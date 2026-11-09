@@ -2,19 +2,22 @@
 
 use std::sync::Arc;
 
-use weft_sdk::Block;
+use weft_sdk::{Block, Tag};
 use weftkit::{Area, Pos};
 
 use crate::fit::{self, Columns};
+use crate::materials::Materials;
 use crate::templates::Entry;
 use crate::turn::Turn;
 
 pub(crate) enum Part {
     Piece(Piece),
-    /// Every block of `area`.
+    /// Every block of `area`; with `only`, just those that have that tag in the world as it
+    /// generates.
     Fill {
         area: Area,
         state: u32,
+        only: Option<&'static Tag>,
     },
 }
 
@@ -33,6 +36,7 @@ pub(crate) struct Piece {
     /// Its lowest corner.
     pub corner: Pos,
     pub turn: Turn,
+    pub materials: Materials,
     pub foundation: Option<Foundation>,
     /// Ground rising above its bottom layer is cut away.
     pub clear_above: bool,
@@ -65,6 +69,12 @@ pub struct Placed<'p> {
 }
 
 impl Placed<'_> {
+    /// Fills its slots with `materials` instead of their defaults.
+    pub fn materials(self, materials: &Materials) -> Self {
+        self.piece.materials = materials.clone();
+        self
+    }
+
     pub fn foundation(self, foundation: Foundation) -> Self {
         self.piece.foundation = Some(foundation);
         self.with_ground()
