@@ -21,7 +21,7 @@ pub fn fields(grid: &mut Grid, roads: &[Road], count: usize) {
         let [x, z] = column(add(end, scale(way, 11.0)));
         let corner = [x - w / 2, z - d / 2];
         let last = [corner[0] + w - 1, corner[1] + d - 1];
-        if !grid.all(corner, last, |c| c == Cell::Free) {
+        if !open(grid, corner, last) {
             continue;
         }
         for cz in corner[1]..=last[1] {
@@ -48,7 +48,7 @@ pub fn garden(grid: &mut Grid, site: &Site) {
         Turn::Left => ([x + sx + 1, z + 1], [x + sx + 4, z + sz - 2]),
         Turn::Right => ([x - 5, z + 1], [x - 2, z + sz - 2]),
     };
-    if !grid.all(corner, last, |c| c == Cell::Free) {
+    if !open(grid, corner, last) {
         return;
     }
     let across_x = matches!(site.turn, Turn::None | Turn::Back);
@@ -60,6 +60,14 @@ pub fn garden(grid: &mut Grid, site: &Site) {
             );
         }
     }
+}
+
+/// Whether the columns from `corner` to `last` are free and even: no field over a ledge.
+fn open(grid: &Grid, corner: [i32; 2], last: [i32; 2]) -> bool {
+    let [x, z] = corner.map(|v| v as f32);
+    let [lx, lz] = last.map(|v| v as f32 + 1.0);
+    grid.all(corner, last, |c| c == Cell::Free)
+        && grid.even(&[[x, z], [lx, z], [lx, lz], [x, lz]], 0.0)
 }
 
 /// Line `line` of a field: a furrow every `width + 1` lines, wheat of an age from `ages`
@@ -97,6 +105,30 @@ pub fn trees(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settlement::grid::row;
+
+    #[test]
+    fn no_field_is_sown_over_a_ledge() {
+        let mut grid = row(&[Some(64); 40]);
+        for z in 0..40 {
+            for x in 0..40 {
+                grid.raise([x, z], if x >= 20 { 66 } else { 64 });
+            }
+        }
+        let road = Road {
+            line: vec![[2.5, 20.5], [10.5, 20.5]],
+        };
+        let sown = |grid: &Grid| grid.near([21, 20], 0, |c| matches!(c, Cell::Crop(_)));
+        fields(&mut grid, std::slice::from_ref(&road), 1);
+        assert!(!sown(&grid), "the field would cross the ledge at x 20");
+        for x in 20..40 {
+            for z in 0..40 {
+                grid.raise([x, z], 64);
+            }
+        }
+        fields(&mut grid, &[road], 1);
+        assert!(sown(&grid), "on level ground it is sown");
+    }
 
     #[test]
     fn a_field_has_a_furrow_between_strips() {

@@ -91,8 +91,8 @@ over a lone building.
    kerb, a block apart. A spot where fewer than four in five of the homes and landmarks fit
    gets no settlement.
 4. **Round about.** A mill stands past one end of the main road, a path to its door, small
-   strip fields of mostly unripe wheat past the ends of other roads, a few trees round the
-   heart. A town paves the ground between its streets and its buildings, and its streets turn to
+   strip fields of mostly unripe wheat on even ground past the ends of other roads, a few trees
+   round the heart. A town paves the ground between its streets and its buildings, and its streets turn to
    gravel lanes, their kerbs to grass, where no building stands near.
 5. **Materials.** A settlement takes one frame and panel for all its buildings and a roof for
    each.
@@ -100,8 +100,8 @@ over a lone building.
 Everything is marked on a grid of the columns round the settlement first, so roads,
 buildings and fields keep out of each other; only then is anything built, roads and fields
 laid at each column's own height with the air above them cleared, and the leaves beside them
-as far as a tree's crown reaches, so no tree the world grew there stands in the way or leaves
-its crown floating. A town paves round its buildings but not round its trees.
+as far as an oak's crown reaches, so no tree the world grew on a road stands in the way or
+leaves its crown floating; one rooted just beside a road keeps its trunk and a trimmed crown. A town paves round its buildings but not round its trees.
 
 ## Finding them
 

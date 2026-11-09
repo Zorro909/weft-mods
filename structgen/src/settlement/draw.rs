@@ -68,8 +68,9 @@ fn laid(cell: Cell) -> bool {
 
 /// How high above a road or field the air is cleared: a tall spruce's height.
 const CLEAR: i32 = 11;
-/// How far a tree's crown reaches out from its trunk.
-const CROWN: i32 = 3;
+/// How far beside a road or field leaves are cleared: an oak's crown, so one rooted on the road
+/// leaves none behind. Wider would strip trees rooted just beside it bare.
+const CROWN: i32 = 2;
 
 /// Whether column (`x`, `z`) is worn, in patches of a few blocks rather than single spots.
 fn patch(x: i32, z: i32) -> bool {
@@ -91,7 +92,7 @@ mod tests {
             "the lane is cleared as a lane"
         );
         assert!(!beside(&grid, [1, 0], Cell::Building), "not the house");
-        assert!(beside(&grid, [3, 0], Cell::Free), "three from the lane");
-        assert!(!beside(&grid, [4, 0], Cell::Free), "four from it");
+        assert!(beside(&grid, [2, 0], Cell::Free), "two from the lane");
+        assert!(!beside(&grid, [3, 0], Cell::Free), "three from it");
     }
 }
