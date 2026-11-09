@@ -70,6 +70,16 @@ The details are in [`docs/`](docs/README.md):
 | `examples/shot_script/` | the game script `tools/structure-shots.sh` photographs them with |
 | `examples/layouts/` | tiles laid side by side, for `structure-shots.sh --layout` |
 | `examples/sketch/`, `examples/sketches/` | hand-drawn settlements turned into ground and layouts to shoot |
+| `src/films/` | the showcase film, only with `--features showcase` |
+
+## Showcase film
+
+With the `showcase` feature, structgen brings a film for the [showcase](../showcase) mod: a
+journey through seed 42's world as it generates, past two hamlets, two villages and a town and
+into some of their buildings. It takes about 5:25. Record it with
+`tools/showcase.sh structgen:showcase -- --view 32`, which makes a world of the showcase's own
+seed, 42; the film only fits that seed's world. Without the feature, none of this is compiled
+in, and showcase is not a dependency.
 
 ## Build and install
 

@@ -4,6 +4,8 @@
 //! nearest structure.
 
 mod command;
+#[cfg(feature = "showcase")]
+mod films;
 mod load;
 mod locate;
 mod save;
@@ -16,7 +18,10 @@ mod worldgen;
 
 use weft_sdk::*;
 
+#[cfg(not(feature = "showcase"))]
 declare_mod!(deps: ["base"], init: init);
+#[cfg(feature = "showcase")]
+declare_mod!(deps: ["base", "showcase"], init: init);
 
 fn init(r: &mut Registry) {
     worldgen::register(r);
@@ -24,4 +29,6 @@ fn init(r: &mut Registry) {
     wand::register(r);
     selection::register(r);
     command::register(r);
+    #[cfg(feature = "showcase")]
+    films::register(r);
 }

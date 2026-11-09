@@ -4,6 +4,8 @@
 
 ### Added
 
+- A film for the showcase mod, built with `--features showcase`: a flight through seed 42's
+  hamlets, villages and town and into some of their houses, tavern, church, town hall and smithy.
 - Hamlets, villages and towns laid out afresh each time: a green or market square, roads that
   wind along the ground, buildings facing them, kitchen gardens, small fields and a mill.
   Villages have gravel lanes, a church, a tavern and a smithy; towns have cobbled streets with

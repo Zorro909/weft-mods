@@ -12,6 +12,11 @@ crate-type = ["cdylib"]
 weft_sdk.workspace = true
 base_api.workspace = true
 structgen_api = { path = "api" }
+showcase_api = { path = "../showcase/api", optional = true }
+
+[features]
+# Builds the film (`src/films/`), played by the showcase mod: `--features showcase`.
+showcase = ["dep:showcase_api"]
 
 # Its own cargo root. `cargo build` and `cargo test` here cover `structgen_api` too.
 [workspace]
