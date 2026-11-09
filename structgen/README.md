@@ -4,7 +4,7 @@
 
 A Weft mod that fills the overworld with buildings, and gives players and mod authors the tools
 to make their own. Structures are boxes of blocks saved as `.wst` files; the mod places them
-while the world generates, alone and gathered into hamlets.
+while the world generates, alone and gathered into hamlets, villages and towns.
 
 It needs the base game (`base`). Its placing lives in a crate of its own, `structgen_api`, that
 any mod can use without this mod being loaded.
@@ -13,12 +13,13 @@ any mod can use without this mod being loaded.
 
 ### In the world
 
-Hamlets and villages grow on the overworld's open plains: cottages, farms and a granary around
-a draw well, and in a village an inn, a smithy, a chapel, market stalls, barns and a mill as
-well, joined by gravel paths. A few cottages, farms, chapels and mills also stand alone. All 29
-buildings share one timber-framed style, and their roofs, frames and wall panels change from
-one settlement to the next. Tiles for village paths and town streets are drawn and ready for
-the planners to lay.
+Hamlets, villages and towns grow on the overworld's open plains, each laid out afresh: a
+village green or a town's market square, roads winding out of it along the ground, buildings
+facing the roads, gardens, small fields and a mill. Villages have gravel lanes, a church, a
+tavern and a smithy; towns have cobbled streets, a town hall, a guildhall and a coaching inn.
+A few cottages, farms, chapels and mills also stand alone. All 29 buildings share one
+timber-framed style, and their roofs, frames and wall panels change from one settlement to the
+next.
 
 ### Making structures in the game
 
@@ -49,7 +50,7 @@ on where structures are without sending them.
 
 The details are in [`docs/`](docs/README.md):
 
-- [In the world](docs/worldgen.md): which buildings appear, where, and how hamlets and villages
+- [In the world](docs/worldgen.md): which buildings appear, where, and how hamlets, villages and towns
   are laid out
 - [Material slots](docs/materials.md): restyling a structure with other blocks
 - [Wand and commands](docs/commands.md)
@@ -63,7 +64,7 @@ The details are in [`docs/`](docs/README.md):
 | Folder | What it holds |
 |---|---|
 | `api/` | `structgen_api`: the file format and the placing, for any mod |
-| `src/` | the mod: world generation, hamlets and villages, styles, the wand and `/structure` |
+| `src/` | the mod: world generation, hamlets, villages and towns, styles, the wand and `/structure` |
 | `assets/structures/` | the `.wst` files compiled into the mod |
 | `examples/buildings/` | draws the mod's buildings, paths and streets in code, with the Hearthwood kit |
 | `examples/shot_script/` | the game script `tools/structure-shots.sh` photographs them with |

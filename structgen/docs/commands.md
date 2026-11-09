@@ -41,5 +41,5 @@ side. It sets one block at a time, so big boxes take a moment.
 
 `locate` works the structures' places out from the world's seed, so it finds them whether their
 part of the world was generated yet or not. Its names are the buildings that stand alone,
-`hamlet` and `village`. The position it gives is the corner of the first thing the structure
-placed: for a hamlet or village, its well. It knows the structures of this mod only.
+`hamlet`, `village` and `town`. The position it gives is the corner of the first thing the structure
+placed: for a hamlet or village, its well; for a town, its fountain. It knows the structures of this mod only.

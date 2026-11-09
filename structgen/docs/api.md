@@ -123,9 +123,9 @@ Anything that would reach outside the region returns `PlanError::OutsideRegion`,
 was and the `Area` it would cover, and `?` stops the planner there. That region's plan is then given up whole, nothing of it is placed, and the log says
 what reached out and where. A template that wasn't registered fails the plan the same way.
 
-`src/settlement.rs` in this mod is a whole dynamic structure, laid out from tables in
-`src/villages.rs`: a well with buildings facing it, fields and gravel paths, each building's
-slots filled from a few styles.
+`src/settlement/` in this mod is a whole dynamic structure, laid out from tables in
+`src/villages.rs`: a heart, winding roads, buildings facing them, gardens and fields, each
+building's slots filled from a few styles.
 
 ## Placing one now
 

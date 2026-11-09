@@ -52,27 +52,43 @@ square has a chance of one:
 The ground under one rises and falls by at most 5 blocks, it is turned whichever way the seed
 says, and its roof is spruce, oak or birch.
 
-## Hamlets and villages
+## Hamlets, villages and towns
 
-Both are laid out around a draw well:
+None is drawn beforehand: each is laid out afresh from the seed and the lie of the land
+(`src/settlement/`), from a table of what it holds (`src/villages.rs`).
 
-| | Hamlet | Village |
-|---|---|---|
-| One per square of | 384 blocks, 50% | 512 blocks, 35% |
-| Buildings | 4 cottages, a granary, 2 wheat fields | 2 market stalls, a tavern, a smithy, a chapel or church, 7 cottages, 2 barns, hofs or stables, a granary or lumberyard, 4 wheat fields, a mill |
-| Roofs | spruce or oak | spruce, oak or brick |
-| Frames and panels | oak or spruce frames | oak, spruce or birch frames; birch or white panels |
+| | Hamlet | Village | Town |
+|---|---|---|---|
+| One per square of | 384 blocks, 50% | 512 blocks, 40% | 768 blocks, 50% |
+| Heart | a green with a well | a green with a well | a cobbled market square, fountain and stalls |
+| Roads | gravel lanes | gravel lanes | cobbled streets between stone kerbs |
+| Buildings | 4 cottages or farms | a church, a tavern, a smithy and forge, 7 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 15 houses, a tower mill |
+| Fields | 1 | 2 | 2 |
 
-1. The well goes on a spot well inside the square, where the ground varies by at most 3
-   blocks.
-2. Then each building, the ones that matter most first: the stalls close to the well, the
-   cottages around them, the barns and fields further out, the mill last at the edge. Each is
-   tried at up to 12 spots within its own distance of the well, keeps 3 blocks from the others,
-   and goes only where the ground varies by at most 4. One that finds no spot is left out.
-3. Every building but the fields turns its front toward the well. A settlement takes one frame
-   and panel for all its buildings, and a roof for each.
-4. A gravel path runs from the well to each building, first across and then straight in, so it
-   meets a building at its front. It goes round buildings and stops at water.
+1. **The heart.** A blob of nine jittered corners round a spot in the square, stretched along
+   a random angle: the village green, ringed by a lane, or the town's square.
+2. **Roads.** The main road leaves the heart's edge both ways along that angle; a branch or
+   two leave it at roughly a right angle. A road goes 7 blocks a step, each time the way of
+   three (straight on, or about 20° either side) that climbs least, so it winds along the
+   ground. It stops at water or the edge of the square and before running into another road,
+   and is smoothed into a curve.
+3. **Buildings.** The heart's own buildings stand in it first: the well, or the fountain and
+   stalls. Then the planner walks round the heart and down both sides of every road a block at
+   a time, putting a building wherever it fits, its front turned toward the road (one of four
+   turns, whichever is nearest). Landmarks go first, each at the first spot along a front of
+   its kind (the church on the green, the inn on a road); homes follow, cottages near the heart
+   and farms further out. Village houses stand 2 to 6 blocks back with 3 between them and a
+   kitchen garden behind; town houses stand at the kerb, a block apart. A settlement where
+   fewer than half its homes fit is given up.
+4. **Round about.** A mill stands past the end of the main road, small strip fields of mostly
+   unripe wheat past the ends of other roads, a few trees round the heart. A town paves the
+   ground between its streets and its buildings.
+5. **Materials.** A settlement takes one frame and panel for all its buildings and a roof for
+   each.
+
+Everything is marked on a grid of the columns round the settlement first, so roads,
+buildings and fields keep out of each other; only then is anything built, roads and fields
+laid at each column's own height.
 
 ## Finding them
 

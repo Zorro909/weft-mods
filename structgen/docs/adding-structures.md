@@ -38,7 +38,7 @@ writes them all again; `-- crofter_cottage longhouse` writes only those.
   `Draft::paint`: open to the north, turned to serve the other ways.
 
 To add one to the settlements, give it a `Template` in `src/villages.rs` and put it in a
-`want`.
+settlement's `houses`, `farms`, `landmarks` or another list.
 
 ## Looking at it
 

@@ -4,8 +4,10 @@
 
 ### Added
 
-- Villages: an inn, a smithy, a chapel or church, market stalls, cottages, farms, fields and a
-  mill around a well, joined by gravel paths. `/structure locate village` finds one.
+- Hamlets, villages and towns laid out afresh each time: a green or market square, roads that
+  wind along the ground, buildings facing them, kitchen gardens, small fields and a mill.
+  Villages have gravel lanes, a church, a tavern and a smithy; towns have cobbled streets with
+  kerbs, a town hall, a guildhall and a coaching inn. `/structure locate town` finds one.
 - New buildings in one timber-framed style, Hearthwood: cottages, burgher houses, farm
   buildings, mills, inns, smithies, market stalls and hall, a well and a fountain, workyards,
   a guildhall and town hall, chapels and churches. `/structure load` places any of them.

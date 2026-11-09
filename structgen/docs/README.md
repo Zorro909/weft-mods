@@ -7,7 +7,7 @@ the [README](../README.md).
 
 | Page | Covers |
 |---|---|
-| [In the world](worldgen.md) | Which buildings appear, where, and how hamlets and villages are laid out |
+| [In the world](worldgen.md) | Which buildings appear, where, and how hamlets, villages and towns are laid out |
 | [Wand and commands](commands.md) | Selecting, saving, loading, undoing and finding structures |
 
 ## For builders and mod authors

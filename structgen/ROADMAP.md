@@ -33,9 +33,8 @@ the main road leaves.
 The tiles are drawn (`examples/buildings/paths.rs` and `streets.rs`, sample layouts in
 `examples/layouts/`): village paths and cart tracks on a grid of 5, town streets and squares on
 a grid of 7, with corners, tees, crossings, ends, slopes and the pieces where one gives way to
-another. Nothing lays them yet; the settlements still draw their gravel lines block by block. A
-network planner would lay the tiles from the centre out, turn each to its neighbours, step them
-up and down slopes with the slope tiles, and leave the buildings room to face onto them.
+another. The settlements draw their roads as curves instead (`src/settlement/`), which looks
+older; the tiles remain for a planned grid, such as a walled town's.
 
 ## What the sketched settlements show
 
@@ -67,15 +66,13 @@ generator has to do:
   110 by 100. Fields stay small, for a find shouldn't hand out too much wheat: two of about 14
   by 10 to a village, most of it not yet ripe.
 
-## Towns
+## Settlements, next
 
-A town planner, larger than a village: a market square with the town hall or guildhall, the
-town church, the market hall and the fountain facing it; streets leading away with rows of
-burgher houses (narrow gable, hall house, corner house at the corners) standing side by side
-with their fronts to the street; the coaching inn on the main road; storehouses and workyards
-further out; farms, fields and a tower mill outside. The buildings for it are drawn; the planner
-is not written yet. It needs streets as well as spots: buildings placed along a line, side by
-side, each turned to the street.
+The generator lays out hamlets, villages and towns (`src/settlement/`, see
+[In the world](docs/worldgen.md#hamlets-villages-and-towns)). Still to come: plots with barns
+behind a farm and hedges between gardens; a market that is a widened street or a fork rather
+than a blob; the church on its own yard; a town's houses stepped a block or two to follow its
+street; gutters along axis-aligned streets.
 
 ## Making structures
 
