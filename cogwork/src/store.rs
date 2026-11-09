@@ -67,35 +67,28 @@ fn for_items(slots: &[ItemStack], is_liquid: impl Fn(u32) -> bool) -> bool {
     !slots.iter().any(|s| !s.is_empty() && is_liquid(s.item))
 }
 
-/// The slots `stack` may go into: fuel into a fuel slot, anything into an input or a chest.
-fn takes(inv: Inventory, stack: ItemStack) -> Option<Span> {
+/// The slots of `inv` to use: the first of the groups `names` it has for items, else the whole
+/// of a plain inventory.
+fn slots(inv: Inventory, names: &[&str]) -> Option<Span> {
     if inv.is_empty() {
         return None;
     }
-    if FUEL.on_item(stack.item).is_some()
-        && let Some(span) = item_group(&inv, "fuel")
-    {
-        return Some(span);
+    let named = names.iter().find_map(|name| item_group(&inv, name));
+    named.or_else(|| whole(inv))
+}
+
+/// The slots `stack` may go into: fuel into a fuel slot, anything into an input or a chest.
+fn takes(inv: Inventory, stack: ItemStack) -> Option<Span> {
+    if FUEL.on_item(stack.item).is_some() {
+        slots(inv, &["fuel", "input", "chest"])
+    } else {
+        slots(inv, &["input", "chest"])
     }
-    for name in ["input", "chest"] {
-        if let Some(span) = item_group(&inv, name) {
-            return Some(span);
-        }
-    }
-    whole(inv)
 }
 
 /// The slots items may be taken from: results, or a chest's contents.
 fn gives(inv: Inventory) -> Option<Span> {
-    if inv.is_empty() {
-        return None;
-    }
-    for name in ["output", "chest"] {
-        if let Some(span) = item_group(&inv, name) {
-            return Some(span);
-        }
-    }
-    whole(inv)
+    slots(inv, &["output", "chest"])
 }
 
 /// Puts `stack` into the machine `owner` (its entity, or its block) and returns what didn't
@@ -124,6 +117,11 @@ fn read(span: &Span) -> Vec<ItemStack> {
     (0..span.len()).map(|i| span.get(i)).collect()
 }
 
+/// The stacks in the slots of `group`, in order.
+pub fn stacks(group: &SlotGroup) -> Vec<ItemStack> {
+    (0..group.len()).map(|i| group.get(i)).collect()
+}
+
 /// Sets the slots of `span` that `slots` changed.
 fn write(span: &Span, slots: &[ItemStack]) {
     for (i, &slot) in (0..).zip(slots) {
@@ -139,25 +137,29 @@ fn fill_slots(slots: &mut [ItemStack], stack: ItemStack, cap: impl Fn(u32) -> u3
     let mut left = stack;
     for into_empty in [false, true] {
         for slot in slots.iter_mut() {
-            let takes = match into_empty {
-                true => slot.is_empty(),
-                false => !slot.is_empty() && slot.stacks_with(&left),
-            };
-            if left.is_empty() || !takes {
-                continue;
-            }
-            let held = if slot.is_empty() { 0 } else { slot.count };
-            let moved = cap(left.item).saturating_sub(held).min(left.count);
-            if moved > 0 {
-                *slot = ItemStack {
-                    count: held + moved,
-                    ..left
-                };
-                left = left.shrink(moved);
+            let joins = !slot.is_empty() && slot.stacks_with(&left);
+            let takes = if into_empty { slot.is_empty() } else { joins };
+            if takes && !left.is_empty() {
+                left = top_up(slot, left, cap(left.item));
             }
         }
     }
     left
+}
+
+/// Puts as much of `stack` into `slot`, empty or holding the same, as brings it to `cap`;
+/// returns the rest.
+fn top_up(slot: &mut ItemStack, stack: ItemStack, cap: u32) -> ItemStack {
+    let held = if slot.is_empty() { 0 } else { slot.count };
+    let moved = cap.saturating_sub(held).min(stack.count);
+    if moved == 0 {
+        return stack;
+    }
+    *slot = ItemStack {
+        count: held + moved,
+        ..stack
+    };
+    stack.shrink(moved)
 }
 
 /// Puts `stack` into the slots of `group` and returns what didn't fit; with `simulate` nothing
@@ -195,19 +197,16 @@ pub fn extract(w: &World, owner: impl Into<Holder>, max: u32) -> ItemStack {
     let Some(span) = gives(w.inventory(owner)) else {
         return ItemStack::EMPTY;
     };
-    for i in 0..span.len() {
-        let have = span.get(i);
-        if have.is_empty() {
-            continue;
-        }
-        let taken = have.count.min(max);
-        span.set(i, have.shrink(taken));
-        return ItemStack {
-            count: taken,
-            ..have
-        };
+    let mut held = (0..span.len()).map(|i| (i, span.get(i)));
+    let Some((i, have)) = held.find(|(_, have)| !have.is_empty()) else {
+        return ItemStack::EMPTY;
+    };
+    let taken = have.count.min(max);
+    span.set(i, have.shrink(taken));
+    ItemStack {
+        count: taken,
+        ..have
     }
-    ItemStack::EMPTY
 }
 
 /// Whether the block at `pos` holds items at all.

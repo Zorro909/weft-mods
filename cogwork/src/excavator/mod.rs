@@ -143,16 +143,8 @@ pub fn register(r: &mut Registry) {
         .entity(|e| {
             e.attach(&DIG)
                 .attach(&rig::RIG)
-                .attach_with(
-                    &ENERGY,
-                    Energy {
-                        stored: 0,
-                        capacity: 20_000,
-                        // Any number of engines: standby alone can pass 1000 on a large area.
-                        max_in: 20_000,
-                        max_out: 0,
-                    },
-                )
+                // In from any number of engines: standby alone can pass 1000 on a large area.
+                .attach_with(&ENERGY, crate::machine::energy(20_000, 20_000))
                 .inventory(9)
         })
         .opens(&EXCAVATOR_MENU);

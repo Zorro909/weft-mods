@@ -1,5 +1,5 @@
-//! What this mod's machines share: a block whose front lights up while it works, energy put into
-//! a job a little every tick, and the energy bar on their screens.
+//! What this mod's machines share: a block whose front lights up while it works, a store of
+//! energy put into a job a little every tick, and the energy bar on their screens.
 
 use weft_sdk::*;
 
@@ -38,16 +38,49 @@ pub fn show_working(w: &World, pos: Pos, working: bool) {
     }
 }
 
+/// A machine's store of `capacity` energy, empty, taking in up to `max_in` a tick.
+pub fn energy(capacity: i64, max_in: i64) -> Energy {
+    Energy {
+        capacity,
+        max_in,
+        ..Energy::default()
+    }
+}
+
+/// How a job stands once a tick's energy has gone into it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Payment {
+    Paid,
+    /// Energy went in, and more is owed.
+    Paying,
+    /// More is owed, and there was none to put in.
+    NoPower,
+}
+
+impl Payment {
+    /// With `spent` of `cost` paid, `drawn` of it this tick.
+    fn after(spent: i64, cost: i64, drawn: i64) -> Payment {
+        if spent >= cost {
+            Payment::Paid
+        } else if drawn > 0 {
+            Payment::Paying
+        } else {
+            Payment::NoPower
+        }
+    }
+}
+
 /// Puts up to `rate` of the machine `id`'s stored energy into a job of `cost`, of which `spent`
-/// is paid already; returns how much it put in.
-pub fn draw(w: &World, id: u64, spent: &mut i64, cost: i64, rate: i64) -> i64 {
-    let Some(e) = w.component_mut(id, &ENERGY) else {
-        return 0;
-    };
-    let drawn = e.stored.min(rate).min((cost - *spent).max(0));
-    e.stored -= drawn;
+/// is paid already. The caller starts `spent` over when the job is done.
+pub fn pay(w: &World, id: u64, spent: &mut i64, cost: i64, rate: i64) -> Payment {
+    let owed = (cost - *spent).max(0);
+    let drawn = w.component_mut(id, &ENERGY).map_or(0, |e| {
+        let drawn = e.stored.min(rate).min(owed);
+        e.stored -= drawn;
+        drawn
+    });
     *spent += drawn;
-    drawn
+    Payment::after(*spent, cost, drawn)
 }
 
 /// The energy of the machine whose menu is open: a bar and the numbers.
@@ -63,4 +96,25 @@ pub fn power_bar(ui: &mut Ui) {
             &[Arg::Int(e.stored), Arg::Int(e.capacity)],
         );
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_job_is_paid_once_its_cost_is_spent() {
+        assert_eq!(Payment::after(60, 100, 30), Payment::Paying, "on its way");
+        assert_eq!(Payment::after(60, 100, 0), Payment::NoPower, "run dry");
+        assert_eq!(
+            Payment::after(100, 100, 40),
+            Payment::Paid,
+            "the last of it"
+        );
+        assert_eq!(
+            Payment::after(100, 100, 0),
+            Payment::Paid,
+            "paid before, waiting for room"
+        );
+    }
 }

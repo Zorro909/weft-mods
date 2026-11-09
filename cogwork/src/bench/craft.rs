@@ -9,7 +9,8 @@ use weft_sdk::*;
 
 use super::{Bench, CRAFT_COST, Status, cells, pattern};
 use crate::lib::Pos;
-use crate::store::{insert_all, insert_into};
+use crate::machine::{self, Payment};
+use crate::store::{insert_all, insert_into, stacks};
 
 /// The most energy a bench puts into a craft per tick: one takes at least 8 ticks.
 const DRAW_RATE: i64 = 30;
@@ -36,8 +37,7 @@ pub fn tick(b: &mut SystemBatch<Bench>) {
 }
 
 fn grid(w: &World, id: u64) -> Vec<ItemStack> {
-    let g = w.inventory(id).group("grid");
-    (0..g.len()).map(|i| g.get(i)).collect()
+    stacks(&w.inventory(id).group("grid"))
 }
 
 /// Which cells hold items, a bit each.
@@ -72,15 +72,12 @@ fn work(w: &World, id: u64, pos: Pos, bench: &mut Bench, pattern: &[u32; 9]) -> 
     if !cells::complete(pattern, &cells) {
         return Status::Missing;
     }
-    let drawn = crate::machine::draw(w, id, &mut bench.spent, CRAFT_COST, DRAW_RATE);
-    if bench.spent < CRAFT_COST {
-        return if drawn > 0 {
-            Status::Working
-        } else {
-            Status::NoPower
-        };
+    match machine::pay(w, id, &mut bench.spent, CRAFT_COST, DRAW_RATE) {
+        Payment::Paying => return Status::Working,
+        Payment::NoPower => return Status::NoPower,
+        // It waits with its arrow full until the output has room.
+        Payment::Paid => {}
     }
-    // Paid for: it waits with its arrow full until the output has room.
     let mut made = vec![result];
     made.extend(cells.iter().filter_map(|&used| left_behind(used)));
     if !insert_all(w.inventory(id).group("output"), &made) {

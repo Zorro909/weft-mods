@@ -10,7 +10,7 @@ use super::{BENCH, cells, pattern};
 pub fn insert(w: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
     let pattern = pattern(&w.component(at, &BENCH)?);
     let grid = w.inventory(at).group("grid");
-    let mut cells: Vec<ItemStack> = (0..grid.len()).map(|i| grid.get(i)).collect();
+    let mut cells = crate::store::stacks(&grid);
     let mut left = stack;
     let cap = max_stack(stack.item);
     while let Some(i) = cells::free_cell(&pattern, &cells, left, cap).filter(|_| !left.is_empty()) {

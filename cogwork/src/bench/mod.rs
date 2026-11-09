@@ -54,6 +54,12 @@ enum Status {
     Working,
 }
 
+impl Bench {
+    fn status(&self) -> Status {
+        Status::from_repr(self.status).unwrap_or_default()
+    }
+}
+
 pub fn register(r: &mut Registry) {
     r.entity_component(
         &BENCH,
@@ -68,15 +74,7 @@ pub fn register(r: &mut Registry) {
         .hardness(3.5)
         .entity(|e| {
             e.attach(&BENCH)
-                .attach_with(
-                    &ENERGY,
-                    Energy {
-                        stored: 0,
-                        capacity: 4_000,
-                        max_in: 200,
-                        max_out: 0,
-                    },
-                )
+                .attach_with(&ENERGY, crate::machine::energy(4_000, 200))
                 // The grid, then the output.
                 .inventory(9 + 3)
         })
@@ -132,7 +130,7 @@ fn screen(ui: &mut Ui) {
             crate::machine::power_bar(ui);
             ui.text_bind_styled(S::column().no_wrap(), |c, out| {
                 let b = c.menu_component(&BENCH).unwrap_or_default();
-                let status: &str = Status::from_repr(b.status).unwrap_or_default().into();
+                let status: &str = b.status().into();
                 out.set(&format!("cogwork.bench.{status}"), &[]);
             });
         });

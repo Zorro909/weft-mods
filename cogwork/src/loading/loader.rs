@@ -56,6 +56,10 @@ impl Loader {
     pub fn mode(&self) -> Mode {
         Mode::from_repr(self.mode).unwrap_or_default()
     }
+
+    fn kept(&self) -> Kept {
+        Kept::from_repr(self.kept).unwrap_or_default()
+    }
 }
 
 value! {
@@ -205,7 +209,7 @@ fn screen(ui: &mut Ui) {
 
 /// What the loader is doing: what it keeps running, or why it keeps nothing.
 fn status_key(l: &Loader) -> &'static str {
-    match Kept::from_repr(l.kept).unwrap_or_default() {
+    match l.kept() {
         Kept::Loading => match l.mode() {
             Mode::Machines => "cogwork.loader.loading",
             Mode::Everything => "cogwork.loader.loading_all",

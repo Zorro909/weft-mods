@@ -117,15 +117,7 @@ pub fn register(r: &mut Registry) {
         .on_break(crate::loading::let_go)
         .entity(|e| {
             e.attach(&LEVEL)
-                .attach_with(
-                    &ENERGY,
-                    Energy {
-                        stored: 0,
-                        capacity: 10_000,
-                        max_in: 1_000,
-                        max_out: 0,
-                    },
-                )
+                .attach_with(&ENERGY, crate::machine::energy(10_000, 1_000))
                 // The input, then the output.
                 .inventory(18 + 9)
         })

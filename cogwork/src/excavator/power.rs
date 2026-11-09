@@ -5,6 +5,7 @@
 use weft_sdk::*;
 
 use super::{Dig, Frame, Status};
+use crate::machine::{self, Payment};
 
 /// Standby energy per tick: a base, and one more per four blocks of area (9 by 9: 30).
 const STANDBY_BASE: i64 = 10;
@@ -41,14 +42,11 @@ pub fn hold(w: &World, id: u64, d: &mut Dig) -> bool {
 /// Puts stored energy into a job of `cost` until `d.spent` covers it; true once it does. The
 /// caller starts `spent` over when the job is done.
 pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
-    let drawn = crate::machine::draw(w, id, &mut d.spent, cost, DRAW_RATE);
-    if d.spent >= cost {
-        return true;
-    }
-    if drawn == 0 {
+    let payment = machine::pay(w, id, &mut d.spent, cost, DRAW_RATE);
+    if payment == Payment::NoPower {
         d.set_status(Status::NoPower);
     }
-    false
+    payment == Payment::Paid
 }
 
 /// Pays for up to `max` blocks of drill travel; returns how far the energy took it.

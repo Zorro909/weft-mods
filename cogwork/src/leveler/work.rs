@@ -6,6 +6,7 @@ use weft_sdk::*;
 use super::{LEVELER, Level, Stage, Status};
 use crate::harvest::{Harvest, cost, harvest};
 use crate::lib::{Area, BlockState, Pos, TypedWorld};
+use crate::machine::{self, Payment};
 use crate::markers::{square_behind, take_area};
 use crate::sounds;
 
@@ -73,6 +74,13 @@ fn next(area: &Area, c: Pos, dy: i32) -> Pos {
     }
 }
 
+/// Moves the cursor on to the next block of the leveler's stage: layer by layer down while it
+/// clears, up while it fills.
+fn move_on(l: &mut Level) {
+    let dy = if l.stage() == Stage::Clear { -1 } else { 1 };
+    l.cursor = next(&l.area, l.cursor, dy);
+}
+
 /// Breaks the next block standing at or above the leveler's height.
 fn clear_next(w: &World, id: u64, l: &mut Level) {
     let clearable = |s: BlockState| s.can_break() && !s.is(&LEVELER);
@@ -84,16 +92,16 @@ fn clear_next(w: &World, id: u64, l: &mut Level) {
         return;
     }
     match harvest(w, id, c, block_state) {
-        // Paid for already: it stays paid until there is room.
-        Harvest::Full => l.set_status(Status::Full),
-        harvested => {
-            if matches!(harvested, Harvest::Done) {
-                sound(w, &sounds::SCRAPE, c);
-            }
-            l.spent = 0;
-            l.cursor = next(&l.area, c, -1);
+        Harvest::Full => {
+            // Paid for already: it stays paid until there is room.
+            l.set_status(Status::Full);
+            return;
         }
+        Harvest::Done => sound(w, &sounds::SCRAPE, c),
+        Harvest::Refused => {}
     }
+    l.spent = 0;
+    move_on(l);
 }
 
 /// Fills the next hole below the leveler's height with a block from its stock.
@@ -114,7 +122,7 @@ fn fill_next(w: &World, id: u64, l: &mut Level) {
     sound(w, &sounds::FILL, c);
     stock.set(slot, stock.get(slot).shrink(1));
     l.spent = 0;
-    l.cursor = next(&l.area, c, 1);
+    move_on(l);
 }
 
 /// Plays `sound` at the block `c` worked on, now and then.
@@ -154,8 +162,7 @@ fn find(
         if wanted(block_state) {
             return Some((c, block_state));
         }
-        let dy = if l.stage() == Stage::Clear { -1 } else { 1 };
-        l.cursor = next(&l.area, c, dy);
+        move_on(l);
     }
     None
 }
@@ -182,14 +189,11 @@ fn stage_over(l: &mut Level) -> bool {
 
 /// Puts stored energy into a job of `cost`; true once it is paid for.
 fn pay(w: &World, id: u64, l: &mut Level, cost: i64) -> bool {
-    let drawn = crate::machine::draw(w, id, &mut l.spent, cost, DRAW_RATE);
-    if l.spent >= cost {
-        return true;
-    }
-    if drawn == 0 {
+    let payment = machine::pay(w, id, &mut l.spent, cost, DRAW_RATE);
+    if payment == Payment::NoPower {
         l.set_status(Status::NoPower);
     }
-    false
+    payment == Payment::Paid
 }
 
 #[cfg(test)]
@@ -225,8 +229,7 @@ mod tests {
                 if l.stage() == Stage::Done {
                     break;
                 }
-                let dy = if l.stage() == Stage::Clear { -1 } else { 1 };
-                l.cursor = next(&area, l.cursor, dy);
+                move_on(&mut l);
                 kept.extend(super::super::work_cubes(&l));
             }
             let again = crate::loading::kept_again(kept);
