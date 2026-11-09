@@ -121,13 +121,23 @@ pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
     Ok(())
 }
 
-/// Puts up the buildings in a settlement's materials, then lays its roads, squares and fields.
+/// Puts up the buildings in a settlement's materials, a town's paved round (but not its
+/// trees), then lays its roads, squares and fields.
 fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) -> Result<(), PlanError> {
     let walls = walls(p, s);
     for site in sites {
         let roof = styles::blocks(one_of(p, s.roofs).unwrap_or(""));
+        let mut materials = styles::add(walls.clone(), roof);
+        if s.kind == Kind::Town
+            && !s
+                .trees
+                .iter()
+                .any(|&tree| std::ptr::eq(tree, site.template))
+        {
+            materials = styles::add(materials, styles::blocks("cobble_ground"));
+        }
         p.structure(site.template, site.corner, site.turn)?
-            .materials(&styles::add(walls.clone(), roof))
+            .materials(&materials)
             .foundation(Foundation::Ground)
             .clear_above();
     }
@@ -202,20 +212,16 @@ fn unit(random: &mut Random) -> f32 {
 }
 
 /// One of `items` at random, `None` when there are none.
-pub(super) fn one_of<T: Copy>(p: &mut Plan, items: &[T]) -> Option<T> {
+fn one_of<T: Copy>(p: &mut Plan, items: &[T]) -> Option<T> {
     match items.len() {
         0 => None,
         n => Some(items[p.random().below(n as u64) as usize]),
     }
 }
 
-/// The frame and infill all of a settlement's buildings share, and in a town paving round each.
+/// The frame and infill all of a settlement's buildings share.
 fn walls(p: &mut Plan, s: &Settlement) -> Materials {
     let frame = styles::blocks(one_of(p, s.frames).unwrap_or(""));
     let infill = styles::blocks(one_of(p, s.infills).unwrap_or(""));
-    let walls = styles::add(styles::add(Materials::new(), frame), infill);
-    match s.kind {
-        Kind::Village => walls,
-        Kind::Town => styles::add(walls, styles::blocks("cobble_ground")),
-    }
+    styles::add(styles::add(Materials::new(), frame), infill)
 }

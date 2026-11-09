@@ -152,7 +152,11 @@ pub fn outskirts(
         ..*rules
     };
     // A few tries at each end, each standing it a different way back.
-    let mut ends = main.iter().cycle().take(main.len() * 4).filter_map(Road::end);
+    let mut ends = main
+        .iter()
+        .cycle()
+        .take(main.len() * 4)
+        .filter_map(Road::end);
     ends.find_map(|end| {
         let front = Front {
             points: vec![end],

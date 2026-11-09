@@ -34,7 +34,8 @@ pub(crate) struct Generator {
     pub dimensions: Vec<&'static Dimension>,
     /// The side of a region, in blocks.
     pub region: i32,
-    /// Where its plan would touch the plan of one with a higher priority, it gives way.
+    /// Where its plan would come within `ROOM` of the plan of one with a higher priority, it
+    /// gives way.
     pub priority: i32,
     planner: Box<Planner>,
     plans: ColumnCache<Slot>,

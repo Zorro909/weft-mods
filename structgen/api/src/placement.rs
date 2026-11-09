@@ -111,7 +111,7 @@ impl Placement<'_> {
         self.turns = false;
         self
     }
-    /// Not where it would touch a structure with a higher priority; see `Planning::priority`.
+    /// Not within 8 blocks of a structure with a higher priority; see `Planning::priority`.
     pub fn priority(mut self, priority: i32) -> Self {
         self.priority = priority;
         self

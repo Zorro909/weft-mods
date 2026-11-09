@@ -225,7 +225,7 @@ impl Grid {
     }
 
     /// Whether a cell within `reach` of `at` passes `test`.
-    fn near(&self, at: [i32; 2], reach: i32, test: fn(Cell) -> bool) -> bool {
+    pub fn near(&self, at: [i32; 2], reach: i32, test: impl Fn(Cell) -> bool) -> bool {
         let from = [at[0] - reach, at[1] - reach];
         !self.all(from, [at[0] + reach, at[1] + reach], |c| !test(c))
     }
