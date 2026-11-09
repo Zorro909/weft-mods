@@ -42,10 +42,10 @@ pub fn register(r: &mut Registry) {
 }
 
 /// Server side: the boxes kept loaded in the asking player's dimension.
-fn answer(p: &Packet, _: ()) {
-    let w = p.world();
-    let shown = tickets::shown(w.dimension(), w.game_time());
-    p.reply(&SHOWN, &encode(&shown));
+fn answer(packet: &Packet, _: ()) {
+    let world = packet.world();
+    let shown = tickets::shown(world.dimension(), world.game_time());
+    packet.reply(&SHOWN, &encode(&shown));
 }
 
 /// Client side: while the lens is held, asks now and then and outlines each cube.
@@ -77,7 +77,7 @@ fn frame(client: &Client) {
 fn outline(client: &Client, cube: CubePos, color: u32) {
     let corner = Vec3::from(cube.first_block());
     let (near, far) = (INSET, super::cubes::CUBE as f64 - INSET);
-    let at = |d: f64| corner.offset(d, d, d);
+    let at = |inset: f64| corner.offset(inset, inset, inset);
     client.draw_box(None, at(near), at(far), color);
 }
 
@@ -125,7 +125,9 @@ fn encode(boxes: &[(Cubes, Keeper)]) -> Vec<u8> {
     let shown = boxes
         .iter()
         .map(|&(cubes, keeper)| Shown::new(cubes, keeper));
-    shown.flat_map(|s| Payload::encode(&s)).collect()
+    shown
+        .flat_map(|shown_box| Payload::encode(&shown_box))
+        .collect()
 }
 
 /// What `encode` wrote; boxes that don't read right are left out.

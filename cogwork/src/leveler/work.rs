@@ -26,109 +26,113 @@ const SCAN: u32 = 512;
 /// Ticks between its sounds at most: it may clear or fill a block every tick.
 const SOUND_EVERY: u64 = 4;
 
-pub fn tick(b: &mut SystemBatch<Level>) {
-    let w = b.world();
-    for (id, l, _) in b.iter_mut() {
-        let Some(st) = w.entity(id) else { continue };
-        let pos = Pos::from(st.block_pos());
-        if !w.block_typed(pos).is(&LEVELER) {
+pub fn tick(batch: &mut SystemBatch<Level>) {
+    let world = batch.world();
+    for (id, level, _) in batch.iter_mut() {
+        let Some(entity) = world.entity(id) else {
+            continue;
+        };
+        let pos = Pos::from(entity.block_pos());
+        if !world.block_typed(pos).is(&LEVELER) {
             continue;
         }
-        work(&w, id, pos, l);
-        super::keep_loaded(&w, pos, l);
-        crate::machine::show_working(&w, pos, l.status().is_working());
+        work(&world, id, pos, level);
+        super::keep_loaded(&world, pos, level);
+        crate::machine::show_working(&world, pos, level.status().is_working());
     }
 }
 
 /// Passes on what the leveler `id` at `pos` cleared, then works on its stage.
-fn work(w: &World, id: u64, pos: Pos, l: &mut Level) {
-    if l.stage() == Stage::New {
-        start(w, pos, l);
+fn work(world: &World, id: u64, pos: Pos, level: &mut Level) {
+    if level.stage() == Stage::New {
+        start(world, pos, level);
     }
-    crate::store::eject(w, pos);
-    match l.stage() {
-        Stage::Clear => clear_next(w, id, l),
-        Stage::Fill => fill_next(w, id, l),
+    crate::store::eject(world, pos);
+    match level.stage() {
+        Stage::Clear => clear_next(world, id, level),
+        Stage::Fill => fill_next(world, id, level),
         Stage::New | Stage::Done => {}
     }
 }
 
-fn start(w: &World, pos: Pos, l: &mut Level) {
-    let front = crate::machine::front(w, pos);
-    l.area = take_area(w, pos).unwrap_or_else(|| square_behind(pos, front, DEFAULT_SIZE, 0));
-    l.set_stage(Stage::Clear);
-    l.cursor = l.area.lo.add_y(CLEAR_HEIGHT - 1);
+fn start(world: &World, pos: Pos, level: &mut Level) {
+    let front = crate::machine::front(world, pos);
+    level.area =
+        take_area(world, pos).unwrap_or_else(|| square_behind(pos, front, DEFAULT_SIZE, 0));
+    level.set_stage(Stage::Clear);
+    level.cursor = level.area.lo.add_y(CLEAR_HEIGHT - 1);
 }
 
-/// The block looked at after `c`: along x, then z, then the next layer `dy` away.
-fn next(area: &Area, c: Pos, dy: i32) -> Pos {
-    if c.x < area.hi.x {
-        c.add_x(1)
-    } else if c.z < area.hi.z {
+/// The block looked at after `cell`: along x, then z, then the next layer `dy` away.
+fn next(area: &Area, cell: Pos, dy: i32) -> Pos {
+    if cell.x < area.hi.x {
+        cell.add_x(1)
+    } else if cell.z < area.hi.z {
         Pos {
             x: area.lo.x,
-            ..c.add_z(1)
+            ..cell.add_z(1)
         }
     } else {
-        area.lo.with_y(c.y + dy)
+        area.lo.with_y(cell.y + dy)
     }
 }
 
 /// Moves the cursor on to the next block of the leveler's stage: layer by layer down while it
 /// clears, up while it fills.
-fn move_on(l: &mut Level) {
-    let dy = if l.stage() == Stage::Clear { -1 } else { 1 };
-    l.cursor = next(&l.area, l.cursor, dy);
+fn move_on(level: &mut Level) {
+    let dy = if level.stage() == Stage::Clear { -1 } else { 1 };
+    level.cursor = next(&level.area, level.cursor, dy);
 }
 
 /// Breaks the next block standing at or above the leveler's height.
-fn clear_next(w: &World, id: u64, l: &mut Level) {
-    let clearable = |s: BlockState| s.can_break() && !s.is(&LEVELER);
-    let Some((c, block_state)) = find(w, l, clearable) else {
+fn clear_next(world: &World, id: u64, level: &mut Level) {
+    let clearable = |state: BlockState| state.can_break() && !state.is(&LEVELER);
+    let Some((cell, block_state)) = find(world, level, clearable) else {
         return;
     };
-    l.set_status(Status::Clearing);
-    if !pay(w, id, l, cost(block_state, CLEAR_BASE, CLEAR_PER_HARDNESS)) {
+    level.set_status(Status::Clearing);
+    let cost = cost(block_state, CLEAR_BASE, CLEAR_PER_HARDNESS);
+    if !pay(world, id, level, cost) {
         return;
     }
-    match harvest(w, id, c, block_state) {
+    match harvest(world, id, cell, block_state) {
         Harvest::Full => {
             // Paid for already: it stays paid until there is room.
-            l.set_status(Status::Full);
+            level.set_status(Status::Full);
             return;
         }
-        Harvest::Done => sound(w, &sounds::SCRAPE, c),
+        Harvest::Done => sound(world, &sounds::SCRAPE, cell),
         Harvest::Refused => {}
     }
-    l.spent = 0;
-    move_on(l);
+    level.spent = 0;
+    move_on(level);
 }
 
 /// Fills the next hole below the leveler's height with a block from its stock.
-fn fill_next(w: &World, id: u64, l: &mut Level) {
-    let Some((c, _)) = find(w, l, BlockState::can_build_into) else {
+fn fill_next(world: &World, id: u64, level: &mut Level) {
+    let Some((cell, _)) = find(world, level, BlockState::can_build_into) else {
         return;
     };
-    let stock = w.inventory(id).group("input");
+    let stock = world.inventory(id).group("input");
     let Some((slot, filler)) = first_filler(&stock) else {
-        l.set_status(Status::NoBlocks);
+        level.set_status(Status::NoBlocks);
         return;
     };
-    l.set_status(Status::Filling);
-    if !pay(w, id, l, FILL_COST) {
+    level.set_status(Status::Filling);
+    if !pay(world, id, level, FILL_COST) {
         return;
     }
-    w.set_block_typed(c, filler);
-    sound(w, &sounds::FILL, c);
+    world.set_block_typed(cell, filler);
+    sound(world, &sounds::FILL, cell);
     stock.set(slot, stock.get(slot).shrink(1));
-    l.spent = 0;
-    move_on(l);
+    level.spent = 0;
+    move_on(level);
 }
 
-/// Plays `sound` at the block `c` worked on, now and then.
-fn sound(w: &World, sound: &Sound, c: Pos) {
-    if w.game_time().is_multiple_of(SOUND_EVERY) {
-        w.play_sound(sound, c.center(), 1.0);
+/// Plays `sound` at the block `cell` worked on, now and then.
+fn sound(world: &World, sound: &Sound, cell: Pos) {
+    if world.game_time().is_multiple_of(SOUND_EVERY) {
+        world.play_sound(sound, cell.center(), 1.0);
     }
 }
 
@@ -146,23 +150,23 @@ fn fill_block(stack: ItemStack) -> Option<BlockState> {
 /// From the cursor on, the next block that `wanted` picks and its state. `None` while waiting,
 /// when there is nothing this tick, or when the stage is over.
 fn find(
-    w: &World,
-    l: &mut Level,
+    world: &World,
+    level: &mut Level,
     wanted: impl Fn(BlockState) -> bool,
 ) -> Option<(Pos, BlockState)> {
     for _ in 0..SCAN {
-        if stage_over(l) {
+        if stage_over(level) {
             return None;
         }
-        let c = l.cursor;
-        let Some(block_state) = w.block_loaded_typed(c) else {
-            l.set_status(Status::Blocked);
+        let cell = level.cursor;
+        let Some(block_state) = world.block_loaded_typed(cell) else {
+            level.set_status(Status::Blocked);
             return None;
         };
         if wanted(block_state) {
-            return Some((c, block_state));
+            return Some((cell, block_state));
         }
-        move_on(l);
+        move_on(level);
     }
     None
 }
@@ -170,17 +174,17 @@ fn find(
 /// Moves on to the next stage once the cursor has left this one's layers: clearing ends below
 /// the leveler's height, and filling, which starts at the deepest layer, ends at it. True when
 /// it moved on.
-fn stage_over(l: &mut Level) -> bool {
-    let height = l.area.lo.y;
-    match l.stage() {
-        Stage::Clear if l.cursor.y < height => {
-            l.set_stage(Stage::Fill);
-            l.cursor = l.area.lo.add_y(-FILL_DEPTH);
+fn stage_over(level: &mut Level) -> bool {
+    let height = level.area.lo.y;
+    match level.stage() {
+        Stage::Clear if level.cursor.y < height => {
+            level.set_stage(Stage::Fill);
+            level.cursor = level.area.lo.add_y(-FILL_DEPTH);
             true
         }
-        Stage::Fill if l.cursor.y >= height => {
-            l.set_stage(Stage::Done);
-            l.set_status(Status::Done);
+        Stage::Fill if level.cursor.y >= height => {
+            level.set_stage(Stage::Done);
+            level.set_status(Status::Done);
             true
         }
         _ => false,
@@ -188,10 +192,10 @@ fn stage_over(l: &mut Level) -> bool {
 }
 
 /// Puts stored energy into a job of `cost`; true once it is paid for.
-fn pay(w: &World, id: u64, l: &mut Level, cost: i64) -> bool {
-    let payment = machine::pay(w, id, &mut l.spent, cost, DRAW_RATE);
+fn pay(world: &World, id: u64, level: &mut Level, cost: i64) -> bool {
+    let payment = machine::pay(world, id, &mut level.spent, cost, DRAW_RATE);
     if payment == Payment::NoPower {
-        l.set_status(Status::NoPower);
+        level.set_status(Status::NoPower);
     }
     payment == Payment::Paid
 }
@@ -216,7 +220,7 @@ mod tests {
         // ends where a cube begins.
         for height in [66, 64] {
             let area = Area::between(Pos::new(-20, height, -20), Pos::new(40, height, 40));
-            let mut l = Level {
+            let mut level = Level {
                 stage: Stage::Clear as u32,
                 area,
                 cursor: area.lo.add_y(CLEAR_HEIGHT - 1),
@@ -225,12 +229,12 @@ mod tests {
             // What it keeps after each block, as a tick does once the cursor has moved on.
             let mut kept = Vec::new();
             loop {
-                stage_over(&mut l);
-                if l.stage() == Stage::Done {
+                stage_over(&mut level);
+                if level.stage() == Stage::Done {
                     break;
                 }
-                move_on(&mut l);
-                kept.extend(super::super::work_cubes(&l));
+                move_on(&mut level);
+                kept.extend(super::super::work_cubes(&level));
             }
             let again = crate::loading::kept_again(kept);
             assert_eq!(again, None, "down, then up, at {height}");
@@ -240,11 +244,11 @@ mod tests {
     #[test]
     fn rows_then_layers_in_either_direction() {
         let area = Area::between(Pos::new(0, 5, 0), Pos::new(1, 5, 1));
-        let mut c = area.lo;
-        let mut seen = vec![c];
+        let mut cell = area.lo;
+        let mut seen = vec![cell];
         for _ in 0..4 {
-            c = next(&area, c, -1);
-            seen.push(c);
+            cell = next(&area, cell, -1);
+            seen.push(cell);
         }
         let expected = [[0, 5, 0], [1, 5, 0], [0, 5, 1], [1, 5, 1], [0, 4, 0]];
         assert_eq!(seen, expected.map(Pos::from), "along x, then z, then down");
@@ -257,26 +261,30 @@ mod tests {
 
     #[test]
     fn clearing_goes_on_down_to_the_leveler_height() {
-        let mut l = leveling(Stage::Clear, 5);
-        assert!(!stage_over(&mut l), "its own layer is cleared too");
-        assert_eq!(l.stage(), Stage::Clear, "still clearing");
+        let mut level = leveling(Stage::Clear, 5);
+        assert!(!stage_over(&mut level), "its own layer is cleared too");
+        assert_eq!(level.stage(), Stage::Clear, "still clearing");
     }
 
     #[test]
     fn filling_starts_at_the_deepest_layer_once_cleared() {
-        let mut l = leveling(Stage::Clear, 4);
-        assert!(stage_over(&mut l), "below the height");
-        assert_eq!(l.stage(), Stage::Fill, "filling");
-        assert_eq!(l.cursor, Pos::new(0, 5 - FILL_DEPTH, 0), "deepest first");
+        let mut level = leveling(Stage::Clear, 4);
+        assert!(stage_over(&mut level), "below the height");
+        assert_eq!(level.stage(), Stage::Fill, "filling");
+        assert_eq!(
+            level.cursor,
+            Pos::new(0, 5 - FILL_DEPTH, 0),
+            "deepest first"
+        );
     }
 
     #[test]
     fn filling_ends_below_the_leveler_height() {
-        let mut l = leveling(Stage::Fill, 4);
-        assert!(!stage_over(&mut l), "the layer just below is filled");
-        let mut l = leveling(Stage::Fill, 5);
-        assert!(stage_over(&mut l), "not its own");
-        assert_eq!(l.stage(), Stage::Done, "done");
-        assert_eq!(l.status(), Status::Done, "and says so");
+        let mut level = leveling(Stage::Fill, 4);
+        assert!(!stage_over(&mut level), "the layer just below is filled");
+        let mut level = leveling(Stage::Fill, 5);
+        assert!(stage_over(&mut level), "not its own");
+        assert_eq!(level.stage(), Stage::Done, "done");
+        assert_eq!(level.status(), Status::Done, "and says so");
     }
 }

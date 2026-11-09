@@ -36,7 +36,7 @@ pub fn build(set: &Set) {
     let world = set.world();
     let pos = in_world(set, FINISHER);
     let frame = Frame::plan(&world, pos, Dir::South);
-    for cell in frame.cells().into_iter().filter(|&c| c != pos) {
+    for cell in frame.cells().into_iter().filter(|&cell| cell != pos) {
         world.set_block_typed(cell, BlockState::of(&GANTRY_FRAME));
     }
     for y in pos.y - PIT_DEPTH..pos.y {
@@ -53,15 +53,15 @@ pub fn start(set: &Set) {
     let world = set.world();
     let pos = in_world(set, FINISHER);
     let frame = Frame::plan(&world, pos, Dir::South);
-    let Some(d) = world.component_mut(world.block_entity(pos), &DIG) else {
+    let Some(dig) = world.component_mut(world.block_entity(pos), &DIG) else {
         return;
     };
-    d.frame = frame;
-    d.step = frame.cells().len() as u32;
-    d.set_stage(Stage::Mine);
-    d.set_status(Status::NoPower);
-    d.cursor = near_floor(&frame);
-    d.set_head(d.cursor.floor_middle());
+    dig.frame = frame;
+    dig.step = frame.cells().len() as u32;
+    dig.set_stage(Stage::Mine);
+    dig.set_status(Status::NoPower);
+    dig.cursor = near_floor(&frame);
+    dig.set_head(dig.cursor.floor_middle());
 }
 
 /// Lights the engines and waits for the excavator to be done.
@@ -82,22 +82,22 @@ fn engines() -> [(Pos, Dir); 3] {
 /// the world.
 fn near_floor(frame: &Frame) -> Pos {
     let [across_x, across_z] = frame.inside();
-    let mut c = frame.lo.add_x(1).add_z(1).with_y(FLOOR_Y);
+    let mut cell = frame.lo.add_x(1).add_z(1).with_y(FLOOR_Y);
     for _ in 0..across_x * across_z - LEFT {
-        c = frame.next(c);
+        cell = frame.next(cell);
     }
-    c
+    cell
 }
 
 /// Lets the film go on once the excavator it waits for is done.
-fn signal_when_done(w: &World) {
+fn signal_when_done(world: &World) {
     let mut watched = WATCHED.lock().unwrap_or_else(PoisonError::into_inner);
     let Some((player, pos)) = *watched else {
         return;
     };
-    let dig = w.component(pos, &DIG);
-    if dig.is_some_and(|d| d.stage() == Stage::Done) {
-        signal(w, player, FINISHED);
+    let dig = world.component(pos, &DIG);
+    if dig.is_some_and(|dig| dig.stage() == Stage::Done) {
+        signal(world, player, FINISHED);
         *watched = None;
     }
 }
@@ -109,11 +109,11 @@ mod tests {
     #[test]
     fn the_drill_starts_a_few_blocks_from_the_end() {
         let frame = Frame::from(([0, 0, 0], [10, 4, 10]));
-        let mut c = near_floor(&frame);
-        assert_eq!(c.y, FLOOR_Y, "on the floor");
+        let mut cell = near_floor(&frame);
+        assert_eq!(cell.y, FLOOR_Y, "on the floor");
         for _ in 0..LEFT {
-            c = frame.next(c);
+            cell = frame.next(cell);
         }
-        assert_eq!(c.y, FLOOR_Y - 1, "past the floor after the last ones");
+        assert_eq!(cell.y, FLOOR_Y - 1, "past the floor after the last ones");
     }
 }

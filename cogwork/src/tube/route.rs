@@ -20,7 +20,7 @@ pub enum Route {
 /// Where `stack` goes from the hub of the tube `id` at `pos`. `from` is the side it came in by,
 /// `None` for one put in at the hub.
 pub fn route(
-    w: &World,
+    world: &World,
     id: u64,
     pos: Pos,
     kind: Kind,
@@ -32,64 +32,64 @@ pub fn route(
     }
     let arms: Vec<Dir> = Dir::ALL
         .into_iter()
-        .filter(|&d| super::connects_to_tube(w, pos, d))
+        .filter(|&dir| super::connects_to_tube(world, pos, dir))
         .collect();
     if arms.is_empty() {
         return Route::Spill;
     }
-    let onward = |d: &Dir| Some(*d) != from && takes(w, pos, *d, kind, stack);
+    let onward = |dir: &Dir| Some(*dir) != from && takes(world, pos, *dir, kind, stack);
     let mut ways: Vec<Dir> = arms
         .iter()
         .copied()
-        .filter(|&d| kind_allows(w, id, pos, kind, d, stack))
+        .filter(|&dir| kind_allows(world, id, pos, kind, dir, stack))
         .filter(onward)
         .collect();
     if kind == Kind::Sorting && ways.is_empty() {
-        let unnamed = super::sorting::unfiltered(w, id);
+        let unnamed = super::sorting::unfiltered(world, id);
         ways = arms
             .iter()
             .copied()
-            .filter(|d| unnamed.contains(d))
+            .filter(|dir| unnamed.contains(dir))
             .filter(onward)
             .collect();
     }
-    if let Some(d) = pick(w, &ways) {
-        return Route::Out(d);
+    if let Some(dir) = pick(world, &ways) {
+        return Route::Out(dir);
     }
     // Back where it came from, if that still leads somewhere.
-    match from.filter(|&back| arms.contains(&back) && takes(w, pos, back, kind, stack)) {
+    match from.filter(|&back| arms.contains(&back) && takes(world, pos, back, kind, stack)) {
         Some(back) => Route::Out(back),
         None => Route::Wait,
     }
 }
 
 /// One of `ways` at random.
-fn pick(w: &World, ways: &[Dir]) -> Option<Dir> {
+fn pick(world: &World, ways: &[Dir]) -> Option<Dir> {
     if ways.is_empty() {
         return None;
     }
-    ways.get(w.random_below(ways.len() as u32) as usize)
+    ways.get(world.random_below(ways.len() as u32) as usize)
         .copied()
 }
 
-/// What a kind of tube lets through toward `d` on its own terms.
-fn kind_allows(w: &World, id: u64, pos: Pos, kind: Kind, d: Dir, stack: ItemStack) -> bool {
+/// What a kind of tube lets through toward `dir` on its own terms.
+fn kind_allows(world: &World, id: u64, pos: Pos, kind: Kind, dir: Dir, stack: ItemStack) -> bool {
     match kind {
         Kind::Directing => {
-            let tube = w.block_typed(pos);
-            tube.is(&DIRECTING_TUBE) && tube.prop("out") == Some(d.name())
+            let tube = world.block_typed(pos);
+            tube.is(&DIRECTING_TUBE) && tube.prop("out") == Some(dir.name())
         }
-        Kind::Sorting => super::sorting::passes(w, id, d, stack),
+        Kind::Sorting => super::sorting::passes(world, id, dir, stack),
         Kind::Stone | Kind::Timber | Kind::Gilded | Kind::Void => true,
     }
 }
 
-/// Whether the neighbor toward `d` takes the item: any tube (a full one makes it wait at the
+/// Whether the neighbor toward `dir` takes the item: any tube (a full one makes it wait at the
 /// face), or a machine with room. Timber tubes only feed tubes, never back into machines.
-fn takes(w: &World, pos: Pos, d: Dir, kind: Kind, stack: ItemStack) -> bool {
-    let other = pos.toward(d);
-    if super::is_tube(w, other) {
+fn takes(world: &World, pos: Pos, dir: Dir, kind: Kind, stack: ItemStack) -> bool {
+    let other = pos.toward(dir);
+    if super::is_tube(world, other) {
         return true;
     }
-    kind != Kind::Timber && crate::store::accepts(w, other, stack)
+    kind != Kind::Timber && crate::store::accepts(world, other, stack)
 }

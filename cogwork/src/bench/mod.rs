@@ -72,8 +72,9 @@ pub fn register(r: &mut Registry) {
     r.tag(NOTHING, &["gantry_frame"]);
     crate::machine::block(r.block(&ASSEMBLY_BENCH), "assembly_bench")
         .hardness(3.5)
-        .entity(|e| {
-            e.attach(&BENCH)
+        .entity(|entity| {
+            entity
+                .attach(&BENCH)
                 .attach_with(&ENERGY, crate::machine::energy(4_000, 200))
                 // The grid, then the output.
                 .inventory(9 + 3)
@@ -119,18 +120,18 @@ fn screen(ui: &mut Ui) {
                     });
                 }
             });
-            ui.recipe_arrow_bind(|c| {
-                let b = c.menu_component(&BENCH).unwrap_or_default();
-                b.spent as f32 / CRAFT_COST as f32
+            ui.recipe_arrow_bind(|view| {
+                let bench = view.menu_component(&BENCH).unwrap_or_default();
+                bench.spent as f32 / CRAFT_COST as f32
             });
             ui.group("output");
         });
         // As wide as the inventory whatever it says, so the cells don't move under the cursor.
         ui.column(S::column().gap(3.0).w(INVENTORY_WIDTH), |ui| {
             crate::machine::power_bar(ui);
-            ui.text_bind_styled(S::column().no_wrap(), |c, out| {
-                let b = c.menu_component(&BENCH).unwrap_or_default();
-                let status: &str = b.status().into();
+            ui.text_bind_styled(S::column().no_wrap(), |view, out| {
+                let bench = view.menu_component(&BENCH).unwrap_or_default();
+                let status: &str = bench.status().into();
                 out.set(&format!("cogwork.bench.{status}"), &[]);
             });
         });
@@ -143,13 +144,13 @@ fn screen(ui: &mut Ui) {
 /// count.
 fn cell(ui: &mut Ui, i: u32) {
     let under = |ui: &mut Ui| ui.group_slot("grid", i);
-    ghost::cell(ui, under, i, move |c| {
-        let b = c.menu_component(&BENCH).unwrap_or_default();
-        let filled = b.filled & (1 << i) != 0;
+    ghost::cell(ui, under, i, move |view| {
+        let bench = view.menu_component(&BENCH).unwrap_or_default();
+        let filled = bench.filled & (1 << i) != 0;
         if filled {
             0
         } else {
-            ghost::item_of(b.pattern[i as usize])
+            ghost::item_of(bench.pattern[i as usize])
         }
     });
 }
@@ -160,11 +161,11 @@ fn pattern(bench: &Bench) -> [u32; 9] {
 }
 
 /// Sets the ghost of `cell` to `item` (0 clears it) when `owner` is a bench.
-pub fn set_ghost(w: &World, owner: u64, cell: u32, item: u32) {
-    let Some(b) = w.component_mut(owner, &BENCH) else {
+pub fn set_ghost(world: &World, owner: u64, cell: u32, item: u32) {
+    let Some(bench) = world.component_mut(owner, &BENCH) else {
         return;
     };
-    let Some(ghost) = b.pattern.get_mut(cell as usize) else {
+    let Some(ghost) = bench.pattern.get_mut(cell as usize) else {
         return;
     };
     *ghost = ghost::key_of(item);

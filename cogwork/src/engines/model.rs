@@ -20,26 +20,28 @@ const TRUNKS: [&str; 4] = [
 
 /// An engine block of `kind` (`spring`, `ember`): it faces away from the block it was placed
 /// against, so its trunk points into that block.
-pub fn engine<'a>(b: BlockBuilder<'a>, kind: &'static str) -> BlockBuilder<'a> {
-    b.facing(Facings::ALL, Toward::Face)
+pub fn engine<'a>(builder: BlockBuilder<'a>, kind: &'static str) -> BlockBuilder<'a> {
+    builder
+        .facing(Facings::ALL, Toward::Face)
         .prop("heat", 0..=3)
         .sound_group("base:block.stone")
-        .states(move |p, s| shape(p, s, kind))
+        .states(move |props, state| shape(props, state, kind))
         .on_use(use_wrench)
 }
 
 /// The boxes for one state, written lying on the floor with the trunk up.
-fn shape<'s>(p: &Props, s: State<'s>, kind: &str) -> State<'s> {
+fn shape<'s>(props: &Props, state: State<'s>, kind: &str) -> State<'s> {
     // Its trunk, the model's top, points away from the facing.
-    let orientation = Orientation::up(p.facing().opposite());
+    let orientation = Orientation::up(props.facing().opposite());
     let (plate_top, plate_side) = (
         format!("engine_{kind}_plate_top"),
         format!("engine_{kind}_plate_side"),
     );
-    let trunk = TRUNKS[p.int("heat").min(3) as usize];
+    let trunk = TRUNKS[props.int("heat").min(3) as usize];
     const WHOLE: [f32; 4] = [0.0, 0.0, 16.0, 16.0];
     const EDGE: [f32; 4] = [0.0, 0.0, 16.0, 4.0];
-    s.texture(&plate_top)
+    state
+        .texture(&plate_top)
         .orientation(orientation)
         .model_box_faces(
             PLATE.lo,
@@ -72,24 +74,25 @@ fn faces<'t>(
     ]
 }
 
-fn use_wrench(u: &mut Use) -> bool {
-    let w = u.world();
-    if !crate::cogs::holds_wrench(&w, u.player()) {
+fn use_wrench(click: &mut Use) -> bool {
+    let world = click.world();
+    if !crate::cogs::holds_wrench(&world, click.player()) {
         return false;
     }
-    turn(&w, Pos::from(u.pos()));
+    turn(&world, Pos::from(click.pos()));
     true
 }
 
 /// The tuning wrench on the engine at `pos`: its trunk points the next way round.
-pub fn turn(w: &World, pos: Pos) {
-    w.prop_cycle(pos, "facing");
-    w.play_sound(&crate::sounds::WRENCH, pos.center(), 1.0);
+pub fn turn(world: &World, pos: Pos) {
+    world.prop_cycle(pos, "facing");
+    world.play_sound(&crate::sounds::WRENCH, pos.center(), 1.0);
 }
 
 /// Where the engine's trunk points: its output.
-pub fn output(w: &World, pos: Pos) -> Option<Dir> {
-    w.prop(pos, "facing")
+pub fn output(world: &World, pos: Pos) -> Option<Dir> {
+    world
+        .prop(pos, "facing")
         .and_then(Dir::from_name)
         .map(Dir::opposite)
 }

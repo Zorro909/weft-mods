@@ -30,13 +30,13 @@ impl ModelBox {
         [0, 1, 2].map(|i| self.hi[i] - self.lo[i])
     }
 
-    /// The box as thick as this one that reaches from its face toward `d` out to the edge of
+    /// The box as thick as this one that reaches from its face toward `dir` out to the edge of
     /// the block: a tube's or a shaft's arm off its hub.
-    pub fn arm(self, d: Dir) -> ModelBox {
-        let axis = d.face() as usize / 2;
+    pub fn arm(self, dir: Dir) -> ModelBox {
+        let axis = dir.face() as usize / 2;
         let (mut lo, mut hi) = (self.lo, self.hi);
         // Even faces are the low side of their axis.
-        if d.face().is_multiple_of(2) {
+        if dir.face().is_multiple_of(2) {
             (lo[axis], hi[axis]) = (0.0, self.lo[axis]);
         } else {
             (lo[axis], hi[axis]) = (self.hi[axis], 16.0);

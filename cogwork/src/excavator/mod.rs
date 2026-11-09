@@ -106,7 +106,7 @@ impl Dig {
     }
 
     pub fn set_head(&mut self, at: Vec3) {
-        self.head = at.to_array().map(|v| v as f32);
+        self.head = at.to_array().map(|coord| coord as f32);
     }
 
     /// The cubes of the layer it mines, across the whole frame. None once the cursor has passed
@@ -119,10 +119,10 @@ impl Dig {
 
 /// Keeps the cubes the excavator at `pos` needs loaded while it mines, then lets them go.
 /// Building the frame keeps nothing loaded: it takes a player near.
-fn keep_loaded(w: &World, pos: Pos, d: &Dig) {
-    match d.stage() {
-        Stage::Mine => crate::loading::keep_machine(w, pos, d.mining_layer()),
-        _ => crate::loading::release_machine(w, pos),
+fn keep_loaded(world: &World, pos: Pos, dig: &Dig) {
+    match dig.stage() {
+        Stage::Mine => crate::loading::keep_machine(world, pos, dig.mining_layer()),
+        _ => crate::loading::release_machine(world, pos),
     }
 }
 
@@ -136,8 +136,9 @@ pub fn register(r: &mut Registry) {
     crate::machine::block(r.block(&EXCAVATOR), "excavator")
         .hardness(4.0)
         .on_break(crate::loading::let_go)
-        .entity(|e| {
-            e.attach(&DIG)
+        .entity(|entity| {
+            entity
+                .attach(&DIG)
                 .attach(&rig::RIG)
                 // In from any number of engines: standby alone can pass 1000 on a large area.
                 .attach_with(&ENERGY, crate::machine::energy(20_000, 20_000))
@@ -175,24 +176,24 @@ fn screen(ui: &mut Ui) {
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
-                ui.text_bind(|c, out| {
-                    let d = c.menu_component(&DIG).unwrap_or_default();
-                    let status: &str = d.status().into();
-                    let layer = d.cursor.y;
+                ui.text_bind(|view, out| {
+                    let dig = view.menu_component(&DIG).unwrap_or_default();
+                    let status: &str = dig.status().into();
+                    let layer = dig.cursor.y;
                     out.set(
                         &format!("cogwork.excavator.{status}"),
-                        &[Arg::Int(layer as i64), Arg::Int(d.frame.standby())],
+                        &[Arg::Int(layer as i64), Arg::Int(dig.frame.standby())],
                     );
                 });
-                ui.text_bind(|c, out| {
-                    let d = c.menu_component(&DIG).unwrap_or_default();
-                    let [x, z] = d.frame.inside();
+                ui.text_bind(|view, out| {
+                    let dig = view.menu_component(&DIG).unwrap_or_default();
+                    let [x, z] = dig.frame.inside();
                     out.set(
                         "cogwork.excavator.area",
                         &[
                             Arg::Int(x as i64),
                             Arg::Int(z as i64),
-                            Arg::Int(d.frame.standby()),
+                            Arg::Int(dig.frame.standby()),
                         ],
                     );
                 });
@@ -217,13 +218,13 @@ mod tests {
 
     #[test]
     fn an_unknown_saved_number_reads_as_the_default() {
-        let d = Dig {
+        let dig = Dig {
             stage: 99,
             status: 99,
             ..Dig::default()
         };
-        assert_eq!(d.stage(), Stage::New, "a stage from a newer cogwork");
-        assert_eq!(d.status(), Status::Idle, "a status from a newer cogwork");
+        assert_eq!(dig.stage(), Stage::New, "a stage from a newer cogwork");
+        assert_eq!(dig.status(), Status::Idle, "a status from a newer cogwork");
     }
 
     #[test]
@@ -241,20 +242,20 @@ mod tests {
     fn no_cube_is_let_go_and_kept_again_over_a_dig() {
         // The frame stands across the cubes from y 0 to 15 and from 16 up.
         let frame = Frame::from(([3, 13, 3], [40, 17, 40]));
-        let mut d = Dig {
+        let mut dig = Dig {
             stage: Stage::Mine as u32,
             frame,
             cursor: frame.first(),
             ..Dig::default()
         };
         // What it keeps after each block, as a tick does once the cursor has moved on.
-        let mut kept = vec![d.mining_layer().expect("the top layer")];
-        while d.cursor.y >= dig::FLOOR_Y {
-            d.cursor = frame.next(d.cursor);
-            kept.extend(d.mining_layer());
+        let mut kept = vec![dig.mining_layer().expect("the top layer")];
+        while dig.cursor.y >= dig::FLOOR_Y {
+            dig.cursor = frame.next(dig.cursor);
+            kept.extend(dig.mining_layer());
         }
         assert_eq!(
-            kept.last().map(|c| c.lo().y),
+            kept.last().map(|cubes| cubes.lo().y),
             Some(-4),
             "nothing below the floor"
         );

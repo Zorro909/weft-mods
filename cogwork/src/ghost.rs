@@ -88,11 +88,11 @@ pub fn cell(
     ui.row(S::row().gap(-SLOT), |ui| {
         under(ui);
         let size = S::default().class("cogwork:ghost_cell").size(SLOT, SLOT);
-        ui.button("", size, move |c| click(c, cell));
+        ui.button("", size, move |view| click(view, cell));
         // Text pixels are half a GUI pixel: 1.5 draws the ghost 12 wide, 3 in from the edges.
         ui.column(S::column().size(SLOT, SLOT).pad(3.0), |ui| {
-            ui.text_bind_styled(S::column().scale(1.5), move |c, out| {
-                let ghost = match shown(c) {
+            ui.text_bind_styled(S::column().scale(1.5), move |view, out| {
+                let ghost = match shown(view) {
                     0 => Arg::Text(""),
                     item => Arg::Item(item),
                 };
@@ -103,27 +103,28 @@ pub fn cell(
 }
 
 /// Client side of a click on `cell`: sends what is on the cursor.
-fn click(c: &ClientView, cell: u32) {
-    let Some(owner) = c.menu_owner() else {
+fn click(view: &ClientView, cell: u32) {
+    let Some(owner) = view.menu_owner() else {
         return;
     };
-    let client = c.client();
+    let client = view.client();
     let item = client.cursor_stack().item;
     client.send(&SET_GHOST, &SetGhost { owner, cell, item });
     client.play_sound(&crate::sounds::GHOST, None, 1.0);
 }
 
 /// Server side: sets the ghost when the player is at the machine, whichever kind it is.
-fn set(p: &Packet, g: SetGhost) {
-    let w = p.world();
-    let (Some(machine), Some(player)) = (w.entity(g.owner), w.entity(p.player())) else {
+fn set(packet: &Packet, asked: SetGhost) {
+    let world = packet.world();
+    let (Some(machine), Some(player)) = (world.entity(asked.owner), world.entity(packet.player()))
+    else {
         return;
     };
     let near = within_reach(machine.pos, player.pos);
-    let known = g.item == 0 || !item_name(g.item).is_empty();
+    let known = asked.item == 0 || !item_name(asked.item).is_empty();
     if near && known {
-        crate::bench::set_ghost(&w, g.owner, g.cell, g.item);
-        crate::tube::set_sample(&w, g.owner, g.cell, g.item);
+        crate::bench::set_ghost(&world, asked.owner, asked.cell, asked.item);
+        crate::tube::set_sample(&world, asked.owner, asked.cell, asked.item);
     }
 }
 

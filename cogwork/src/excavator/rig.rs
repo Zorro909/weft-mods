@@ -77,8 +77,10 @@ fn piece<'a>(
         .size(0.5, 0.5)
 }
 
-fn claims(w: &World, owner: u64, id: u64) -> bool {
-    w.component(owner, &RIG).is_some_and(|rig| rig.holds(id))
+fn claims(world: &World, owner: u64, id: u64) -> bool {
+    world
+        .component(owner, &RIG)
+        .is_some_and(|rig| rig.holds(id))
 }
 
 impl Rig {
@@ -100,9 +102,9 @@ struct Piece {
 }
 
 /// Where each piece goes now.
-fn layout(d: &Dig) -> Vec<Piece> {
-    let head = d.head();
-    let Frame { lo, hi } = d.frame;
+fn layout(dig: &Dig) -> Vec<Piece> {
+    let head = dig.head();
+    let Frame { lo, hi } = dig.frame;
     let top = hi.y as f64 + 0.25;
     let carriage = Vec3 { y: top, ..head };
     // On top of the block it drills, only its tip in it; never above the carriage.
@@ -123,15 +125,15 @@ fn layout(d: &Dig) -> Vec<Piece> {
     // Shaft pieces hang from the carriage down to the bit; the lowest reaches into the ground.
     let reach = top - (bit.y + BIT_HEIGHT);
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
-    let below_carriage = |k: usize| carriage.offset(0.0, -PIECE * k as f64, 0.0);
-    pieces.extend((0..shafts).map(|k| piece(SHAFT_SLOTS + k, &SHAFT, below_carriage(k), 0.0)));
+    let below_carriage = |i: usize| carriage.offset(0.0, -PIECE * i as f64, 0.0);
+    pieces.extend((0..shafts).map(|i| piece(SHAFT_SLOTS + i, &SHAFT, below_carriage(i), 0.0)));
     let beams = carriage.offset(0.0, 0.125, 0.0);
     let (lo, hi) = (lo.center(), hi.center());
-    for (k, (kind, x)) in spans(lo.x, hi.x).into_iter().enumerate() {
-        pieces.push(piece(X_BEAM_SLOTS + k, kind, Vec3 { x, ..beams }, 0.0));
+    for (i, (kind, x)) in spans(lo.x, hi.x).into_iter().enumerate() {
+        pieces.push(piece(X_BEAM_SLOTS + i, kind, Vec3 { x, ..beams }, 0.0));
     }
-    for (k, (kind, z)) in spans(lo.z, hi.z).into_iter().enumerate() {
-        pieces.push(piece(Z_BEAM_SLOTS + k, kind, Vec3 { z, ..beams }, 90.0));
+    for (i, (kind, z)) in spans(lo.z, hi.z).into_iter().enumerate() {
+        pieces.push(piece(Z_BEAM_SLOTS + i, kind, Vec3 { z, ..beams }, 90.0));
     }
     pieces
 }
@@ -143,34 +145,34 @@ fn spans(a: f64, b: f64) -> Vec<(&'static EntityKind, f64)> {
     let long = (blocks / PIECE as usize).min(LONG_BEAMS);
     let ends = (blocks - long * PIECE as usize).min(BEAMS - LONG_BEAMS);
     let after_long = a + PIECE * long as f64;
-    let long = (0..long).map(|k| (&BEAM, a + PIECE * (k as f64 + 0.5)));
-    let ends = (0..ends).map(|k| (&BEAM_END, after_long + k as f64 + 0.5));
+    let long = (0..long).map(|i| (&BEAM, a + PIECE * (i as f64 + 0.5)));
+    let ends = (0..ends).map(|i| (&BEAM_END, after_long + i as f64 + 0.5));
     long.chain(ends).collect()
 }
 
 /// Puts the rig where the drill is, while the excavator mines; takes it away otherwise.
-pub fn update(w: &World, owner: u64, d: &Dig) {
-    let Some(mut rig) = w.component(owner, &RIG) else {
+pub fn update(world: &World, owner: u64, dig: &Dig) {
+    let Some(mut rig) = world.component(owner, &RIG) else {
         return;
     };
-    let wanted = if d.stage() == Stage::Mine {
-        layout(d)
+    let wanted = if dig.stage() == Stage::Mine {
+        layout(dig)
     } else {
         Vec::new()
     };
     let mut used = [false; SLOTS];
     for piece in wanted {
         let id = &mut rig.ids[piece.slot];
-        *id = crate::owned::place(w, owner, *id, piece.kind, piece.at, piece.yaw);
+        *id = crate::owned::place(world, owner, *id, piece.kind, piece.at, piece.yaw);
         used[piece.slot] = true;
     }
     for (slot, id) in rig.ids.iter_mut().enumerate() {
         if !used[slot] && *id != 0 {
-            w.despawn(*id);
+            world.despawn(*id);
             *id = 0;
         }
     }
-    w.set_component(owner, &RIG, rig);
+    world.set_component(owner, &RIG, rig);
 }
 
 #[cfg(test)]
@@ -179,18 +181,18 @@ mod tests {
 
     /// An excavator mining with its drill at `head`, under a frame whose top is at 8.
     fn mining_at(head: Vec3) -> Dig {
-        let mut d = Dig {
+        let mut dig = Dig {
             stage: Stage::Mine as u32,
             frame: Frame::from(([0, 0, 0], [10, 8, 10])),
             ..Dig::default()
         };
-        d.set_head(head);
-        d
+        dig.set_head(head);
+        dig
     }
 
-    /// Where the pieces of `kind` of the excavator `d` are placed.
-    fn placed(d: &Dig, kind: &'static EntityKind) -> impl Iterator<Item = Vec3> {
-        let pieces = layout(d).into_iter();
+    /// Where the pieces of `kind` of the excavator `dig` are placed.
+    fn placed(dig: &Dig, kind: &'static EntityKind) -> impl Iterator<Item = Vec3> {
+        let pieces = layout(dig).into_iter();
         pieces
             .filter(move |piece| std::ptr::eq(piece.kind, kind))
             .map(|piece| piece.at)
@@ -216,7 +218,7 @@ mod tests {
         };
         pieces
             .iter()
-            .map(|&(kind, c)| (c - half(kind), c + half(kind)))
+            .map(|&(kind, center)| (center - half(kind), center + half(kind)))
             .collect()
     }
 
@@ -244,16 +246,16 @@ mod tests {
     fn ten_blocks_take_two_pieces_and_two_ends() {
         let whole: Vec<bool> = spans(0.5, 10.5)
             .iter()
-            .map(|p| std::ptr::eq(p.0, &BEAM))
+            .map(|piece| std::ptr::eq(piece.0, &BEAM))
             .collect();
         assert_eq!(whole, [true, true, false, false]);
     }
 
     #[test]
     fn shafts_reach_from_the_carriage_down_to_the_bit() {
-        let d = mining_at(Vec3::new(5.5, -3.0, 5.5));
+        let dig = mining_at(Vec3::new(5.5, -3.0, 5.5));
         // Each piece's top, where it is placed.
-        let shafts: Vec<f64> = placed(&d, &SHAFT).map(|at| at.y).collect();
+        let shafts: Vec<f64> = placed(&dig, &SHAFT).map(|at| at.y).collect();
         let lowest = shafts.iter().copied().fold(f64::MAX, f64::min);
         assert!(
             lowest - PIECE <= -2.0 + BIT_HEIGHT,
@@ -270,8 +272,8 @@ mod tests {
         // An entity is lit by the block half a block above its place; the drilled block is the
         // highest solid one under the bit.
         for depth in [-3.0, -3.5, -5.0, -6.25] {
-            let d = mining_at(Vec3::new(5.5, depth, 5.5));
-            for at in placed(&d, &SHAFT) {
+            let dig = mining_at(Vec3::new(5.5, depth, 5.5));
+            for at in placed(&dig, &SHAFT) {
                 let lit_by = (at.y + 0.5).floor();
                 assert!(lit_by > depth, "drilling at {depth}: piece at {}", at.y);
             }
@@ -280,8 +282,8 @@ mod tests {
 
     #[test]
     fn the_bit_stands_on_the_block_it_drills() {
-        let d = mining_at(Vec3::new(5.5, -3.0, 5.5));
-        let bit: Vec<f64> = placed(&d, &BIT).map(|at| at.y).collect();
+        let dig = mining_at(Vec3::new(5.5, -3.0, 5.5));
+        let bit: Vec<f64> = placed(&dig, &BIT).map(|at| at.y).collect();
         assert_eq!(bit, [-2.0], "its foot on top of the block at -3");
     }
 }

@@ -91,7 +91,7 @@ pub fn register(r: &mut Registry) {
     for (block, kind, texture) in PLAIN {
         shape::tube(r.block(block), texture, Arms::Same)
             .tab(&crate::TAB)
-            .entity(move |e| tube_entity(e, kind));
+            .entity(move |entity| tube_entity(entity, kind));
     }
     shape::tube(
         r.block(&DIRECTING_TUBE),
@@ -100,38 +100,40 @@ pub fn register(r: &mut Registry) {
     )
     .on_use(shape::turn_output)
     .tab(&crate::TAB)
-    .entity(|e| tube_entity(e, Kind::Directing));
+    .entity(|entity| tube_entity(entity, Kind::Directing));
     sorting::register(r);
     visual::register(r);
 }
 
 /// A tube's block entity: its `Tube` state and slots for the items it carries.
-fn tube_entity(e: EntityBuilder<'_>, kind: Kind) -> EntityBuilder<'_> {
-    let e = e.attach_with(&TUBE, Tube::of(kind)).inventory(SLOTS as u32);
+fn tube_entity(builder: EntityBuilder<'_>, kind: Kind) -> EntityBuilder<'_> {
+    let builder = builder
+        .attach_with(&TUBE, Tube::of(kind))
+        .inventory(SLOTS as u32);
     if kind != Kind::Timber {
-        return e;
+        return builder;
     }
     // Engines drive the timber tube's pulls.
-    e.attach_with(&ENERGY, crate::machine::energy(2_000, 200))
+    builder.attach_with(&ENERGY, crate::machine::energy(2_000, 200))
 }
 
 /// Whether the block at `pos` is a tube. Asked of its block, which is cheaper than reading
 /// its `Tube`.
-pub fn is_tube(w: &World, pos: Pos) -> bool {
-    w.block_typed(pos).has(&TUBES)
+pub fn is_tube(world: &World, pos: Pos) -> bool {
+    world.block_typed(pos).has(&TUBES)
 }
 
 /// A slot of the tube `at` (its entity, or its block) that neither holds a stack nor has an
 /// item on its way.
-fn free_slot(w: &World, at: impl Into<Holder>, tube: &Tube) -> Option<usize> {
-    let inv = w.inventory(at);
-    (0..SLOTS).find(|&k| inv.get(k as u32).is_empty() && tube.moving[k].is_none())
+fn free_slot(world: &World, at: impl Into<Holder>, tube: &Tube) -> Option<usize> {
+    let inventory = world.inventory(at);
+    (0..SLOTS).find(|&slot| inventory.get(slot as u32).is_empty() && tube.moving[slot].is_none())
 }
 
 /// Empties `slot` of the tube `id`: its stack, the item's picture, and where it was on its way.
-fn clear_slot(w: &World, id: u64, tube: &mut Tube, slot: usize) {
-    w.inventory(id).set(slot as u32, ItemStack::EMPTY);
-    visual::remove(w, tube.moving[slot].visual);
+fn clear_slot(world: &World, id: u64, tube: &mut Tube, slot: usize) {
+    world.inventory(id).set(slot as u32, ItemStack::EMPTY);
+    visual::remove(world, tube.moving[slot].visual);
     tube.moving[slot] = Motion::default();
 }
 

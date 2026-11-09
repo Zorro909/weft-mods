@@ -35,7 +35,7 @@ impl Role {
         match self {
             Role::Home => 0,
             Role::Work => 1,
-            Role::Link(n) => 2 + n as i32,
+            Role::Link(nth) => 2 + nth as i32,
         }
     }
 }
@@ -47,17 +47,20 @@ pub fn register(r: &mut Registry) {
 
 /// The key of the ticket in `role` of the block at `pos`: the same for that block across
 /// restarts, so its ticket can be let go when it breaks.
-fn key(w: &World, pos: Pos, role: Role) -> u64 {
-    let numbers = [w.dimension() as i32, pos.x, pos.y, pos.z, role.number()];
-    let bytes: Vec<u8> = numbers.iter().flat_map(|n| n.to_le_bytes()).collect();
+fn key(world: &World, pos: Pos, role: Role) -> u64 {
+    let numbers = [world.dimension() as i32, pos.x, pos.y, pos.z, role.number()];
+    let bytes: Vec<u8> = numbers
+        .iter()
+        .flat_map(|number| number.to_le_bytes())
+        .collect();
     XxHash3_64::oneshot(&bytes)
 }
 
 /// A block that keeps cubes loaded was broken: its tickets go now, even its own and its work's
 /// restored with the world that cogwork has not noted again yet.
-pub fn let_go(w: &World, change: &BlockChange) {
+pub fn let_go(world: &World, change: &BlockChange) {
     let pos = Pos::from(change.pos);
-    tickets::release_any(w, key(w, pos, Role::Home));
-    tickets::release_any(w, key(w, pos, Role::Work));
-    machines::release_links(w, pos, 0);
+    tickets::release_any(world, key(world, pos, Role::Home));
+    tickets::release_any(world, key(world, pos, Role::Work));
+    machines::release_links(world, pos, 0);
 }

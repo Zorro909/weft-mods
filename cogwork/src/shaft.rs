@@ -11,13 +11,14 @@ pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
 const HUB: ModelBox = ModelBox::new([6.0; 3], [10.0; 3]);
 
 pub fn register(r: &mut Registry) {
-    let mut b = r.block(&TORQUE_SHAFT);
-    for d in Dir::ALL {
-        b = b.prop(d.name(), ["false", "true"]);
+    let mut builder = r.block(&TORQUE_SHAFT);
+    for dir in Dir::ALL {
+        builder = builder.prop(dir.name(), ["false", "true"]);
     }
-    b.states(model)
-        .on_place(|w, change| refresh(w, change.pos.into()))
-        .on_neighbor(|e| refresh(&e.world(), e.pos().into()))
+    builder
+        .states(model)
+        .on_place(|world, change| refresh(world, change.pos.into()))
+        .on_neighbor(|event| refresh(&event.world(), event.pos().into()))
         .tag("conductor")
         .hardness(0.5)
         .mined_by("pickaxe", tool_tier::HAND)
@@ -25,32 +26,35 @@ pub fn register(r: &mut Registry) {
         .tab(&crate::TAB);
 }
 
-fn model<'s>(p: &Props, s: State<'s>) -> State<'s> {
-    let rod = |s: State<'s>, part: ModelBox| {
+fn model<'s>(props: &Props, state: State<'s>) -> State<'s> {
+    let rod = |state: State<'s>, part: ModelBox| {
         // Its boxes are what it collides with, too.
-        s.model_box_faces(part.lo, part.hi, [("torque_shaft", abi::UV_FROM_BOX); 6])
+        state.model_box_faces(part.lo, part.hi, [("torque_shaft", abi::UV_FROM_BOX); 6])
     };
-    let mut s = rod(s.texture("torque_shaft"), HUB);
-    for d in Dir::ALL.into_iter().filter(|d| p.is(d.name(), "true")) {
-        s = rod(s, HUB.arm(d));
+    let mut state = rod(state.texture("torque_shaft"), HUB);
+    for dir in Dir::ALL
+        .into_iter()
+        .filter(|dir| props.is(dir.name(), "true"))
+    {
+        state = rod(state, HUB.arm(dir));
     }
-    s
+    state
 }
 
 /// Reaches toward every conductor and every block entity that holds energy. `CONDUCTOR` is the
 /// engine's own tag.
-fn refresh(w: &World, pos: Pos) {
-    let shaft = w.block_typed(pos);
+fn refresh(world: &World, pos: Pos) {
+    let shaft = world.block_typed(pos);
     if !shaft.is(&TORQUE_SHAFT) {
         return;
     }
     let mut next = shaft;
-    for d in Dir::ALL {
-        let at = pos.toward(d);
-        let joins = w.block_typed(at).has(&CONDUCTOR) || w.component(at, &ENERGY).is_some();
-        next = next.with_flag(d.name(), joins);
+    for dir in Dir::ALL {
+        let at = pos.toward(dir);
+        let joins = world.block_typed(at).has(&CONDUCTOR) || world.component(at, &ENERGY).is_some();
+        next = next.with_flag(dir.name(), joins);
     }
     if next != shaft {
-        w.set_block_typed(pos, next);
+        world.set_block_typed(pos, next);
     }
 }

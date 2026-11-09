@@ -81,8 +81,9 @@ fn spring_engine(r: &mut Registry) {
         .hardness(1.5)
         .mined_by("axe", tool_tier::HAND)
         .tab(&crate::TAB)
-        .entity(|e| {
-            e.attach_with(&ENGINE, Engine::of(Kind::Spring))
+        .entity(|entity| {
+            entity
+                .attach_with(&ENGINE, Engine::of(Kind::Spring))
                 .attach_with(&ENERGY, gives(1_000, 50))
         });
 }
@@ -94,8 +95,9 @@ fn ember_engine(r: &mut Registry) {
         .hardness(3.0)
         .mined_by("axe", tool_tier::HAND)
         .tab(&crate::TAB)
-        .entity(|e| {
-            e.attach_with(&ENGINE, Engine::of(Kind::Ember))
+        .entity(|entity| {
+            entity
+                .attach_with(&ENGINE, Engine::of(Kind::Ember))
                 .attach_with(&ENERGY, gives(10_000, 200))
                 .inventory(1)
         })
@@ -135,23 +137,23 @@ fn ember_screen(ui: &mut Ui) {
                     "flame",
                     S::default().size(14.0, 14.0),
                     abi::ui_dir::UP,
-                    |c| {
-                        c.menu_component(&ENGINE)
-                            .map_or(0.0, |e| ratio(e.burn, e.burn_max))
+                    |view| {
+                        view.menu_component(&ENGINE)
+                            .map_or(0.0, |engine| ratio(engine.burn, engine.burn_max))
                     },
                 );
                 ui.group("fuel");
             });
             ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
-                ui.text_bind(|c, out| {
-                    let e = c.menu_component(&ENGINE).unwrap_or_default();
-                    let key = if e.is_overheated() {
+                ui.text_bind(|view, out| {
+                    let engine = view.menu_component(&ENGINE).unwrap_or_default();
+                    let key = if engine.is_overheated() {
                         "cogwork.engine.overheated"
                     } else {
                         "cogwork.engine.heat"
                     };
-                    out.set(key, &[Arg::Int(e.heat as i64 / 10)]);
+                    out.set(key, &[Arg::Int(engine.heat as i64 / 10)]);
                 });
             });
         });

@@ -112,37 +112,40 @@ mod tests {
 
     #[test]
     fn a_saved_face_reads_as_its_side() {
-        let m = Motion::entering(1, Dir::North);
-        assert_eq!(m.came_by(), Some(Dir::North), "the face it came by");
-        assert_eq!(m.leaves_by(), None, "no side chosen yet");
+        let motion = Motion::entering(1, Dir::North);
+        assert_eq!(motion.came_by(), Some(Dir::North), "the face it came by");
+        assert_eq!(motion.leaves_by(), None, "no side chosen yet");
         assert_eq!(Motion::at_hub(1).came_by(), None, "put in at the hub");
     }
 
     #[test]
     fn an_item_waits_at_the_hub_until_it_has_a_way_out() {
-        let mut m = Motion::entering(1, Dir::West);
+        let mut motion = Motion::entering(1, Dir::West);
         for _ in 0..20 {
-            m.step();
+            motion.step();
         }
-        assert_eq!(m.pos, HUB, "no further than the hub");
-        assert!(m.reached_hub() && !m.at_far_face(), "waiting there");
-        m.leave_by(Dir::Up);
+        assert_eq!(motion.pos, HUB, "no further than the hub");
+        assert!(
+            motion.reached_hub() && !motion.at_far_face(),
+            "waiting there"
+        );
+        motion.leave_by(Dir::Up);
         for _ in 0..20 {
-            m.step();
+            motion.step();
         }
-        assert!(m.at_far_face(), "on to the face it chose");
+        assert!(motion.at_far_face(), "on to the face it chose");
     }
 
     #[test]
     fn an_item_keeps_its_speed_and_picture_into_the_next_tube() {
-        let mut m = Motion {
+        let mut motion = Motion {
             visual: 7,
             speed: 0.3,
             pos: 1.0,
             ..Motion::entering(1, Dir::West)
         };
-        m.leave_by(Dir::East);
-        let next = m.handed_on(Dir::West);
+        motion.leave_by(Dir::East);
+        let next = motion.handed_on(Dir::West);
         assert_eq!((next.visual, next.speed), (7, 0.3), "as it was");
         assert_eq!(next.came_by(), Some(Dir::West), "in by the facing side");
         assert_eq!((next.leaves_by(), next.pos), (None, 0.0), "at the start");
@@ -150,10 +153,14 @@ mod tests {
 
     #[test]
     fn an_item_turned_back_goes_to_the_hub_again() {
-        let mut m = Motion::entering(1, Dir::West);
-        m.leave_by(Dir::East);
-        m.turn_back();
-        assert_eq!(m.came_by(), Some(Dir::East), "from where it stood");
-        assert_eq!((m.leaves_by(), m.pos), (None, 0.0), "to choose again");
+        let mut motion = Motion::entering(1, Dir::West);
+        motion.leave_by(Dir::East);
+        motion.turn_back();
+        assert_eq!(motion.came_by(), Some(Dir::East), "from where it stood");
+        assert_eq!(
+            (motion.leaves_by(), motion.pos),
+            (None, 0.0),
+            "to choose again"
+        );
     }
 }

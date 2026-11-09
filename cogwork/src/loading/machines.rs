@@ -17,31 +17,31 @@ const SECTION: i32 = 4;
 ///
 /// A machine's `work` should not let go of a cube it comes back to later: unloaded, a cube is
 /// written to disk at once, and read back from it when wanted again.
-pub fn keep_machine(w: &World, pos: Pos, work: Option<Cubes>) {
+pub fn keep_machine(world: &World, pos: Pos, work: Option<Cubes>) {
     let home = Cubes::around(pos, 1);
-    tickets::keep(w, key(w, pos, Role::Home), home, Keeper::Machine);
+    tickets::keep(world, key(world, pos, Role::Home), home, Keeper::Machine);
     let work = work.filter(|cubes| !home.contains(cubes));
-    keep_or_release(w, key(w, pos, Role::Work), work);
+    keep_or_release(world, key(world, pos, Role::Work), work);
     let links = work.map(|cubes| links(pos, cubes)).unwrap_or_default();
     for (i, &cube) in links.iter().enumerate() {
         let link = Some(Cubes::between(cube, cube));
-        keep_or_release(w, key(w, pos, Role::Link(i as u32)), link);
+        keep_or_release(world, key(world, pos, Role::Link(i as u32)), link);
     }
-    release_links(w, pos, links.len());
+    release_links(world, pos, links.len());
 }
 
 /// Lets go of what the machine at `pos` kept loaded: it is done.
-pub fn release_machine(w: &World, pos: Pos) {
-    tickets::release(w, key(w, pos, Role::Home));
-    tickets::release(w, key(w, pos, Role::Work));
-    release_links(w, pos, 0);
+pub fn release_machine(world: &World, pos: Pos) {
+    tickets::release(world, key(world, pos, Role::Home));
+    tickets::release(world, key(world, pos, Role::Work));
+    release_links(world, pos, 0);
 }
 
 /// Lets go of the links of the machine at `pos` from the `from`th on, up to the first cogwork
 /// doesn't hold. Any after that, no longer renewed, runs out on its own.
-pub(super) fn release_links(w: &World, pos: Pos, from: usize) {
+pub(super) fn release_links(world: &World, pos: Pos, from: usize) {
     let mut i = from as u32;
-    while tickets::release(w, key(w, pos, Role::Link(i))) {
+    while tickets::release(world, key(world, pos, Role::Link(i))) {
         i += 1;
     }
 }
@@ -65,10 +65,10 @@ fn links(pos: Pos, work: Cubes) -> Vec<CubePos> {
     links
 }
 
-fn keep_or_release(w: &World, key: u64, cubes: Option<Cubes>) {
+fn keep_or_release(world: &World, key: u64, cubes: Option<Cubes>) {
     match cubes {
-        Some(cubes) => drop(tickets::keep(w, key, cubes, Keeper::Machine)),
-        None => drop(tickets::release(w, key)),
+        Some(cubes) => drop(tickets::keep(world, key, cubes, Keeper::Machine)),
+        None => drop(tickets::release(world, key)),
     }
 }
 
@@ -99,7 +99,7 @@ mod tests {
     use super::*;
 
     fn heights(cubes: &[CubePos]) -> Vec<i32> {
-        cubes.iter().map(|c| c.y).collect()
+        cubes.iter().map(|cube| cube.y).collect()
     }
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
         let joining = links(pos, below);
         assert_eq!(heights(&joining), [16, 12, 8, 4], "from cube 20 down to 3");
         assert!(
-            joining.iter().all(|c| c.x == 0 && c.z == 0),
+            joining.iter().all(|cube| cube.x == 0 && cube.z == 0),
             "its own column"
         );
         let above = Cubes::around(Pos::new(30, 400, 30), 0);
@@ -129,7 +129,7 @@ mod tests {
             chain.push(work.lo().y);
             let touching = chain
                 .windows(2)
-                .all(|p| (section(p[0]) - section(p[1])).abs() <= 1);
+                .all(|pair| (section(pair[0]) - section(pair[1])).abs() <= 1);
             assert!(touching, "{chain:?} for work at {work_y}");
         }
     }

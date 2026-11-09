@@ -23,54 +23,54 @@ fn items_for(energy: i64) -> u32 {
 /// A timber tube's pull, once a stroke: it takes as many items out of the machines it touches as
 /// the energy of that stroke pays for. The energy is used up whether or not there was anything
 /// to take, so a tube left idle doesn't save up for a burst.
-pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
+pub fn pull(world: &World, id: u64, pos: Pos, tube: &mut Tube) {
     tube.timer = tube.timer.saturating_sub(1);
     if tube.timer > 0 {
         return;
     }
     tube.timer = PULL_EVERY;
-    let energy = w
+    let energy = world
         .component_mut(id, &ENERGY)
-        .map_or(0, |e| std::mem::take(&mut e.stored));
+        .map_or(0, |store| std::mem::take(&mut store.stored));
     let paid_for = items_for(energy);
     let mut left = paid_for;
-    for d in Dir::ALL {
-        let Some(slot) = free_slot(w, id, tube).filter(|_| left > 0) else {
+    for dir in Dir::ALL {
+        let Some(slot) = free_slot(world, id, tube).filter(|_| left > 0) else {
             break;
         };
-        let Some(from) = source(w, pos, d) else {
+        let Some(from) = source(world, pos, dir) else {
             continue;
         };
-        let stack = crate::store::extract(w, from, left);
+        let stack = crate::store::extract(world, from, left);
         if stack.is_empty() {
             continue;
         }
         left -= stack.count;
-        w.inventory(id).set(slot as u32, stack);
-        tube.moving[slot] = Motion::entering(stack.item, d);
+        world.inventory(id).set(slot as u32, stack);
+        tube.moving[slot] = Motion::entering(stack.item, dir);
     }
     if left < paid_for {
-        w.play_sound(&crate::sounds::TUBE_PULL, pos.center(), 1.0);
+        world.play_sound(&crate::sounds::TUBE_PULL, pos.center(), 1.0);
     }
 }
 
-/// The machine (not a tube) the tube at `pos` touches toward `d`.
-fn source(w: &World, pos: Pos, d: Dir) -> Option<Pos> {
-    let other = pos.toward(d);
-    let machine = super::connects_to_tube(w, pos, d) && !super::is_tube(w, other);
+/// The machine (not a tube) the tube at `pos` touches toward `dir`.
+fn source(world: &World, pos: Pos, dir: Dir) -> Option<Pos> {
+    let other = pos.toward(dir);
+    let machine = super::connects_to_tube(world, pos, dir) && !super::is_tube(world, other);
     machine.then_some(other)
 }
 
 /// Puts `stack` into the tube at `pos` at its hub, as much as it has room for; returns the rest.
 /// For machines outside the tube system: their callbacks see tubes outside a batch.
-pub fn inject(w: &World, pos: Pos, stack: ItemStack) -> ItemStack {
-    let Some(tube) = w.component(pos, &TUBE) else {
+pub fn inject(world: &World, pos: Pos, stack: ItemStack) -> ItemStack {
+    let Some(tube) = world.component(pos, &TUBE) else {
         return stack;
     };
-    let Some(slot) = free_slot(w, pos, &tube) else {
+    let Some(slot) = free_slot(world, pos, &tube) else {
         return stack;
     };
-    w.inventory(pos).set(slot as u32, stack);
+    world.inventory(pos).set(slot as u32, stack);
     ItemStack::EMPTY
 }
 

@@ -57,8 +57,10 @@ pub fn register(r: &mut Registry) {
     }
 }
 
-fn claims(w: &World, owner: u64, id: u64) -> bool {
-    w.component(owner, &ENGINE).is_some_and(|e| e.piston == id)
+fn claims(world: &World, owner: u64, id: u64) -> bool {
+    world
+        .component(owner, &ENGINE)
+        .is_some_and(|engine| engine.piston == id)
 }
 
 /// A 16 by 4 by 16 plate centered on the pivot, which is 2 texels above the entity's feet.
@@ -85,13 +87,13 @@ pub fn at_top(stroke: u32) -> bool {
 /// Ticks of travel the piston is above its rest at `stroke` ticks into it, 0..=`TRAVEL`: up, a
 /// rest, back down, a rest.
 fn steps_up(stroke: u32) -> u32 {
-    let s = stroke % STROKE_TICKS;
-    if s < TRAVEL {
-        s
-    } else if s < TRAVEL + REST {
+    let tick = stroke % STROKE_TICKS;
+    if tick < TRAVEL {
+        tick
+    } else if tick < TRAVEL + REST {
         TRAVEL
     } else {
-        (2 * TRAVEL + REST).saturating_sub(s)
+        (2 * TRAVEL + REST).saturating_sub(tick)
     }
 }
 
@@ -112,11 +114,11 @@ pub fn advance(stroke: u32, running: bool, time: u64) -> u32 {
 }
 
 /// Puts the engine `id`'s piston where its stroke has it.
-pub fn show(w: &World, id: u64, pos: Pos, e: &mut Engine) {
-    let Some(out) = model::output(w, pos) else {
+pub fn show(world: &World, id: u64, pos: Pos, engine: &mut Engine) {
+    let Some(out) = model::output(world, pos) else {
         return;
     };
-    let pistons = pistons(e.kind());
+    let pistons = pistons(engine.kind());
     let (entity, yaw) = match out {
         Dir::Up | Dir::Down => (&pistons.flat, 0.0),
         Dir::North | Dir::South => (&pistons.standing, 0.0),
@@ -124,9 +126,9 @@ pub fn show(w: &World, id: u64, pos: Pos, e: &mut Engine) {
     };
     // At rest the piston's middle is 2 texels from the block's toward the base plate; the
     // stroke lifts it toward the trunk's end.
-    let along = (lift(e.stroke) - 2.0) / 16.0;
+    let along = (lift(engine.stroke) - 2.0) / 16.0;
     let feet = point::toward(pos.center(), out, along).offset(0.0, -2.0 / 16.0, 0.0);
-    e.piston = crate::owned::place(w, id, e.piston, entity, feet, yaw);
+    engine.piston = crate::owned::place(world, id, engine.piston, entity, feet, yaw);
 }
 
 #[cfg(test)]
@@ -144,8 +146,8 @@ mod tests {
             16.0,
             "the plate and piston reach the trunk's end"
         );
-        let at_top = lifts.iter().filter(|&&l| l == max).count();
-        let at_bottom = lifts.iter().filter(|&&l| l == 0.0).count();
+        let at_top = lifts.iter().filter(|&&height| height == max).count();
+        let at_bottom = lifts.iter().filter(|&&height| height == 0.0).count();
         assert!(at_top > 2 && at_bottom > 2, "rests at both ends: {lifts:?}");
     }
 
@@ -170,10 +172,12 @@ mod tests {
 
     #[test]
     fn the_piston_reaches_the_top_once_a_stroke() {
-        let tops: Vec<u32> = (0..2 * STROKE_TICKS).filter(|&s| at_top(s)).collect();
+        let tops: Vec<u32> = (0..2 * STROKE_TICKS)
+            .filter(|&stroke| at_top(stroke))
+            .collect();
         assert_eq!(tops.len(), 2, "once in each of two strokes: {tops:?}");
         assert!(
-            tops.iter().all(|&s| lift(s) == LIFT),
+            tops.iter().all(|&stroke| lift(stroke) == LIFT),
             "at the top: {tops:?}"
         );
         assert!(lift(tops[0] - 1) < LIFT, "just reached it");

@@ -31,9 +31,9 @@ impl Frame {
     /// The frame for an excavator at `pos` facing `front`: on the rectangle of the survey
     /// markers next to it, else on a frame already standing beside it (one put back by its old
     /// frame carries on there), else around a 9 by 9 area behind it.
-    pub fn plan(w: &World, pos: Pos, front: Dir) -> Frame {
-        let ground = take_area(w, pos)
-            .or_else(|| standing_frame(w, pos))
+    pub fn plan(world: &World, pos: Pos, front: Dir) -> Frame {
+        let ground = take_area(world, pos)
+            .or_else(|| standing_frame(world, pos))
             .unwrap_or_else(|| square_behind(pos, front, DEFAULT_INSIDE, 1));
         Frame {
             lo: ground.lo.with_y(pos.y),
@@ -59,7 +59,7 @@ impl Frame {
                         y == lo.y || y == hi.y,
                         z == lo.z || z == hi.z,
                     ];
-                    if on.iter().filter(|&&b| b).count() >= 2 {
+                    if on.iter().filter(|&&on_edge| on_edge).count() >= 2 {
                         cells.push(Pos::new(x, y, z));
                     }
                 }
@@ -73,29 +73,33 @@ impl Frame {
         self.first_of_layer(self.hi.y)
     }
 
-    /// Which way along x the row of `c` is mined: 1 on the first row of a layer, then -1, 1 ...
-    pub fn row_dir(&self, c: Pos) -> i32 {
-        if (c.z - (self.lo.z + 1)) % 2 == 0 {
+    /// Which way along x the row of `cell` is mined: 1 on the first row of a layer, then -1, 1 ...
+    pub fn row_dir(&self, cell: Pos) -> i32 {
+        if (cell.z - (self.lo.z + 1)) % 2 == 0 {
             1
         } else {
             -1
         }
     }
 
-    /// The block mined after `c`: along the row, back the other way on the next row, then the
+    /// The block mined after `cell`: along the row, back the other way on the next row, then the
     /// next layer down.
-    pub fn next(&self, c: Pos) -> Pos {
-        let (x0, x1) = (self.lo.x + 1, self.hi.x - 1);
-        let along = c.add_x(self.row_dir(c));
-        if (x0..=x1).contains(&along.x) {
+    pub fn next(&self, cell: Pos) -> Pos {
+        let (first_x, last_x) = (self.lo.x + 1, self.hi.x - 1);
+        let along = cell.add_x(self.row_dir(cell));
+        if (first_x..=last_x).contains(&along.x) {
             return along;
         }
-        if c.z < self.hi.z - 1 {
-            let next_row = c.add_z(1);
-            let x = if self.row_dir(next_row) == 1 { x0 } else { x1 };
+        if cell.z < self.hi.z - 1 {
+            let next_row = cell.add_z(1);
+            let x = if self.row_dir(next_row) == 1 {
+                first_x
+            } else {
+                last_x
+            };
             return Pos { x, ..next_row };
         }
-        self.first_of_layer(c.y - 1)
+        self.first_of_layer(cell.y - 1)
     }
 
     fn first_of_layer(&self, y: i32) -> Pos {
@@ -125,8 +129,8 @@ impl From<([i32; 3], [i32; 3])> for Frame {
 }
 
 /// The bottom ring of a frame beside `pos` at its height, with `pos` outside it.
-fn standing_frame(w: &World, pos: Pos) -> Option<Area> {
-    let ring = ring_bounds(pos, |p| w.block_typed(p).is(&GANTRY_FRAME))?;
+fn standing_frame(world: &World, pos: Pos) -> Option<Area> {
+    let ring = ring_bounds(pos, |at| world.block_typed(at).is(&GANTRY_FRAME))?;
     (!ring.spans(pos)).then_some(ring)
 }
 
@@ -136,24 +140,28 @@ fn standing_frame(w: &World, pos: Pos) -> Option<Area> {
 /// taken.
 fn ring_bounds(pos: Pos, is_frame: impl Fn(Pos) -> bool) -> Option<Area> {
     let start = SIDES
-        .map(|d| pos.toward(d))
+        .map(|dir| pos.toward(dir))
         .into_iter()
-        .find(|&p| is_frame(p))?;
+        .find(|&at| is_frame(at))?;
     let mut seen = HashSet::from([start]);
     let mut todo = vec![start];
     let mut ring = Area::between(start, start);
-    while let Some(p) = todo.pop() {
-        for n in SIDES.map(|d| p.toward(d)) {
-            if seen.len() >= MAX_RING || seen.contains(&n) || !is_frame(n) {
+    while let Some(at) = todo.pop() {
+        for beside in SIDES.map(|dir| at.toward(dir)) {
+            if seen.len() >= MAX_RING || seen.contains(&beside) || !is_frame(beside) {
                 continue;
             }
-            seen.insert(n);
-            todo.push(n);
-            ring.grow_to(n);
+            seen.insert(beside);
+            todo.push(beside);
+            ring.grow_to(beside);
         }
     }
     let flat = Frame::from(ring);
-    let missing = flat.cells().into_iter().filter(|&c| !is_frame(c)).count();
+    let missing = flat
+        .cells()
+        .into_iter()
+        .filter(|&cell| !is_frame(cell))
+        .count();
     let [x, z] = flat.inside();
     (x >= 1 && z >= 1 && missing <= 1).then_some(ring)
 }
@@ -179,11 +187,11 @@ mod tests {
 
     /// The bottom ring of a frame from `lo` to `hi`, less the blocks in `gaps`.
     fn ring(lo: [i32; 3], hi: [i32; 3], gaps: &[[i32; 3]]) -> HashSet<Pos> {
-        let gaps: Vec<Pos> = gaps.iter().map(|&g| g.into()).collect();
+        let gaps: Vec<Pos> = gaps.iter().map(|&gap| gap.into()).collect();
         Frame::from((lo, hi))
             .cells()
             .into_iter()
-            .filter(|c| c.y == lo[1] && !gaps.contains(c))
+            .filter(|cell| cell.y == lo[1] && !gaps.contains(cell))
             .collect()
     }
 
@@ -192,7 +200,7 @@ mod tests {
         let (lo, hi) = ([0, 4, 0], [10, 8, 10]);
         let bottom = Some(Area::between(Pos::new(0, 4, 0), Pos::new(10, 4, 10)));
         let found = |from: [i32; 3], blocks: &HashSet<Pos>| {
-            ring_bounds(from.into(), |p| blocks.contains(&p))
+            ring_bounds(from.into(), |at| blocks.contains(&at))
         };
         let whole = ring(lo, hi, &[]);
         assert_eq!(found([5, 4, 11], &whole), bottom, "beside an edge");
@@ -212,11 +220,11 @@ mod tests {
     #[test]
     fn mining_order_snakes_through_a_layer() {
         let frame = Frame::from(([0, 0, 0], [3, 4, 3]));
-        let mut c = frame.first();
-        let mut seen = vec![c];
+        let mut cell = frame.first();
+        let mut seen = vec![cell];
         for _ in 0..4 {
-            c = frame.next(c);
-            seen.push(c);
+            cell = frame.next(cell);
+            seen.push(cell);
         }
         let expected = [[1, 4, 1], [2, 4, 1], [2, 4, 2], [1, 4, 2], [1, 3, 1]];
         assert_eq!(seen, expected.map(Pos::from), "back and forth, then down");
@@ -227,15 +235,15 @@ mod tests {
         // An even and an odd number of rows, 5 blocks long.
         for hi in [[6, 4, 5], [6, 4, 4]] {
             let frame = Frame::from(([0, 0, 0], hi));
-            let mut c = frame.first();
+            let mut cell = frame.first();
             let mut layer = HashSet::new();
-            while c.y == hi[1] {
-                assert!(layer.insert(c), "{c:?} only once");
-                c = frame.next(c);
+            while cell.y == hi[1] {
+                assert!(layer.insert(cell), "{cell:?} only once");
+                cell = frame.next(cell);
             }
             assert_eq!(layer.len() as i32, 5 * (hi[2] - 1), "the whole inside");
             assert_eq!(
-                c,
+                cell,
                 Pos::new(1, hi[1] - 1, 1),
                 "then the same corner one down"
             );
