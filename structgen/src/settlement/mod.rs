@@ -51,17 +51,14 @@ impl Kind {
     }
 }
 
-/// The side of a region, in blocks: every kind of settlement shares them out, so no two stand
-/// in one region.
-pub const REGION: u32 = 512;
-/// The group every kind of settlement plans in, and lone buildings keep out of.
-pub const GROUP: &str = "settlement";
-
 /// One kind of settlement.
 pub struct Settlement {
-    /// The regions it takes: those whose first random number, from 0 to 1, falls in this range.
-    /// The kinds' ranges don't overlap.
-    pub share: [f32; 2],
+    /// One per region of this many blocks square, at most, with this chance.
+    pub region: u32,
+    pub chance: f32,
+    /// Where two kinds would overlap, the one of higher priority stands: a town over a village
+    /// over a hamlet over a lone building (0).
+    pub priority: i32,
     pub kind: Kind,
     /// Steps of the main road out of the heart, each way, and of a branch.
     pub steps: [usize; 2],
@@ -98,8 +95,7 @@ pub struct Settlement {
 /// Lays out one settlement in the region, if the seed wants one there: at the first of a few
 /// spots where the ground leaves room for it.
 pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
-    let roll = unit(p.random());
-    if !(s.share[0]..s.share[1]).contains(&roll) {
+    if !p.random().chance(s.chance) {
         return Ok(());
     }
     let reach = (s.steps[0] as f32 * roads::STEP + s.heart[0]) as i32 + 20;

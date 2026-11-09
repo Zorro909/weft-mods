@@ -55,13 +55,12 @@ says, and its roof is spruce, oak or birch.
 ## Hamlets, villages and towns
 
 None is drawn beforehand: each is laid out afresh from the seed and the lie of the land
-(`src/settlement/`), from a table of what it holds (`src/villages.rs`). The three share the
-overworld's squares of 512 blocks out between them, at most one to a square, so they never
-overlap.
+(`src/settlement/`), from a table of what it holds (`src/villages.rs`). Where two would
+overlap, only the bigger stands: a town over a village over a hamlet over a lone building.
 
 | | Hamlet | Village | Town |
 |---|---|---|---|
-| Of the squares of 512 blocks | 25% | 32% | 25% |
+| One per square of | 384 blocks, 45% | 512 blocks, 45% | 640 blocks, 50% |
 | Heart | a green with a well | a green with a well | a cobbled market square, fountain and stalls |
 | Roads | gravel lanes | gravel lanes | cobbled streets between stone kerbs |
 | Buildings | 5 cottages or farms | a church, a tavern, a smithy and forge, 5 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 12 town houses, a tower mill |

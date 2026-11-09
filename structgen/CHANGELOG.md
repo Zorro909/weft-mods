@@ -8,9 +8,8 @@
   wind along the ground, buildings facing them, kitchen gardens, small fields and a mill.
   Villages have gravel lanes, a church, a tavern and a smithy; towns have cobbled streets with
   kerbs, a town hall, a guildhall and a coaching inn. `/structure locate town` finds one.
-- `.group(..)` on a planned structure shares the regions out between several kinds, so they
-  never stand on top of each other, and `.avoid(..)` keeps a placed structure out of them: a
-  lone cottage no longer stands in a village's lane.
+- `.priority(n)` on planned and placed structures: where two would overlap, only the one of
+  higher priority stands, so a lone cottage no longer stands in a village's lane.
 - New buildings in one timber-framed style, Hearthwood: cottages, burgher houses, farm
   buildings, mills, inns, smithies, market stalls and hall, a well and a fountain, workyards,
   a guildhall and town hall, chapels and churches. `/structure load` places any of them.

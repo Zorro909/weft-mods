@@ -102,11 +102,10 @@ fn village(p: &mut Plan) -> Result<(), PlanError> {
 }
 ```
 
-Several kinds that shouldn't stand on top of each other can share the regions out:
-`.group("settlement")` on each, with the same `.region(..)`, gives them all the same random
-numbers in a region, so each takes the regions whose first number falls in its own range.
-A structure placed with `place(..)` keeps out of them with `.avoid("settlement")`: wherever it
-would touch one of the group's plans, it isn't placed.
+Where structures would overlap, `.priority(n)` decides, on `plan(..)` and `place(..)` alike:
+a plan that would touch the plan of a structure with a higher priority isn't placed. Only
+what really stands counts, so a hamlet the village gave way to doesn't keep a cottage out.
+Both stand where the priorities are the same (0 by default).
 
 What a planner has:
 

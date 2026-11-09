@@ -57,7 +57,9 @@ static TREES: &[&Template] = &[
 ];
 
 static HAMLET: Settlement = Settlement {
-    share: [0.0, 0.25],
+    region: 384,
+    chance: 0.45,
+    priority: 1,
     kind: Kind::Village,
     steps: [3, 3],
     branches: [0, 1],
@@ -78,7 +80,9 @@ static HAMLET: Settlement = Settlement {
 };
 
 static VILLAGE: Settlement = Settlement {
-    share: [0.25, 0.57],
+    region: 512,
+    chance: 0.45,
+    priority: 2,
     kind: Kind::Village,
     steps: [5, 5],
     branches: [1, 2],
@@ -104,7 +108,9 @@ static VILLAGE: Settlement = Settlement {
 };
 
 static TOWN: Settlement = Settlement {
-    share: [0.57, 0.82],
+    region: 640,
+    chance: 0.5,
+    priority: 3,
     kind: Kind::Town,
     steps: [6, 6],
     branches: [2, 3],
@@ -134,7 +140,7 @@ pub fn register(r: &mut Registry) {
     for (name, settlement) in [("hamlet", &HAMLET), ("village", &VILLAGE), ("town", &TOWN)] {
         structgen_api::plan(r, name, move |p| settlement::plan(p, settlement))
             .dimension(&base_api::OVERWORLD)
-            .region(settlement::REGION)
-            .group(settlement::GROUP);
+            .region(settlement.region)
+            .priority(settlement.priority);
     }
 }

@@ -35,7 +35,7 @@ pub fn plan<'a>(
         planner: Some(Box::new(planner)),
         dimensions: Vec::new(),
         region: DEFAULT_REGION,
-        group: None,
+        priority: 0,
     }
 }
 
@@ -46,7 +46,7 @@ pub struct Planning<'a> {
     planner: Option<Box<Planner>>,
     dimensions: Vec<&'static Dimension>,
     region: i32,
-    group: Option<String>,
+    priority: i32,
 }
 
 impl Planning<'_> {
@@ -60,11 +60,11 @@ impl Planning<'_> {
         self.region = blocks.clamp(1, i32::MAX as u32) as i32;
         self
     }
-    /// Draws the same random numbers in a region as every other structure of `group` with the
-    /// same region size, so they can share the regions out between them: each takes the
-    /// regions whose first number falls in its own range, and none stands where another does.
-    pub fn group(mut self, group: &str) -> Self {
-        self.group = Some(full_name(group));
+    /// Where its plan would touch that of a structure with a higher priority (any of this or
+    /// another mod's, `place`d or `plan`ned), it isn't placed: a town over a village over a lone
+    /// cottage. Both stand where the priorities are the same. 0 by default.
+    pub fn priority(mut self, priority: i32) -> Self {
+        self.priority = priority;
         self
     }
 }
@@ -79,11 +79,9 @@ impl Drop for Planning<'_> {
         };
         let name = full_name(&self.name);
         let dimensions = std::mem::take(&mut self.dimensions);
-        let mut generator = Generator::new(name, self.region, dimensions, planner);
-        if let Some(group) = &self.group {
-            generator = generator.in_group(group);
-        }
-        generator.register(self.registry);
+        Generator::new(name, self.region, dimensions, planner)
+            .with_priority(self.priority)
+            .register(self.registry);
     }
 }
 

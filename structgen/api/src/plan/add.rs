@@ -48,7 +48,7 @@ impl Plan<'_> {
     }
 
     /// An unknown block (`u32::MAX`) is left out; the SDK has already said so.
-    fn fill_state(&mut self, a: Pos, b: Pos, state: BlockState) -> Result<(), PlanError> {
+    pub(crate) fn fill_state(&mut self, a: Pos, b: Pos, state: BlockState) -> Result<(), PlanError> {
         self.check()?;
         let area = Area::between(a, b);
         self.inside("blocks", area)?;

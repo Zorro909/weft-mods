@@ -31,13 +31,10 @@ pub(crate) struct Generator {
     pub dimensions: Vec<&'static Dimension>,
     /// The side of a region, in blocks.
     pub region: i32,
+    /// Where its plan would touch the plan of one with a higher priority, it gives way.
+    pub priority: i32,
     planner: Box<Planner>,
     plans: ColumnCache<Slot>,
-    /// Where a region's random numbers start: from the name, or a group's.
-    salt: u64,
-    /// The group it belongs to, and the one whose plans it keeps off.
-    group: Option<String>,
-    avoids: Option<String>,
 }
 
 impl Generator {
@@ -48,27 +45,17 @@ impl Generator {
         planner: Box<Planner>,
     ) -> Generator {
         Generator {
-            salt: salt(&name),
             name,
             dimensions,
             region: region.max(1),
+            priority: 0,
             planner,
             plans: ColumnCache::new(CACHED_REGIONS),
-            group: None,
-            avoids: None,
         }
     }
 
-    /// Draws the same random numbers in a region as every other generator of `group` there.
-    pub fn in_group(mut self, group: &str) -> Generator {
-        self.salt = salt(group);
-        self.group = Some(group.to_string());
-        self
-    }
-
-    /// Gives up a plan that would touch a plan of `group`'s.
-    pub fn avoiding(mut self, group: &str) -> Generator {
-        self.avoids = Some(group.to_string());
+    pub fn with_priority(mut self, priority: i32) -> Generator {
+        self.priority = priority;
         self
     }
 
@@ -121,13 +108,13 @@ impl Generator {
 
     fn make(&self, seed: u64, dimension: u32, index: [i32; 2], ground: Columns) -> Option<Planned> {
         let region = Region::at(index, self.region);
-        let salt = noise::hash(seed ^ self.salt, index[0] as i64, 0, index[1] as i64);
+        let salt = noise::hash(seed ^ salt(&self.name), index[0] as i64, 0, index[1] as i64);
         let mut plan = Plan::new(region, Random::new(salt), ground);
         let result = (self.planner)(&mut plan);
         match plan.finish(result) {
             Ok(parts) => {
                 let planned = Planned::new(parts);
-                if self.crowded(&locate::all(), seed, dimension, &planned, ground) {
+                if self.gives_way(seed, dimension, &planned, ground) {
                     return None;
                 }
                 // The log needs the game, which unit tests run without.
@@ -154,22 +141,15 @@ impl Generator {
 }
 
 impl Generator {
-    /// Whether `planned` would touch a plan of the group it avoids, among `others`.
-    fn crowded(
-        &self,
-        others: &[Arc<Generator>],
-        seed: u64,
-        dimension: u32,
-        planned: &Planned,
-        ground: Columns,
-    ) -> bool {
-        let (Some(group), Some((from, to))) = (&self.avoids, planned.bounds()) else {
+    /// Whether `planned` would touch the plan of a structure with a higher priority. Theirs have
+    /// given way in turn where they had to, so only what is really placed counts.
+    fn gives_way(&self, seed: u64, dimension: u32, planned: &Planned, ground: Columns) -> bool {
+        let Some((from, to)) = planned.bounds() else {
             return false;
         };
-        let ours = others
-            .iter()
-            .filter(|g| g.group.as_ref() == Some(group) && g.is_in(dimension));
-        ours.into_iter().any(|other| {
+        let higher = locate::all().into_iter();
+        let higher = higher.filter(|g| g.priority > self.priority && g.is_in(dimension));
+        higher.into_iter().any(|other| {
             let regions = region::indices(from[2], to[2], other.region).flat_map(|iz| {
                 region::indices(from[0], to[0], other.region).map(move |ix| [ix, iz])
             });
@@ -213,52 +193,44 @@ fn ground(g: &Gen, x: i32, z: i32) -> Option<terrain::Column> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
-
     use super::*;
 
-    /// A generator whose planner notes the first number each region draws.
-    fn noting(name: &str, drawn: Arc<Mutex<Vec<u64>>>) -> Generator {
-        let planner = move |p: &mut Plan| {
-            drawn.lock().unwrap().push(p.random().next());
-            Ok(())
+    /// A generator of `priority` whose plan fills from `from` to `to` in the region holding
+    /// them; registered for the others to see. Each test plans in a region of its own.
+    fn filling(name: &str, priority: i32, from: [i32; 3], to: [i32; 3]) -> Arc<Generator> {
+        let planner = move |p: &mut Plan| match p.region().contains(from[0], from[2]) {
+            true => p.fill_state(from, to, 5),
+            false => Ok(()),
         };
-        Generator::new(name.to_string(), 512, Vec::new(), Box::new(planner))
+        let generator = Generator::new(name.to_string(), 512, Vec::new(), Box::new(planner));
+        let generator = Arc::new(generator.with_priority(priority));
+        locate::add(generator.clone());
+        generator
+    }
+
+    fn placed(generator: &Generator, region: [i32; 2]) -> bool {
+        let none = |_: i32, _: i32| None;
+        generator.make(42, 0, region, &none).is_some()
     }
 
     #[test]
-    fn a_group_draws_the_same_numbers_in_a_region() {
-        let drawn = Arc::new(Mutex::new(Vec::new()));
-        let none = |_: i32, _: i32| None;
-        let hamlet = noting("m:hamlet", drawn.clone()).in_group("m:settlement");
-        let town = noting("m:town", drawn.clone()).in_group("m:settlement");
-        let alone = noting("m:alone", drawn.clone());
-        for generator in [&hamlet, &town, &alone] {
-            generator.make(42, 0, [3, -2], &none);
-        }
-        let drawn = drawn.lock().unwrap();
-        assert_eq!(drawn[0], drawn[1], "one group, one roll");
-        assert_ne!(drawn[0], drawn[2], "alone, its own roll");
-    }
-
-    /// A generator whose plan is one block at `at` in every region.
-    fn block_at(name: &str, at: [i32; 3]) -> Generator {
-        let planner = move |p: &mut Plan| p.set_state(at, 5);
-        Generator::new(name.to_string(), 512, Vec::new(), Box::new(planner))
+    fn a_plan_gives_way_where_it_would_touch_a_higher_one() {
+        filling("m:village", 2, [100, 70, 100], [110, 70, 110]);
+        let on_it = filling("m:cottage", 0, [105, 70, 105], [105, 70, 105]);
+        let beside = filling("m:cottage2", 0, [120, 70, 100], [120, 70, 100]);
+        let level = filling("m:hamlet", 2, [105, 70, 105], [105, 70, 105]);
+        assert!(!placed(&on_it, [0, 0]), "a cottage in the village");
+        assert!(placed(&beside, [0, 0]), "a cottage beside it");
+        assert!(placed(&level, [0, 0]), "the same priority: both stand");
     }
 
     #[test]
-    fn a_plan_that_would_touch_one_of_the_group_it_avoids_is_given_up() {
-        let none = |_: i32, _: i32| None;
-        let village = Arc::new(block_at("m:village", [100, 70, 100]).in_group("m:settlement"));
-        let others = [village];
-        let on_it = block_at("m:cottage", [100, 70, 100]).avoiding("m:settlement");
-        let beside = block_at("m:cottage2", [104, 70, 100]).avoiding("m:settlement");
-        let planned = |g: &Generator| {
-            g.make(42, 0, [0, 0], &none)
-                .map(|plan| g.crowded(&others, 42, 0, &plan, &none))
-        };
-        assert_eq!(planned(&on_it), Some(true), "on the village's block");
-        assert_eq!(planned(&beside), Some(false), "a few blocks away");
+    fn a_plan_that_gave_way_leaves_the_ground_to_lower_ones() {
+        let at = |x| [x, 70, 2600];
+        filling("m:town2", 3, at(2600), at(2600));
+        let village = filling("m:village2", 2, at(2600), at(2700));
+        let hamlet = filling("m:hamlet2", 1, at(2700), at(2700));
+        assert!(!placed(&village, [5, 5]), "the town has it");
+        assert!(placed(&hamlet, [5, 5]), "no village there after all");
     }
 }
