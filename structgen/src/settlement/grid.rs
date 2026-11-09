@@ -3,7 +3,7 @@
 
 use structgen_api::Plan;
 
-use super::shape::{Point, distance, inside};
+use super::shape::{Point, add, distance, inside, scale};
 use crate::worldgen::SEA;
 
 /// What one column is for.
@@ -94,6 +94,20 @@ impl Grid {
         (self.cells[i] != Cell::Blocked).then_some(self.heights[i])
     }
 
+    /// The height at the end of a walk of `blocks` blocks from `from` along `way`, if every
+    /// column on the way has ground and none is more than a block above or below the last.
+    pub fn walkable(&self, from: Point, way: Point, blocks: i32) -> Option<i32> {
+        let mut last = self.height(column(from))?;
+        for k in 1..=blocks {
+            let next = self.height(column(add(from, scale(way, k as f32))))?;
+            if (next - last).abs() > 1 {
+                return None;
+            }
+            last = next;
+        }
+        Some(last)
+    }
+
     /// Puts `cell` at `at` unless what is there ranks higher.
     pub fn put(&mut self, at: [i32; 2], cell: Cell) {
         if let Some(i) = self.index(at)
@@ -169,6 +183,11 @@ impl Grid {
     }
 }
 
+/// The column a point is in.
+pub fn column(at: Point) -> [i32; 2] {
+    [at[0].floor() as i32, at[1].floor() as i32]
+}
+
 /// The middle of column `at`.
 pub fn middle([x, z]: [i32; 2]) -> Point {
     [x as f32 + 0.5, z as f32 + 0.5]
@@ -182,4 +201,45 @@ fn bounds(points: &[Point], margin: f32) -> ([i32; 2], [i32; 2]) {
         [low(0).floor() as i32, low(1).floor() as i32],
         [high(0).ceil() as i32, high(1).ceil() as i32],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A row of columns from x 0 east, at these heights; `None` is water.
+    fn row(heights: &[Option<i32>]) -> Grid {
+        let side = heights.len() as i32;
+        let mut grid = Grid {
+            origin: [0, 0],
+            side,
+            cells: vec![Cell::Blocked; (side * side) as usize],
+            heights: vec![SEA; (side * side) as usize],
+        };
+        for (x, height) in heights.iter().enumerate() {
+            if let Some(height) = height {
+                (grid.cells[x], grid.heights[x]) = (Cell::Free, *height);
+            }
+        }
+        grid
+    }
+
+    #[test]
+    fn a_walk_climbs_a_block_at_a_time_and_stops_at_water_or_a_ledge() {
+        let east = [1.0, 0.0];
+        let gentle = row(&[Some(64), Some(65), Some(66), Some(65)]);
+        assert_eq!(gentle.walkable([0.5, 0.5], east, 3), Some(65));
+        let ledge = row(&[Some(64), Some(64), Some(66), Some(66)]);
+        assert_eq!(
+            ledge.walkable([0.5, 0.5], east, 3),
+            None,
+            "two blocks up at once"
+        );
+        let stream = row(&[Some(64), None, Some(64), Some(64)]);
+        assert_eq!(
+            stream.walkable([0.5, 0.5], east, 3),
+            None,
+            "water between dry ends"
+        );
+    }
 }

@@ -4,8 +4,8 @@
 use structgen_api::{Fit, Plan, Turn};
 use weft_sdk::Template;
 
-use super::grid::{Cell, Grid};
-use super::roads::{Road, column};
+use super::grid::{Cell, Grid, column};
+use super::roads::Road;
 use super::shape::{Point, add, inside, scale, walk};
 
 /// What faces a front: a heart's edge, or a road.
@@ -39,6 +39,8 @@ pub struct Rules {
     /// Blocks kept free between two buildings.
     pub gap: i32,
     pub fit: Fit,
+    /// What the way from the road to a building's door becomes: a path, or paving.
+    pub path: Cell,
 }
 
 /// Both sides of `road`.
@@ -99,9 +101,33 @@ pub fn corner_for(front: [i32; 2], [sx, _, sz]: [i32; 3], turn: Turn) -> [i32; 2
     }
 }
 
+/// The first building `pick` chooses that has room along `front` from point `from` on, and
+/// the point past it where the next may start.
+pub fn next_site(
+    p: &mut Plan,
+    grid: &mut Grid,
+    rules: &Rules,
+    front: &Front,
+    from: usize,
+    pick: &mut dyn FnMut(&mut Plan, Point) -> &'static Template,
+) -> Option<(Site, usize)> {
+    let mut i = from;
+    while i < front.points.len() {
+        let template = pick(p, front.points[i].0);
+        if let Some(placed) = site(p, grid, rules, template, front, i) {
+            let gap = rules.gap + p.random().between(0, rules.gap);
+            let next = i + width_along(&placed) + gap as usize;
+            return Some((placed, next));
+        }
+        i += 2;
+    }
+    None
+}
+
 /// Where `template` would stand at point `index` of `front`, if the ground and the buildings
-/// already there leave it room; marked on `grid` when it does.
-pub fn site(
+/// already there leave it room and a walkable way leads from the road to its door; marked on
+/// `grid` with that way when it does.
+fn site(
     p: &mut Plan,
     grid: &mut Grid,
     rules: &Rules,
@@ -113,12 +139,30 @@ pub fn site(
     let turn = facing(out);
     let size = p.size(template, turn)?;
     let setback = p.random().between(rules.setback[0], rules.setback[1]);
-    let face = column(add(at, scale(out, front.reach + setback as f32 + 0.5)));
-    stand(p, grid, rules, template, corner_for(face, size, turn), turn)
+    let length = (front.reach + setback as f32 + 0.5) as i32;
+    let doorstep = grid.walkable(at, out, (length - 1).max(0))?;
+    let face = column(add(at, scale(out, length as f32)));
+    let placed = stand(
+        p,
+        grid,
+        rules,
+        template,
+        corner_for(face, size, turn),
+        turn,
+        Some(doorstep),
+    )?;
+    for k in 0..length {
+        let way = column(add(at, scale(out, k as f32)));
+        if grid.get(way) == Cell::Free {
+            grid.put(way, rules.path);
+        }
+    }
+    Some(placed)
 }
 
 /// `template` with its north-west corner at `corner`, if it stands on free columns, no closer
-/// than the gap to another building, and on ground that meets the rules' fit.
+/// than the gap to another building, on ground that meets the rules' fit, and, given a
+/// `doorstep` height, with its floor within a block of it.
 pub fn stand(
     p: &mut Plan,
     grid: &mut Grid,
@@ -126,6 +170,7 @@ pub fn stand(
     template: &'static Template,
     corner: [i32; 2],
     turn: Turn,
+    doorstep: Option<i32>,
 ) -> Option<Site> {
     let size = p.size(template, turn)?;
     let last = [corner[0] + size[0] - 1, corner[1] + size[2] - 1];
@@ -141,6 +186,9 @@ pub fn stand(
         return None;
     }
     let at = p.fit(template, corner, turn, &rules.fit)?;
+    if doorstep.is_some_and(|y| (y - at[1]).abs() > 1) {
+        return None;
+    }
     for z in corner[1]..=last[1] {
         for x in corner[0]..=last[0] {
             grid.put([x, z], Cell::Building);
@@ -154,8 +202,30 @@ pub fn stand(
     })
 }
 
+/// `template` round the column `middle` is in; see `stand`.
+pub fn stand_round(
+    p: &mut Plan,
+    grid: &mut Grid,
+    rules: &Rules,
+    template: &'static Template,
+    middle: Point,
+    turn: Turn,
+) -> Option<Site> {
+    let [sx, _, sz] = p.size(template, turn)?;
+    let [x, z] = column(middle);
+    stand(
+        p,
+        grid,
+        rules,
+        template,
+        [x - sx / 2, z - sz / 2],
+        turn,
+        None,
+    )
+}
+
 /// How many points along a front a building takes: its width along the road.
-pub fn width_along(site: &Site) -> usize {
+fn width_along(site: &Site) -> usize {
     match site.turn {
         Turn::None | Turn::Back => site.size[0] as usize,
         Turn::Left | Turn::Right => site.size[2] as usize,

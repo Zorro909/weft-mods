@@ -57,8 +57,7 @@ static TREES: &[&Template] = &[
 ];
 
 static HAMLET: Settlement = Settlement {
-    region: 384,
-    chance: 0.5,
+    share: [0.0, 0.28],
     kind: Kind::Village,
     steps: [3, 3],
     branches: [0, 1],
@@ -70,7 +69,7 @@ static HAMLET: Settlement = Settlement {
     homes: 4,
     houses: COTTAGES,
     farms: &[&HOF, &STADDLE_GRANARY],
-    outskirts: &[],
+    mill: None,
     fields: 1,
     trees: TREES,
     roofs: &["spruce_roof", "spruce_roof", "oak_roof"],
@@ -79,8 +78,7 @@ static HAMLET: Settlement = Settlement {
 };
 
 static VILLAGE: Settlement = Settlement {
-    region: 512,
-    chance: 0.4,
+    share: [0.28, 0.63],
     kind: Kind::Village,
     steps: [6, 4],
     branches: [1, 2],
@@ -94,10 +92,10 @@ static VILLAGE: Settlement = Settlement {
         (&SMITHY_HOUSE, Faces::Road),
         (&OPEN_FORGE, Faces::Road),
     ],
-    homes: 7,
+    homes: 5,
     houses: COTTAGES,
     farms: FARMS,
-    outskirts: &[&POST_MILL],
+    mill: Some(&POST_MILL),
     fields: 2,
     trees: TREES,
     roofs: &["spruce_roof", "spruce_roof", "oak_roof", "brick_roof"],
@@ -106,8 +104,7 @@ static VILLAGE: Settlement = Settlement {
 };
 
 static TOWN: Settlement = Settlement {
-    region: 768,
-    chance: 0.5,
+    share: [0.63, 0.83],
     kind: Kind::Town,
     steps: [7, 5],
     branches: [2, 3],
@@ -125,7 +122,7 @@ static TOWN: Settlement = Settlement {
     homes: 15,
     houses: TOWN_HOUSES,
     farms: &[&CROFTER_COTTAGE, &STABLE],
-    outskirts: &[&TOWER_MILL],
+    mill: Some(&TOWER_MILL),
     fields: 2,
     trees: &[&OAK_TREE_LARGE, &FRUIT_TREE],
     roofs: &["brick_roof", "brick_roof", "spruce_roof"],
@@ -137,6 +134,7 @@ pub fn register(r: &mut Registry) {
     for (name, settlement) in [("hamlet", &HAMLET), ("village", &VILLAGE), ("town", &TOWN)] {
         structgen_api::plan(r, name, move |p| settlement::plan(p, settlement))
             .dimension(&base_api::OVERWORLD)
-            .region(settlement.region);
+            .region(settlement::REGION)
+            .group("settlement");
     }
 }

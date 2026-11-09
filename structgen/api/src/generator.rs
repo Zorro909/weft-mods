@@ -33,6 +33,8 @@ pub(crate) struct Generator {
     pub region: i32,
     planner: Box<Planner>,
     plans: ColumnCache<Slot>,
+    /// Where a region's random numbers start: from the name, or a group's.
+    salt: u64,
 }
 
 impl Generator {
@@ -43,12 +45,19 @@ impl Generator {
         planner: Box<Planner>,
     ) -> Generator {
         Generator {
+            salt: salt(&name),
             name,
             dimensions,
             region: region.max(1),
             planner,
             plans: ColumnCache::new(CACHED_REGIONS),
         }
+    }
+
+    /// Draws the same random numbers in a region as every other generator of `group` there.
+    pub fn in_group(mut self, group: &str) -> Generator {
+        self.salt = salt(group);
+        self
     }
 
     /// Registers it for `locate`, and as one of the calling mod's decorations, named like the
@@ -95,7 +104,7 @@ impl Generator {
 
     fn make(&self, seed: u64, dimension: u32, index: [i32; 2], ground: Columns) -> Option<Planned> {
         let region = Region::at(index, self.region);
-        let salt = noise::hash(seed ^ salt(&self.name), index[0] as i64, 0, index[1] as i64);
+        let salt = noise::hash(seed ^ self.salt, index[0] as i64, 0, index[1] as i64);
         let mut plan = Plan::new(region, Random::new(salt), ground);
         let result = (self.planner)(&mut plan);
         match plan.finish(result) {
@@ -149,4 +158,35 @@ fn salt(name: &str) -> u64 {
 fn ground(g: &Gen, x: i32, z: i32) -> Option<terrain::Column> {
     let column = g.column(x, z);
     (column.height != i32::MIN && !g.surface_carved(x, z)).then_some(column)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use super::*;
+
+    /// A generator whose planner notes the first number each region draws.
+    fn noting(name: &str, drawn: Arc<Mutex<Vec<u64>>>) -> Generator {
+        let planner = move |p: &mut Plan| {
+            drawn.lock().unwrap().push(p.random().next());
+            Ok(())
+        };
+        Generator::new(name.to_string(), 512, Vec::new(), Box::new(planner))
+    }
+
+    #[test]
+    fn a_group_draws_the_same_numbers_in_a_region() {
+        let drawn = Arc::new(Mutex::new(Vec::new()));
+        let none = |_: i32, _: i32| None;
+        let hamlet = noting("m:hamlet", drawn.clone()).in_group("m:settlement");
+        let town = noting("m:town", drawn.clone()).in_group("m:settlement");
+        let alone = noting("m:alone", drawn.clone());
+        for generator in [&hamlet, &town, &alone] {
+            generator.make(42, 0, [3, -2], &none);
+        }
+        let drawn = drawn.lock().unwrap();
+        assert_eq!(drawn[0], drawn[1], "one group, one roll");
+        assert_ne!(drawn[0], drawn[2], "alone, its own roll");
+    }
 }

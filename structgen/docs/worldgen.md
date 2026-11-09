@@ -55,14 +55,16 @@ says, and its roof is spruce, oak or birch.
 ## Hamlets, villages and towns
 
 None is drawn beforehand: each is laid out afresh from the seed and the lie of the land
-(`src/settlement/`), from a table of what it holds (`src/villages.rs`).
+(`src/settlement/`), from a table of what it holds (`src/villages.rs`). The three share the
+overworld's squares of 512 blocks out between them, at most one to a square, so they never
+overlap.
 
 | | Hamlet | Village | Town |
 |---|---|---|---|
-| One per square of | 384 blocks, 50% | 512 blocks, 40% | 768 blocks, 50% |
+| Of the squares of 512 blocks | 28% | 35% | 20% |
 | Heart | a green with a well | a green with a well | a cobbled market square, fountain and stalls |
 | Roads | gravel lanes | gravel lanes | cobbled streets between stone kerbs |
-| Buildings | 4 cottages or farms | a church, a tavern, a smithy and forge, 7 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 15 houses, a tower mill |
+| Buildings | 4 cottages or farms | a church, a tavern, a smithy and forge, 5 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 15 houses, a tower mill |
 | Fields | 1 | 2 | 2 |
 
 1. **The heart.** A blob of nine jittered corners round a spot in the square, stretched along
@@ -70,17 +72,19 @@ None is drawn beforehand: each is laid out afresh from the seed and the lie of t
 2. **Roads.** The main road leaves the heart's edge both ways along that angle; a branch or
    two leave it at roughly a right angle. A road goes 7 blocks a step, each time the way of
    three (straight on, or about 20° either side) that climbs least, so it winds along the
-   ground. It stops at water or the edge of the square and before running into another road,
-   and is smoothed into a curve.
+   ground. It stops at water, the edge of the square, ground too steep to walk (a step of more
+   than a block) and before running into another road or the heart, and is smoothed into a
+   curve.
 3. **Buildings.** The heart's own buildings stand in it first: the well, or the fountain and
    stalls. Then the planner walks round the heart and down both sides of every road a block at
    a time, putting a building wherever it fits, its front turned toward the road (one of four
    turns, whichever is nearest). Landmarks go first, each at the first spot along a front of
-   its kind (the church on the green, the inn on a road); homes follow, cottages near the heart
-   and farms further out. Village houses stand 2 to 6 blocks back with 3 between them and a
+   its kind (the church on the green, the smithy on a road); homes follow, one to each front in
+   turn so every road gets some, cottages near the heart and farms further out. A building
+   goes only where a walkable way leads from the road to its door, which becomes a path. Village houses stand 2 to 6 blocks back with 3 between them and a
    kitchen garden behind; town houses stand at the kerb, a block apart. A settlement where
    fewer than half its homes fit is given up.
-4. **Round about.** A mill stands past the end of the main road, small strip fields of mostly
+4. **Round about.** A mill stands past one end of the main road, small strip fields of mostly
    unripe wheat past the ends of other roads, a few trees round the heart. A town paves the
    ground between its streets and its buildings.
 5. **Materials.** A settlement takes one frame and panel for all its buildings and a roof for

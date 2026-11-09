@@ -5,17 +5,29 @@ use std::f32::consts::{FRAC_PI_2, PI};
 
 use structgen_api::Random;
 
-use super::grid::{Cell, Grid};
-use super::shape::{Point, add, blob, heading, inside, scale, smooth};
+use super::grid::{Cell, Grid, column};
+use super::shape::{Point, add, blob, heading, inside, length_of, scale, smooth, sub};
 
 /// How far a road goes in one step, in blocks.
-const STEP: f32 = 7.0;
+pub const STEP: f32 = 7.0;
 /// How much a step may turn, either way, in radians: about 20°.
 const BEND: f32 = 0.35;
 
 /// A road: its middle line, curved.
 pub struct Road {
     pub line: Vec<Point>,
+}
+
+impl Road {
+    /// The road's last point and the way it runs there.
+    pub fn end(&self) -> Option<(Point, Point)> {
+        let [.., before, end] = self.line[..] else {
+            return None;
+        };
+        let way = sub(end, before);
+        let length = length_of(way);
+        (length > 0.0).then(|| (end, scale(way, 1.0 / length)))
+    }
 }
 
 /// A number from 0 to 1.
@@ -62,11 +74,12 @@ pub fn branch(grid: &Grid, random: &mut Random, from: &Road, index: usize, steps
 }
 
 /// A road from `start` taking up to `steps` steps along `angle`, each the way of three that
-/// climbs least. It stops where the ground ends or before it would run into another road.
+/// climbs least. It stops where the ground ends, grows too steep to walk, or before it would
+/// run into another road.
 fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: usize) -> Road {
     let mut points = vec![start];
     let mut at = start;
-    for step in 0..steps {
+    for _ in 0..steps {
         let Some(here) = grid.height(column(at)) else {
             break;
         };
@@ -74,8 +87,10 @@ fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: u
         let options = [-BEND, 0.0, BEND].map(|turn| angle + turn + wobble);
         let climb = |a: f32| {
             let next = add(at, scale(heading(a), STEP));
-            let open = step == 0 || !grid.get(column(next)).is_road();
-            let height = grid.height(column(next)).filter(|_| open)?;
+            let open = grid.get(column(next)) == Cell::Free;
+            let height = grid
+                .walkable(at, heading(a), STEP as i32)
+                .filter(|_| open)?;
             Some(((height - here).abs() as f32 + (a - angle).abs(), next, a))
         };
         let best = options
@@ -90,19 +105,5 @@ fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: u
     }
     Road {
         line: smooth(&points),
-    }
-}
-
-/// The column a point is in.
-pub fn column(at: Point) -> [i32; 2] {
-    [at[0].floor() as i32, at[1].floor() as i32]
-}
-
-/// Draws the roads onto the grid: lanes in a village, streets with kerbs in a town.
-pub fn put(grid: &mut Grid, roads: &[Road], width: f32, cell: Cell) {
-    for road in roads {
-        if road.line.len() > 1 {
-            grid.put_road(&road.line, width, cell);
-        }
     }
 }

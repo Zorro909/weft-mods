@@ -8,17 +8,18 @@
 mod draw;
 mod frontage;
 mod grid;
+mod planting;
 mod roads;
 mod shape;
 
 use std::f32::consts::TAU;
 
 pub use frontage::Faces;
-use frontage::{Front, Rules, Site, around, facing, sides, site, stand, width_along};
+use frontage::{Front, Rules, Site, around, facing, next_site, sides, stand_round};
 use grid::{Cell, Grid};
-use roads::{Road, column, unit};
+use roads::{Road, unit};
 use shape::{Point, add, heading, length_of, scale, smooth, sub};
-use structgen_api::{Biomes, Fit, Foundation, Materials, Plan, PlanError, Turn};
+use structgen_api::{Biomes, Fit, Foundation, Materials, Plan, PlanError, Random};
 use weft_sdk::*;
 
 use crate::styles;
@@ -29,8 +30,6 @@ static OPEN_LAND: Biomes = Biomes::named(OPEN);
 /// A village's lane is this wide; a town's street, kerbs included, `STREET`.
 const LANE: f32 = 3.0;
 const STREET: f32 = 7.0;
-/// Blocks a road goes in one step: `roads::STEP`, again for the planner's sums.
-const STEP: i32 = 7;
 
 /// A village of lanes round a green, or a town of streets round a market square.
 #[derive(Clone, Copy, PartialEq)]
@@ -39,11 +38,15 @@ pub enum Kind {
     Town,
 }
 
+/// The side of a region, in blocks: every kind of settlement shares them out, so no two stand
+/// in one region.
+pub const REGION: u32 = 512;
+
 /// One kind of settlement.
 pub struct Settlement {
-    /// One per region of this many blocks square, at most.
-    pub region: u32,
-    pub chance: f32,
+    /// The regions it takes: those whose first random number, from 0 to 1, falls in this range.
+    /// The kinds' ranges don't overlap.
+    pub share: [f32; 2],
     pub kind: Kind,
     /// Steps of the main road out of the heart, each way, and of a branch.
     pub steps: [usize; 2],
@@ -57,15 +60,15 @@ pub struct Settlement {
     pub gap: i32,
     /// In the heart: a village's chapel and well, a town's fountain.
     pub centre: &'static [&'static Template],
-    /// Each takes the first spot along a front of its kind: the town hall facing the square,
-    /// the tavern on a road.
+    /// Each takes the first spot with room along a front of its kind: the church facing the
+    /// green, the smithy on a road.
     pub landmarks: &'static [(&'static Template, Faces)],
     /// Homes along the fronts, this many at most: `houses` near the heart, `farms` further out.
     pub homes: usize,
     pub houses: &'static [&'static Template],
     pub farms: &'static [&'static Template],
-    /// Past the end of the main road: a mill.
-    pub outskirts: &'static [&'static Template],
+    /// Past one end of the main road.
+    pub mill: Option<&'static Template>,
     /// Small strip fields at the ends of the roads.
     pub fields: usize,
     pub trees: &'static [&'static Template],
@@ -78,20 +81,21 @@ pub struct Settlement {
 
 /// Lays out one settlement in the region, if the seed and the ground there want one.
 pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
-    if !p.random().chance(s.chance) {
+    let roll = unit(p.random());
+    if !(s.share[0]..s.share[1]).contains(&roll) {
         return Ok(());
     }
-    let reach = s.steps[0] as i32 * STEP + s.heart[0] as i32 + 20;
+    let reach = (s.steps[0] as f32 * roads::STEP + s.heart[0]) as i32 + 20;
     let middle = p.spot(reach);
     let mut grid = Grid::new(p, middle, reach);
     let Some(sites) = lay_out(p, &mut grid, s, middle) else {
         return Ok(());
     };
-    let look = Look::pick(p, s);
+    let walls = walls(p, s);
     for site in &sites {
-        let materials = look.for_building(p);
+        let roof = styles::blocks(one_of(p, s.roofs).unwrap_or(""));
         p.structure(site.template, site.corner, site.turn)?
-            .materials(&materials)
+            .materials(&styles::add(walls.clone(), roof))
             .foundation(Foundation::Ground)
             .clear_above();
     }
@@ -101,63 +105,76 @@ pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
 /// Where everything stands, marked on `grid`: `None` when the ground leaves too little room
 /// for a settlement worth the name.
 fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, middle: [i32; 2]) -> Option<Vec<Site>> {
-    let random = p.random();
-    let angle = unit(random) * TAU;
+    let angle = unit(p.random()) * TAU;
     let m = [middle[0] as f32 + 0.5, middle[1] as f32 + 0.5];
-    let heart = roads::heart(random, m, angle, s.heart);
-    let (width, road_cell, heart_cell) = match s.kind {
+    let heart = roads::heart(p.random(), m, angle, s.heart);
+    let roads = lay_roads(p.random(), grid, s, &heart, m, angle);
+    // A village's green has a lane round it; a town's square is paved to its houses' doors.
+    let (width, ring, path) = match s.kind {
+        Kind::Village => (LANE, LANE / 2.0, Cell::Lane),
+        Kind::Town => (STREET, 0.0, Cell::Square),
+    };
+    let rules = Rules {
+        setback: s.setback,
+        gap: s.gap,
+        fit: Fit::new().biome(&OPEN_LAND).max_slope(4).min_height(SEA),
+        path,
+    };
+    let mut sites = centre(p, grid, s, m, angle);
+    let mut fronts = vec![around(&heart, ring)];
+    fronts.extend(roads.iter().flat_map(|road| sides(road, width / 2.0)));
+    let farmland = reach_of(&roads, m) * 0.6;
+    let far = |at: Point| length_of(sub(at, m)) > farmland;
+    let homes = line_up(p, grid, s, &rules, &fronts, &far, &mut sites);
+    if homes < s.homes / 2 {
+        return None;
+    }
+    sites.extend(
+        s.mill
+            .and_then(|mill| outskirts(p, grid, &rules, mill, &roads[..2])),
+    );
+    planting::fields(grid, &roads, s.fields);
+    let reach = s.heart[0] as i32 + 18;
+    sites.extend(planting::trees(p, grid, s.trees, &rules, m, reach));
+    if s.kind == Kind::Town {
+        grid.pave_frontages();
+    }
+    Some(sites)
+}
+
+/// The heart and the roads out of it, marked on `grid`: the main road both ways, then the
+/// branches, each leaving it a third of the way along or further.
+fn lay_roads(
+    random: &mut Random,
+    grid: &mut Grid,
+    s: &Settlement,
+    heart: &[Point],
+    m: Point,
+    angle: f32,
+) -> Vec<Road> {
+    let (width, road, middle) = match s.kind {
         Kind::Village => (LANE, Cell::Lane, Cell::Green),
         Kind::Town => (STREET, Cell::Street, Cell::Square),
     };
-    grid.put_area(&heart, heart_cell);
-    let mut roads: Vec<Road> = roads::main_road(grid, random, &heart, m, angle, s.steps[0]).into();
-    roads::put(grid, &roads, width, road_cell);
+    grid.put_area(heart, middle);
+    let mut roads: Vec<Road> = roads::main_road(grid, random, heart, m, angle, s.steps[0]).into();
+    for main in &roads {
+        grid.put_road(&main.line, width, road);
+    }
     if s.kind == Kind::Village {
-        let mut ring = heart.clone();
+        let mut ring = heart.to_vec();
         ring.push(heart[0]);
         grid.put_road(&smooth(&ring), LANE, Cell::Lane);
     }
     for _ in 0..random.between(s.branches[0], s.branches[1]) {
         let from = &roads[random.below(2) as usize];
-        let index = random.between(2, from.line.len() as i32 - 3).max(0) as usize;
+        let n = from.line.len() as i32;
+        let index = random.between(n / 3, (n - 3).max(n / 3)) as usize;
         let branch = roads::branch(grid, random, from, index, s.steps[1]);
-        roads::put(grid, std::slice::from_ref(&branch), width, road_cell);
+        grid.put_road(&branch.line, width, road);
         roads.push(branch);
     }
-
-    let rules = Rules {
-        setback: s.setback,
-        gap: s.gap,
-        fit: Fit::new().biome(&OPEN_LAND).max_slope(4).min_height(SEA),
-    };
-    let mut sites = centre(p, grid, s, m, angle);
-    let heart_reach = if s.kind == Kind::Village {
-        LANE / 2.0
-    } else {
-        0.0
-    };
-    let mut fronts = vec![around(&heart, heart_reach)];
-    fronts.extend(roads.iter().flat_map(|road| sides(road, width / 2.0)));
-    let homes = line_up(
-        p,
-        grid,
-        s,
-        &rules,
-        &fronts,
-        m,
-        reach_of(&roads, m),
-        &mut sites,
-    );
-    if homes < s.homes / 2 {
-        return None;
-    }
-    sites.extend(outskirts(p, grid, s, &rules, &roads[..2]));
-    fields(grid, &roads, s.fields);
-    sites.extend(trees(p, grid, s, &rules, m));
-    if s.kind == Kind::Town {
-        grid.pave_frontages();
-    }
-    Some(sites)
+    roads
 }
 
 /// The heart's own buildings, in it along the main road: the first in the middle.
@@ -166,6 +183,7 @@ fn centre(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point, angle: f32) -
         setback: [0, 0],
         gap: 2,
         fit: Fit::new().max_slope(3).min_height(SEA),
+        path: Cell::Free,
     };
     let along = heading(angle);
     let mut sites = Vec::new();
@@ -174,14 +192,12 @@ fn centre(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point, angle: f32) -
         let placed = [0.0, 10.0, -10.0, 16.0, -16.0]
             .into_iter()
             .find_map(|offset| {
-                let size = p.size(template, turn)?;
-                let [x, z] = column(add(m, scale(along, offset)));
-                stand(
+                stand_round(
                     p,
                     grid,
                     &rules,
                     template,
-                    [x - size[0] / 2, z - size[2] / 2],
+                    add(m, scale(along, offset)),
                     turn,
                 )
             });
@@ -190,53 +206,56 @@ fn centre(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point, angle: f32) -
     sites
 }
 
-/// Walks every front, heart first, putting a building wherever there is room: each landmark at
-/// the first spot along a front of its kind, then homes until there are `s.homes`. Gives back
-/// how many homes stand.
-#[allow(clippy::too_many_arguments)]
+/// Puts buildings along the fronts, heart first: each landmark at the first spot with room
+/// along a front of its kind, then homes, one to each front in turn, until there are
+/// `s.homes` or no front has room left. Gives back how many homes stand.
 fn line_up(
     p: &mut Plan,
     grid: &mut Grid,
     s: &Settlement,
     rules: &Rules,
     fronts: &[Front],
-    m: Point,
-    reach: f32,
+    far: &dyn Fn(Point) -> bool,
     sites: &mut Vec<Site>,
 ) -> usize {
-    let mut landmarks = s.landmarks.to_vec();
+    let mut next = vec![0; fronts.len()];
+    for &(template, faces) in s.landmarks {
+        let mut ours = fronts
+            .iter()
+            .zip(&mut next)
+            .filter(|(front, _)| front.faces == faces);
+        let found = ours.find_map(|(front, from)| {
+            let placed = next_site(p, grid, rules, front, *from, &mut |_, _| template)?;
+            Some((placed, from))
+        });
+        if let Some(((placed, after), from)) = found {
+            *from = after;
+            sites.push(placed);
+        }
+    }
+    let mut pick = |p: &mut Plan, at: Point| match far(at) && !s.farms.is_empty() {
+        true => one_of(p, s.farms).expect("farms are there"),
+        false => one_of(p, s.houses).expect("a settlement has houses"),
+    };
     let mut homes = 0;
-    for front in fronts {
-        let mut i = 0;
-        while i < front.points.len() && (homes < s.homes || !landmarks.is_empty()) {
-            let wanted = landmarks
-                .iter()
-                .position(|&(_, faces)| faces == front.faces);
-            let far = length_of(sub(front.points[i].0, m)) > reach * 0.6;
-            let template = match wanted {
-                Some(k) => landmarks[k].0,
-                None if homes < s.homes => one_of(
-                    p,
-                    if far && !s.farms.is_empty() {
-                        s.farms
-                    } else {
-                        s.houses
-                    },
-                ),
-                None => break,
-            };
-            let Some(placed) = site(p, grid, rules, template, front, i) else {
-                i += 2;
+    while homes < s.homes
+        && next
+            .iter()
+            .zip(fronts)
+            .any(|(&i, front)| i < front.points.len())
+    {
+        for (front, from) in fronts.iter().zip(&mut next) {
+            if homes == s.homes {
+                break;
+            }
+            let Some((placed, after)) = next_site(p, grid, rules, front, *from, &mut pick) else {
+                *from = front.points.len();
                 continue;
             };
-            match wanted {
-                Some(k) => drop(landmarks.remove(k)),
-                None => homes += 1,
-            }
             if s.kind == Kind::Village {
-                garden(grid, &placed);
+                planting::garden(grid, &placed);
             }
-            i += width_along(&placed) + s.gap as usize + p.random().between(0, s.gap) as usize;
+            (*from, homes) = (after, homes + 1);
             sites.push(placed);
         }
     }
@@ -249,162 +268,37 @@ fn reach_of(roads: &[Road], m: Point) -> f32 {
     points.map(|&at| length_of(sub(at, m))).fold(0.0, f32::max)
 }
 
-/// The outskirts' buildings, each past the end of a road, its front toward it.
+/// `template` past one end or the other of the main road, its front toward it.
 fn outskirts(
     p: &mut Plan,
     grid: &mut Grid,
-    s: &Settlement,
     rules: &Rules,
-    roads: &[Road],
-) -> Vec<Site> {
-    let mut sites = Vec::new();
-    for (&template, road) in s.outskirts.iter().zip(roads) {
-        let Some((end, way)) = end_of(road) else {
-            continue;
-        };
+    template: &'static Template,
+    main: &[Road],
+) -> Option<Site> {
+    main.iter().filter_map(Road::end).find_map(|(end, way)| {
         let turn = facing(way);
-        let Some(size) = p.size(template, turn) else {
-            continue;
-        };
-        let [x, z] = column(add(
-            end,
-            scale(way, 6.0 + size[0].max(size[2]) as f32 / 2.0),
-        ));
-        sites.extend(stand(
-            p,
-            grid,
-            rules,
-            template,
-            [x - size[0] / 2, z - size[2] / 2],
-            turn,
-        ));
-    }
-    sites
+        let [sx, _, sz] = p.size(template, turn)?;
+        let middle = add(end, scale(way, 6.0 + sx.max(sz) as f32 / 2.0));
+        stand_round(p, grid, rules, template, middle, turn)
+    })
 }
 
-/// Up to `count` small strip fields, each just past the end of a road, the branches' first.
-fn fields(grid: &mut Grid, roads: &[Road], count: usize) {
-    let ends = roads.iter().rev().filter_map(end_of);
-    let mut placed = 0;
-    for (end, way) in ends {
-        if placed == count {
-            break;
-        }
-        let along_x = way[0].abs() > way[1].abs();
-        let [w, d] = if along_x { [14, 9] } else { [9, 14] };
-        let [x, z] = column(add(end, scale(way, 4.0 + 7.0)));
-        let corner = [x - w / 2, z - d / 2];
-        let last = [corner[0] + w - 1, corner[1] + d - 1];
-        if !grid.all(corner, last, |c| c == Cell::Free) {
-            continue;
-        }
-        for cz in corner[1]..=last[1] {
-            for cx in corner[0]..=last[0] {
-                let line = if along_x {
-                    cz - corner[1]
-                } else {
-                    cx - corner[0]
-                };
-                grid.put([cx, cz], strip(line, 5, &[1, 2, 3, 4, 7]));
-            }
-        }
-        placed += 1;
+/// One of `items` at random, `None` when there are none.
+fn one_of<T: Copy>(p: &mut Plan, items: &[T]) -> Option<T> {
+    match items.len() {
+        0 => None,
+        n => Some(items[p.random().below(n as u64) as usize]),
     }
 }
 
-/// A kitchen garden behind a house: a few rows of young wheat, if the ground there is free.
-fn garden(grid: &mut Grid, site: &Site) {
-    let [x, _, z] = site.corner;
-    let [sx, _, sz] = site.size;
-    let (corner, last) = match site.turn {
-        Turn::None => ([x + 1, z + sz + 1], [x + sx - 2, z + sz + 4]),
-        Turn::Back => ([x + 1, z - 5], [x + sx - 2, z - 2]),
-        Turn::Left => ([x + sx + 1, z + 1], [x + sx + 4, z + sz - 2]),
-        Turn::Right => ([x - 5, z + 1], [x - 2, z + sz - 2]),
-    };
-    if !grid.all(corner, last, |c| c == Cell::Free) {
-        return;
-    }
-    for gz in corner[1]..=last[1] {
-        for gx in corner[0]..=last[0] {
-            grid.put([gx, gz], strip(gx + gz, 2, &[2, 3, 4]));
-        }
-    }
-}
-
-/// Line `line` of a field: a furrow every `width + 1` lines, wheat of an age from `ages`
-/// otherwise, the same all along a strip.
-fn strip(line: i32, width: i32, ages: &[u8]) -> Cell {
-    let index = line.div_euclid(width + 1);
-    match line.rem_euclid(width + 1) == width {
-        true => Cell::Furrow,
-        false => {
-            Cell::Crop(ages[(shape::noise(index, 7) * ages.len() as f32) as usize % ages.len()])
-        }
-    }
-}
-
-/// Trees on free ground near the heart: up to one of each of `s.trees`, a few tries each.
-fn trees(p: &mut Plan, grid: &mut Grid, s: &Settlement, rules: &Rules, m: Point) -> Vec<Site> {
-    let mut sites = Vec::new();
-    for &template in s.trees {
-        for _ in 0..8 {
-            let reach = s.heart[0] as i32 + 18;
-            let x = m[0] as i32 + p.random().between(-reach, reach);
-            let z = m[1] as i32 + p.random().between(-reach, reach);
-            if let Some(tree) = stand(p, grid, rules, template, [x, z], Turn::None) {
-                sites.push(tree);
-                break;
-            }
-        }
-    }
-    sites
-}
-
-/// A road's last point and the way it runs there.
-fn end_of(road: &Road) -> Option<(Point, Point)> {
-    let [.., before, end] = road.line[..] else {
-        return None;
-    };
-    let way = sub(end, before);
-    let length = length_of(way);
-    (length > 0.0).then(|| (end, scale(way, 1.0 / length)))
-}
-
-fn one_of(p: &mut Plan, templates: &'static [&'static Template]) -> &'static Template {
-    templates[p.random().below(templates.len() as u64) as usize]
-}
-
-/// What a settlement is built of: one frame and infill for all of it, roofs per building, and
-/// in a town paving round every building.
-struct Look {
-    walls: Materials,
-    roofs: &'static [&'static str],
-}
-
-impl Look {
-    fn pick(p: &mut Plan, s: &Settlement) -> Look {
-        let frame = styles::blocks(pick_name(p, s.frames));
-        let infill = styles::blocks(pick_name(p, s.infills));
-        let mut walls = styles::add(styles::add(Materials::new(), frame), infill);
-        if s.kind == Kind::Town {
-            walls = styles::add(walls, styles::blocks("cobble_ground"));
-        }
-        Look {
-            walls,
-            roofs: s.roofs,
-        }
-    }
-
-    fn for_building(&self, p: &mut Plan) -> Materials {
-        styles::add(self.walls.clone(), styles::blocks(pick_name(p, self.roofs)))
-    }
-}
-
-/// One of `names` at random, `""` (the defaults) when there are none.
-fn pick_name(p: &mut Plan, names: &[&'static str]) -> &'static str {
-    match names.len() {
-        0 => "",
-        n => names[p.random().below(n as u64) as usize],
+/// The frame and infill all of a settlement's buildings share, and in a town paving round each.
+fn walls(p: &mut Plan, s: &Settlement) -> Materials {
+    let frame = styles::blocks(one_of(p, s.frames).unwrap_or(""));
+    let infill = styles::blocks(one_of(p, s.infills).unwrap_or(""));
+    let walls = styles::add(styles::add(Materials::new(), frame), infill);
+    match s.kind {
+        Kind::Village => walls,
+        Kind::Town => styles::add(walls, styles::blocks("cobble_ground")),
     }
 }

@@ -35,6 +35,7 @@ pub fn plan<'a>(
         planner: Some(Box::new(planner)),
         dimensions: Vec::new(),
         region: DEFAULT_REGION,
+        group: None,
     }
 }
 
@@ -45,6 +46,7 @@ pub struct Planning<'a> {
     planner: Option<Box<Planner>>,
     dimensions: Vec<&'static Dimension>,
     region: i32,
+    group: Option<String>,
 }
 
 impl Planning<'_> {
@@ -56,6 +58,13 @@ impl Planning<'_> {
     /// One plan per `blocks` x `blocks` region (512 by default).
     pub fn region(mut self, blocks: u32) -> Self {
         self.region = blocks.clamp(1, i32::MAX as u32) as i32;
+        self
+    }
+    /// Draws the same random numbers in a region as every other structure of `group` with the
+    /// same region size, so they can share the regions out between them: each takes the
+    /// regions whose first number falls in its own range, and none stands where another does.
+    pub fn group(mut self, group: &str) -> Self {
+        self.group = Some(full_name(group));
         self
     }
 }
@@ -70,7 +79,11 @@ impl Drop for Planning<'_> {
         };
         let name = full_name(&self.name);
         let dimensions = std::mem::take(&mut self.dimensions);
-        Generator::new(name, self.region, dimensions, planner).register(self.registry);
+        let mut generator = Generator::new(name, self.region, dimensions, planner);
+        if let Some(group) = &self.group {
+            generator = generator.in_group(group);
+        }
+        generator.register(self.registry);
     }
 }
 
