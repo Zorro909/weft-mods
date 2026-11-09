@@ -616,8 +616,9 @@ Found again, and changed from another mod, as any structure is:
 let camp = w.structure_near("camps:camp", pos, 2000);     // the well's corner, generated yet or not
 
 static CAMP: Structure = Structure::named("camps:camp");
+static HUT: Template = Template::named("camps:hut");
 r.edit(&CAMP).spacing(640);                                // rarer
-r.edit(&Template::named("camps:hut")).fill("base:torch", [2, 1, 3], [2, 1, 3]);   // a light in every hut
+r.edit(&HUT).fill("base:torch", [2, 1, 3], [2, 1, 3]);     // a light in every hut
 ```
 
 What it uses: M1 (`structure_named`, `plan`, `piece`), M2 (`cell`, `random`, `column`), M3 (the
