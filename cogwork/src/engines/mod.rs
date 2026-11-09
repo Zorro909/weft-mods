@@ -8,6 +8,7 @@ mod piston;
 mod run;
 
 pub use model::turn;
+use strum::FromRepr;
 use weft_sdk::*;
 
 pub static SPRING_ENGINE: Block = Block::named("spring_engine");
@@ -15,9 +16,9 @@ pub static EMBER_ENGINE: Block = Block::named("ember_engine");
 static EMBER_MENU: Menu = Menu::named("ember_engine");
 
 value! {
-    /// An engine's state: its `kind`, `heat` 0..1000, `overheated` (1 while it cools down), the
-    /// ticks of fuel left burning out of `burn_max`, ticks into the piston's stroke, and the
-    /// piston entity.
+    /// An engine's state: its kind (`Kind`), `heat` 0..1000, `overheated` (1 while it cools
+    /// down), the ticks of fuel left burning out of `burn_max`, ticks into the piston's stroke,
+    /// and the piston entity.
     #[derive(Default)]
     pub struct Engine {
         pub kind: u32,
@@ -31,9 +32,35 @@ value! {
 }
 pub static ENGINE: Component<Engine> = Component::named("cogwork:engine");
 
-pub mod kind {
-    pub const SPRING: u32 = 0;
-    pub const EMBER: u32 = 1;
+/// Which engine it is. Kept in `Engine::kind` as its number, so the order is part of the save
+/// format.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr)]
+#[repr(u32)]
+pub enum Kind {
+    /// Runs on a redstone signal.
+    #[default]
+    Spring,
+    /// Burns fuel.
+    Ember,
+}
+
+impl Engine {
+    /// An engine of `kind`, cold and at rest.
+    fn of(kind: Kind) -> Engine {
+        Engine {
+            kind: kind as u32,
+            ..Engine::default()
+        }
+    }
+
+    pub fn kind(&self) -> Kind {
+        Kind::from_repr(self.kind).unwrap_or_default()
+    }
+
+    /// Whether it has stopped to cool down.
+    pub fn is_overheated(&self) -> bool {
+        self.overheated != 0
+    }
 }
 
 pub fn register(r: &mut Registry) {
@@ -55,22 +82,8 @@ fn spring_engine(r: &mut Registry) {
         .mined_by("axe", tool_tier::HAND)
         .tab(&crate::TAB)
         .entity(|e| {
-            e.attach_with(
-                &ENGINE,
-                Engine {
-                    kind: kind::SPRING,
-                    ..Engine::default()
-                },
-            )
-            .attach_with(
-                &ENERGY,
-                Energy {
-                    stored: 0,
-                    capacity: 1_000,
-                    max_in: 0,
-                    max_out: 50,
-                },
-            )
+            e.attach_with(&ENGINE, Engine::of(Kind::Spring))
+                .attach_with(&ENERGY, gives(1_000, 50))
         });
 }
 
@@ -82,29 +95,25 @@ fn ember_engine(r: &mut Registry) {
         .mined_by("axe", tool_tier::HAND)
         .tab(&crate::TAB)
         .entity(|e| {
-            e.attach_with(
-                &ENGINE,
-                Engine {
-                    kind: kind::EMBER,
-                    ..Engine::default()
-                },
-            )
-            .attach_with(
-                &ENERGY,
-                Energy {
-                    stored: 0,
-                    capacity: 10_000,
-                    max_in: 0,
-                    max_out: 200,
-                },
-            )
-            .inventory(1)
+            e.attach_with(&ENGINE, Engine::of(Kind::Ember))
+                .attach_with(&ENERGY, gives(10_000, 200))
+                .inventory(1)
         })
         .opens(&EMBER_MENU);
     r.menu(&EMBER_MENU)
         .group("fuel", Slots::single().accepts("fuel").holder())
         .player_inventory()
         .screen(ember_screen);
+}
+
+/// An engine's store of `capacity` energy, empty, giving out up to `max_out` a tick to
+/// `conductor` networks.
+fn gives(capacity: i64, max_out: i64) -> Energy {
+    Energy {
+        capacity,
+        max_out,
+        ..Energy::default()
+    }
 }
 
 /// The ember engine's screen, above the player's inventory:
@@ -137,7 +146,7 @@ fn ember_screen(ui: &mut Ui) {
                 crate::machine::power_bar(ui);
                 ui.text_bind(|c, out| {
                     let e = c.menu_component(&ENGINE).unwrap_or_default();
-                    let key = if e.overheated != 0 {
+                    let key = if e.is_overheated() {
                         "cogwork.engine.overheated"
                     } else {
                         "cogwork.engine.heat"

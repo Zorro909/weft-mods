@@ -3,20 +3,34 @@
 
 use weft_sdk::*;
 
-use super::{ENGINE, Engine, kind, model};
+use super::{ENGINE, Engine, Kind, model};
 use crate::lib::{ModelBox, Pos, point};
 
-/// The pistons lying flat (engines facing up or down), then standing (facing sideways), by
-/// engine kind.
-static FLAT: [EntityKind; 2] = [
-    EntityKind::named("spring_piston"),
-    EntityKind::named("ember_piston"),
-];
-static STANDING: [EntityKind; 2] = [
-    EntityKind::named("spring_piston_standing"),
-    EntityKind::named("ember_piston_standing"),
-];
-const TEXTURES: [&str; 2] = ["spring_piston", "ember_piston"];
+/// The pistons of one kind of engine: lying flat (engines facing up or down) and standing
+/// (facing sideways), both in one texture.
+struct Pistons {
+    flat: EntityKind,
+    standing: EntityKind,
+    texture: &'static str,
+}
+
+static SPRING: Pistons = Pistons {
+    flat: EntityKind::named("spring_piston"),
+    standing: EntityKind::named("spring_piston_standing"),
+    texture: "spring_piston",
+};
+static EMBER: Pistons = Pistons {
+    flat: EntityKind::named("ember_piston"),
+    standing: EntityKind::named("ember_piston_standing"),
+    texture: "ember_piston",
+};
+
+fn pistons(kind: Kind) -> &'static Pistons {
+    match kind {
+        Kind::Spring => &SPRING,
+        Kind::Ember => &EMBER,
+    }
+}
 
 /// Ticks the piston takes to rise or to fall, and to rest at each end: the client eases it
 /// toward where it is, so without the rest it would turn back short of the ends.
@@ -28,13 +42,16 @@ pub const STROKE_TICKS: u32 = 2 * (TRAVEL + REST);
 const LIFT: f64 = 8.0;
 
 pub fn register(r: &mut Registry) {
-    for k in 0..2 {
-        let models = [(&FLAT[k], plate()), (&STANDING[k], standing_plate())];
+    for pistons in [&SPRING, &EMBER] {
+        let models = [
+            (&pistons.flat, plate()),
+            (&pistons.standing, standing_plate()),
+        ];
         for (entity, part) in models {
             // Small enough to stay inside the engine, so aiming at it aims at the block.
             crate::owned::kind(r.entity(entity), claims)
                 .model(Model::from(vec![part]).uv_size(64, 20))
-                .texture(TEXTURES[k])
+                .texture(pistons.texture)
                 .size(0.25, 0.25);
         }
     }
@@ -99,11 +116,11 @@ pub fn show(w: &World, id: u64, pos: Pos, e: &mut Engine) {
     let Some(out) = model::output(w, pos) else {
         return;
     };
-    let k = (e.kind == kind::EMBER) as usize;
+    let pistons = pistons(e.kind());
     let (entity, yaw) = match out {
-        Dir::Up | Dir::Down => (&FLAT[k], 0.0),
-        Dir::North | Dir::South => (&STANDING[k], 0.0),
-        _ => (&STANDING[k], 90.0),
+        Dir::Up | Dir::Down => (&pistons.flat, 0.0),
+        Dir::North | Dir::South => (&pistons.standing, 0.0),
+        Dir::West | Dir::East => (&pistons.standing, 90.0),
     };
     // At rest the piston's middle is 2 texels from the block's toward the base plate; the
     // stroke lifts it toward the trunk's end.
