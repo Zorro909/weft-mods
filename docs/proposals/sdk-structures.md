@@ -368,7 +368,7 @@ leaves in its column, the default where there is none. A building's rim is then 
 plains and snow on snowy plains. It is structgen's `ground` slot, said by the piece instead of
 by the slot's name.
 
-### H3. `Fit`: whether a template suits the ground at a spot — grade C
+### H3. `Fit`: whether a template suits the ground at a spot — grade C, high: H4 is built on it
 
 ```rust
 pub struct Fit { .. }
@@ -570,7 +570,7 @@ Small pull requests, each with its test and its part of `docs/worldgen.md`:
 3. P3 and `Template::size` could go ahead of everything; they stand alone.
 4. P1, slots.
 5. P2, priority.
-6. Helpers one at a time, H1 and H4 first.
+6. Helpers one at a time: H1 and H3 first, then H4, which is built on H3.
 
 ## Open questions
 
