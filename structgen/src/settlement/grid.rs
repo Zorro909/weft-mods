@@ -211,12 +211,13 @@ impl Grid {
     /// within `reach`: the cobbles end where the town does.
     pub fn fade_streets(&mut self, reach: i32) {
         let faded: Vec<(usize, Cell)> = (self.columns().enumerate())
-            .filter(|&(_, (at, _))| !self.near(at, reach, |c| c == Cell::Building))
-            .filter_map(|(i, (_, cell))| match cell {
-                Cell::Street => Some((i, Cell::Lane)),
-                Cell::Kerb => Some((i, Cell::Free)),
+            .filter_map(|(i, (at, cell))| match cell {
+                Cell::Street => Some((i, at, Cell::Lane)),
+                Cell::Kerb => Some((i, at, Cell::Free)),
                 _ => None,
             })
+            .filter(|&(_, at, _)| !self.near(at, reach, |c| c == Cell::Building))
+            .map(|(i, _, cell)| (i, cell))
             .collect();
         for (i, cell) in faded {
             self.cells[i] = cell;
@@ -295,6 +296,35 @@ mod tests {
             house.walkable([0.5, 0.5], east, 3),
             None,
             "no way through a house"
+        );
+    }
+
+    #[test]
+    fn a_heart_on_a_ledge_or_water_is_uneven() {
+        let strip = [[0.0, 0.0], [4.0, 0.0], [4.0, 1.0], [0.0, 1.0]];
+        let gentle = row(&[Some(64), Some(65), Some(65), Some(66), Some(66)]);
+        assert!(gentle.even(&strip, 0.0), "a block at a time");
+        let ledge = row(&[Some(64), Some(64), Some(66), Some(66), Some(66)]);
+        assert!(!ledge.even(&strip, 0.0), "two blocks up at once");
+        let pond = row(&[Some(64), None, Some(64), Some(64), Some(64)]);
+        assert!(!pond.even(&strip, 0.0), "water in it");
+    }
+
+    #[test]
+    fn a_street_fades_to_a_lane_away_from_the_houses() {
+        let mut street = row(&[Some(64); 20]);
+        for x in 0..19 {
+            street.put([x, 0], Cell::Street);
+        }
+        street.put([19, 0], Cell::Kerb);
+        street.put([1, 0], Cell::Building);
+        street.fade_streets(3);
+        assert_eq!(street.get([4, 0]), Cell::Street, "three from the house");
+        assert_eq!(street.get([5, 0]), Cell::Lane, "four from it");
+        assert_eq!(
+            street.get([19, 0]),
+            Cell::Free,
+            "a kerb out of town is grass"
         );
     }
 }

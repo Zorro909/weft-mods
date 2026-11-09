@@ -151,9 +151,9 @@ pub fn outskirts(
         setback: [1, 6],
         ..*rules
     };
-    let ends: Vec<_> = main.iter().filter_map(Road::end).collect();
     // A few tries at each end, each standing it a different way back.
-    ends.iter().cycle().take(ends.len() * 4).find_map(|&end| {
+    let mut ends = main.iter().cycle().take(main.len() * 4).filter_map(Road::end);
+    ends.find_map(|end| {
         let front = Front {
             points: vec![end],
             reach,
