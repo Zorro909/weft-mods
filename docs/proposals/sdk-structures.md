@@ -283,6 +283,8 @@ Replaces `Turn` in plans and `turn_state` (`turn.rs`).
 
 ```rust
 impl StructurePlan {
+    /// One block.
+    pub fn set(&mut self, pos: impl Into<BlockPos>, state: u32);
     /// Every block from `from` to `to`, both included, in either order.
     pub fn fill(&mut self, from: impl Into<BlockPos>, to: impl Into<BlockPos>, state: u32);
     /// The same, only where the block there has `tag` as the world generates: leaves to air
@@ -291,7 +293,8 @@ impl StructurePlan {
 }
 ```
 
-Roads, paving, fields and the clearing of trees are boxes, mostly one column each. `replace`
+Roads, paving, fields and the clearing of trees are boxes, mostly one column each; `set` is
+`fill` with both corners the same, and what the example below wanted for its path. `replace`
 is asked per cube against the cube as it stands when structures go in, so after scatters,
 decorations and ores. Foundations and clearing above a piece can be written with these two and
 M2 (see H1), which is why they are helpers and not in this level.
@@ -528,6 +531,109 @@ are completeness 3.
 | O2 | Scatters and the spawn search keep out of pieces, as the spawn search keeps out of trees (`scattered_near`). A village could then stand in a forest; today structgen stays on open land and trims leaves along its roads. | D |
 | O3 | What a chest or machine in a template holds. Generation writes block states only; `World::seed_at` already gives a block its own random number, so with O1 a mod can fill a chest when it is first opened. | D |
 | O4 | Structures in distant terrain. The LOD draws the terrain, tree canopies and the columns the server says saved cubes changed (`client/lod.rs`), so a village not yet generated isn't there from afar. | D |
+
+## An example: a camp
+
+A whole mod with one planned structure, as it would be written with everything above: a well
+with huts round it, each with its door to the well and a gravel path between. Which sides get
+a hut and what the huts are walled with comes from the seed. It builds against nothing yet.
+
+```rust
+//! Camps on base's plains: a well with huts round it, each with its door to the well and a
+//! gravel path between.
+
+use base_api::OVERWORLD;
+use weft_sdk::*;
+
+declare_mod!(deps: ["base"], init: init);
+
+static CAMP: Structure = Structure::named("camp");
+static WELL: Template = Template::named("well");
+static HUT: Template = Template::named("hut");
+static GRAVEL: Block = Block::named("base:gravel");
+/// What a camp walls its huts with, one for all of them.
+static WALLS: [Block; 3] =
+    [Block::named("base:oak_planks"), Block::named("base:spruce_planks"), Block::named("base:birch_planks")];
+
+/// From the well's middle to a hut's.
+const APART: i32 = 7;
+
+fn init(r: &mut Registry) {
+    r.template(&WELL)
+        .layer(&["ccc", "cwc", "ccc"])
+        .layer(&["ccc", "c c", "ccc"])
+        .key('c', "base:cobblestone")
+        .key('w', "base:water");
+    // Drawn with its door to the north, like a block's model; the camp turns it.
+    r.template(&HUT)
+        .slot("wall", "base:oak_planks")
+        .layer(&["fffff", "fffff", "fffff", "fffff", "fffff"])
+        .layer(&["ww.ww", "w...w", "w...w", "w...w", "wwwww"])
+        .layer(&["ww.ww", "w...w", "w...w", "w...w", "wwwww"])
+        .layer(&["rrrrr", "rrrrr", "rrrrr", "rrrrr", "rrrrr"])
+        .key('f', "base:cobblestone")
+        .key('w', "@wall")
+        .key('.', "air")
+        .key('r', "base:spruce_planks_slab");
+    r.structure_named(&CAMP).dimension(&OVERWORLD).spacing(320).chance(0.4).plan(camp);
+}
+
+/// One cell's camp: the well where the ground suits it, then a hut on each side the seed picks,
+/// where the ground suits that too.
+fn camp(p: &mut StructurePlan) {
+    let mut random = Random::new(p.random());
+    let Cell { min, size } = p.cell();
+    // Far enough inside the cell that every hut stays in it.
+    let (x, z) = (min[0] + random.between(12, size - 13), min[1] + random.between(12, size - 13));
+    // Open, dry and nearly level ground, the bottom layer set into it.
+    let dry = p.sea_level().map_or(i32::MIN, |sea| sea + 1);
+    let fit = Fit::new().biome("#animals !#forest").max_slope(2).y(dry, i32::MAX).buried(1);
+
+    let Some(at) = p.fit(&WELL, [x - 1, z - 1], Dir::North, &fit) else { return };
+    p.piece(&WELL, at, Dir::North).foundation(Foundation::Surface);
+
+    let wall = &WALLS[random.below(3) as usize];
+    for side in Facings::HORIZONTAL.dirs() {
+        let BlockPos { x: dx, z: dz, .. } = side.offset();
+        let door = side.opposite();
+        if !random.chance(0.7) {
+            continue;
+        }
+        let Some(at) = p.fit(&HUT, [x + dx * APART - 2, z + dz * APART - 2], door, &fit) else { continue };
+        p.piece(&HUT, at, door).slot("wall", wall).foundation(Foundation::Surface).clear_above();
+        // The path, from the well's rim to the door.
+        for step in 2..APART - 2 {
+            let (x, z) = (x + dx * step, z + dz * step);
+            p.set([x, p.column(x, z).height, z], GRAVEL.id());
+        }
+    }
+}
+```
+
+Found again, and changed from another mod, as any structure is:
+
+```rust
+let camp = w.structure_near("camps:camp", pos, 2000);     // the well's corner, generated yet or not
+
+static CAMP: Structure = Structure::named("camps:camp");
+r.edit(&CAMP).spacing(640);                                // rarer
+r.edit(&Template::named("camps:hut")).fill("base:torch", [2, 1, 3], [2, 1, 3]);   // a light in every hut
+```
+
+What it uses: M1 (`structure_named`, `plan`, `piece`), M2 (`cell`, `random`, `column`), M3 (the
+door's `Dir`), M4 (`set`), M5, P1 (the `wall` slot), P3 (`sea_level`), H1 (`foundation`,
+`clear_above`), H3 (`Fit`) and H5 (`Random`). With level 1 alone it would be about twice as
+long: the fit, the foundation and the random numbers written out by hand, and one hut template
+for each wood.
+
+What writing it showed:
+
+- `set` was missing from M4; it is there now.
+- Keeping a structure out of water takes two lines (`dry`, then `.y(dry, i32::MAX)`), and most
+  structures on land want it. `Fit::dry()` would say it in a word; it is not asked for above.
+- The huts are square, so a turn doesn't change what `fit` takes as their corner. A hut of 5
+  by 7 would need `HUT.size()` and the two swapped for east and west; a `p.fit` taking the
+  middle of the footprint instead of its corner would spare every planner that sum.
 
 ## The ABI, roughly
 
