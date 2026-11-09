@@ -55,13 +55,17 @@ generator has to do:
 - **The plot is the unit, not the building**: the house at the road, its garden or yard behind,
   barns at the back of a farm, the fields in strips beyond. Hedges and orchards between gardens
   and fields, trees on the green.
-- **To fix before generating**: grass is left between kerbs and house fronts where nothing
-  reaches (a street should pave out to its building line); a gutter or kerb at an angle steps
-  like a staircase; worn patches every tenth block of a path read as spots; field strips always
-  run north to south rather than across their plot. Roads go down before buildings, so a
-  building's eaves keep the ground's own block unless it is paved (`cobble_ground`).
-- **Size**: a village of 15 buildings takes about 130 by 120 blocks, a small town of 35 to 40
-  about 140 by 130 without its fields.
+- **What the sketch tool now does, and a generator should too**: a town street paves out to
+  the buildings along it, so no grass is left between kerb and house front; a gutter runs only
+  where a street runs along an axis, since at an angle a line of slabs steps like a staircase;
+  paths wear in patches of a few blocks, not single spots; field strips run along their plot.
+  Roads go down before buildings; a village building keeps grass round it, a town building
+  stands on paving (`cobble_ground`).
+- **Still to solve**: cart ruts and kerbs at an angle still step; a gutter ends in an open slab
+  where its street turns; a street's paving reaches only 4 blocks toward a building.
+- **Size**: a village is 9 or 10 buildings in about 95 by 85 blocks, a small town about 20 in
+  110 by 100. Fields stay small, for a find shouldn't hand out too much wheat: two of about 14
+  by 10 to a village, most of it not yet ripe.
 
 ## Towns
 

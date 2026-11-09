@@ -40,7 +40,13 @@ fn main() {
         .file_stem()
         .map_or("sketch".to_string(), |s| s.to_string_lossy().into_owned());
     let sketch = parse::read(file);
-    let ground = raster::Ground::of(&sketch);
+    let footprints: Vec<Footprint> = sketch.places.iter().map(footprint).collect();
+    // A town's buildings stand on paving (`cobble_ground`): the streets pave out to them.
+    let paved: Vec<raster::Rect> = (sketch.places.iter().zip(&footprints))
+        .filter(|(place, _)| place.styles.contains("cobble_ground"))
+        .map(|(_, footprint)| (footprint.corner, footprint.size))
+        .collect();
+    let ground = raster::Ground::of(&sketch, &paved);
     let out = Path::new(out);
     std::fs::create_dir_all(out)
         .unwrap_or_else(|e| panic!("could not create {}: {e}", out.display()));
@@ -55,7 +61,6 @@ fn main() {
         let [x, z] = piece.corner;
         writeln!(layout, "{piece_name} none {x} {z}").ok();
     }
-    let footprints: Vec<Footprint> = sketch.places.iter().map(footprint).collect();
     for (place, footprint) in sketch.places.iter().zip(&footprints) {
         let [x, z] = footprint.corner;
         writeln!(

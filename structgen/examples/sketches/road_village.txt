@@ -1,74 +1,48 @@
-# A road village grown into a cluster (Haufendorf): the country road winds through, a lane
-# forks north past the church in its hedged churchyard and a lane south to the farms. The tavern
-# and the old lime tree stand at the fork; houses keep to the roads at whatever distance and
-# angle the plot gave them, with gardens, orchards and barns behind, fields all round.
+# A road village: the country road bends through, a lane forks north to the chapel in its hedged
+# yard and one south to the farms. The tavern and an old oak stand at the fork; the houses keep
+# to the road at whatever distance their plot gave them, two small fields behind.
 
 # The country road, and the lanes off it.
-path 4   -4,72 12,67 25,62 50,64 70,55 95,50 125,58 140,56
-path 3   70,55 75,35 68,15 72,-4
-path 3   50,64 45,85 52,110 50,124
-# Tracks to the fields and the mill.
-track    73,18 95,17 104,15
-track    0,40 20,46 36,59
-track    95,50 108,72 126,96
-# To the church door, and to some houses.
-path 2   88,42 89,47 91,51
-path 2   36,57 36,61
-path 2   97,57 96,53
-# Fields.
-field    0,-2 50,2 48,34 2,38
-field    84,-4 100,-6 100,8 84,10
-field    74,82 104,78 106,112 70,112
-field    110,80 128,76 130,108 112,108
-field    -2,92 14,90 15,114 0,114
-# Gardens behind the houses.
-garden   2,48 14,48 14,52 2,52
-garden   92,68 102,68 102,74 92,74
-garden   24,86 41,88 40,92 24,90
-garden   110,72 120,72 120,77 110,77
-# The churchyard hedge, open toward the road.
-hedge    86,47 77,45 76,16 100,15 101,45 91,47
-hedge    0,89 16,86 26,94
+path 4   -4,58 15,54 35,56 52,48 75,45 98,52
+path 3   52,48 56,30 52,12
+path 3   35,56 32,74 38,92
+# Tracks to the fields.
+track    20,52 18,40 14,31
+track    90,51 98,60
+# To the chapel door, and to some houses.
+path 2   68,33 66,40 60,44
+path 2   30,51 31,53
+# Fields and gardens.
+field    3,18 20,17 20,29 4,30
+field    97,59 111,58 111,69 98,70
+garden   2,40 8,40 8,46 2,46
+garden   72,62 80,62 80,67 72,67
+# The chapel yard's hedge, open toward the lane.
+hedge    64,37 61,36 61,19 76,19 76,36 72,37
 
-# Along the road, west of the fork.
-place crofter_cottage back  10,57  spruce_roof
-place dormer_cottage  back  36,52  oak_roof
-place longhouse       none  14,79  spruce_roof,spruce_frame
-place hof             none  35,78  spruce_roof
-place great_barn      none  22,100 oak_roof
-# At the fork.
-place wayside_tavern  back  58,49  brick_roof
-place oak_tree_large  none  66,68
-# East of the fork.
-place smithy_house    none  78,66  spruce_roof
-place dormer_cottage  none  97,62  brick_roof,white_infill
-place crofter_cottage none  114,66 oak_roof
-place crofter_cottage back  106,40 spruce_roof,birch_frame
-place longhouse       back  121,44 oak_roof
-# The church.
-place village_church  back  88,31  stone_roof
-place oak_tree        none  79,20
-place birch_tree      none  97,19
-# The lane north.
-place dormer_cottage  right 64,26  spruce_roof
-place crofter_cottage left  78,10  oak_roof
-# The lane south.
-place lumberyard      left  58,88
-place staddle_granary right 38,98
-# Orchards, trees and bushes.
-place fruit_tree      none  30,42
-place fruit_tree      none  37,39
-place fruit_tree      none  44,43
-place birch_tree      none  6,44
-place oak_tree        none  48,72
-place bush            none  86,58
-place bush            none  128,50
-place oak_tree        none  132,68
-# The mill on the hill north-east.
-place tower_mill      none  110,13 stone_roof
+# North of the road.
+place crofter_cottage back  12,46  spruce_roof
+place dormer_cottage  back  30,47  oak_roof
+place wayside_tavern  back  42,41  brick_roof
+place longhouse       back  88,38  oak_roof
+# The chapel.
+place wayside_chapel  back  68,28  stone_roof
+place birch_tree      none  64,21
+# South of the road.
+place hof             none  20,66  spruce_roof
+place smithy_house    none  64,58  spruce_roof
+place crofter_cottage none  82,56  oak_roof,birch_frame
+place oak_tree_large  none  48,58
+# Down the lane south.
+place lumberyard      left  44,78
+place great_barn      none  20,88  oak_roof
+# Trees.
+place fruit_tree      none  4,52
+place oak_tree        none  100,42
+place bush            none  58,36
 
-view fork        44,2,68     75,4,52
-view road_east   86,2,52     130,3,57
-view churchyard  89,3,53     88,8,30
-view lane_south  52,2,70     48,3,105
-view from_mill   112,16,24   60,2,60
+view fork        30,2,61     58,4,47
+view road_east   62,2,49     98,3,52
+view chapel_yard 63,3,45     68,6,28
+view lane_south  36,2,60     36,3,92
+view from_field  10,12,24    55,2,55

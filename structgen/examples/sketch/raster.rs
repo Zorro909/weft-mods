@@ -6,6 +6,11 @@ use crate::parse::{Feature, Sketch};
 
 /// How far from a street's middle its gutter reaches.
 const GUTTER: f32 = 0.72;
+/// How far a town street paves out toward the buildings along it.
+const FRONTAGE: i32 = 4;
+
+/// A building's footprint seen from above: its north-west corner and size.
+pub type Rect = ([i32; 2], [i32; 2]);
 
 /// What one column of the ground becomes.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -64,8 +69,9 @@ pub struct Ground {
 }
 
 impl Ground {
-    /// Every feature of `sketch` drawn, on a grid just big enough for them.
-    pub fn of(sketch: &Sketch) -> Ground {
+    /// Every feature of `sketch` drawn, on a grid just big enough for them, and the street
+    /// paved out to the `paved` buildings standing along it.
+    pub fn of(sketch: &Sketch, paved: &[Rect]) -> Ground {
         let shapes: Vec<Shape> = sketch.features.iter().map(Shape::of).collect();
         let (low, high) = bounds(&shapes);
         let size = [(high[0] - low[0]) as usize, (high[1] - low[1]) as usize];
@@ -77,11 +83,42 @@ impl Ground {
         for shape in &shapes {
             ground.draw(shape);
         }
+        ground.pave_frontages(paved);
         ground
     }
 
     pub fn get(&self, [x, z]: [usize; 2]) -> Cell {
         self.cells[z * self.size[0] + x]
+    }
+
+    /// Paves the ground between a street and the buildings on it, so no grass is left in
+    /// front of a house: every bare cell near both.
+    fn pave_frontages(&mut self, buildings: &[Rect]) {
+        let [w, h] = self.size.map(|s| s as i32);
+        let paved = |g: &Ground, x: i32, z: i32| {
+            let inside = (0..w).contains(&x) && (0..h).contains(&z);
+            inside && g.cells[(z * w + x) as usize].rank() >= Cell::Kerb.rank()
+        };
+        let mut frontage = Vec::new();
+        for z in 0..h {
+            for x in 0..w {
+                let world = [x + self.origin[0], z + self.origin[1]];
+                let bare = self.cells[(z * w + x) as usize] == Cell::Ground;
+                let near_building = buildings.iter().any(|b| gap(b, world) <= FRONTAGE);
+                let reach = -FRONTAGE..=FRONTAGE;
+                let near_street = || {
+                    reach
+                        .clone()
+                        .any(|dz| reach.clone().any(|dx| paved(self, x + dx, z + dz)))
+                };
+                if bare && near_building && near_street() {
+                    frontage.push((z * w + x) as usize);
+                }
+            }
+        }
+        for i in frontage {
+            self.cells[i] = Cell::Square;
+        }
     }
 
     fn draw(&mut self, shape: &Shape) {
@@ -148,18 +185,25 @@ impl<'a> Shape<'a> {
                 let d = distance(&self.points, at);
                 let ragged = d <= width / 2.0 + 0.7 && roll < 0.3;
                 let on = d <= width / 2.0 || ragged;
-                on.then_some(if roll > 0.9 { Cell::Worn } else { Cell::Path })
+                on.then_some(if worn(x, z, 0.82) {
+                    Cell::Worn
+                } else {
+                    Cell::Path
+                })
             }
             Feature::Track { .. } => {
                 let d = distance(&self.points, at);
                 ((d - 1.1).abs() <= 0.55).then_some(Cell::Rut)
             }
             Feature::Street { width, .. } => {
-                let d = distance(&self.points, at);
+                let (d, along) = nearest(&self.points, at);
+                // Along an axis only: at an angle a gutter of slabs steps like a staircase.
+                let square_on =
+                    along[0].abs().min(along[1].abs()) * 2.5 < along[0].abs().max(along[1].abs());
                 match d {
-                    // Past half a cell's diagonal, so a gutter at an angle runs on unbroken.
-                    d if d <= GUTTER => Some(Cell::Gutter),
-                    d if d <= width / 2.0 => Some(if roll < 0.07 {
+                    // Past half a cell's diagonal, so a gutter at a slight angle runs on unbroken.
+                    d if d <= GUTTER && square_on => Some(Cell::Gutter),
+                    d if d <= width / 2.0 => Some(if worn(x, z, 0.9) {
                         Cell::Patch
                     } else {
                         Cell::Paving
@@ -169,24 +213,61 @@ impl<'a> Shape<'a> {
                 }
             }
             Feature::Hedge { .. } => (distance(&self.points, at) <= 0.6).then_some(Cell::Hedge),
-            Feature::Square { area } => inside(area, at).then_some(if roll < 0.06 {
+            Feature::Square { area } => inside(area, at).then_some(if worn(x, z, 0.92) {
                 Cell::SquarePatch
             } else {
                 Cell::Square
             }),
-            Feature::Field { area } => inside(area, at).then(|| strip(x, 4, &[3, 5, 7, 7])),
-            Feature::Garden { area } => inside(area, at).then(|| strip(x, 2, &[2, 4, 5])),
+            Feature::Field { area } => {
+                inside(area, at).then(|| strip(area, at, 4, &[1, 2, 3, 4, 7]))
+            }
+            Feature::Garden { area } => inside(area, at).then(|| strip(area, at, 2, &[2, 3, 4])),
         }
     }
 }
 
-/// Strips `width` blocks wide along z, a furrow between each, each strip's wheat of one age.
-fn strip(x: i32, width: i32, ages: &[u8]) -> Cell {
-    let index = x.div_euclid(width + 1);
-    match x.rem_euclid(width + 1) == width {
+/// Strips `width` blocks wide along the longest side of `area`, a furrow between each, each
+/// strip's wheat of one age.
+fn strip(area: &[[f32; 2]], at: [f32; 2], width: i32, ages: &[u8]) -> Cell {
+    let along = longest_side(area);
+    let across = (at[0] * -along[1] + at[1] * along[0]).floor() as i32;
+    let index = across.div_euclid(width + 1);
+    match across.rem_euclid(width + 1) == width {
         true => Cell::Furrow,
         false => Cell::Crop(ages[(noise(index, 7) * ages.len() as f32) as usize % ages.len()]),
     }
+}
+
+/// The direction of the longest side of `area`, one block long.
+fn longest_side(area: &[[f32; 2]]) -> [f32; 2] {
+    let sides = (0..area.len()).map(|i| {
+        let [a, b] = [area[i], area[(i + 1) % area.len()]];
+        [b[0] - a[0], b[1] - a[1]]
+    });
+    let side = sides.fold([0.0, 1.0], |best: [f32; 2], s| {
+        if s[0].hypot(s[1]) > best[0].hypot(best[1]) {
+            s
+        } else {
+            best
+        }
+    });
+    let length = side[0].hypot(side[1]);
+    [side[0] / length, side[1] / length]
+}
+
+/// Whether column (`x`, `z`) is worn, in patches of a few blocks: rarer the higher `rarity`.
+fn worn(x: i32, z: i32, rarity: f32) -> bool {
+    noise(x.div_euclid(3), z.div_euclid(3) + 9000) > rarity && noise(x, z) > 0.3
+}
+
+/// How many blocks `at` is from `rect`, along x or z, whichever is further; 0 inside it.
+fn gap((corner, size): &Rect, at: [i32; 2]) -> i32 {
+    let off = |i: usize| {
+        (corner[i] - at[i])
+            .max(at[i] - (corner[i] + size[i] - 1))
+            .max(0)
+    };
+    off(0).max(off(1))
 }
 
 /// The lowest and highest corners over every shape.
@@ -215,8 +296,16 @@ fn smooth(line: &[[f32; 2]]) -> Vec<[f32; 2]> {
 
 /// How far `at` is from the nearest point of `line`.
 fn distance(line: &[[f32; 2]], at: [f32; 2]) -> f32 {
+    nearest(line, at).0
+}
+
+/// How far `at` is from the nearest point of `line`, and which way the line runs there.
+fn nearest(line: &[[f32; 2]], at: [f32; 2]) -> (f32, [f32; 2]) {
     if line.len() == 1 {
-        return ((at[0] - line[0][0]).powi(2) + (at[1] - line[0][1]).powi(2)).sqrt();
+        return (
+            ((at[0] - line[0][0]).powi(2) + (at[1] - line[0][1]).powi(2)).sqrt(),
+            [1.0, 0.0],
+        );
     }
     line.windows(2)
         .map(|pair| {
@@ -226,9 +315,12 @@ fn distance(line: &[[f32; 2]], at: [f32; 2]) -> f32 {
             let t =
                 (((at[0] - a[0]) * along[0] + (at[1] - a[1]) * along[1]) / length).clamp(0.0, 1.0);
             let near = [a[0] + t * along[0], a[1] + t * along[1]];
-            ((at[0] - near[0]).powi(2) + (at[1] - near[1]).powi(2)).sqrt()
+            let d = ((at[0] - near[0]).powi(2) + (at[1] - near[1]).powi(2)).sqrt();
+            (d, along)
         })
-        .fold(f32::MAX, f32::min)
+        .fold((f32::MAX, [1.0, 0.0]), |best, here| {
+            if here.0 < best.0 { here } else { best }
+        })
 }
 
 /// Whether `at` is inside the polygon with corners `area`.
@@ -272,6 +364,25 @@ mod tests {
             assert!(gutter(i, i), "on the line at {i}");
             assert!(gutter(i + 1, i), "joined to the next one along x at {i}");
         }
+    }
+
+    #[test]
+    fn fields_are_striped_along_their_longest_side() {
+        let long_east = [[0.0, 0.0], [30.0, 0.0], [30.0, 8.0], [0.0, 8.0]];
+        let row = |z: f32| (0..30).map(move |x| strip(&long_east, [x as f32 + 0.5, z], 4, &[1, 7]));
+        let first: Vec<Cell> = row(0.5).collect();
+        assert!(
+            first.iter().all(|c| *c == first[0]),
+            "one strip all along a row"
+        );
+    }
+
+    #[test]
+    fn the_gap_to_a_footprint_counts_blocks_outside_it() {
+        let house: Rect = ([10, 10], [5, 5]);
+        assert_eq!(gap(&house, [12, 12]), 0, "inside");
+        assert_eq!(gap(&house, [16, 12]), 2, "two east of its last column");
+        assert_eq!(gap(&house, [7, 7]), 3, "off a corner");
     }
 
     #[test]
