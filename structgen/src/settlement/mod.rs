@@ -130,15 +130,16 @@ pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
     Ok(())
 }
 
-/// Puts up the buildings in a settlement's materials, a town's paved round (but not its
-/// trees), then lays its roads, squares and fields.
+/// Puts up the buildings in a settlement's materials, a town's paved round (but not its trees
+/// or its mill out in the fields), then lays its roads, squares and fields.
 fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) -> Result<(), PlanError> {
     let walls = walls(p, s);
     for site in sites {
         let roof = styles::blocks(one_of(p, s.roofs).unwrap_or(""));
         let mut materials = styles::add(walls.clone(), roof);
-        let tree = s.trees.iter().any(|&t| std::ptr::eq(t, site.template));
-        if s.kind == Kind::Town && !tree {
+        let is = |t: &Template| std::ptr::eq(t, site.template);
+        let outside = s.trees.iter().any(|&t| is(t)) || s.mill.is_some_and(is);
+        if s.kind == Kind::Town && !outside {
             materials = styles::add(materials, styles::blocks("cobble_ground"));
         }
         p.structure(site.template, site.corner, site.turn)?

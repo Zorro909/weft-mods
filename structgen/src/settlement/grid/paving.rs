@@ -6,14 +6,17 @@ use super::*;
 impl Grid {
     /// Paves the bare ground between a town's streets and the buildings on them, and where the
     /// streets meet the square, so no grass is left in front of a house or in a corner: every
-    /// free column next to a building or the square and near a road.
+    /// free column next to a building and near a road or the square, or next to the square and
+    /// near a street.
     pub fn pave_frontages(&mut self) {
+        let street = |c| matches!(c, Cell::Street | Cell::Kerb | Cell::Lane);
         let paved: Vec<[i32; 2]> = self
             .columns()
             .filter(|&(at, cell)| {
+                let by = |what| self.near(at, 2, |c| c == what);
                 cell == Cell::Free
-                    && self.near(at, 2, |c| matches!(c, Cell::Building | Cell::Square))
-                    && self.near(at, 3, Cell::is_road)
+                    && (by(Cell::Building) && self.near(at, 3, Cell::is_road)
+                        || by(Cell::Square) && self.near(at, 3, street))
             })
             .map(|(at, _)| at)
             .collect();
@@ -78,5 +81,13 @@ mod tests {
         );
         assert_eq!(town.get([3, 0]), Cell::Free, "three from the square");
         assert_eq!(town.get([9, 0]), Cell::Free, "nothing near");
+        let mut edge = row(&[Some(64); 6]);
+        edge.put([0, 0], Cell::Square);
+        edge.pave_frontages();
+        assert_eq!(
+            edge.get([1, 0]),
+            Cell::Free,
+            "no street meets the square here"
+        );
     }
 }
