@@ -60,9 +60,9 @@ impl Planning<'_> {
         self.region = blocks.clamp(1, i32::MAX as u32) as i32;
         self
     }
-    /// Where its plan would touch that of a structure with a higher priority (any of this or
-    /// another mod's, `place`d or `plan`ned), it isn't placed: a town over a village over a lone
-    /// cottage. Both stand where the priorities are the same. 0 by default.
+    /// Where its plan would come within 8 blocks of that of a structure with a higher priority
+    /// (any of this or another mod's, `place`d or `plan`ned), it isn't placed: a town over a
+    /// village over a lone cottage. Both stand where the priorities are the same. 0 by default.
     pub fn priority(mut self, priority: i32) -> Self {
         self.priority = priority;
         self

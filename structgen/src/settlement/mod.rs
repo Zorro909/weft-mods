@@ -42,11 +42,19 @@ pub enum Kind {
 }
 
 impl Kind {
-    /// How wide its roads are, and what they are on the grid.
-    fn road(self) -> (f32, Cell) {
+    /// How wide its roads are.
+    fn width(self) -> f32 {
         match self {
-            Kind::Village => (LANE, Cell::Lane),
-            Kind::Town => (STREET, Cell::Street),
+            Kind::Village => LANE,
+            Kind::Town => STREET,
+        }
+    }
+
+    /// What its roads, and the ways to its doors, are on the grid.
+    fn road(self) -> Cell {
+        match self {
+            Kind::Village => Cell::Lane,
+            Kind::Town => Cell::Street,
         }
     }
 }
@@ -61,7 +69,7 @@ pub struct Settlement {
     pub priority: i32,
     pub kind: Kind,
     /// Steps of the main road out of the heart, each way, and of a branch.
-    pub steps: [usize; 2],
+    pub steps: usize,
     /// How many branches leave the main road, at least and at most.
     pub branches: [i32; 2],
     /// How far the heart reaches along the main road and across it, in blocks.
@@ -98,7 +106,7 @@ pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
     if !p.random().chance(s.chance) {
         return Ok(());
     }
-    let reach = (s.steps[0] as f32 * roads::STEP + s.heart[0]) as i32 + 20;
+    let reach = (s.steps as f32 * roads::STEP + s.heart[0]) as i32 + 20;
     for _ in 0..SPOTS {
         let middle = p.spot(reach);
         let open = p.ground(middle[0], middle[1]);
@@ -143,11 +151,14 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
     let roads = roads::lay(p.random(), grid, s, &heart, m, angle);
     let mut sites = buildings::centre(p, grid, s, m, angle)?;
     let start = p.random().below(1 << 16) as usize;
-    let fronts = fronts(&heart, ring, &roads, s.kind.road().0, start);
+    let fronts = fronts(&heart, ring, &roads, s.kind.width(), start);
     let rules = rules(s);
     let farmland = reach_of(&roads, m) * 0.6;
     sites.extend(buildings::along(p, grid, s, &rules, &fronts, m, farmland)?);
-    let from_road = s.kind.road().0 / 2.0 + 1.0;
+    if s.kind == Kind::Town {
+        grid.fade_streets(12);
+    }
+    let from_road = s.kind.width() / 2.0 + 1.0;
     sites.extend(
         s.mill
             .and_then(|mill| buildings::outskirts(p, grid, &rules, mill, &roads[..2], from_road)),
@@ -163,7 +174,6 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
         s.heart[0] as i32 + 18,
     ));
     if s.kind == Kind::Town {
-        grid.fade_streets(12);
         grid.pave_frontages();
     }
     Some(sites)
@@ -176,7 +186,7 @@ fn rules(s: &Settlement) -> Rules {
         setback: s.setback,
         gap: s.gap,
         fit: Fit::new().biome(&OPEN_LAND).max_slope(4).min_height(SEA),
-        path: s.kind.road().1,
+        path: s.kind.road(),
     }
 }
 

@@ -205,18 +205,19 @@ impl Grid {
         }
     }
 
-    /// Turns a town's streets into lanes where no building stands within `reach`: the cobbles
-    /// end where the town does.
+    /// Turns a town's streets into lanes, their kerbs into grass, where no building stands
+    /// within `reach`: the cobbles end where the town does.
     pub fn fade_streets(&mut self, reach: i32) {
-        let faded: Vec<usize> = (self.columns().enumerate())
-            .filter(|&(_, (at, cell))| {
-                matches!(cell, Cell::Street | Cell::Kerb)
-                    && !self.near(at, reach, |c| c == Cell::Building)
+        let faded: Vec<(usize, Cell)> = (self.columns().enumerate())
+            .filter(|&(_, (at, _))| !self.near(at, reach, |c| c == Cell::Building))
+            .filter_map(|(i, (_, cell))| match cell {
+                Cell::Street => Some((i, Cell::Lane)),
+                Cell::Kerb => Some((i, Cell::Free)),
+                _ => None,
             })
-            .map(|(i, _)| i)
             .collect();
-        for i in faded {
-            self.cells[i] = Cell::Lane;
+        for (i, cell) in faded {
+            self.cells[i] = cell;
         }
     }
 

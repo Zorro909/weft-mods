@@ -66,7 +66,7 @@ pub fn lay(
     middle: Point,
     angle: f32,
 ) -> Vec<Road> {
-    let (width, road) = s.kind.road();
+    let (width, road) = (s.kind.width(), s.kind.road());
     grid.put_area(
         heart,
         if s.kind == Kind::Village {
@@ -75,7 +75,7 @@ pub fn lay(
             Cell::Square
         },
     );
-    let mut roads: Vec<Road> = main_road(grid, random, heart, middle, angle, s.steps[0]).into();
+    let mut roads: Vec<Road> = main_road(grid, random, heart, middle, angle, s.steps).into();
     for main in &roads {
         grid.put_road(&main.line, width, road);
     }
@@ -93,7 +93,7 @@ pub fn lay(
         let from = &roads[random.below(2) as usize];
         let n = from.line.len() as i32;
         let index = random.between(n / 3, (n - 3).max(n / 3)) as usize;
-        let Some(branch) = branch(grid, random, from, index, side, s.steps[1]) else {
+        let Some(branch) = branch(grid, random, from, index, side, s.steps) else {
             continue;
         };
         if branch.length() < 2.0 * STEP {
@@ -106,7 +106,7 @@ pub fn lay(
     roads
 }
 
-/// The main road through the heart: out from its edge both ways.
+/// The main road through the heart: out from its edge both ways, bending a little as it passes.
 fn main_road(
     grid: &Grid,
     random: &mut Random,
@@ -115,7 +115,8 @@ fn main_road(
     angle: f32,
     steps: usize,
 ) -> [Road; 2] {
-    [angle, angle + PI].map(|way| grow(grid, random, edge(heart, middle, way), way, steps))
+    let bend = (unit(random) - 0.5) * 1.2;
+    [angle, angle + PI + bend].map(|way| grow(grid, random, edge(heart, middle, way), way, steps))
 }
 
 /// A road branching off `from` at the point `index` along it, to its left for `side` 1 and

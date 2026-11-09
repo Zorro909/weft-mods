@@ -62,7 +62,7 @@ over a lone building.
 | | Hamlet | Village | Town |
 |---|---|---|---|
 | One per square of | 384 blocks, 45% | 512 blocks, 45% | 640 blocks, 50% |
-| Heart | a green with a well | a green with a well | a cobbled market square, fountain and stalls |
+| Heart | a green with a well | a green with a well and an oak | a cobbled market square, fountain and stalls |
 | Roads | gravel lanes | gravel lanes | cobbled streets between stone kerbs |
 | Buildings | 5 cottages or farms | a church, a tavern, a smithy and forge, 5 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 12 town houses, a tower mill |
 | Fields | 1 | 2 | 2 |
@@ -71,7 +71,8 @@ over a lone building.
    a random angle: the village green, ringed by a lane, or the town's square. Its ground, and
    the lane's, must be open land a player can walk across, no column more than a block above
    its neighbour; a square tries up to three spots before it goes without a settlement.
-2. **Roads.** The main road leaves the heart's edge both ways along that angle; a branch or
+2. **Roads.** The main road leaves the heart's edge both ways along that angle, bending a
+   little as it passes through; a branch or
    two leave it at roughly a right angle, to either side in turn, and one the ground stops
    short is tried again elsewhere. A road goes 7 blocks a step, each time the way of
    three (straight on, or about 20° either side) that climbs least, so it winds along the
@@ -92,13 +93,14 @@ over a lone building.
 4. **Round about.** A mill stands past one end of the main road, a path to its door, small
    strip fields of mostly unripe wheat past the ends of other roads, a few trees round the
    heart. A town paves the ground between its streets and its buildings, and its streets turn to
-   gravel lanes where no building stands near.
+   gravel lanes, their kerbs to grass, where no building stands near.
 5. **Materials.** A settlement takes one frame and panel for all its buildings and a roof for
    each.
 
 Everything is marked on a grid of the columns round the settlement first, so roads,
 buildings and fields keep out of each other; only then is anything built, roads and fields
-laid at each column's own height.
+laid at each column's own height with the air above them cleared, so no tree the world grew
+there floats or stands in the way.
 
 ## Finding them
 

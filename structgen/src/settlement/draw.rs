@@ -1,5 +1,6 @@
 //! The grid's roads, squares and fields laid onto the ground at each column's own height:
-//! gravel lanes worn in patches, cobbled streets between stone kerbs, wheat on farmland.
+//! gravel lanes worn in patches, cobbled streets between stone kerbs, wheat on farmland. Above
+//! each, the air is cleared, so no tree the world grew there stands in the way or floats.
 
 use structgen_api::{Plan, PlanError};
 use weft_sdk::*;
@@ -37,9 +38,13 @@ pub fn draw(p: &mut Plan, grid: &Grid) -> Result<(), PlanError> {
         };
         p.set([x, y, z], floor)?;
         p.set_state([x, y + 1, z], above)?;
+        p.fill([x, y + 2, z], [x, y + CLEAR, z], &AIR)?;
     }
     Ok(())
 }
+
+/// How high above a road or field the air is cleared: a tall tree's height.
+const CLEAR: i32 = 10;
 
 /// Whether column (`x`, `z`) is worn, in patches of a few blocks rather than single spots.
 fn patch(x: i32, z: i32) -> bool {
