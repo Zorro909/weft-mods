@@ -26,7 +26,13 @@ const SHAFTS: usize = 40;
 const LONG_BEAMS: usize = 16;
 /// Beam pieces on each axis, the whole ones then up to three ends.
 const BEAMS: usize = LONG_BEAMS + 3;
-const SLOTS: usize = 2 + SHAFTS + 2 * BEAMS;
+/// Where in `Rig::ids` each run of pieces starts, and how many there are in all.
+const CARRIAGE_SLOT: usize = 0;
+const BIT_SLOT: usize = 1;
+const SHAFT_SLOTS: usize = 2;
+const X_BEAM_SLOTS: usize = SHAFT_SLOTS + SHAFTS;
+const Z_BEAM_SLOTS: usize = X_BEAM_SLOTS + BEAMS;
+const SLOTS: usize = Z_BEAM_SLOTS + BEAMS;
 /// Blocks one shaft or beam piece is long.
 const PIECE: f64 = 4.0;
 /// Blocks the bit stands above where it is placed (its tip reaches a quarter below).
@@ -34,44 +40,30 @@ const BIT_HEIGHT: f64 = 0.75;
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
-    let body = |lo, size| ModelBox::sized(lo, size).part("body", [0.0, 0.0]);
-    let pieces: [(&'static EntityKind, Vec<ModelPart>, [u32; 2]); 4] = [
-        (
-            &CARRIAGE,
-            vec![body([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0])],
-            [64, 32],
-        ),
-        (
-            &BIT,
-            // `bit` turns about its own axis (`animations/drill_bit.animation.json`), the tip
-            // with it.
-            vec![
-                ModelBox::sized([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0]).part("bit", [0.0, 0.0]),
-                ModelBox::sized([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0])
-                    .part("tip", [32.0, 0.0])
-                    .child_of(0),
-            ],
-            [64, 32],
-        ),
-        (
-            &SHAFT,
-            // Hangs below its place, which is its top: the engine lights an entity by the block
-            // just above its place, and the lowest piece's foot is down in the ground.
-            vec![body([-2.0, -64.0, -2.0], [4.0, 64.0, 4.0])],
-            [32, 80],
-        ),
-        (
-            &BEAM,
-            vec![body([-32.0, 0.0, -2.0], [64.0, 4.0, 4.0])],
-            [144, 16],
-        ),
-    ];
-    for (kind, parts, uv) in pieces {
-        piece(r, kind, parts, uv);
-    }
+    let body = |lo, size| vec![ModelBox::sized(lo, size).part("body", [0.0, 0.0])];
+    let carriage = body([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0]);
+    piece(r, &CARRIAGE, carriage, [64, 32]);
+    piece(r, &BIT, bit_parts(), [64, 32]);
+    // Hangs below its place, which is its top: the engine lights an entity by the block just
+    // above its place, and the lowest piece's foot is down in the ground.
+    let shaft = body([-2.0, -64.0, -2.0], [4.0, 64.0, 4.0]);
+    piece(r, &SHAFT, shaft, [32, 80]);
+    let beam = body([-32.0, 0.0, -2.0], [64.0, 4.0, 4.0]);
+    piece(r, &BEAM, beam, [144, 16]);
     // A short piece of the same beam, so it wears the beam's skin.
-    let end = vec![body([-8.0, 0.0, -2.0], [16.0, 4.0, 4.0])];
+    let end = body([-8.0, 0.0, -2.0], [16.0, 4.0, 4.0]);
     piece(r, &BEAM_END, end, [144, 16]).texture("gantry_beam");
+}
+
+/// The drill's bit and its tip. `bit` turns about its own axis
+/// (`animations/drill_bit.animation.json`), the tip with it.
+fn bit_parts() -> Vec<ModelPart> {
+    let bit = ModelBox::sized([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0]);
+    let tip = ModelBox::sized([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0]);
+    vec![
+        bit.part("bit", [0.0, 0.0]),
+        tip.part("tip", [32.0, 0.0]).child_of(0),
+    ]
 }
 
 fn piece<'a>(
@@ -97,8 +89,18 @@ impl Rig {
     }
 }
 
-/// Where each piece goes now: by slot, its kind, place and turn.
-fn layout(d: &Dig) -> Vec<(usize, &'static EntityKind, Vec3, f32)> {
+/// One piece of the rig as it should stand now: its slot in `Rig::ids`, its kind, where it is
+/// placed and its turn in degrees.
+#[derive(Clone, Copy)]
+struct Piece {
+    slot: usize,
+    kind: &'static EntityKind,
+    at: Vec3,
+    yaw: f32,
+}
+
+/// Where each piece goes now.
+fn layout(d: &Dig) -> Vec<Piece> {
     let head = d.head();
     let Frame { lo, hi } = d.frame;
     let top = hi.y as f64 + 0.25;
@@ -108,21 +110,30 @@ fn layout(d: &Dig) -> Vec<(usize, &'static EntityKind, Vec3, f32)> {
         y: (head.y + 1.0).min(top - BIT_HEIGHT),
         ..head
     };
-    let mut out = vec![(0, &CARRIAGE, carriage, 0.0), (1, &BIT, bit, 0.0)];
+    let piece = |slot, kind, at, yaw| Piece {
+        slot,
+        kind,
+        at,
+        yaw,
+    };
+    let mut pieces = vec![
+        piece(CARRIAGE_SLOT, &CARRIAGE, carriage, 0.0),
+        piece(BIT_SLOT, &BIT, bit, 0.0),
+    ];
     // Shaft pieces hang from the carriage down to the bit; the lowest reaches into the ground.
     let reach = top - (bit.y + BIT_HEIGHT);
     let shafts = ((reach / PIECE).ceil().max(0.0) as usize).min(SHAFTS);
     let below_carriage = |k: usize| carriage.offset(0.0, -PIECE * k as f64, 0.0);
-    out.extend((0..shafts).map(|k| (2 + k, &SHAFT, below_carriage(k), 0.0)));
+    pieces.extend((0..shafts).map(|k| piece(SHAFT_SLOTS + k, &SHAFT, below_carriage(k), 0.0)));
     let beams = carriage.offset(0.0, 0.125, 0.0);
     let (lo, hi) = (lo.center(), hi.center());
     for (k, (kind, x)) in spans(lo.x, hi.x).into_iter().enumerate() {
-        out.push((2 + SHAFTS + k, kind, Vec3 { x, ..beams }, 0.0));
+        pieces.push(piece(X_BEAM_SLOTS + k, kind, Vec3 { x, ..beams }, 0.0));
     }
     for (k, (kind, z)) in spans(lo.z, hi.z).into_iter().enumerate() {
-        out.push((2 + SHAFTS + BEAMS + k, kind, Vec3 { z, ..beams }, 90.0));
+        pieces.push(piece(Z_BEAM_SLOTS + k, kind, Vec3 { z, ..beams }, 90.0));
     }
-    out
+    pieces
 }
 
 /// Beam pieces end to end from `a` to `b`, whole ones then ends, by kind and center. None
@@ -148,9 +159,10 @@ pub fn update(w: &World, owner: u64, d: &Dig) {
         Vec::new()
     };
     let mut used = [false; SLOTS];
-    for (slot, kind, pos, yaw) in wanted {
-        used[slot] = true;
-        rig.ids[slot] = crate::owned::place(w, owner, rig.ids[slot], kind, pos, yaw);
+    for piece in wanted {
+        let id = &mut rig.ids[piece.slot];
+        *id = crate::owned::place(w, owner, *id, piece.kind, piece.at, piece.yaw);
+        used[piece.slot] = true;
     }
     for (slot, id) in rig.ids.iter_mut().enumerate() {
         if !used[slot] && *id != 0 {
@@ -174,6 +186,14 @@ mod tests {
         };
         d.set_head(head);
         d
+    }
+
+    /// Where the pieces of `kind` of the excavator `d` are placed.
+    fn placed(d: &Dig, kind: &'static EntityKind) -> impl Iterator<Item = Vec3> {
+        let pieces = layout(d).into_iter();
+        pieces
+            .filter(move |piece| std::ptr::eq(piece.kind, kind))
+            .map(|piece| piece.at)
     }
 
     #[test]
@@ -233,11 +253,7 @@ mod tests {
     fn shafts_reach_from_the_carriage_down_to_the_bit() {
         let d = mining_at(Vec3::new(5.5, -3.0, 5.5));
         // Each piece's top, where it is placed.
-        let shafts: Vec<f64> = layout(&d)
-            .into_iter()
-            .filter(|p| std::ptr::eq(p.1, &SHAFT))
-            .map(|p| p.2.y)
-            .collect();
+        let shafts: Vec<f64> = placed(&d, &SHAFT).map(|at| at.y).collect();
         let lowest = shafts.iter().copied().fold(f64::MAX, f64::min);
         assert!(
             lowest - PIECE <= -2.0 + BIT_HEIGHT,
@@ -255,9 +271,9 @@ mod tests {
         // highest solid one under the bit.
         for depth in [-3.0, -3.5, -5.0, -6.25] {
             let d = mining_at(Vec3::new(5.5, depth, 5.5));
-            for p in layout(&d).iter().filter(|p| std::ptr::eq(p.1, &SHAFT)) {
-                let lit_by = (p.2.y + 0.5).floor();
-                assert!(lit_by > depth, "drilling at {depth}: piece at {}", p.2.y);
+            for at in placed(&d, &SHAFT) {
+                let lit_by = (at.y + 0.5).floor();
+                assert!(lit_by > depth, "drilling at {depth}: piece at {}", at.y);
             }
         }
     }
@@ -265,10 +281,7 @@ mod tests {
     #[test]
     fn the_bit_stands_on_the_block_it_drills() {
         let d = mining_at(Vec3::new(5.5, -3.0, 5.5));
-        let bit = layout(&d)
-            .into_iter()
-            .find(|p| std::ptr::eq(p.1, &BIT))
-            .map(|p| p.2.y);
-        assert_eq!(bit, Some(-2.0), "its foot on top of the block at -3");
+        let bit: Vec<f64> = placed(&d, &BIT).map(|at| at.y).collect();
+        assert_eq!(bit, [-2.0], "its foot on top of the block at -3");
     }
 }

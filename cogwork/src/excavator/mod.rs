@@ -4,6 +4,7 @@
 
 mod area;
 mod dig;
+mod framing;
 mod mine;
 mod power;
 mod rig;
@@ -111,13 +112,8 @@ impl Dig {
     /// The cubes of the layer it mines, across the whole frame. None once the cursor has passed
     /// the floor: it finishes on the next tick.
     fn mining_layer(&self) -> Option<Cubes> {
-        match self.cursor.y {
-            y if y >= dig::FLOOR_Y => Some(Cubes::spanning(
-                self.frame.lo.with_y(y),
-                self.frame.hi.with_y(y),
-            )),
-            _ => None,
-        }
+        let (lo, hi, y) = (self.frame.lo, self.frame.hi, self.cursor.y);
+        (y >= dig::FLOOR_Y).then(|| Cubes::spanning(lo.with_y(y), hi.with_y(y)))
     }
 }
 
