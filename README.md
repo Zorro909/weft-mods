@@ -85,9 +85,9 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 
 | Mod | Release | Release candidate |
 |---|---|---|
-| cogwork | [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.3.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | [0.3.1-rc.28.g3cf937a](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.3.1-rc.28.g3cf937a), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
-| showcase | [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | [0.3.1-rc.28.g3cf937a](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.1-rc.28.g3cf937a), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
-| structgen | [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.2.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | [0.2.1-rc.28.g3cf937a](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.2.1-rc.28.g3cf937a), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
+| cogwork | [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.3.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | [0.3.1-rc.30.g998345d](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.3.1-rc.30.g998345d), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
+| showcase | [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | [0.3.1-rc.30.g998345d](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.1-rc.30.g998345d), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
+| structgen | [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.3.0), Weft 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) | – |
 | structures | [0.1.3](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | [0.1.4-rc.24.gfbcd03f](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.4-rc.24.gfbcd03f), Weft unknown |
 
 ## Versions
@@ -117,6 +117,7 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 
 | Version | Released | Weft |
 |---|---|---|
+| [0.3.0](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.3.0) | 2026-11-09 | 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
 | [0.2.0](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.2.0) | 2026-11-08 | 26.11.3 [80d1f65](https://github.com/Weft-Rust/Weft/commit/80d1f6504545b1ce3f6afab0b1df975630a3c7e5) |
 
 ### structures
