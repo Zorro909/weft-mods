@@ -168,7 +168,11 @@ mod tests {
                     .ease(Ease::In)
                     .blend(1.0),
             )
-            .shot(dolly([0.0; 3], [1.0; 3]).look(Look::Pan([0.0; 3], [2.0; 3])))
+            .shot(
+                dolly([0.0; 3], [1.0; 3])
+                    .look(Look::Pan([0.0; 3], [2.0; 3]))
+                    .ease(Ease::Speeds { from: 2.0, to: 0.5 }),
+            )
             .shot(hold([1.0; 3]).look(Look::Angles {
                 yaw: 90.0,
                 pitch: -10.0,

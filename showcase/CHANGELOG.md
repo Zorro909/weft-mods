@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- `Ease::Speeds { from, to }` sets a shot's speed at its start and end, so a camera flying
+  on from one shot to the next keeps moving instead of stopping where they meet.
+
 ### Fixed
 
 - A long flight is loaded along its whole path, and a film opens with its first view loaded.

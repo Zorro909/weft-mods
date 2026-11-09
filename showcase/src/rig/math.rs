@@ -3,15 +3,24 @@
 use showcase_api::Ease;
 use weft_sdk::Vec3;
 
-/// Progress through a shot after easing; `u` is the share of its time gone, 0 to 1.
+/// Progress through a shot after easing; `u` is the share of its time gone, 0 to 1. `Speeds`
+/// needs the path's length to go by (see `paced`); without it, it eases as `Smooth` does.
 pub fn eased(ease: Ease, u: f64) -> f64 {
     let u = u.clamp(0.0, 1.0);
     match ease {
         Ease::Linear => u,
-        Ease::Smooth => u * u * u * (u * (u * 6.0 - 15.0) + 10.0),
+        Ease::Smooth | Ease::Speeds { .. } => u * u * u * (u * (u * 6.0 - 15.0) + 10.0),
         Ease::In => u * u * u,
         Ease::Out => 1.0 - (1.0 - u).powi(3),
     }
+}
+
+/// Progress through a shot that starts at `from` times its average speed and ends at `to`
+/// times it, changing smoothly between (a cubic). Each is held to 0 to 3, which keeps the
+/// progress from ever going back.
+pub fn paced(from: f64, to: f64, u: f64) -> f64 {
+    let (a, b, u) = (from.clamp(0.0, 3.0), to.clamp(0.0, 3.0), u.clamp(0.0, 1.0));
+    ((a + b - 2.0) * u + (3.0 - 2.0 * a - b)) * u * u + a * u
 }
 
 pub fn lerp(a: f64, b: f64, u: f64) -> f64 {
@@ -70,6 +79,25 @@ mod tests {
                 "{ease:?} at the end"
             );
         }
+    }
+
+    #[test]
+    fn a_paced_shot_starts_and_ends_at_its_speeds_and_never_goes_back() {
+        let speed = |a: f64, b: f64, u: f64| (paced(a, b, u + 1e-6) - paced(a, b, u)) / 1e-6;
+        for (a, b) in [(0.0, 0.0), (0.5, 2.0), (3.0, 3.0), (0.0, 3.0), (3.0, 0.0)] {
+            assert!(paced(a, b, 0.0).abs() < 1e-12 && (paced(a, b, 1.0) - 1.0).abs() < 1e-12);
+            assert!((speed(a, b, 0.0) - a).abs() < 1e-4, "starts at {a}");
+            assert!((speed(a, b, 1.0 - 1e-6) - b).abs() < 1e-4, "ends at {b}");
+            assert!(
+                (0..100).all(|i| speed(a, b, i as f64 / 100.0) >= 0.0),
+                "{a} to {b}"
+            );
+        }
+        assert_eq!(
+            paced(9.0, -1.0, 0.5),
+            paced(3.0, 0.0, 0.5),
+            "held to 0 to 3"
+        );
     }
 
     #[test]
