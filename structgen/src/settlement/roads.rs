@@ -6,7 +6,7 @@ use std::f32::consts::{FRAC_PI_2, PI};
 use structgen_api::Random;
 
 use super::grid::{Cell, Grid, column};
-use super::shape::{Point, add, blob, heading, inside, length_of, scale, smooth, sub};
+use super::shape::{Point, add, blob, heading, inside, length_of, scale, smooth, sub, walk};
 use super::{Kind, Settlement, unit};
 
 /// How far a road goes in one step, in blocks.
@@ -20,8 +20,8 @@ pub struct Road {
 }
 
 impl Road {
-    /// How far it runs from end to end, in a straight line.
-    pub fn length(&self) -> f32 {
+    /// How far apart its ends are.
+    pub fn span(&self) -> f32 {
         match self.line[..] {
             [first, .., last] => length_of(sub(last, first)),
             _ => 0.0,
@@ -93,15 +93,13 @@ pub fn lay(
         let from = &roads[random.below(2) as usize];
         let n = from.line.len() as i32;
         let index = random.between(n / 3, (n - 3).max(n / 3)) as usize;
-        let Some(branch) = branch(grid, random, from, index, side, s.steps) else {
+        let tried = branch(grid, random, from, index, side, s.steps);
+        side = -side;
+        let Some(branch) = tried.filter(|branch| branch.span() >= 2.0 * STEP) else {
             continue;
         };
-        if branch.length() < 2.0 * STEP {
-            continue;
-        }
         grid.put_road(&branch.line, width, road);
         roads.push(branch);
-        side = -side;
     }
     roads
 }
@@ -188,14 +186,19 @@ fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: u
 /// `line` up to its first stretch that can't be walked: smoothing cuts its corners across
 /// columns the steps never looked at.
 fn walkable_part(grid: &Grid, mut line: Vec<Point>) -> Vec<Point> {
-    let walkable = |pair: &[Point]| {
-        let along = sub(pair[1], pair[0]);
-        let length = length_of(along);
-        let way = scale(along, 1.0 / length.max(f32::EPSILON));
-        grid.walkable(pair[0], way, length.round() as i32).is_some()
-    };
-    let stretches = line.windows(2).take_while(|pair| walkable(pair)).count();
-    line.truncate(stretches + 1);
+    let mut last: Option<i32> = None;
+    for i in 1..line.len() {
+        let stretch = walk(&line[i - 1..=i]).into_iter().map(|(at, _)| at);
+        for at in stretch.chain([line[i]]) {
+            let height = grid.ground(at);
+            let step = last.zip(height).is_some_and(|(a, b)| (a - b).abs() > 1);
+            if height.is_none() || step {
+                line.truncate(i);
+                return line;
+            }
+            last = height;
+        }
+    }
     line
 }
 
@@ -218,6 +221,13 @@ mod tests {
             Some(([0.0, 0.0], 0.0)),
             "past the end: the last stretch"
         );
+    }
+
+    #[test]
+    fn a_ledge_between_two_short_stretches_ends_the_road() {
+        let ground = [Some(64), Some(64), Some(66), Some(66)];
+        let line = vec![[0.5, 0.5], [1.8, 0.5], [2.2, 0.5], [2.6, 0.5]];
+        assert_eq!(walkable_part(&row(&ground), line), [[0.5, 0.5], [1.8, 0.5]]);
     }
 
     #[test]

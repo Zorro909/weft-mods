@@ -99,19 +99,21 @@ impl Grid {
     /// column on the way has ground and no building, and none is more than a block above or
     /// below the last.
     pub fn walkable(&self, from: Point, way: Point, blocks: i32) -> Option<i32> {
-        let ground = |at: Point| {
-            let at = column(at);
-            self.height(at).filter(|_| self.get(at) != Cell::Building)
-        };
-        let mut last = ground(from)?;
+        let mut last = self.ground(from)?;
         for k in 1..=blocks {
-            let next = ground(add(from, scale(way, k as f32)))?;
+            let next = self.ground(add(from, scale(way, k as f32)))?;
             if (next - last).abs() > 1 {
                 return None;
             }
             last = next;
         }
         Some(last)
+    }
+
+    /// The height of the ground under `at`, if it can be walked on: no water, no building.
+    pub fn ground(&self, at: Point) -> Option<i32> {
+        let at = column(at);
+        self.height(at).filter(|_| self.get(at) != Cell::Building)
     }
 
     /// Whether every column inside `area`, or within `margin` of its edge, has ground no more
