@@ -48,11 +48,23 @@ impl Planned {
         })
     }
 
+    /// Whether any of its parts comes within `room` blocks of one of `other`'s, seen from above.
+    pub fn near(&self, other: &Planned, room: i32) -> bool {
+        self.parts.iter().any(|part| {
+            let (from, to) = part.bounds();
+            other.reaches_into(from.map(|v| v - room), to.map(|v| v + room))
+        })
+    }
+
     /// Whether any part reaches into the columns from `from` to `to`, seen from above.
-    pub fn touches(&self, from: [i32; 3], to: [i32; 3]) -> bool {
-        self.parts
-            .iter()
-            .map(Part::bounds)
+    fn reaches_into(&self, from: [i32; 3], to: [i32; 3]) -> bool {
+        let cubes = |i: usize| from[i].div_euclid(16)..=to[i].div_euclid(16);
+        let columns = cubes(2).flat_map(|z| cubes(0).map(move |x| [x, z]));
+        let nearby = columns
+            .filter_map(|column| self.columns.get(&column))
+            .flatten();
+        nearby
+            .map(|&i| self.parts[i].bounds())
             .any(|(a, b)| [0, 2].into_iter().all(|i| a[i] <= to[i] && from[i] <= b[i]))
     }
 

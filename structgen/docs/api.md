@@ -103,7 +103,8 @@ fn village(p: &mut Plan) -> Result<(), PlanError> {
 ```
 
 Where structures would overlap, `.priority(n)` decides, on `plan(..)` and `place(..)` alike:
-a plan that would touch the plan of a structure with a higher priority isn't placed. Only
+a plan that would come within 8 blocks of the plan of a structure with a higher priority isn't
+placed. Only
 what really stands counts, so a hamlet the village gave way to doesn't keep a cottage out.
 Both stand where the priorities are the same (0 by default).
 

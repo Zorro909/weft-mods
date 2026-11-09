@@ -11,8 +11,15 @@ use super::shape::{Point, add, heading, length_of, scale, sub};
 use super::{Kind, Settlement, one_of, planting};
 use crate::worldgen::SEA;
 
-/// The heart's own buildings, in it along the main road: the first in the middle.
-pub fn centre(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point, angle: f32) -> Vec<Site> {
+/// The heart's own buildings, in it along the main road, the first in the middle; `None` if the
+/// first, the well or fountain, has no room.
+pub fn centre(
+    p: &mut Plan,
+    grid: &mut Grid,
+    s: &Settlement,
+    m: Point,
+    angle: f32,
+) -> Option<Vec<Site>> {
     let rules = Rules {
         setback: [0, 0],
         gap: 2,
@@ -34,9 +41,13 @@ pub fn centre(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point, angle: f3
                 turn,
             )
         };
-        sites.extend(offsets.into_iter().find_map(&mut try_at));
+        match offsets.into_iter().find_map(&mut try_at) {
+            Some(site) => sites.push(site),
+            None if i == 0 => return None,
+            None => {}
+        }
     }
-    sites
+    Some(sites)
 }
 
 /// The landmarks, then the homes, along `fronts`; `None` if fewer than four in five of them

@@ -20,6 +20,14 @@ pub struct Road {
 }
 
 impl Road {
+    /// How far it runs from end to end, in a straight line.
+    pub fn length(&self) -> f32 {
+        match self.line[..] {
+            [first, .., last] => length_of(sub(last, first)),
+            _ => 0.0,
+        }
+    }
+
     /// The road's last point and the way it runs there.
     pub fn end(&self) -> Option<(Point, Point)> {
         let [.., before, end] = self.line[..] else {
@@ -48,7 +56,8 @@ pub fn edge(area: &[Point], middle: Point, angle: f32) -> Point {
 }
 
 /// The heart and the roads out of it, marked on `grid`: the main road both ways, then the
-/// branches, each leaving it a third of the way along or further.
+/// branches, each leaving it a third of the way along or further, to either side in turn. A
+/// branch the ground stops short is tried again elsewhere, a few times.
 pub fn lay(
     random: &mut Random,
     grid: &mut Grid,
@@ -75,15 +84,24 @@ pub fn lay(
         ring.push(heart[0]);
         grid.put_road(&smooth(&ring), width, road);
     }
-    for _ in 0..random.between(s.branches[0], s.branches[1]) {
+    let wanted = random.between(s.branches[0], s.branches[1]) as usize;
+    let mut side = if random.chance(0.5) { 1.0 } else { -1.0 };
+    for _ in 0..wanted * 3 {
+        if roads.len() == 2 + wanted {
+            break;
+        }
         let from = &roads[random.below(2) as usize];
         let n = from.line.len() as i32;
         let index = random.between(n / 3, (n - 3).max(n / 3)) as usize;
-        let Some(branch) = branch(grid, random, from, index, s.steps[1]) else {
+        let Some(branch) = branch(grid, random, from, index, side, s.steps[1]) else {
             continue;
         };
+        if branch.length() < 2.0 * STEP {
+            continue;
+        }
         grid.put_road(&branch.line, width, road);
         roads.push(branch);
+        side = -side;
     }
     roads
 }
@@ -100,17 +118,17 @@ fn main_road(
     [angle, angle + PI].map(|way| grow(grid, random, edge(heart, middle, way), way, steps))
 }
 
-/// A road branching off `from` at the point `index` along it, to one side or the other;
-/// `None` off a road too short to run any way.
+/// A road branching off `from` at the point `index` along it, to its left for `side` 1 and
+/// its right for -1; `None` off a road too short to run any way.
 fn branch(
     grid: &Grid,
     random: &mut Random,
     from: &Road,
     index: usize,
+    side: f32,
     steps: usize,
 ) -> Option<Road> {
     let (at, along) = fork(from, index)?;
-    let side = if random.chance(0.5) { 1.0 } else { -1.0 };
     let angle = along + side * (FRAC_PI_2 + (unit(random) - 0.5) * 0.8);
     Some(grow(grid, random, at, angle, steps))
 }

@@ -72,7 +72,9 @@ The generator lays out hamlets, villages and towns (`src/settlement/`, see
 [In the world](docs/worldgen.md#hamlets-villages-and-towns)). Still to come: plots with barns
 behind a farm and hedges between gardens; a market that is a widened street or a fork rather
 than a blob; the church on its own yard; a town's houses stepped a block or two to follow its
-street; gutters along axis-aligned streets.
+street; gutters along axis-aligned streets. A building's door path leads to the middle of its
+front, which on the longhouse and the corner house is a post beside the door rather than the
+door itself.
 
 ## Making structures
 

@@ -141,19 +141,16 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
         return None;
     }
     let roads = roads::lay(p.random(), grid, s, &heart, m, angle);
-    let mut sites = buildings::centre(p, grid, s, m, angle);
-    if sites.is_empty() {
-        return None;
-    }
+    let mut sites = buildings::centre(p, grid, s, m, angle)?;
     let start = p.random().below(1 << 16) as usize;
     let fronts = fronts(&heart, ring, &roads, s.kind.road().0, start);
     let rules = rules(s);
     let farmland = reach_of(&roads, m) * 0.6;
     sites.extend(buildings::along(p, grid, s, &rules, &fronts, m, farmland)?);
-    let reach = s.kind.road().0 / 2.0 + 1.0;
+    let from_road = s.kind.road().0 / 2.0 + 1.0;
     sites.extend(
         s.mill
-            .and_then(|mill| buildings::outskirts(p, grid, &rules, mill, &roads[..2], reach)),
+            .and_then(|mill| buildings::outskirts(p, grid, &rules, mill, &roads[..2], from_road)),
     );
     planting::fields(grid, &roads, s.fields);
     let trees = Rules { gap: 3, ..rules };
@@ -166,6 +163,7 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
         s.heart[0] as i32 + 18,
     ));
     if s.kind == Kind::Town {
+        grid.fade_streets(12);
         grid.pave_frontages();
     }
     Some(sites)

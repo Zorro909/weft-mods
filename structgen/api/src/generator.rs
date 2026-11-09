@@ -13,6 +13,9 @@ use crate::planned::Planned;
 use crate::random::Random;
 use crate::region::{self, Region};
 
+/// Blocks kept between a structure and one of higher priority, so a lone cottage doesn't stand
+/// against a village's houses.
+const ROOM: i32 = 8;
 /// Plans worked out per region; each is shared by every cube in it.
 const CACHED_REGIONS: usize = 1024;
 
@@ -138,24 +141,24 @@ impl Generator {
             }
         }
     }
-}
 
-impl Generator {
-    /// Whether `planned` would touch the plan of a structure with a higher priority. Theirs have
-    /// given way in turn where they had to, so only what is really placed counts.
+    /// Whether `planned` would come within `ROOM` of the plan of a structure with a higher
+    /// priority. Theirs have given way in turn where they had to, so only what is really placed
+    /// counts.
     fn gives_way(&self, seed: u64, dimension: u32, planned: &Planned, ground: Columns) -> bool {
         let Some((from, to)) = planned.bounds() else {
             return false;
         };
+        let (from, to) = (from.map(|v| v - ROOM), to.map(|v| v + ROOM));
         let higher = locate::all().into_iter();
-        let higher = higher.filter(|g| g.priority > self.priority && g.is_in(dimension));
-        higher.into_iter().any(|other| {
-            let regions = region::indices(from[2], to[2], other.region).flat_map(|iz| {
+        let mut higher = higher.filter(|g| g.priority > self.priority && g.is_in(dimension));
+        higher.any(|other| {
+            let mut regions = region::indices(from[2], to[2], other.region).flat_map(|iz| {
                 region::indices(from[0], to[0], other.region).map(move |ix| [ix, iz])
             });
-            regions.into_iter().any(|index| {
+            regions.any(|index| {
                 let slot = other.planned(seed, dimension, index, ground);
-                matches!(slot.get(), Some(Some(theirs)) if theirs.touches(from, to))
+                matches!(slot.get(), Some(Some(theirs)) if planned.near(theirs, ROOM))
             })
         })
     }
@@ -217,11 +220,22 @@ mod tests {
     fn a_plan_gives_way_where_it_would_touch_a_higher_one() {
         filling("m:village", 2, [100, 70, 100], [110, 70, 110]);
         let on_it = filling("m:cottage", 0, [105, 70, 105], [105, 70, 105]);
-        let beside = filling("m:cottage2", 0, [120, 70, 100], [120, 70, 100]);
+        let against = filling("m:cottage2", 0, [115, 70, 100], [115, 70, 100]);
+        let beside = filling("m:cottage3", 0, [120, 70, 100], [120, 70, 100]);
         let level = filling("m:hamlet", 2, [105, 70, 105], [105, 70, 105]);
         assert!(!placed(&on_it, [0, 0]), "a cottage in the village");
-        assert!(placed(&beside, [0, 0]), "a cottage beside it");
+        assert!(!placed(&against, [0, 0]), "a cottage up against it");
+        assert!(placed(&beside, [0, 0]), "a cottage with room between");
         assert!(placed(&level, [0, 0]), "the same priority: both stand");
+        let round = move |p: &mut Plan| {
+            p.fill_state([80, 70, 100], [80, 70, 100], 5)?;
+            p.fill_state([130, 70, 100], [130, 70, 100], 5)
+        };
+        let round = Generator::new("m:hamlet3".into(), 512, Vec::new(), Box::new(round));
+        assert!(
+            placed(&round.with_priority(1), [0, 0]),
+            "parts either side, none near it"
+        );
     }
 
     #[test]

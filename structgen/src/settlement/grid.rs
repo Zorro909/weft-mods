@@ -192,21 +192,38 @@ impl Grid {
     /// Paves the bare ground between a town's streets and the buildings on them, so no grass is
     /// left in front of a house: every free column next to a building and near a road.
     pub fn pave_frontages(&mut self) {
-        let near = |grid: &Grid, at: [i32; 2], reach: i32, test: fn(Cell) -> bool| {
-            let from = [at[0] - reach, at[1] - reach];
-            !grid.all(from, [at[0] + reach, at[1] + reach], |c| !test(c))
-        };
         let paved: Vec<[i32; 2]> = (self.columns())
             .filter(|&(at, cell)| {
                 cell == Cell::Free
-                    && near(self, at, 2, |c| c == Cell::Building)
-                    && near(self, at, 3, Cell::is_road)
+                    && self.near(at, 2, |c| c == Cell::Building)
+                    && self.near(at, 3, Cell::is_road)
             })
             .map(|(at, _)| at)
             .collect();
         for at in paved {
             self.put(at, Cell::Square);
         }
+    }
+
+    /// Turns a town's streets into lanes where no building stands within `reach`: the cobbles
+    /// end where the town does.
+    pub fn fade_streets(&mut self, reach: i32) {
+        let faded: Vec<usize> = (self.columns().enumerate())
+            .filter(|&(_, (at, cell))| {
+                matches!(cell, Cell::Street | Cell::Kerb)
+                    && !self.near(at, reach, |c| c == Cell::Building)
+            })
+            .map(|(i, _)| i)
+            .collect();
+        for i in faded {
+            self.cells[i] = Cell::Lane;
+        }
+    }
+
+    /// Whether a cell within `reach` of `at` passes `test`.
+    fn near(&self, at: [i32; 2], reach: i32, test: fn(Cell) -> bool) -> bool {
+        let from = [at[0] - reach, at[1] - reach];
+        !self.all(from, [at[0] + reach, at[1] + reach], |c| !test(c))
     }
 }
 

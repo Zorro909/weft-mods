@@ -56,7 +56,8 @@ says, and its roof is spruce, oak or birch.
 
 None is drawn beforehand: each is laid out afresh from the seed and the lie of the land
 (`src/settlement/`), from a table of what it holds (`src/villages.rs`). Where two would
-overlap, only the bigger stands: a town over a village over a hamlet over a lone building.
+overlap, or come within 8 blocks, only the bigger stands: a town over a village over a hamlet
+over a lone building.
 
 | | Hamlet | Village | Town |
 |---|---|---|---|
@@ -71,7 +72,8 @@ overlap, only the bigger stands: a town over a village over a hamlet over a lone
    the lane's, must be open land a player can walk across, no column more than a block above
    its neighbour; a square tries up to three spots before it goes without a settlement.
 2. **Roads.** The main road leaves the heart's edge both ways along that angle; a branch or
-   two leave it at roughly a right angle. A road goes 7 blocks a step, each time the way of
+   two leave it at roughly a right angle, to either side in turn, and one the ground stops
+   short is tried again elsewhere. A road goes 7 blocks a step, each time the way of
    three (straight on, or about 20° either side) that climbs least, so it winds along the
    ground. It stops at water, forest, the edge of the square, ground too steep to walk (a step
    of more than a block) and before crossing another road or the heart, and is smoothed into a
@@ -89,7 +91,8 @@ overlap, only the bigger stands: a town over a village over a hamlet over a lone
    gets no settlement.
 4. **Round about.** A mill stands past one end of the main road, a path to its door, small
    strip fields of mostly unripe wheat past the ends of other roads, a few trees round the
-   heart. A town paves the ground between its streets and its buildings.
+   heart. A town paves the ground between its streets and its buildings, and its streets turn to
+   gravel lanes where no building stands near.
 5. **Materials.** A settlement takes one frame and panel for all its buildings and a roof for
    each.
 
