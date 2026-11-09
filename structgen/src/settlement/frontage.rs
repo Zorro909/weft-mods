@@ -4,7 +4,7 @@
 use structgen_api::{Fit, Plan, Turn};
 use weft_sdk::Template;
 
-use super::grid::{Cell, Grid, column};
+use super::grid::{Cell, Grid, column, middle};
 use super::roads::Road;
 use super::shape::{Point, add, inside, scale, walk};
 
@@ -139,8 +139,8 @@ pub fn next_site(
 }
 
 /// Where `template` would stand at point `index` of `front`, if the ground and the buildings
-/// already there leave it room and a walkable way leads from the road to its door; marked on
-/// `grid` with that way when it does.
+/// already there leave it room and a walkable way leads from the road to the column outside
+/// its door; marked on `grid` with that way when it does.
 fn site(
     p: &mut Plan,
     grid: &mut Grid,
@@ -154,8 +154,8 @@ fn site(
     let size = p.size(template, turn)?;
     let setback = p.random().between(rules.setback[0], rules.setback[1]);
     let length = (front.reach + setback as f32 + 0.5) as i32;
-    let doorstep = grid.walkable(at, out, (length - 1).max(0))?;
     let face = column(add(at, scale(out, length as f32)));
+    let (door, doorstep) = doorstep(grid, at, out, length, turn)?;
     let placed = stand(
         p,
         grid,
@@ -165,13 +165,39 @@ fn site(
         turn,
         Some(doorstep),
     )?;
-    for k in 0..length {
-        let way = column(add(at, scale(out, k as f32)));
+    let way = (0..length).map(|k| column(add(at, scale(out, k as f32))));
+    for way in way.chain([door]) {
         if grid.get(way) == Cell::Free {
             grid.put(way, rules.path);
         }
     }
     Some(placed)
+}
+
+/// The column in front of the door of a building whose front stands `length` blocks out from
+/// `at` along `out`, and its height, if a walk from `at` leads onto it. A way out at a slant
+/// ends beside the door, not always in front of it.
+fn doorstep(
+    grid: &Grid,
+    at: Point,
+    out: Point,
+    length: i32,
+    turn: Turn,
+) -> Option<([i32; 2], i32)> {
+    let end = grid.walkable(at, out, (length - 1).max(0))?;
+    let door = outside(column(add(at, scale(out, length as f32))), turn);
+    let height = grid.ground(middle(door)).filter(|y| (y - end).abs() <= 1)?;
+    Some((door, height))
+}
+
+/// The column in front of the middle of a front at `face`, turned by `turn`.
+fn outside([x, z]: [i32; 2], turn: Turn) -> [i32; 2] {
+    match turn {
+        Turn::None => [x, z - 1],
+        Turn::Back => [x, z + 1],
+        Turn::Right => [x + 1, z],
+        Turn::Left => [x - 1, z],
+    }
 }
 
 /// `template` with its north-west corner at `corner`, if it stands on free columns, no closer
@@ -249,6 +275,7 @@ fn width_along(site: &Site) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settlement::grid::row;
 
     #[test]
     fn every_road_gets_a_side_before_any_gets_its_second() {
@@ -311,5 +338,40 @@ mod tests {
             [4, 18],
             "front column is x 10"
         );
+    }
+
+    #[test]
+    fn a_slanted_way_must_reach_the_column_in_front_of_the_door() {
+        let mut grid = row(&[Some(64); 6]);
+        // Out at 45 degrees from the corner, the way ends at (2, 2) and the front at (3, 3).
+        for at in [[1, 1], [2, 2], [3, 2]] {
+            grid.raise(at, 64);
+        }
+        let out = [0.71, 0.71];
+        let (at, turn) = ([0.5, 0.5], facing(out));
+        assert_eq!(doorstep(&grid, at, out, 4, turn), Some(([3, 2], 64)));
+        grid.raise([3, 2], 66);
+        assert_eq!(
+            doorstep(&grid, at, out, 4, turn),
+            None,
+            "a step up to the door"
+        );
+    }
+
+    #[test]
+    fn the_door_opens_onto_the_column_just_outside_the_front() {
+        let size = [7, 9, 5];
+        for turn in [Turn::None, Turn::Back, Turn::Left, Turn::Right] {
+            let [x, z] = corner_for([10, 20], size, turn);
+            let [sx, _, sz] = size;
+            let within = |[a, b]: [i32; 2]| (x..x + sx).contains(&a) && (z..z + sz).contains(&b);
+            let door = outside([10, 20], turn);
+            assert!(!within(door), "{turn:?}: outside the building");
+            assert_eq!(
+                (door[0] - 10).abs() + (door[1] - 20).abs(),
+                1,
+                "{turn:?}: next to it"
+            );
+        }
     }
 }

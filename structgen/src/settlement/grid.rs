@@ -252,6 +252,15 @@ fn bounds(points: &[Point], margin: f32) -> ([i32; 2], [i32; 2]) {
     )
 }
 
+#[cfg(test)]
+impl Grid {
+    /// Free ground at `height` in column `at`.
+    pub fn raise(&mut self, at: [i32; 2], height: i32) {
+        let i = self.index(at).expect("on the grid");
+        (self.cells[i], self.heights[i]) = (Cell::Free, height);
+    }
+}
+
 /// A row of columns from x 0 east, at these heights, `None` for water; for tests.
 #[cfg(test)]
 pub fn row(heights: &[Option<i32>]) -> Grid {
