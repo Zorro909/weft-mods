@@ -7,6 +7,7 @@ use structgen_api::Random;
 
 use super::grid::{Cell, Grid, column};
 use super::shape::{Point, add, blob, heading, inside, length_of, scale, smooth, sub};
+use super::{Kind, Settlement};
 
 /// How far a road goes in one step, in blocks.
 pub const STEP: f32 = 7.0;
@@ -51,8 +52,49 @@ pub fn edge(area: &[Point], middle: Point, angle: f32) -> Point {
     at
 }
 
+/// The heart and the roads out of it, marked on `grid`: the main road both ways, then the
+/// branches, each leaving it a third of the way along or further.
+pub fn lay(
+    random: &mut Random,
+    grid: &mut Grid,
+    s: &Settlement,
+    heart: &[Point],
+    middle: Point,
+    angle: f32,
+) -> Vec<Road> {
+    let (width, road) = s.kind.road();
+    grid.put_area(
+        heart,
+        if s.kind == Kind::Village {
+            Cell::Green
+        } else {
+            Cell::Square
+        },
+    );
+    let mut roads: Vec<Road> = main_road(grid, random, heart, middle, angle, s.steps[0]).into();
+    for main in &roads {
+        grid.put_road(&main.line, width, road);
+    }
+    if s.kind == Kind::Village {
+        let mut ring = heart.to_vec();
+        ring.push(heart[0]);
+        grid.put_road(&smooth(&ring), width, road);
+    }
+    for _ in 0..random.between(s.branches[0], s.branches[1]) {
+        let from = &roads[random.below(2) as usize];
+        let n = from.line.len() as i32;
+        let index = random.between(n / 3, (n - 3).max(n / 3)) as usize;
+        let Some(branch) = branch(grid, random, from, index, s.steps[1]) else {
+            continue;
+        };
+        grid.put_road(&branch.line, width, road);
+        roads.push(branch);
+    }
+    roads
+}
+
 /// The main road through the heart: out from its edge both ways.
-pub fn main_road(
+fn main_road(
     grid: &Grid,
     random: &mut Random,
     heart: &[Point],
@@ -63,35 +105,56 @@ pub fn main_road(
     [angle, angle + PI].map(|way| grow(grid, random, edge(heart, middle, way), way, steps))
 }
 
-/// A road branching off `from` at the point `index` along it, to one side or the other.
-pub fn branch(grid: &Grid, random: &mut Random, from: &Road, index: usize, steps: usize) -> Road {
-    let at = from.line[index.min(from.line.len() - 2)];
-    let next = from.line[index.min(from.line.len() - 2) + 1];
-    let along = (next[1] - at[1]).atan2(next[0] - at[0]);
+/// A road branching off `from` at the point `index` along it, to one side or the other;
+/// `None` off a road too short to run any way.
+fn branch(
+    grid: &Grid,
+    random: &mut Random,
+    from: &Road,
+    index: usize,
+    steps: usize,
+) -> Option<Road> {
+    let (at, along) = fork(from, index)?;
     let side = if random.chance(0.5) { 1.0 } else { -1.0 };
     let angle = along + side * (FRAC_PI_2 + (unit(random) - 0.5) * 0.8);
-    grow(grid, random, at, angle, steps)
+    Some(grow(grid, random, at, angle, steps))
+}
+
+/// The point `index` along `road`, or its last but one, and the angle the road runs at there;
+/// `None` for a road of a single point.
+fn fork(road: &Road, index: usize) -> Option<(Point, f32)> {
+    let index = index.min(road.line.len().checked_sub(2)?);
+    let (at, next) = (road.line[index], road.line[index + 1]);
+    Some((at, (next[1] - at[1]).atan2(next[0] - at[0])))
 }
 
 /// A road from `start` taking up to `steps` steps along `angle`, each the way of three that
-/// climbs least. It stops where the ground ends, grows too steep to walk, or before it would
-/// run into another road.
+/// climbs least. It stops where the ground ends or grows too steep to walk, and before it would
+/// cross another road or the heart; only its first step, leaving the road it branches off, may.
 fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: usize) -> Road {
     let mut points = vec![start];
     let mut at = start;
-    for _ in 0..steps {
+    for step in 0..steps {
         let Some(here) = grid.height(column(at)) else {
             break;
         };
         let wobble = (unit(random) - 0.5) * BEND;
         let options = [-BEND, 0.0, BEND].map(|turn| angle + turn + wobble);
         let climb = |a: f32| {
-            let next = add(at, scale(heading(a), STEP));
-            let open = grid.get(column(next)) == Cell::Free;
-            let height = grid
-                .walkable(at, heading(a), STEP as i32)
-                .filter(|_| open)?;
-            Some(((height - here).abs() as f32 + (a - angle).abs(), next, a))
+            let way = heading(a);
+            let free = |k: i32| grid.get(column(add(at, scale(way, k as f32)))) == Cell::Free;
+            let reach = STEP as i32;
+            let open = if step == 0 {
+                free(reach)
+            } else {
+                (1..=reach).all(free)
+            };
+            let height = grid.walkable(at, way, reach).filter(|_| open)?;
+            Some((
+                (height - here).abs() as f32 + (a - angle).abs(),
+                add(at, scale(way, STEP)),
+                a,
+            ))
         };
         let best = options
             .into_iter()
@@ -104,6 +167,60 @@ fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: u
         points.push(at);
     }
     Road {
-        line: smooth(&points),
+        line: walkable_part(grid, smooth(&points)),
+    }
+}
+
+/// `line` up to its first stretch that can't be walked: smoothing cuts its corners across
+/// columns the steps never looked at.
+fn walkable_part(grid: &Grid, mut line: Vec<Point>) -> Vec<Point> {
+    let walkable = |pair: &[Point]| {
+        let along = sub(pair[1], pair[0]);
+        let length = length_of(along);
+        let way = scale(along, 1.0 / length.max(f32::EPSILON));
+        grid.walkable(pair[0], way, length.round() as i32).is_some()
+    };
+    let stretches = line.windows(2).take_while(|pair| walkable(pair)).count();
+    line.truncate(stretches + 1);
+    line
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settlement::grid::row;
+
+    #[test]
+    fn nothing_branches_off_a_road_of_one_point() {
+        let stub = Road {
+            line: vec![[3.0, 4.0]],
+        };
+        assert_eq!(fork(&stub, 0), None);
+        let east = Road {
+            line: vec![[0.0, 0.0], [5.0, 0.0]],
+        };
+        assert_eq!(
+            fork(&east, 9),
+            Some(([0.0, 0.0], 0.0)),
+            "past the end: the last stretch"
+        );
+    }
+
+    #[test]
+    fn a_road_ends_before_the_first_stretch_it_cannot_walk() {
+        let ground = [
+            Some(64),
+            Some(64),
+            Some(64),
+            Some(64),
+            None,
+            Some(64),
+            Some(64),
+        ];
+        let line = vec![[0.5, 0.5], [2.5, 0.5], [3.5, 0.5], [5.5, 0.5], [6.5, 0.5]];
+        assert_eq!(
+            walkable_part(&row(&ground), line),
+            [[0.5, 0.5], [2.5, 0.5], [3.5, 0.5]]
+        );
     }
 }

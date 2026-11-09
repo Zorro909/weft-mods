@@ -57,7 +57,7 @@ static TREES: &[&Template] = &[
 ];
 
 static HAMLET: Settlement = Settlement {
-    share: [0.0, 0.28],
+    share: [0.0, 0.25],
     kind: Kind::Village,
     steps: [3, 3],
     branches: [0, 1],
@@ -78,7 +78,7 @@ static HAMLET: Settlement = Settlement {
 };
 
 static VILLAGE: Settlement = Settlement {
-    share: [0.28, 0.63],
+    share: [0.25, 0.57],
     kind: Kind::Village,
     steps: [6, 4],
     branches: [1, 2],
@@ -104,7 +104,7 @@ static VILLAGE: Settlement = Settlement {
 };
 
 static TOWN: Settlement = Settlement {
-    share: [0.63, 0.83],
+    share: [0.57, 0.82],
     kind: Kind::Town,
     steps: [7, 5],
     branches: [2, 3],
@@ -119,9 +119,9 @@ static TOWN: Settlement = Settlement {
         (&COACHING_INN, Faces::Road),
         (&SMITHY_HOUSE, Faces::Road),
     ],
-    homes: 15,
+    homes: 12,
     houses: TOWN_HOUSES,
-    farms: &[&CROFTER_COTTAGE, &STABLE],
+    farms: &[],
     mill: Some(&TOWER_MILL),
     fields: 2,
     trees: &[&OAK_TREE_LARGE, &FRUIT_TREE],

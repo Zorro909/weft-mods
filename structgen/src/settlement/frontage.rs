@@ -33,6 +33,7 @@ pub struct Site {
 }
 
 /// How buildings line up along a front.
+#[derive(Clone, Copy)]
 pub struct Rules {
     /// Blocks between a road's edge and a building's front, at least and at most.
     pub setback: [i32; 2],
@@ -43,21 +44,34 @@ pub struct Rules {
     pub path: Cell,
 }
 
-/// Both sides of `road`.
-pub fn sides(road: &Road, reach: f32) -> [Front; 2] {
-    let points = walk(&road.line);
-    [1.0, -1.0].map(|side| Front {
+/// Every front buildings may face: round the heart, starting `start` points round it, then one
+/// side of every road, then the other, so homes handed out a front at a time reach every road
+/// before a road gets its second side.
+pub fn fronts(heart: &[Point], ring: f32, roads: &[Road], width: f32, start: usize) -> Vec<Front> {
+    let mut round = around(heart, ring);
+    let turn = start % round.points.len().max(1);
+    round.points.rotate_left(turn);
+    let mut fronts = vec![round];
+    for sign in [1.0, -1.0] {
+        fronts.extend(roads.iter().map(|road| side(road, width / 2.0, sign)));
+    }
+    fronts
+}
+
+/// One side of `road`: the left going along it for `sign` 1, the right for -1.
+fn side(road: &Road, reach: f32, sign: f32) -> Front {
+    let points = walk(&road.line).into_iter();
+    Front {
         points: points
-            .iter()
-            .map(|&(at, way)| (at, scale([-way[1], way[0]], side)))
+            .map(|(at, way)| (at, scale([-way[1], way[0]], sign)))
             .collect(),
         reach,
         faces: Faces::Road,
-    })
+    }
 }
 
 /// The outside of the closed outline `area`, its way out pointing away from it.
-pub fn around(area: &[Point], reach: f32) -> Front {
+fn around(area: &[Point], reach: f32) -> Front {
     let mut closed = area.to_vec();
     closed.push(area[0]);
     let points = walk(&closed)
@@ -235,6 +249,32 @@ fn width_along(site: &Site) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_road_gets_a_side_before_any_gets_its_second() {
+        let heart = [[-4.0, -4.0], [4.0, -4.0], [4.0, 4.0], [-4.0, 4.0]];
+        let east = Road {
+            line: vec![[5.0, 0.0], [20.0, 0.0]],
+        };
+        let south = Road {
+            line: vec![[0.0, 5.0], [0.0, 20.0]],
+        };
+        let fronts = fronts(&heart, 0.0, &[east, south], 3.0, 5);
+        let first = |f: &Front| f.points[0];
+        assert_eq!(fronts.len(), 5);
+        assert_eq!(fronts[0].faces, Faces::Heart);
+        assert_eq!(
+            first(&fronts[1]),
+            ([5.0, 0.0], [0.0, 1.0]),
+            "east road, south side"
+        );
+        assert_eq!(first(&fronts[2]).1, [-1.0, 0.0], "south road, west side");
+        assert_eq!(first(&fronts[3]).1, [0.0, -1.0], "east road, north side");
+        assert_ne!(
+            fronts[0].points[0].0, heart[0],
+            "the heart's walk starts further round"
+        );
+    }
 
     #[test]
     fn a_building_turns_its_front_to_the_road() {

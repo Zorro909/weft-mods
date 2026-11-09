@@ -1,7 +1,7 @@
 //! A settlement's ground seen from above, a cell per column: what each column is for, so roads,
 //! buildings and fields keep out of each other, and how high its ground is.
 
-use structgen_api::Plan;
+use structgen_api::{Biomes, Plan};
 
 use super::shape::{Point, add, distance, inside, scale};
 use crate::worldgen::SEA;
@@ -21,7 +21,8 @@ pub enum Cell {
     /// A town's market square, or paving up to a building.
     Square,
     Building,
-    /// Water, no ground, or outside the region: nothing goes here.
+    /// Water, no ground, land of another kind (a forest), or outside the region: nothing goes
+    /// here.
     Blocked,
 }
 
@@ -54,8 +55,8 @@ pub struct Grid {
 }
 
 impl Grid {
-    /// The columns within `reach` of `middle`, read from the ground.
-    pub fn new(p: &Plan, middle: [i32; 2], reach: i32) -> Grid {
+    /// The columns within `reach` of `middle`, read from the ground; only `land` is free.
+    pub fn new(p: &Plan, middle: [i32; 2], reach: i32, land: &Biomes) -> Grid {
         let (origin, side) = ([middle[0] - reach, middle[1] - reach], 2 * reach + 1);
         let region = p.region();
         let mut grid = Grid {
@@ -68,7 +69,7 @@ impl Grid {
             for x in origin[0]..origin[0] + side {
                 let ground = p
                     .ground(x, z)
-                    .filter(|g| g.height >= SEA && region.contains(x, z));
+                    .filter(|g| g.height >= SEA && region.contains(x, z) && land.contains(g.biome));
                 let usable = ground.is_some();
                 grid.cells
                     .push(if usable { Cell::Free } else { Cell::Blocked });
@@ -95,11 +96,16 @@ impl Grid {
     }
 
     /// The height at the end of a walk of `blocks` blocks from `from` along `way`, if every
-    /// column on the way has ground and none is more than a block above or below the last.
+    /// column on the way has ground and no building, and none is more than a block above or
+    /// below the last.
     pub fn walkable(&self, from: Point, way: Point, blocks: i32) -> Option<i32> {
-        let mut last = self.height(column(from))?;
+        let ground = |at: Point| {
+            let at = column(at);
+            self.height(at).filter(|_| self.get(at) != Cell::Building)
+        };
+        let mut last = ground(from)?;
         for k in 1..=blocks {
-            let next = self.height(column(add(from, scale(way, k as f32))))?;
+            let next = ground(add(from, scale(way, k as f32)))?;
             if (next - last).abs() > 1 {
                 return None;
             }
@@ -203,26 +209,27 @@ fn bounds(points: &[Point], margin: f32) -> ([i32; 2], [i32; 2]) {
     )
 }
 
+/// A row of columns from x 0 east, at these heights, `None` for water; for tests.
+#[cfg(test)]
+pub fn row(heights: &[Option<i32>]) -> Grid {
+    let side = heights.len() as i32;
+    let mut grid = Grid {
+        origin: [0, 0],
+        side,
+        cells: vec![Cell::Blocked; (side * side) as usize],
+        heights: vec![SEA; (side * side) as usize],
+    };
+    for (x, height) in heights.iter().enumerate() {
+        if let Some(height) = height {
+            (grid.cells[x], grid.heights[x]) = (Cell::Free, *height);
+        }
+    }
+    grid
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A row of columns from x 0 east, at these heights; `None` is water.
-    fn row(heights: &[Option<i32>]) -> Grid {
-        let side = heights.len() as i32;
-        let mut grid = Grid {
-            origin: [0, 0],
-            side,
-            cells: vec![Cell::Blocked; (side * side) as usize],
-            heights: vec![SEA; (side * side) as usize],
-        };
-        for (x, height) in heights.iter().enumerate() {
-            if let Some(height) = height {
-                (grid.cells[x], grid.heights[x]) = (Cell::Free, *height);
-            }
-        }
-        grid
-    }
 
     #[test]
     fn a_walk_climbs_a_block_at_a_time_and_stops_at_water_or_a_ledge() {
@@ -240,6 +247,13 @@ mod tests {
             stream.walkable([0.5, 0.5], east, 3),
             None,
             "water between dry ends"
+        );
+        let mut house = row(&[Some(64); 4]);
+        house.put([2, 0], Cell::Building);
+        assert_eq!(
+            house.walkable([0.5, 0.5], east, 3),
+            None,
+            "no way through a house"
         );
     }
 }
