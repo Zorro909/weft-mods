@@ -4,7 +4,7 @@
 
 use std::ops::Add;
 
-use weft_sdk::*;
+use weft_sdk::{BlockPos, Dir, Holder, Vec3, value};
 
 value! {
     /// A block's position, or an offset from one. Laid out as `[i32; 3]`, so a saved or sent

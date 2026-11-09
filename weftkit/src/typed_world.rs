@@ -3,7 +3,7 @@
 //! arguments otherwise. Once the SDK's own methods take typed states, dropping every `_typed`
 //! (`sed -E 's/\.([a-z_]+)_typed\(/.\1(/g'`) and this trait's `use` moves a mod over.
 
-use weft_sdk::*;
+use weft_sdk::{BlockPos, Fill, Shape, World};
 
 use crate::BlockState;
 

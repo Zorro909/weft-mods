@@ -1,7 +1,7 @@
 //! A box of blocks, both corners included: what a machine works, a set fills, a structure
 //! covers. One block high, it is a rectangle on the ground.
 
-use weft_sdk::*;
+use weft_sdk::value;
 
 use crate::Pos;
 

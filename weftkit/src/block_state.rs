@@ -3,7 +3,7 @@
 //! `BlockState` that answers what mods ask of a block. `BlockState::from` takes a bare state.
 
 use weft_sdk::abi::block_flags::{LIQUID, OPAQUE, REPLACEABLE, SOLID};
-use weft_sdk::*;
+use weft_sdk::{Block, HARDNESS, Tag, block_info, item_block, state_flags, state_prop, state_with};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct BlockState(u32);
