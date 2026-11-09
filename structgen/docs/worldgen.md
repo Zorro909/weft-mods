@@ -94,8 +94,9 @@ over a lone building.
    gets no settlement.
 4. **Round about.** A mill stands past one end of the main road, a path to its door, small
    strip fields of mostly unripe wheat on even ground past the ends of other roads, a few trees
-   round the heart. A town paves the ground between its streets and its buildings, and its
-   streets turn to gravel lanes, their kerbs to grass, where no building stands near.
+   round the heart. A town paves the ground between its streets and its buildings and where
+   they meet the square, and its streets turn to gravel lanes, their kerbs to grass, where no
+   building stands near; a lane leads out to its mill.
 5. **Materials.** A settlement takes one frame and panel for all its buildings and a roof for
    each.
 

@@ -4,13 +4,15 @@
 use super::*;
 
 impl Grid {
-    /// Paves the bare ground between a town's streets and the buildings on them, so no grass is
-    /// left in front of a house: every free column next to a building and near a road.
+    /// Paves the bare ground between a town's streets and the buildings on them, and where the
+    /// streets meet the square, so no grass is left in front of a house or in a corner: every
+    /// free column next to a building or the square and near a road.
     pub fn pave_frontages(&mut self) {
-        let paved: Vec<[i32; 2]> = (self.columns())
+        let paved: Vec<[i32; 2]> = self
+            .columns()
             .filter(|&(at, cell)| {
                 cell == Cell::Free
-                    && self.near(at, 2, |c| c == Cell::Building)
+                    && self.near(at, 2, |c| matches!(c, Cell::Building | Cell::Square))
                     && self.near(at, 3, Cell::is_road)
             })
             .map(|(at, _)| at)
@@ -23,7 +25,9 @@ impl Grid {
     /// Turns a town's streets into lanes, their kerbs into grass, where no building stands
     /// within `reach`: the cobbles end where the town does.
     pub fn fade_streets(&mut self, reach: i32) {
-        let faded: Vec<(usize, Cell)> = (self.columns().enumerate())
+        let faded: Vec<(usize, Cell)> = self
+            .columns()
+            .enumerate()
             .filter_map(|(i, (at, cell))| {
                 let to = match cell {
                     Cell::Street => Cell::Lane,
@@ -59,5 +63,20 @@ mod tests {
             Cell::Free,
             "a kerb out of town is grass"
         );
+    }
+
+    #[test]
+    fn grass_between_a_street_and_the_square_is_paved() {
+        let mut town = row(&[Some(64); 12]);
+        town.put([0, 0], Cell::Square);
+        town.put([4, 0], Cell::Kerb);
+        town.pave_frontages();
+        assert_eq!(
+            town.get([2, 0]),
+            Cell::Square,
+            "beside the square, near the kerb"
+        );
+        assert_eq!(town.get([3, 0]), Cell::Free, "three from the square");
+        assert_eq!(town.get([9, 0]), Cell::Free, "nothing near");
     }
 }

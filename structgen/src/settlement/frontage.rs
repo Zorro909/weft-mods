@@ -150,9 +150,9 @@ fn site(
         Some(doorstep),
     )?;
     let way = (0..length).map(|k| column(add(at, scale(out, k as f32))));
-    for way in way.chain([door]) {
-        if grid.get(way) == Cell::Free {
-            grid.put(way, rules.path);
+    for on_way in way.chain([door]) {
+        if grid.get(on_way) == Cell::Free {
+            grid.put(on_way, rules.path);
         }
     }
     Some(placed)

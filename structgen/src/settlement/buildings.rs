@@ -138,7 +138,7 @@ fn homes(
 }
 
 /// `template` past one end or the other of the main road, `reach` from its middle line, its
-/// front toward it and a way to its door as a building along a road has.
+/// front toward it and a lane to its door.
 pub fn outskirts(
     p: &mut Plan,
     grid: &mut Grid,
@@ -149,6 +149,7 @@ pub fn outskirts(
 ) -> Option<Site> {
     let rules = Rules {
         setback: [1, 6],
+        path: Cell::Lane,
         ..*rules
     };
     // A few tries at each end, each standing it a different way back.

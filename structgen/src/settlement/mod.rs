@@ -170,9 +170,11 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
     let rules = rules(s);
     let farmland = reach_of(&roads, m) * 0.6;
     sites.extend(buildings::along(p, grid, s, &rules, &fronts, m, farmland)?);
-    // Before the mill goes up, so the road out to it fades like the rest.
+    // Before the mill goes up and the trees are planted, so the road out to the mill fades like
+    // the rest and the paving goes round the town's own buildings only.
     if s.kind == Kind::Town {
         grid.fade_streets(12);
+        grid.pave_frontages();
     }
     let from_road = s.kind.width() / 2.0 + 1.0;
     sites.extend(
@@ -180,10 +182,6 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
             .and_then(|mill| buildings::outskirts(p, grid, &rules, mill, &roads[..2], from_road)),
     );
     planting::fields(grid, &roads, s.fields);
-    // Before the trees, so paving goes round buildings only.
-    if s.kind == Kind::Town {
-        grid.pave_frontages();
-    }
     let trees = Rules { gap: 3, ..rules };
     sites.extend(planting::trees(
         p,
