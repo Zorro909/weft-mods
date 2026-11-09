@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- A long flight is loaded along its whole path, and a film opens with its first view loaded.
+
 ### Changed
 
 - The mod's description opens with a shorter summary, which the Weft mod index also shows.
