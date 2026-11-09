@@ -67,6 +67,17 @@ fn shaped(recipe: &Table) -> Result<String, String> {
             "{result}: the pattern must be 1 to 3 rows of 1 to 3, all as wide"
         ));
     }
+    let keys = keys(recipe, &pattern, &result)?;
+    let count = count(recipe, &result)?;
+    Ok(format!(
+        "Recipe::Shaped {{ result: {result:?}, count: {count}, pattern: &{pattern:?}, key: &[{}] }}",
+        keys.join(", ")
+    ))
+}
+
+/// What each letter of `pattern` is, from the recipe's `key` table, as the Rust of each pair.
+/// Every key is one letter of the pattern, and every letter of the pattern has a key.
+fn keys(recipe: &Table, pattern: &[String], result: &str) -> Result<Vec<String>, String> {
     let Some(key) = recipe.get("key").and_then(Value::as_table) else {
         return Err(format!(
             "{result}: no `key` table naming what the pattern's letters are"
@@ -86,18 +97,11 @@ fn shaped(recipe: &Table) -> Result<String, String> {
         }
         keys.push(format!("({c:?}, {ingredient:?})"));
     }
-    let unnamed = pattern.iter().flat_map(|row| row.chars());
-    if let Some(c) = unnamed
-        .filter(|&c| c != ' ')
-        .find(|c| !key.contains_key(&c.to_string()))
-    {
-        return Err(format!("{result}: the pattern's `{c}` is not in the key"));
+    let mut letters = pattern.iter().flat_map(|row| row.chars());
+    match letters.find(|&c| c != ' ' && !key.contains_key(&c.to_string())) {
+        Some(c) => Err(format!("{result}: the pattern's `{c}` is not in the key")),
+        None => Ok(keys),
     }
-    let count = count(recipe, &result)?;
-    Ok(format!(
-        "Recipe::Shaped {{ result: {result:?}, count: {count}, pattern: &{pattern:?}, key: &[{}] }}",
-        keys.join(", ")
-    ))
 }
 
 fn shapeless(recipe: &Table) -> Result<String, String> {
@@ -136,20 +140,17 @@ fn count(recipe: &Table, result: &str) -> Result<u32, String> {
             .as_integer()
             .and_then(|n| u32::try_from(n).ok())
             .filter(|&n| n >= 1)
-            .ok_or(format!("{result}: `count` must be a whole number from 1")),
+            .ok_or_else(|| format!("{result}: `count` must be a whole number from 1")),
     }
 }
 
 /// The list of strings `field`.
 fn strings(recipe: &Table, field: &str, result: &str) -> Result<Vec<String>, String> {
-    let strings: Option<Vec<String>> =
-        recipe
-            .get(field)
-            .and_then(Value::as_array)
-            .and_then(|list| {
-                list.iter()
-                    .map(|v| v.as_str().map(str::to_string))
-                    .collect()
-            });
-    strings.ok_or(format!("{result}: `{field}` must be a list of strings"))
+    let list = recipe.get(field).and_then(Value::as_array);
+    let strings = list.and_then(|list| list.iter().map(string).collect());
+    strings.ok_or_else(|| format!("{result}: `{field}` must be a list of strings"))
+}
+
+fn string(value: &Value) -> Option<String> {
+    value.as_str().map(str::to_string)
 }
