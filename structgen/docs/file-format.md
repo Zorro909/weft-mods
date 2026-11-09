@@ -6,8 +6,8 @@ bits, and LZ4 around it. Air in the box is stored as `core:air` and clears what 
 
 ## Layout
 
-`WSTR`, a version byte (now 2; files of version 1, without slots, still read), then LZ4 with the size prepended (like each cube in a region
-file) around:
+`WSTR`, a version byte (2; other versions are refused), then LZ4 with the size prepended (like
+each cube in a region file) around:
 
 - the size along x, y and z, a `u16` each;
 - the palette: a `u16` count, then each state's name as a `u16` byte length and UTF-8, written

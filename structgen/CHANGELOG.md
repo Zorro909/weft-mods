@@ -49,7 +49,8 @@
 - Buildings stand in the grass, not on a pad of gravel.
 - Buildings stand only on open plains above sea level, so none lands in a lake or among trees
   cut through it.
-- `.wst` files are version 2, with a table of slots; version 1 files still read. Mods using
+- `.wst` files are version 2, with a table of slots; version 1 files no longer load, so a
+  structure saved before has to be saved again from a world it stands in. Mods using
   `structgen_api` have to be rebuilt: `place_in` takes the `Materials` to fill slots with.
 - The mod is now Structgen: its id is `structgen` and its API crate `structgen_api`, so the
   wand is `structgen:wand` and structures are `structgen:<name>`. Mods using `structures_api`

@@ -6,7 +6,7 @@
 //! - the palette: a `u16` count, then each state's name as a `u16` byte length and UTF-8,
 //!   written like the lines of a save's `ids.txt` (`base:furnace[facing=east,lit=false]`).
 //!   `core:air` clears what is there. An entry `@<slot>[props]` is a material slot (`materials`)
-//! - the slots (version 2): a `u16` count, then each slot's name and default block, written
+//! - the slots: a `u16` count, then each slot's name and default block, written
 //!   like palette names
 //! - every block's palette index (`packing`), x fastest, then z, then y
 //!
@@ -22,8 +22,6 @@ use crate::packing;
 
 const MAGIC: &[u8] = b"WSTR";
 const VERSION: u8 = 2;
-/// The version before slots, still read.
-const VERSION_WITHOUT_SLOTS: u8 = 1;
 /// The most blocks a structure holds (256 x 256 x 256), so a small file can't claim a box too
 /// big to keep in memory.
 const MAX_VOLUME: usize = 1 << 24;
@@ -158,7 +156,7 @@ impl Structure {
     /// `None` for anything but a whole file of this version.
     pub fn decode(file: &[u8]) -> Option<Structure> {
         let (&version, packed) = file.strip_prefix(MAGIC)?.split_first()?;
-        if !(version == VERSION || version == VERSION_WITHOUT_SLOTS) || !plausible_body(packed) {
+        if version != VERSION || !plausible_body(packed) {
             return None;
         }
         let body = lz4_flex::decompress_size_prepended(packed).ok()?;
@@ -168,15 +166,10 @@ impl Structure {
         let palette = (0..count)
             .map(|_| reader.name())
             .collect::<Option<Vec<String>>>()?;
-        let slots = match version {
-            VERSION => {
-                let count = reader.u16()?;
-                (0..count)
-                    .map(|_| Some((reader.name()?, reader.name()?)))
-                    .collect::<Option<BTreeMap<String, String>>>()?
-            }
-            _ => BTreeMap::new(),
-        };
+        let count = reader.u16()?;
+        let slots = (0..count)
+            .map(|_| Some((reader.name()?, reader.name()?)))
+            .collect::<Option<BTreeMap<String, String>>>()?;
         let indices = packing::read(reader.0, volume(size)?, palette.len())?;
         let structure = Structure {
             size,
@@ -289,7 +282,14 @@ mod tests {
         );
         let mut newer = file.clone();
         newer[MAGIC.len()] = VERSION + 1;
-        assert_eq!(Structure::decode(&newer), None, "another version");
+        assert_eq!(Structure::decode(&newer), None, "a newer version");
+        let mut older = file.clone();
+        older[MAGIC.len()] = VERSION - 1;
+        assert_eq!(
+            Structure::decode(&older),
+            None,
+            "version 1, from before slots"
+        );
     }
 
     #[test]
