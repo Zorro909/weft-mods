@@ -75,7 +75,9 @@ pub fn lay(
             Cell::Square
         },
     );
-    let mut roads: Vec<Road> = main_road(grid, random, heart, middle, angle, s.steps).into();
+    let half = width / 2.0;
+    let main = main_road(grid, random, heart, middle, angle, s.steps);
+    let mut roads: Vec<Road> = main.map(|road| walkable_part(grid, road, half)).into();
     for main in &roads {
         grid.put_road(&main.line, width, road);
     }
@@ -94,6 +96,7 @@ pub fn lay(
         let n = from.line.len() as i32;
         let index = random.between(n / 3, (n - 3).max(n / 3)) as usize;
         let tried = branch(grid, random, from, index, side, branch_steps(s.steps));
+        let tried = tried.map(|road| walkable_part(grid, road, half));
         side = -side;
         let Some(branch) = tried.filter(|branch| branch.span() >= 2.0 * STEP) else {
             continue;
@@ -147,8 +150,9 @@ fn fork(road: &Road, index: usize) -> Option<(Point, f32)> {
 }
 
 /// A road from `start` taking up to `steps` steps along `angle`, each the way of three that
-/// climbs least. It stops where the ground ends or grows too steep to walk, and before it would
-/// cross another road or the heart; only its first step, leaving the road it branches off, may.
+/// climbs least, smoothed. It stops where the ground ends or grows too steep to walk, and before
+/// it would cross another road or the heart; only its first step, leaving the road it branches
+/// off, may.
 fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: usize) -> Road {
     let mut points = vec![start];
     let mut at = start;
@@ -185,27 +189,33 @@ fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: u
         points.push(at);
     }
     Road {
-        line: walkable_part(grid, smooth(&points)),
+        line: smooth(&points),
     }
 }
 
-/// `line` up to its first stretch that can't be walked: smoothing cuts its corners across
-/// columns the steps never looked at.
-fn walkable_part(grid: &Grid, mut line: Vec<Point>) -> Vec<Point> {
+/// `road` up to its first stretch that can't be walked, along its middle or across its width
+/// out to `half` either side: smoothing cuts corners across columns the steps never looked at,
+/// and a street's sides may cross a ledge its middle passes beside.
+fn walkable_part(grid: &Grid, road: Road, half: f32) -> Road {
+    let mut line = road.line;
     let mut last: Option<i32> = None;
     for i in 1..line.len() {
+        if !grid.level(&line[i - 1..=i], half) {
+            line.truncate(i);
+            break;
+        }
         let stretch = walk(&line[i - 1..=i]).into_iter().map(|(at, _)| at);
         for at in stretch.chain([line[i]]) {
             let height = grid.ground(at);
             let step = last.zip(height).is_some_and(|(a, b)| (a - b).abs() > 1);
             if height.is_none() || step {
                 line.truncate(i);
-                return line;
+                return Road { line };
             }
             last = height;
         }
     }
-    line
+    Road { line }
 }
 
 #[cfg(test)]
@@ -233,7 +243,8 @@ mod tests {
     fn a_ledge_between_two_short_stretches_ends_the_road() {
         let ground = [Some(64), Some(64), Some(66), Some(66)];
         let line = vec![[0.5, 0.5], [1.8, 0.5], [2.2, 0.5], [2.6, 0.5]];
-        assert_eq!(walkable_part(&row(&ground), line), [[0.5, 0.5], [1.8, 0.5]]);
+        let walked = walkable_part(&row(&ground), Road { line }, 0.0);
+        assert_eq!(walked.line, [[0.5, 0.5], [1.8, 0.5]]);
     }
 
     #[test]
@@ -248,9 +259,23 @@ mod tests {
             Some(64),
         ];
         let line = vec![[0.5, 0.5], [2.5, 0.5], [3.5, 0.5], [5.5, 0.5], [6.5, 0.5]];
-        assert_eq!(
-            walkable_part(&row(&ground), line),
-            [[0.5, 0.5], [2.5, 0.5], [3.5, 0.5]]
-        );
+        let walked = walkable_part(&row(&ground), Road { line }, 0.0);
+        assert_eq!(walked.line, [[0.5, 0.5], [2.5, 0.5], [3.5, 0.5]]);
+    }
+
+    #[test]
+    fn a_road_ends_where_its_side_would_cross_a_ledge() {
+        let mut grid = row(&[Some(64); 10]);
+        for z in 0..10 {
+            for x in 0..10 {
+                // A shelf beside the road's middle line, from x 7 on.
+                grid.raise([x, z], if z == 6 && x >= 7 { 66 } else { 64 });
+            }
+        }
+        let line = vec![[2.5, 5.5], [4.5, 5.5], [8.5, 5.5]];
+        let walked = walkable_part(&grid, Road { line: line.clone() }, 0.0);
+        assert_eq!(walked.line, line, "its middle line is level");
+        let walked = walkable_part(&grid, Road { line }, 1.5);
+        assert_eq!(walked.line, [[2.5, 5.5], [4.5, 5.5]], "but not its side");
     }
 }

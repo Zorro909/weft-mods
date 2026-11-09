@@ -79,7 +79,8 @@ over a lone building.
    three (straight on, or about 20° either side) that climbs least, so it winds along the
    ground. It stops at water, forest, the edge of the square, ground too steep to walk (a step
    of more than a block) and before crossing another road or the heart, and is smoothed into a
-   curve, cut short where the curve leaves walkable ground.
+   curve, cut short where the curve, or the road's width either side of it, leaves walkable
+   ground.
 3. **Buildings.** The heart's own buildings stand in it first: the well, or the fountain and
    stalls; a heart with no room for its well or fountain gives the spot up. Then the planner walks round the heart and down both sides of every road a block at
    a time, putting a building wherever it fits, its front turned toward the road (one of four
