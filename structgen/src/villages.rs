@@ -58,7 +58,7 @@ static TREES: &[&Template] = &[
 
 static HAMLET: Settlement = Settlement {
     region: 384,
-    chance: 0.45,
+    chance: 0.38,
     priority: 1,
     kind: Kind::Village,
     steps: 3,
@@ -81,7 +81,7 @@ static HAMLET: Settlement = Settlement {
 
 static VILLAGE: Settlement = Settlement {
     region: 512,
-    chance: 0.45,
+    chance: 0.38,
     priority: 2,
     kind: Kind::Village,
     steps: 5,
