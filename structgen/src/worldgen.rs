@@ -66,6 +66,6 @@ fn alone(r: &mut Registry, name: &str, structure: Structure, spacing: u32, chanc
         .foundation(Foundation::Ground)
         .max_slope(MAX_SLOPE);
     for roof in ROOFS {
-        placement = placement.materials(styles::add(Default::default(), styles::blocks(roof)));
+        placement = placement.materials(styles::add(Default::default(), roof));
     }
 }

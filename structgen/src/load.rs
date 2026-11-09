@@ -33,7 +33,7 @@ pub fn run(cmd: &mut ServerCommand) {
         return cmd.reply("structgen.bad_turn", &[]);
     };
     let Some(materials) = styles::named(cmd.text("styles").unwrap_or("")) else {
-        let all: Vec<&str> = styles::STYLES.iter().map(|(name, _)| *name).collect();
+        let all: Vec<&str> = styles::names().collect();
         return cmd.reply("structgen.bad_style", &[Arg::Text(&all.join(", "))]);
     };
     let path = save::path_of(&name);

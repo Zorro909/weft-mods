@@ -4,48 +4,68 @@
 
 use structgen_api::Materials;
 
-/// Each style's name and the blocks it puts in which slots.
-pub const STYLES: &[(&str, &[(&str, &str)])] = &[
+/// Roof styles: each name and the block the roof is of, its stairs and slabs too.
+const ROOFS: &[(&str, &str)] = &[
+    ("spruce_roof", "base:spruce_planks"),
+    ("oak_roof", "base:oak_planks"),
+    ("birch_roof", "base:birch_planks"),
+    ("brick_roof", "base:bricks"),
+    ("stone_roof", "base:cobblestone"),
+];
+
+/// Street styles: each name and its blocks, in the order of `STREET_SLOTS`.
+const STREETS: &[(&str, [&str; 5])] = &[
     (
-        "spruce_roof",
-        &[
-            ("roof/stair", "base:spruce_planks_stairs"),
-            ("roof/slab", "base:spruce_planks_slab"),
-            ("roof/block", "base:spruce_planks"),
+        "cobble_street",
+        [
+            "base:cobblestone",
+            "base:mossy_cobblestone",
+            "base:stone_bricks",
+            "base:stone_bricks_slab",
+            "base:stone_bricks_stairs",
         ],
     ),
     (
-        "oak_roof",
-        &[
-            ("roof/stair", "base:oak_planks_stairs"),
-            ("roof/slab", "base:oak_planks_slab"),
-            ("roof/block", "base:oak_planks"),
+        "stone_street",
+        [
+            "base:stone_bricks",
+            "base:cobblestone",
+            "base:stone",
+            "base:stone_slab",
+            "base:stone_stairs",
         ],
     ),
     (
-        "birch_roof",
-        &[
-            ("roof/stair", "base:birch_planks_stairs"),
-            ("roof/slab", "base:birch_planks_slab"),
-            ("roof/block", "base:birch_planks"),
+        "brick_street",
+        [
+            "base:bricks",
+            "base:stone_bricks",
+            "base:stone_bricks",
+            "base:stone_bricks_slab",
+            "base:bricks_stairs",
         ],
     ),
     (
-        "brick_roof",
-        &[
-            ("roof/stair", "base:bricks_stairs"),
-            ("roof/slab", "base:bricks_slab"),
-            ("roof/block", "base:bricks"),
+        "sandstone_street",
+        [
+            "base:sandstone",
+            "base:sand",
+            "base:stone_bricks",
+            "base:sandstone_slab",
+            "base:sandstone_stairs",
         ],
     ),
-    (
-        "stone_roof",
-        &[
-            ("roof/stair", "base:cobblestone_stairs"),
-            ("roof/slab", "base:cobblestone_slab"),
-            ("roof/block", "base:cobblestone"),
-        ],
-    ),
+];
+const STREET_SLOTS: [&str; 5] = [
+    "street/paving",
+    "street/patch",
+    "street/kerb",
+    "street/gutter",
+    "street/step",
+];
+
+/// The other styles: each name and the blocks it puts in which slots.
+const OTHERS: &[(&str, &[(&str, &str)])] = &[
     ("oak_frame", &[("frame/log", "base:oak_log")]),
     ("spruce_frame", &[("frame/log", "base:spruce_log")]),
     ("birch_frame", &[("frame/log", "base:birch_log")]),
@@ -62,47 +82,16 @@ pub const STYLES: &[(&str, &[(&str, &str)])] = &[
         "dirt_path",
         &[("path/surface", "base:dirt"), ("path/worn", "base:gravel")],
     ),
-    (
-        "cobble_street",
-        &[
-            ("street/paving", "base:cobblestone"),
-            ("street/patch", "base:mossy_cobblestone"),
-            ("street/kerb", "base:stone_bricks"),
-            ("street/gutter", "base:stone_bricks_slab"),
-            ("street/step", "base:stone_bricks_stairs"),
-        ],
-    ),
-    (
-        "stone_street",
-        &[
-            ("street/paving", "base:stone_bricks"),
-            ("street/patch", "base:cobblestone"),
-            ("street/kerb", "base:stone"),
-            ("street/gutter", "base:stone_slab"),
-            ("street/step", "base:stone_stairs"),
-        ],
-    ),
-    (
-        "brick_street",
-        &[
-            ("street/paving", "base:bricks"),
-            ("street/patch", "base:stone_bricks"),
-            ("street/kerb", "base:stone_bricks"),
-            ("street/gutter", "base:stone_bricks_slab"),
-            ("street/step", "base:bricks_stairs"),
-        ],
-    ),
-    (
-        "sandstone_street",
-        &[
-            ("street/paving", "base:sandstone"),
-            ("street/patch", "base:sand"),
-            ("street/kerb", "base:stone_bricks"),
-            ("street/gutter", "base:sandstone_slab"),
-            ("street/step", "base:sandstone_stairs"),
-        ],
-    ),
 ];
+
+/// Every style's name.
+pub fn names() -> impl Iterator<Item = &'static str> {
+    let roofs = ROOFS.iter().map(|(name, _)| *name);
+    let streets = STREETS.iter().map(|(name, _)| *name);
+    roofs
+        .chain(streets)
+        .chain(OTHERS.iter().map(|(name, _)| *name))
+}
 
 /// The styles named in `names`, each over the one before: `brick_roof,spruce_frame`. `None`
 /// for a name no style has.
@@ -112,24 +101,49 @@ pub fn named(names: &str) -> Option<Materials> {
         .map(str::trim)
         .filter(|name| !name.is_empty());
     names.try_fold(Materials::new(), |materials, name| {
-        let known = STYLES.iter().any(|(style, _)| *style == name);
-        known.then(|| add(materials, blocks(name)))
+        let known = self::names().any(|style| style == name);
+        known.then(|| add(materials, name))
     })
 }
 
-/// The blocks of style `name`, none for a name no style has (`""` for the defaults).
-pub fn blocks(name: &str) -> &'static [(&'static str, &'static str)] {
-    STYLES
+/// `materials` with style `name`'s blocks put in their slots; unchanged for a name no style has
+/// (`""` for the defaults).
+pub fn add(materials: Materials, name: &str) -> Materials {
+    blocks(name)
+        .into_iter()
+        .fold(materials, |materials, (slot, block)| {
+            materials.with(slot, &block)
+        })
+}
+
+/// The blocks of style `name` and their slots, none for a name no style has.
+fn blocks(name: &str) -> Vec<(&'static str, String)> {
+    if let Some(block) = find(ROOFS, name) {
+        return vec![
+            ("roof/stair", format!("{block}_stairs")),
+            ("roof/slab", format!("{block}_slab")),
+            ("roof/block", block.to_string()),
+        ];
+    }
+    if let Some(blocks) = find(STREETS, name) {
+        return STREET_SLOTS
+            .into_iter()
+            .zip(blocks.map(String::from))
+            .collect();
+    }
+    let others = find(OTHERS, name).copied().unwrap_or_default();
+    others
+        .iter()
+        .map(|&(slot, block)| (slot, block.to_string()))
+        .collect()
+}
+
+/// What `styles` has under `name`.
+fn find<T>(styles: &'static [(&str, T)], name: &str) -> Option<&'static T> {
+    styles
         .iter()
         .find(|(style, _)| *style == name)
-        .map_or(&[], |(_, blocks)| *blocks)
-}
-
-/// `materials` with `blocks` put in their slots.
-pub fn add(materials: Materials, blocks: &[(&str, &str)]) -> Materials {
-    blocks.iter().fold(materials, |materials, (slot, block)| {
-        materials.with(slot, block)
-    })
+        .map(|(_, blocks)| blocks)
 }
 
 #[cfg(test)]
@@ -148,6 +162,11 @@ mod tests {
             materials.get("frame/log"),
             Some("base:spruce_log"),
             "the frame"
+        );
+        assert_eq!(
+            materials.get("roof/slab"),
+            Some("base:bricks_slab"),
+            "the roof's slabs"
         );
         assert_eq!(named(""), Some(Materials::new()), "none at all");
         assert_eq!(named("gold_roof"), None, "an unknown style");

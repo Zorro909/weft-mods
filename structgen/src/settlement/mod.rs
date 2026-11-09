@@ -151,12 +151,12 @@ pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
 fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) -> Result<(), PlanError> {
     let walls = walls(p, s);
     for site in sites {
-        let roof = styles::blocks(one_of(p, s.roofs).unwrap_or(""));
+        let roof = one_of(p, s.roofs).unwrap_or("");
         let mut materials = styles::add(walls.clone(), roof);
         let is = |t: &Template| std::ptr::eq(t, site.template);
         let outside = s.trees.iter().any(|&t| is(t)) || s.mill.is_some_and(is);
         if s.kind == Kind::Town && !outside {
-            materials = styles::add(materials, styles::blocks("cobble_ground"));
+            materials = styles::add(materials, "cobble_ground");
         }
         p.structure(site.template, site.corner, site.turn)?
             .materials(&materials)
@@ -238,7 +238,7 @@ fn one_of<T: Copy>(p: &mut Plan, items: &[T]) -> Option<T> {
 
 /// The frame and infill all of a settlement's buildings share.
 fn walls(p: &mut Plan, s: &Settlement) -> Materials {
-    let frame = styles::blocks(one_of(p, s.frames).unwrap_or(""));
-    let infill = styles::blocks(one_of(p, s.infills).unwrap_or(""));
+    let frame = one_of(p, s.frames).unwrap_or("");
+    let infill = one_of(p, s.infills).unwrap_or("");
     styles::add(styles::add(Materials::new(), frame), infill)
 }
