@@ -67,7 +67,7 @@ fn open(grid: &Grid, corner: [i32; 2], last: [i32; 2]) -> bool {
     let [x, z] = corner.map(|v| v as f32);
     let [lx, lz] = last.map(|v| v as f32 + 1.0);
     grid.all(corner, last, |c| c == Cell::Free)
-        && grid.even(&[[x, z], [lx, z], [lx, lz], [x, lz]], 0.0)
+        && grid.even(&[[x, z], [lx, z], [lx, lz], [x, lz]], 0.0, i32::MAX)
 }
 
 /// Line `line` of a field: a furrow every `width + 1` lines, wheat of an age from `ages`

@@ -50,6 +50,15 @@ impl Kind {
         }
     }
 
+    /// How many blocks its heart may rise from its lowest column to its highest: a paved square
+    /// shows every step.
+    fn rise(self) -> i32 {
+        match self {
+            Kind::Village => 6,
+            Kind::Town => 3,
+        }
+    }
+
     /// What its roads, and the ways to its doors, are on the grid.
     fn road(self) -> Cell {
         match self {
@@ -151,7 +160,7 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
     } else {
         0.0
     };
-    if !grid.even(&heart, ring) {
+    if !grid.even(&heart, ring, s.kind.rise()) {
         return None;
     }
     let roads = roads::lay(p.random(), grid, s, &heart, m, angle);

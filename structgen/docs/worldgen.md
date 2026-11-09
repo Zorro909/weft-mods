@@ -70,7 +70,8 @@ over a lone building.
 1. **The heart.** A blob of nine jittered corners round a spot in the square, stretched along
    a random angle: the village green, ringed by a lane, or the town's square. Its ground, and
    the lane's, must be open land a player can walk across, no column more than a block above
-   its neighbour; a square tries up to three spots before it goes without a settlement.
+   its neighbour, and fairly level: a town's square rises 3 blocks at most from end to end, a
+   green 6. A region tries up to three spots before it goes without a settlement.
 2. **Roads.** The main road leaves the heart's edge both ways along that angle, bending a
    little as it passes through; a branch or two, about half as long, leave it at roughly a
    right angle, to either side in turn, and one the ground stops short is tried again

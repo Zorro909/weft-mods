@@ -119,24 +119,28 @@ impl Grid {
     }
 
     /// Whether every column inside `area`, or within `margin` of its edge, has ground no more
-    /// than a block above or below its neighbours there: a heart a player can walk across.
-    pub fn even(&self, area: &[Point], margin: f32) -> bool {
+    /// than a block above or below its neighbours there and `rise` above the lowest: a heart a
+    /// player can walk across, not a hillside of steps.
+    pub fn even(&self, area: &[Point], margin: f32, rise: i32) -> bool {
         let mut edge = area.to_vec();
         edge.push(area[0]);
         let within =
             |at: [i32; 2]| inside(area, middle(at)) || distance(&edge, middle(at)) <= margin;
         let (from, to) = bounds(area, margin + 1.0);
         let columns = (from[1]..=to[1]).flat_map(|z| (from[0]..=to[0]).map(move |x| [x, z]));
-        columns.filter(|&at| within(at)).all(|at| {
+        let (mut low, mut high) = (i32::MAX, i32::MIN);
+        let steps = columns.filter(|&at| within(at)).all(|at| {
             let Some(height) = self.height(at) else {
                 return false;
             };
+            (low, high) = (low.min(height), high.max(height));
             let next = [[at[0] + 1, at[1]], [at[0], at[1] + 1]]
                 .into_iter()
                 .filter(|&n| within(n));
             next.filter_map(|n| self.height(n))
                 .all(|h| (h - height).abs() <= 1)
-        })
+        });
+        steps && high - low <= rise
     }
 
     /// Puts `cell` at `at` unless what is there ranks higher.
@@ -281,10 +285,11 @@ mod tests {
     fn a_heart_on_a_ledge_or_water_is_uneven() {
         let strip = [[0.0, 0.0], [4.0, 0.0], [4.0, 1.0], [0.0, 1.0]];
         let gentle = row(&[Some(64), Some(65), Some(65), Some(66), Some(66)]);
-        assert!(gentle.even(&strip, 0.0), "a block at a time");
+        assert!(gentle.even(&strip, 0.0, 2), "a block at a time");
+        assert!(!gentle.even(&strip, 0.0, 1), "but two up in all");
         let ledge = row(&[Some(64), Some(64), Some(66), Some(66), Some(66)]);
-        assert!(!ledge.even(&strip, 0.0), "two blocks up at once");
+        assert!(!ledge.even(&strip, 0.0, 2), "two blocks up at once");
         let pond = row(&[Some(64), None, Some(64), Some(64), Some(64)]);
-        assert!(!pond.even(&strip, 0.0), "water in it");
+        assert!(!pond.even(&strip, 0.0, 2), "water in it");
     }
 }
