@@ -59,6 +59,22 @@ impl Kind {
         }
     }
 
+    /// What its heart is on the grid: a green or a square.
+    fn heart(self) -> Cell {
+        match self {
+            Kind::Village => Cell::Green,
+            Kind::Town => Cell::Square,
+        }
+    }
+
+    /// How far round its heart a road runs: a village's green has a lane round it.
+    fn ring(self) -> f32 {
+        match self {
+            Kind::Village => LANE / 2.0,
+            Kind::Town => 0.0,
+        }
+    }
+
     /// What its roads, and the ways to its doors, are on the grid.
     fn road(self) -> Cell {
         match self {
@@ -155,12 +171,7 @@ fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) -> Result<()
 fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Vec<Site>> {
     let angle = unit(p.random()) * TAU;
     let heart = roads::heart(p.random(), m, angle, s.heart);
-    // A village's green has a lane round it.
-    let ring = if s.kind == Kind::Village {
-        LANE / 2.0
-    } else {
-        0.0
-    };
+    let ring = s.kind.ring();
     if !grid.even(&heart, ring, s.kind.rise()) {
         return None;
     }

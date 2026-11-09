@@ -15,8 +15,8 @@ impl Grid {
             .filter(|&(at, cell)| {
                 let by = |what| self.near(at, 2, |c| c == what);
                 cell == Cell::Free
-                    && (by(Cell::Building) && self.near(at, 3, Cell::is_road)
-                        || by(Cell::Square) && self.near(at, 3, street))
+                    && ((by(Cell::Building) && self.near(at, 3, Cell::is_road))
+                        || (by(Cell::Square) && self.near(at, 3, street)))
             })
             .map(|(at, _)| at)
             .collect();

@@ -67,14 +67,7 @@ pub fn lay(
     angle: f32,
 ) -> Vec<Road> {
     let (width, road) = (s.kind.width(), s.kind.road());
-    grid.put_area(
-        heart,
-        if s.kind == Kind::Village {
-            Cell::Green
-        } else {
-            Cell::Square
-        },
-    );
+    grid.put_area(heart, s.kind.heart());
     let half = width / 2.0;
     let main = main_road(grid, random, heart, middle, angle, s.steps);
     let mut roads: Vec<Road> = main.map(|road| walkable_part(grid, road, half)).into();
@@ -193,27 +186,18 @@ fn grow(grid: &Grid, random: &mut Random, start: Point, mut angle: f32, steps: u
     }
 }
 
-/// `road` up to its first stretch that can't be walked, along its middle or across its width
-/// out to `half` either side: smoothing cuts corners across columns the steps never looked at,
-/// and a street's sides may cross a ledge its middle passes beside.
+/// `road` up to its first stretch that can't be walked: with no ground under its middle, or a
+/// ledge anywhere across its width out to `half` either side. Smoothing cuts corners across
+/// columns the steps never looked at, and a street's side may cross a ledge its middle passes
+/// beside.
 fn walkable_part(grid: &Grid, road: Road, half: f32) -> Road {
     let mut line = road.line;
-    let mut last: Option<i32> = None;
-    for i in 1..line.len() {
-        if !grid.level(&line[i - 1..=i], half) {
-            line.truncate(i);
-            break;
-        }
-        let stretch = walk(&line[i - 1..=i]).into_iter().map(|(at, _)| at);
-        for at in stretch.chain([line[i]]) {
-            let height = grid.ground(at);
-            let step = last.zip(height).is_some_and(|(a, b)| (a - b).abs() > 1);
-            if height.is_none() || step {
-                line.truncate(i);
-                return Road { line };
-            }
-            last = height;
-        }
+    let walkable = |stretch: &[Point]| {
+        let ground = walk(stretch).into_iter().map(|(at, _)| grid.ground(at));
+        grid.level(stretch, half) && ground.chain([grid.ground(stretch[1])]).all(|g| g.is_some())
+    };
+    if let Some(i) = (1..line.len()).find(|&i| !walkable(&line[i - 1..=i])) {
+        line.truncate(i);
     }
     Road { line }
 }
@@ -243,7 +227,8 @@ mod tests {
     fn a_ledge_between_two_short_stretches_ends_the_road() {
         let ground = [Some(64), Some(64), Some(66), Some(66)];
         let line = vec![[0.5, 0.5], [1.8, 0.5], [2.2, 0.5], [2.6, 0.5]];
-        let walked = walkable_part(&row(&ground), Road { line }, 0.0);
+        // A path a block wide: neither short stretch's middle passes a column's middle.
+        let walked = walkable_part(&row(&ground), Road { line }, 0.5);
         assert_eq!(walked.line, [[0.5, 0.5], [1.8, 0.5]]);
     }
 
@@ -259,7 +244,7 @@ mod tests {
             Some(64),
         ];
         let line = vec![[0.5, 0.5], [2.5, 0.5], [3.5, 0.5], [5.5, 0.5], [6.5, 0.5]];
-        let walked = walkable_part(&row(&ground), Road { line }, 0.0);
+        let walked = walkable_part(&row(&ground), Road { line }, 1.5);
         assert_eq!(walked.line, [[0.5, 0.5], [2.5, 0.5], [3.5, 0.5]]);
     }
 

@@ -18,6 +18,7 @@ static KERB: Block = Block::named("base:stone_bricks");
 static FARMLAND: Block = Block::named("base:farmland");
 static WHEAT: Block = Block::named("base:wheat");
 static LEAVES: Tag = Tag::named("leaves");
+static LOGS: Tag = Tag::named("logs");
 
 pub fn draw(p: &mut Plan, grid: &Grid) -> Result<(), PlanError> {
     for ([x, z], cell) in grid.columns() {
@@ -30,8 +31,12 @@ pub fn draw(p: &mut Plan, grid: &Grid) -> Result<(), PlanError> {
             p.set_state([x, y + 1, z], above)?;
             p.fill(from, to, &AIR)?;
         } else if beside(grid, [x, z], cell) {
-            // Leaves only: a trunk standing here keeps the crown it still holds up.
+            // Leaves only: a trunk standing here keeps the crown it still holds up, unless it is
+            // so near that none would be left.
             p.replace(from, to, &LEAVES, &AIR)?;
+            if grid.near([x, z], 1, laid) {
+                p.replace([x, y + 1, z], to, &LOGS, &AIR)?;
+            }
         }
     }
     Ok(())
@@ -69,9 +74,9 @@ fn laid(cell: Cell) -> bool {
 /// How high above a road or field the air is cleared: a tall spruce's height.
 const CLEAR: i32 = 11;
 /// How far beside a road or field leaves are cleared: an oak's crown, so one rooted on the road
-/// leaves none behind and one two or more off keeps a trimmed crown. One a block off may keep a
-/// slab of leaves apart from its trunk; no width avoids that for every tree, and wider strips
-/// trees beside the road bare.
+/// leaves none behind and one two or more off keeps a trimmed crown. One a block off loses its
+/// trunk too, which would stand bare, but may leave a slab of leaves; no width avoids that for
+/// every tree, and wider strips trees beside the road bare.
 const CROWN: i32 = 2;
 
 /// Whether column (`x`, `z`) is worn, in patches of a few blocks rather than single spots.

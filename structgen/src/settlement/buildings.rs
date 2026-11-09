@@ -30,7 +30,7 @@ pub fn centre(
     let mut sites = Vec::new();
     for (i, &template) in s.centre.iter().enumerate() {
         let turn = facing(scale(along, if i % 2 == 0 { 1.0 } else { -1.0 }));
-        let offsets = [0.0, 10.0, -10.0, 16.0, -16.0];
+        let offsets = [0.0, 8.0, -8.0, 12.0, -12.0];
         let mut try_at = |offset| {
             stand_round(
                 p,
