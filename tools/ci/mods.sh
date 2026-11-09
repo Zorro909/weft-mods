@@ -31,9 +31,10 @@ all_crates() {
 
 # The mods that take library $1 by path, from any of their crates.
 users_of() {
+    local library=$1
     for folder in $(all_mods); do
         if find "$folder" -name Cargo.toml -not -path '*/target/*' -print0 |
-            xargs -0 grep -qE "path *= *\"(\.\./)+$1\""; then
+            xargs -0 grep -qE "path *= *\"(\.\./)+$library\""; then
             echo "$folder"
         fi
     done

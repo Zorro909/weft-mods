@@ -17,7 +17,7 @@ status=0
 for folder in $(all_crates); do
     tags=$(weft_tag <"$folder/Cargo.toml")
     count=$(grep -c . <<<"$tags" || true)
-    if [ "$count" -ne 1 ]; then
+    if [[ "$count" -ne 1 ]]; then
         echo "::error file=$folder/Cargo.toml::$folder has $count $url weft_sdk lines; the mod index needs exactly one: $line"
         status=1
     elif ! grep -qxF "$tags" <<<"$releases"; then
@@ -31,7 +31,7 @@ for library in $(all_libraries); do
     tag=$(weft_tag <"$library/Cargo.toml")
     for folder in $(users_of "$library"); do
         theirs=$(weft_tag <"$folder/Cargo.toml")
-        if [ "$theirs" != "$tag" ]; then
+        if [[ "$theirs" != "$tag" ]]; then
             echo "::error file=$folder/Cargo.toml::$folder takes Weft $theirs but uses $library, which takes $tag; give both the same tag"
             status=1
         fi
