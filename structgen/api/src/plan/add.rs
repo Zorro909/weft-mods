@@ -13,8 +13,7 @@ impl Plan<'_> {
     ) -> Result<Placed<'_>, PlanError> {
         self.check()?;
         let entry = self.entry(template)?;
-        let (from, to) = box_of(corner, turn.size(entry.size()));
-        self.inside(&entry.name, from, to)?;
+        self.inside(&entry.name, Area::sized(corner, turn.size(entry.size())))?;
         self.parts.push(Part::Piece(Piece {
             template: entry,
             corner,
@@ -50,23 +49,22 @@ impl Plan<'_> {
     /// An unknown block (`u32::MAX`) is left out; the SDK has already said so.
     fn fill_state(&mut self, a: Pos, b: Pos, state: BlockState) -> Result<(), PlanError> {
         self.check()?;
-        let (from, to) = Pos::corners(a, b);
-        self.inside("blocks", from, to)?;
+        let area = Area::between(a, b);
+        self.inside("blocks", area)?;
         let state = state.id();
         if state != u32::MAX {
-            self.parts.push(Part::Fill { from, to, state });
+            self.parts.push(Part::Fill { area, state });
         }
         Ok(())
     }
 
-    fn inside(&mut self, what: &str, from: Pos, to: Pos) -> Result<(), PlanError> {
-        if self.region.holds(from, to) {
+    fn inside(&mut self, what: &str, area: Area) -> Result<(), PlanError> {
+        if self.region.holds(&area) {
             return Ok(());
         }
         Err(self.fail(PlanError::OutsideRegion {
             what: what.to_string(),
-            from,
-            to,
+            area,
         }))
     }
 }
@@ -99,7 +97,10 @@ mod tests {
             matches!(
                 error,
                 Some(PlanError::OutsideRegion {
-                    to: Pos { x: 64, y: 65, z: 1 },
+                    area: Area {
+                        hi: Pos { x: 64, y: 65, z: 1 },
+                        ..
+                    },
                     ..
                 })
             ),
@@ -143,7 +144,7 @@ mod tests {
         let parts = plan.finish(Ok(())).unwrap_or_default();
         assert_eq!(
             parts.first().map(Part::bounds),
-            Some((b, a)),
+            Some(Area { lo: b, hi: a }),
             "lowest corner first"
         );
     }

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use weft_sdk::Block;
-use weftkit::Pos;
+use weftkit::{Area, Pos};
 
 use crate::fit::{self, Columns};
 use crate::templates::Entry;
@@ -11,10 +11,9 @@ use crate::turn::Turn;
 
 pub(crate) enum Part {
     Piece(Piece),
-    /// Every block from `from` to `to`, both included.
+    /// Every block of `area`.
     Fill {
-        from: Pos,
-        to: Pos,
+        area: Area,
         state: u32,
     },
 }
@@ -50,19 +49,13 @@ impl Piece {
 }
 
 impl Part {
-    /// The box of the blocks it sets itself (not counting foundations and clearing), both
-    /// corners included.
-    pub fn bounds(&self) -> (Pos, Pos) {
+    /// The box of the blocks it sets itself, not counting foundations and clearing.
+    pub fn bounds(&self) -> Area {
         match self {
-            Part::Piece(piece) => box_of(piece.corner, piece.size()),
-            Part::Fill { from, to, .. } => (*from, *to),
+            Part::Piece(piece) => Area::sized(piece.corner, piece.size()),
+            Part::Fill { area, .. } => *area,
         }
     }
-}
-
-/// The box of `size` blocks from `corner`, both corners included.
-pub(crate) fn box_of(corner: Pos, [sx, sy, sz]: [i32; 3]) -> (Pos, Pos) {
-    (corner, corner + Pos::new(sx - 1, sy - 1, sz - 1))
 }
 
 /// A template just added to a plan, to say how it meets the ground.

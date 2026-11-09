@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
-use structgen_api::Pos;
+use structgen_api::{Area, Pos};
 use weft_sdk::*;
 
 /// How far away a looked-at block can be taken as a corner.
@@ -12,19 +12,14 @@ const REACH: f64 = 64.0;
 /// The box's outline, `0xRRGGBBAA`.
 const COLOR: u32 = 0xffd2_3cff;
 
-value! {
-    /// A selected box, both corners included.
-    pub struct Shown { pub from: Pos, pub to: Pos }
-}
-
-/// Server to client: the player's box, once both corners are set.
-static SHOWN: Channel<Shown> = Channel::named("selection");
+/// Server to client: the player's box, or the one corner set so far.
+static SHOWN: Channel<Area> = Channel::named("selection");
 
 /// By player entity.
 static SELECTIONS: LazyLock<Mutex<HashMap<u64, Selection>>> = LazyLock::new(Default::default);
 
 /// On the client: the box this player selected.
-static DRAWN: Mutex<Option<Shown>> = Mutex::new(None);
+static DRAWN: Mutex<Option<Area>> = Mutex::new(None);
 
 #[derive(Clone, Copy, Default)]
 struct Selection {
@@ -33,19 +28,18 @@ struct Selection {
 }
 
 impl Selection {
-    /// Lowest corner, then highest.
-    fn bounds(&self) -> Option<(Pos, Pos)> {
+    fn bounds(&self) -> Option<Area> {
         let [Some(a), Some(b)] = self.corners else {
             return None;
         };
-        Some(Pos::corners(a, b))
+        Some(Area::between(a, b))
     }
 
     /// What the player sees: the box, or the one corner set so far.
-    fn shown(&self) -> Option<Shown> {
+    fn shown(&self) -> Option<Area> {
         let [a, b] = self.corners;
-        let (from, to) = self.bounds().or_else(|| a.or(b).map(|c| (c, c)))?;
-        Some(Shown { from, to })
+        self.bounds()
+            .or_else(|| a.or(b).map(|c| Area::between(c, c)))
     }
 }
 
@@ -53,9 +47,9 @@ impl Selection {
 pub fn register(r: &mut Registry) {
     r.client_packet(&SHOWN, |_, shown| *lock(&DRAWN) = Some(shown));
     r.client_frame(|client| {
-        if let Some(Shown { from, to }) = *lock(&DRAWN) {
-            let beyond = Vec3::from(to).offset(1.0, 1.0, 1.0);
-            client.draw_box(None, from, beyond, COLOR);
+        if let Some(Area { lo, hi }) = *lock(&DRAWN) {
+            let beyond = Vec3::from(hi).offset(1.0, 1.0, 1.0);
+            client.draw_box(None, lo, beyond, COLOR);
         }
     });
 }
@@ -70,8 +64,8 @@ pub fn second(cmd: &mut ServerCommand) {
     set(cmd, 1);
 }
 
-/// The box `player` selected in `dimension`: lowest corner, then highest.
-pub fn selected(dimension: u32, player: u64) -> Option<(Pos, Pos)> {
+/// The box `player` selected in `dimension`.
+pub fn selected(dimension: u32, player: u64) -> Option<Area> {
     let selections = lock(&SELECTIONS);
     let selection = selections.get(&player)?;
     (selection.dimension == dimension).then(|| selection.bounds())?
@@ -136,7 +130,10 @@ mod tests {
         selection.corners[1] = Some(Pos::new(1, 70, -9));
         assert_eq!(
             selection.bounds(),
-            Some((Pos::new(1, 64, -9), Pos::new(5, 70, -2))),
+            Some(Area {
+                lo: Pos::new(1, 64, -9),
+                hi: Pos::new(5, 70, -2)
+            }),
             "lowest corner first, whichever was set first"
         );
     }
@@ -147,6 +144,6 @@ mod tests {
         let corner = Pos::new(2, 3, 4);
         selection.corners[1] = Some(corner);
         let shown = selection.shown().expect("a corner");
-        assert_eq!((shown.from, shown.to), (corner, corner), "the one block");
+        assert_eq!((shown.lo, shown.hi), (corner, corner), "the one block");
     }
 }

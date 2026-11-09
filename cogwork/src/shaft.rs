@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use crate::lib::{BlockState, ModelBox, Pos};
+use crate::lib::{ModelBox, Pos, TypedWorld};
 
 pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
 
@@ -40,17 +40,17 @@ fn model<'s>(p: &Props, s: State<'s>) -> State<'s> {
 /// Reaches toward every conductor and every block entity that holds energy. `CONDUCTOR` is the
 /// engine's own tag.
 fn refresh(w: &World, pos: Pos) {
-    let shaft = BlockState::at(w, pos);
+    let shaft = w.block_typed(pos);
     if !shaft.is(&TORQUE_SHAFT) {
         return;
     }
     let mut next = shaft;
     for d in Dir::ALL {
         let at = pos.toward(d);
-        let joins = BlockState::at(w, at).has(&CONDUCTOR) || w.component(at, &ENERGY).is_some();
+        let joins = w.block_typed(at).has(&CONDUCTOR) || w.component(at, &ENERGY).is_some();
         next = next.with_flag(d.name(), joins);
     }
     if next != shaft {
-        next.place(w, pos);
+        w.set_block_typed(pos, next);
     }
 }

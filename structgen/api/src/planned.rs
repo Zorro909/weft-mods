@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use weftkit::Pos;
+use weftkit::{Area, Pos};
 
 use crate::part::Part;
 use crate::stamp::{self, Surface};
@@ -18,9 +18,9 @@ impl Planned {
     pub fn new(parts: Vec<Part>) -> Planned {
         let mut columns: HashMap<[i32; 2], Vec<usize>> = HashMap::new();
         for (i, part) in parts.iter().enumerate() {
-            let (from, to) = part.bounds();
-            for z in from.z.div_euclid(16)..=to.z.div_euclid(16) {
-                for x in from.x.div_euclid(16)..=to.x.div_euclid(16) {
+            let Area { lo, hi } = part.bounds();
+            for z in lo.z.div_euclid(16)..=hi.z.div_euclid(16) {
+                for x in lo.x.div_euclid(16)..=hi.x.div_euclid(16) {
                     columns.entry([x, z]).or_default().push(i);
                 }
             }
@@ -34,7 +34,7 @@ impl Planned {
 
     /// The lowest corner of what was added first: where `locate` points.
     pub fn anchor(&self) -> Option<Pos> {
-        self.parts.first().map(|part| part.bounds().0)
+        self.parts.first().map(|part| part.bounds().lo)
     }
 
     /// Calls `set` for every block the plan puts into the cube at `origin`, later parts after
@@ -62,8 +62,7 @@ mod tests {
 
     fn fill(from: [i32; 3], to: [i32; 3], state: u32) -> Part {
         Part::Fill {
-            from: from.into(),
-            to: to.into(),
+            area: Area::between(from.into(), to.into()),
             state,
         }
     }

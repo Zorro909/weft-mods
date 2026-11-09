@@ -6,7 +6,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
-use crate::lib::{BlockState, ModelBox, Pos};
+use crate::lib::{BlockState, ModelBox, Pos, TypedWorld};
 
 /// The tube's hub: 8 texels wide in the middle of the block. Its arms are as thick.
 const HUB: ModelBox = ModelBox::new([4.0; 3], [12.0; 3]);
@@ -95,13 +95,13 @@ fn output(tube: BlockState) -> Option<Dir> {
 
 /// Sets every arm property of the tube at `pos` to what its neighbors are now.
 fn refresh(w: &World, pos: Pos) {
-    let tube = BlockState::at(w, pos);
+    let tube = w.block_typed(pos);
     if !tube.has(&TUBES) {
         return;
     }
     let next = joined(w, pos, tube);
     if next != tube {
-        next.place(w, pos);
+        w.set_block_typed(pos, next);
     }
 }
 
@@ -120,7 +120,7 @@ fn joined(w: &World, pos: Pos, tube: BlockState) -> BlockState {
 /// anything holding items.
 fn joins(w: &World, pos: Pos, tube: BlockState, d: Dir) -> bool {
     let at = pos.toward(d);
-    let other = BlockState::at(w, at);
+    let other = w.block_typed(at);
     if other.has(&TUBES) {
         return !(tube.is(&TIMBER_TUBE) && other.is(&TIMBER_TUBE));
     }
@@ -129,7 +129,7 @@ fn joins(w: &World, pos: Pos, tube: BlockState, d: Dir) -> bool {
 
 /// Whether the tube at `pos` has its arm toward `face` out, so a neighbor can hand it items.
 pub fn connects_to_tube(w: &World, pos: Pos, d: Dir) -> bool {
-    let tube = BlockState::at(w, pos);
+    let tube = w.block_typed(pos);
     match arm_prop(output(tube), d) {
         Some(name) => tube.prop(name) == Some("true"),
         None => joins(w, pos, tube, d),
@@ -148,7 +148,7 @@ pub fn turn_output(u: &mut Use) -> bool {
 
 /// Turns the output of the directing tube at `pos` to its next connected arm.
 pub fn turn_directing(w: &World, pos: Pos) {
-    let tube = BlockState::at(w, pos);
+    let tube = w.block_typed(pos);
     let Some(now) = output(tube).filter(|_| tube.is(&DIRECTING_TUBE)) else {
         return;
     };
@@ -156,7 +156,7 @@ pub fn turn_directing(w: &World, pos: Pos) {
         .map(|k| Dir::from_face((now.face() + k) % 6))
         .find(|&d| connects_to_tube(w, pos, d));
     if let Some(turned) = next.and_then(|d| tube.with_prop("out", d.name())) {
-        joined(w, pos, turned).place(w, pos);
+        w.set_block_typed(pos, joined(w, pos, turned));
         w.play_sound(&crate::sounds::WRENCH, pos.center(), 1.0);
     }
 }

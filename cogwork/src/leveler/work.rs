@@ -5,7 +5,7 @@ use weft_sdk::*;
 
 use super::{LEVELER, Level, Stage, Status};
 use crate::harvest::{Harvest, cost, harvest};
-use crate::lib::{Area, BlockState, Pos};
+use crate::lib::{Area, BlockState, Pos, TypedWorld};
 use crate::markers::{square_behind, take_area};
 use crate::sounds;
 
@@ -30,7 +30,7 @@ pub fn tick(b: &mut SystemBatch<Level>) {
     for (id, l, _) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
         let pos = Pos::from(st.block_pos());
-        if !BlockState::at(&w, pos).is(&LEVELER) {
+        if !w.block_typed(pos).is(&LEVELER) {
             continue;
         }
         work(&w, id, pos, l);
@@ -110,7 +110,7 @@ fn fill_next(w: &World, id: u64, l: &mut Level) {
     if !pay(w, id, l, FILL_COST) {
         return;
     }
-    filler.place(w, c);
+    w.set_block_typed(c, filler);
     sound(w, &sounds::FILL, c);
     stock.set(slot, stock.get(slot).shrink(1));
     l.spent = 0;
@@ -147,7 +147,7 @@ fn find(
             return None;
         }
         let c = l.cursor;
-        let Some(block_state) = BlockState::loaded_at(w, c) else {
+        let Some(block_state) = w.block_loaded_typed(c) else {
             l.set_status(Status::Blocked);
             return None;
         };

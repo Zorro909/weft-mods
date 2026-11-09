@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use weft_sdk::*;
-use weftkit::{BlockState, Pos};
+use weftkit::{BlockState, Pos, TypedWorld};
 
 use crate::format::Structure;
 use crate::turn::{Turn, turn_state};
@@ -41,23 +41,18 @@ pub fn put_back(world: &World, replaced: &Replaced) {
 /// Makes the cell at `pos` hold just `parts`, left alone if it does. Its first block is
 /// replaced in place, so a chest turned or put back keeps what is in it.
 fn write_cell(world: &World, pos: Pos, parts: &[BlockState]) {
-    let now = parts_at(world, pos);
+    let now = world.parts_typed(pos);
     if now == parts {
         return;
     }
-    for extra in now.iter().skip(1) {
-        world.part_remove(pos, extra.id());
+    for &extra in now.iter().skip(1) {
+        world.part_remove_typed(pos, extra);
     }
     let first = parts.first().copied().unwrap_or(BlockState::AIR);
-    first.place(world, pos);
-    for part in parts.iter().skip(1) {
-        world.part_add(pos, part.id());
+    world.set_block_typed(pos, first);
+    for &part in parts.iter().skip(1) {
+        world.part_add_typed(pos, part);
     }
-}
-
-/// Everything the cell at `pos` holds (`World::parts`).
-fn parts_at(world: &World, pos: Pos) -> Vec<BlockState> {
-    world.parts(pos).into_iter().map(BlockState::from).collect()
 }
 
 impl Structure {
@@ -74,8 +69,8 @@ impl Structure {
         let replaced: Option<Replaced> = blocks
             .iter()
             .map(|&(pos, _)| {
-                BlockState::loaded_at(world, pos)?;
-                Some((pos, parts_at(world, pos)))
+                world.block_loaded_typed(pos)?;
+                Some((pos, world.parts_typed(pos)))
             })
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;

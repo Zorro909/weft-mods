@@ -45,4 +45,4 @@ pub use random::Random;
 pub use region::Region;
 pub use templates::template;
 pub use turn::Turn;
-pub use weftkit::{BlockState, Pos};
+pub use weftkit::{Area, BlockState, Pos};

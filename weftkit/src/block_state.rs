@@ -5,23 +5,11 @@
 use weft_sdk::abi::block_flags::{LIQUID, OPAQUE, REPLACEABLE, SOLID};
 use weft_sdk::*;
 
-use super::Pos;
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct BlockState(u32);
 
 impl BlockState {
     pub const AIR: BlockState = BlockState(0);
-
-    /// The block at `pos`.
-    pub fn at(w: &World, pos: Pos) -> BlockState {
-        BlockState(w.block(pos))
-    }
-
-    /// The block at `pos`, `None` while that part of the world isn't loaded.
-    pub fn loaded_at(w: &World, pos: Pos) -> Option<BlockState> {
-        w.block_loaded(pos).map(BlockState)
-    }
 
     /// `block` with its properties at their defaults.
     pub fn of(block: &Block) -> BlockState {
@@ -37,11 +25,6 @@ impl BlockState {
     /// The block `item` places, if it places one.
     pub fn placed_by(item: u32) -> Option<BlockState> {
         item_block(item).map(BlockState)
-    }
-
-    /// Puts it at `pos`; false where the world isn't loaded.
-    pub fn place(self, w: &World, pos: Pos) -> bool {
-        w.set_block(pos, self.0)
     }
 
     /// The SDK's number for it, for the SDK calls that take one.

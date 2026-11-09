@@ -9,10 +9,10 @@ use std::sync::Arc;
 
 use weft_sdk::terrain::Column;
 use weft_sdk::{Block, Template};
-use weftkit::{BlockState, Pos};
+use weftkit::{Area, BlockState, Pos};
 
 use crate::fit::{Columns, Fit};
-use crate::part::{Part, Piece, Placed, box_of};
+use crate::part::{Part, Piece, Placed};
 use crate::random::Random;
 use crate::region::Region;
 use crate::templates::{self, Entry};
@@ -21,9 +21,8 @@ use crate::turn::Turn;
 /// Why a plan was given up. Nothing of it is placed, and generation logs why.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlanError {
-    /// `what` (a template's name, or `blocks`) would cover `from..=to`, reaching outside the
-    /// region.
-    OutsideRegion { what: String, from: Pos, to: Pos },
+    /// `what` (a template's name, or `blocks`) would cover `area`, reaching outside the region.
+    OutsideRegion { what: String, area: Area },
     /// A template this mod didn't register with `structgen_api::template` or `place`.
     UnknownTemplate(String),
 }
@@ -31,8 +30,8 @@ pub enum PlanError {
 impl fmt::Display for PlanError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PlanError::OutsideRegion { what, from, to } => {
-                let (from, to) = (<[i32; 3]>::from(*from), <[i32; 3]>::from(*to));
+            PlanError::OutsideRegion { what, area } => {
+                let (from, to) = (<[i32; 3]>::from(area.lo), <[i32; 3]>::from(area.hi));
                 write!(
                     f,
                     "{what} from {from:?} to {to:?} reaches outside the region"
@@ -111,8 +110,10 @@ impl<'a> Plan<'a> {
     ) -> Option<Pos> {
         let entry = self.entry(template).ok()?;
         let [sx, _, sz] = turn.size(entry.size());
-        let far = Pos::new(x + sx - 1, 0, z + sz - 1);
-        if !self.region.holds(Pos::new(x, 0, z), far) {
+        if !self
+            .region
+            .holds(&Area::sized(Pos::new(x, 0, z), [sx, 1, sz]))
+        {
             return None;
         }
         let y = fit.floor([x, z], [sx, sz], self.ground)?;
@@ -125,10 +126,8 @@ impl<'a> Plan<'a> {
         let Ok(entry) = self.entry(template) else {
             return false;
         };
-        let bounds = box_of(corner, turn.size(entry.size()));
-        self.parts
-            .iter()
-            .all(|part| !overlap(bounds, part.bounds()))
+        let area = Area::sized(corner, turn.size(entry.size()));
+        self.parts.iter().all(|part| !area.overlaps(&part.bounds()))
     }
 
     /// The parts, or why the plan was given up: `result` is what the planner returned, and a
@@ -157,15 +156,6 @@ impl<'a> Plan<'a> {
         self.error.get_or_insert(error.clone());
         error
     }
-}
-
-/// Whether two boxes, each given by its lowest and highest corner, share a block.
-fn overlap((from, to): (Pos, Pos), (other_from, other_to): (Pos, Pos)) -> bool {
-    let along =
-        |from: i32, to: i32, other_from: i32, other_to: i32| from <= other_to && other_from <= to;
-    along(from.x, to.x, other_from.x, other_to.x)
-        && along(from.y, to.y, other_from.y, other_to.y)
-        && along(from.z, to.z, other_from.z, other_to.z)
 }
 
 #[cfg(test)]

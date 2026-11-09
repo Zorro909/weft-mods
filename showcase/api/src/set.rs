@@ -4,6 +4,7 @@
 use std::sync::Arc;
 
 use weft_sdk::*;
+use weftkit::TypedWorld;
 
 use crate::film::Film;
 use crate::{
@@ -56,7 +57,7 @@ impl Set {
 
     /// Sets the block `offset` from the origin; false if it is not loaded.
     pub fn place(&self, offset: Pos, state: BlockState) -> bool {
-        self.world.set_block(self.at(offset), state.id())
+        self.world.set_block_typed(self.at(offset), state)
     }
 
     /// Sets every block in `area`, in offsets from the origin.
@@ -75,17 +76,17 @@ impl Set {
         let top = self.get(Pos::new(0, -1, 0));
         let below = self.get(Pos::new(0, -2, 0));
         let ground = area.lo.y - 1;
-        self.world.fill(self.shape(area), BlockState::AIR.id());
+        self.world.fill_typed(self.shape(area), BlockState::AIR);
         self.world
-            .fill(self.shape(area.heights(ground, ground)), top.id());
+            .fill_typed(self.shape(area.heights(ground, ground)), top);
         let hollows = area.heights(ground - HOLLOW_DEPTH, ground - 1);
         self.world
-            .fill(self.shape(hollows), below.id())
+            .fill_typed(self.shape(hollows), below)
             .only(HOLLOW);
     }
 
     fn get(&self, offset: Pos) -> BlockState {
-        self.world.block(self.at(offset)).into()
+        self.world.block_typed(self.at(offset))
     }
 
     /// `area`, in offsets from the origin, as a shape in the world.

@@ -8,10 +8,11 @@ an entry in `declare_mod!`. Add the crate and call it from your `init`:
 structgen_api = { path = "<path to weft-mods>/structgen/api" }
 ```
 
-Block positions are `Pos` (`Pos::new(x, y, z)`, `.x`, `.y`, `.z`) and block states `BlockState`,
-both from this repository's `weftkit` and re-exported as `structgen_api::{Pos, BlockState}`.
-A `Pos` goes to any SDK call taking a `BlockPos` as it is; `Pos::from` takes one back. Sizes are
-`[i32; 3]` along x, y and z, and columns `[x, z]`.
+Block positions are `Pos` (`Pos::new(x, y, z)`, `.x`, `.y`, `.z`), boxes of them `Area` (its
+lowest corner `lo` and highest `hi`, both included) and block states `BlockState`, all from this
+repository's `weftkit` and re-exported as `structgen_api::{Area, Pos, BlockState}`. A `Pos` goes
+to any SDK call taking a `BlockPos` as it is; `Pos::from` takes one back. Sizes are `[i32; 3]`
+along x, y and z, and columns `[x, z]`.
 
 ## Structure files
 
@@ -102,7 +103,7 @@ What a planner has:
 
 | Call | What it does |
 |---|---|
-| `p.region()` | the region's corners; everything must stay inside, seen from above |
+| `p.region()` | the region's corners; everything must stay inside, seen from above, which `region.holds(&area)` asks of an `Area` |
 | `p.random()` | the same numbers every time: `next`, `below`, `between`, `chance`, `turn` |
 | `p.spot(margin)` | a random column at least `margin` blocks inside the region |
 | `p.ground(x, z)` | the column's height and biome (`weft_sdk::terrain::Column`), `None` at a cave mouth |
@@ -110,13 +111,13 @@ What a planner has:
 | `p.fit(&T, [x, z], turn, &fit)` | the `Pos` where the template would stand with that corner, if the ground meets `fit` (`biome`, `max_slope`, `buried`) and it stays inside the region; else `None`. `Fit::biome(&FORESTS)` takes `static FORESTS: Biomes = Biomes::named("#forest")` |
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned; `corner` is a `Pos` |
 | `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it and `.clear_above()` cuts away ground above it, neither unless called |
-| `p.set(pos, &B)?`, `p.set_state(pos, state)?`, `p.fill(from, to, &B)?` | blocks, at `Pos`es; `set_state` takes a `BlockState` |
+| `p.set(pos, &B)?`, `p.set_state(pos, state)?`, `p.fill(from, to, &B)?` | blocks, at `Pos`es; `fill` takes two opposite corners in either order, and `set_state` a `BlockState` |
 
 Later parts win where two overlap. A planner must be pure: it runs on the server and on every
 client, in any order, so it may use only the seed (`p.random()`) and the ground.
 
-Anything that would reach outside the region returns `PlanError`, and `?` stops the planner
-there. That region's plan is then given up whole, nothing of it is placed, and the log says
+Anything that would reach outside the region returns `PlanError::OutsideRegion`, with what it
+was and the `Area` it would cover, and `?` stops the planner there. That region's plan is then given up whole, nothing of it is placed, and the log says
 what reached out and where. A template that wasn't registered fails the plan the same way.
 
 `src/hamlet.rs` in this mod is a whole dynamic structure: a well with cottages facing it,

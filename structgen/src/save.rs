@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use structgen_api::{Pos, Structure};
+use structgen_api::{Area, Pos, Structure};
 use weft_sdk::*;
 
 use crate::selection;
@@ -21,14 +21,14 @@ pub fn run(cmd: &mut ServerCommand) {
     if !valid_name(&name) {
         return cmd.reply("structgen.bad_name", &[Arg::Text(&name)]);
     }
-    let Some((from, to)) = corners(cmd) else {
+    let Some(area) = chosen_area(cmd) else {
         return cmd.reply("structgen.no_selection", &[]);
     };
-    let (lo, size) = block_box(from, to);
+    let size = area.size();
     if size.iter().any(|&side| side > MAX_SIDE) {
         return cmd.reply("structgen.too_big", &[Arg::Int(MAX_SIDE as i64)]);
     }
-    let Some(names) = read_box(&cmd.world(), lo, size) else {
+    let Some(names) = read_box(&cmd.world(), &area) else {
         return cmd.reply("structgen.not_loaded", &[]);
     };
     let Some(structure) = Structure::from_names(size.map(|side| side as u16), names) else {
@@ -55,10 +55,10 @@ pub fn run(cmd: &mut ServerCommand) {
     }
 }
 
-/// The blocks at the two corners given, else the player's selection.
-fn corners(cmd: &ServerCommand) -> Option<(Pos, Pos)> {
+/// The box between the two corner blocks given, else the player's selection.
+fn chosen_area(cmd: &ServerCommand) -> Option<Area> {
     if let (Some(from), Some(to)) = (cmd.pos("from"), cmd.pos("to")) {
-        return Some((from.block().into(), to.block().into()));
+        return Some(Area::between(from.block().into(), to.block().into()));
     }
     selection::selected(cmd.world().dimension(), cmd.player())
 }
@@ -76,19 +76,14 @@ pub fn valid_name(name: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
-/// The lowest block of the box between two corner blocks, and its size in blocks.
-fn block_box(from: Pos, to: Pos) -> (Pos, [i32; 3]) {
-    let (lo, hi) = Pos::corners(from, to);
-    (lo, [hi.x - lo.x + 1, hi.y - lo.y + 1, hi.z - lo.z + 1])
-}
-
 /// Each block's state name, in `Structure::blocks` order; `None` if any of it isn't loaded.
-fn read_box(world: &World, lo: Pos, size: [i32; 3]) -> Option<Vec<&'static str>> {
+fn read_box(world: &World, area: &Area) -> Option<Vec<&'static str>> {
+    let size = area.size();
     let mut names = Vec::with_capacity(size.iter().product::<i32>() as usize);
     for y in 0..size[1] {
         for z in 0..size[2] {
             for x in 0..size[0] {
-                let state = world.block_loaded(lo + Pos::new(x, y, z))?;
+                let state = world.block_loaded(area.lo + Pos::new(x, y, z))?;
                 names.push(block_name(state));
             }
         }
@@ -111,9 +106,13 @@ mod tests {
 
     #[test]
     fn a_box_covers_both_corners_in_any_order() {
-        let (lo, size) = block_box(Pos::new(3, 64, -2), Pos::new(1, 62, -4));
-        assert_eq!(lo, Pos::new(1, 62, -4), "the lowest block of each axis");
-        assert_eq!(size, [3, 3, 3], "both corner blocks inside");
+        let area = Area::between(Pos::new(3, 64, -2), Pos::new(1, 62, -4));
+        assert_eq!(
+            area.lo,
+            Pos::new(1, 62, -4),
+            "the lowest block of each axis"
+        );
+        assert_eq!(area.size(), [3, 3, 3], "both corner blocks inside");
     }
 
     #[test]

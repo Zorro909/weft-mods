@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, kind};
-use crate::lib::{BlockState, Pos};
+use crate::lib::{Pos, TypedWorld};
 
 pub enum Route {
     /// On through this side.
@@ -73,7 +73,7 @@ fn pick<'a>(w: &World, ways: &'a [Dir]) -> Option<&'a Dir> {
 fn kind_allows(w: &World, id: u64, pos: Pos, tube_kind: u32, d: Dir, stack: ItemStack) -> bool {
     match tube_kind {
         kind::DIRECTING => {
-            let tube = BlockState::at(w, pos);
+            let tube = w.block_typed(pos);
             tube.is(&DIRECTING_TUBE) && tube.prop("out") == Some(d.name())
         }
         kind::SORTING => super::sorting::passes(w, id, d, stack),

@@ -23,10 +23,11 @@ pub(crate) fn stamp(
                 stamp_piece(piece, resolved, origin, surface, set);
             }
         }
-        Part::Fill { from, to, state } => {
-            for (_, z) in overlap(from.z, to.z - from.z + 1, origin.z) {
-                for (_, y) in overlap(from.y, to.y - from.y + 1, origin.y) {
-                    for (_, x) in overlap(from.x, to.x - from.x + 1, origin.x) {
+        Part::Fill { area, state } => {
+            let ([sx, sy, sz], lo) = (area.size(), area.lo);
+            for (_, z) in overlap(lo.z, sz, origin.z) {
+                for (_, y) in overlap(lo.y, sy, origin.y) {
+                    for (_, x) in overlap(lo.x, sx, origin.x) {
                         set([x, y, z], *state);
                     }
                 }
@@ -99,6 +100,8 @@ fn overlap(start: i32, len: i32, origin: i32) -> impl Iterator<Item = (i32, usiz
 
 #[cfg(test)]
 mod tests {
+    use weftkit::Area;
+
     use super::*;
     use crate::format::Structure;
     use crate::templates;
@@ -242,8 +245,7 @@ mod tests {
     #[test]
     fn a_fill_is_cut_at_the_cube() {
         let fill = Part::Fill {
-            from: Pos::new(14, 0, 0),
-            to: Pos::new(17, 0, 0),
+            area: Area::between(Pos::new(14, 0, 0), Pos::new(17, 0, 0)),
             state: STONE,
         };
         let mut here = 0;

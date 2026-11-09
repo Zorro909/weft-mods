@@ -4,7 +4,7 @@
 
 use weft_sdk::*;
 
-use crate::lib::{Area, BlockState, ModelBox, Pos};
+use crate::lib::{Area, ModelBox, Pos, TypedWorld};
 
 pub static SURVEY_MARKER: Block = Block::named("survey_marker");
 static SURVEY_GLOW: Particle = Particle::named("survey_glow");
@@ -47,7 +47,7 @@ pub fn rectangle(w: &World, pos: Pos) -> Option<Area> {
         [1, -1].into_iter().find_map(|sign| {
             (2..=REACH)
                 .map(|k| step(pos, sign * k))
-                .find(|&p| BlockState::at(w, p).is(&SURVEY_MARKER))
+                .find(|&p| w.block_typed(p).is(&SURVEY_MARKER))
         })
     };
     let (x, z) = (marker_along(Pos::add_x)?, marker_along(Pos::add_z)?);
@@ -61,8 +61,8 @@ pub fn take_area(w: &World, pos: Pos) -> Option<Area> {
     if area.spans(pos) {
         return None;
     }
-    for corner in area.corners() {
-        if BlockState::at(w, corner).is(&SURVEY_MARKER) {
+    for corner in area.bottom_corners() {
+        if w.block_typed(corner).is(&SURVEY_MARKER) {
             w.break_block(corner, ItemStack::EMPTY, 0, true);
         }
     }
@@ -89,7 +89,7 @@ fn beside(w: &World, pos: Pos) -> Option<Pos> {
     [Dir::West, Dir::East, Dir::North, Dir::South]
         .map(|d| pos.toward(d))
         .into_iter()
-        .find(|&p| BlockState::at(w, p).is(&SURVEY_MARKER))
+        .find(|&p| w.block_typed(p).is(&SURVEY_MARKER))
 }
 
 fn show(u: &mut Use) -> bool {
