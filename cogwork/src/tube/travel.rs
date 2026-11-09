@@ -6,8 +6,9 @@ use std::collections::HashMap;
 
 use weft_sdk::*;
 
+use super::motion::{BASE_SPEED, GILDED_SPEED};
 use super::route::{Route, route};
-use super::{BASE_SPEED, GILDED_SPEED, Motion, NONE, SLOTS, Tube, free_slot, kind, visual};
+use super::{Kind, Motion, SLOTS, Tube, clear_slot, free_slot, visual};
 use crate::lib::Pos;
 
 /// An item at the far face of a tube, to go on through it.
@@ -20,12 +21,12 @@ pub fn tick_tubes(b: &mut SystemBatch<Tube>) {
     let w = b.world();
     let ids = b.ids().to_vec();
     let tubes = b.values();
-    let index: HashMap<u64, usize> = ids.iter().enumerate().map(|(i, id)| (*id, i)).collect();
+    let index: HashMap<u64, usize> = ids.iter().copied().zip(0..).collect();
     let mut handoffs = Vec::new();
     for (i, tube) in tubes.iter_mut().enumerate() {
         let Some(st) = w.entity(ids[i]) else { continue };
         let pos = Pos::from(st.block_pos());
-        if tube.kind == kind::TIMBER {
+        if tube.kind() == Kind::Timber {
             super::extract::pull(&w, ids[i], pos, tube);
         }
         for slot in 0..SLOTS {
@@ -49,6 +50,7 @@ pub fn tick_tubes(b: &mut SystemBatch<Tube>) {
 /// Moves one item a tick along and shows it; true when it waits at the far face.
 fn advance(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize) -> bool {
     let stack = w.inventory(id).get(slot as u32);
+    let kind = tube.kind();
     let m = &mut tube.moving[slot];
     if stack.is_empty() {
         visual::remove(w, m.visual);
@@ -58,52 +60,38 @@ fn advance(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize) -> bool {
     if m.item != stack.item || m.speed == 0.0 {
         // Put in by someone else (another mod, the excavator): it starts at the hub.
         visual::remove(w, m.visual);
-        *m = Motion {
-            item: stack.item,
-            visual: 0,
-            pos: 0.5,
-            speed: BASE_SPEED,
-            from: NONE,
-            to: NONE,
-        };
+        *m = Motion::at_hub(stack.item);
     }
-    m.speed = if tube.kind == kind::GILDED {
+    m.speed = if kind == Kind::Gilded {
         GILDED_SPEED
     } else {
         (m.speed * 0.98).max(BASE_SPEED)
     };
-    let chosen = m.leaves_by().is_some();
-    if m.pos < 0.5 || chosen {
-        m.pos = (m.pos + m.speed).min(if chosen { 1.0 } else { 0.5 });
-    }
-    if m.pos >= 0.5 && !chosen {
+    m.step();
+    if m.reached_hub() && m.leaves_by().is_none() {
         decide(w, id, pos, tube, slot, stack);
     }
     let m = &mut tube.moving[slot];
-    if m.item == 0 {
+    if m.is_none() {
         return false;
     }
     visual::show(w, pos, m, stack);
-    m.pos >= 1.0
+    m.at_far_face()
 }
 
 /// At the hub: where the item goes next.
 fn decide(w: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize, stack: ItemStack) {
-    let m = &mut tube.moving[slot];
-    match route(w, id, pos, tube.kind, m.came_by(), stack) {
-        Route::Out(d) => m.to = d.face(),
+    let from = tube.moving[slot].came_by();
+    match route(w, id, pos, tube.kind(), from, stack) {
+        Route::Out(d) => tube.moving[slot].leave_by(d),
         Route::Wait => {}
         Route::Destroy => {
             w.play_sound(&crate::sounds::TUBE_VOID, pos.center(), 1.0);
-            w.inventory(id).set(slot as u32, ItemStack::EMPTY);
-            visual::remove(w, m.visual);
-            *m = Motion::default();
+            clear_slot(w, id, tube, slot);
         }
         Route::Spill => {
             spill(w, pos, None, stack);
-            w.inventory(id).set(slot as u32, ItemStack::EMPTY);
-            visual::remove(w, m.visual);
-            *m = Motion::default();
+            clear_slot(w, id, tube, slot);
         }
     }
 }
@@ -135,35 +123,44 @@ fn hand_on(
     let next = pos.toward(out);
     let other = w.block_entity(next);
     if let Some(&j) = index.get(&other) {
-        let moved = into_tube(w, next, other, &mut tubes[j], m, stack);
-        if moved {
-            w.inventory(id).set(h.slot as u32, ItemStack::EMPTY);
-            tubes[h.tube].moving[h.slot] = Motion::default();
+        if !into_tube(w, next, other, &mut tubes[j], m, stack) {
+            return false;
         }
-        return moved;
+        // Its picture went along: only the slot is emptied.
+        w.inventory(id).set(h.slot as u32, ItemStack::EMPTY);
+        tubes[h.tube].moving[h.slot] = Motion::default();
+        return true;
     }
-    if other != 0 && super::is_tube(w, next) {
+    let tube = &mut tubes[h.tube];
+    if other == 0 {
+        spill(w, pos, Some(out), stack);
+    } else if super::is_tube(w, next) {
         // A tube outside this batch (another region): the item waits.
         return false;
-    }
-    let left = if other != 0 {
-        crate::store::insert(w, other, stack, false)
-    } else {
-        stack
-    };
-    let m = &mut tubes[h.tube].moving[h.slot];
-    if other == 0 {
-        spill(w, pos, Some(out), left);
-    } else if !left.is_empty() {
-        // Full: back the way it came, to be sent somewhere else.
-        w.inventory(id).set(h.slot as u32, left);
-        (m.from, m.to, m.pos) = (m.to, NONE, 0.0);
+    } else if !into_machine(w, id, tube, h.slot, other, stack) {
         return false;
     }
-    w.inventory(id).set(h.slot as u32, ItemStack::EMPTY);
-    visual::remove(w, m.visual);
-    *m = Motion::default();
+    clear_slot(w, id, tube, h.slot);
     true
+}
+
+/// Puts `stack`, in `slot` of the tube `id`, into the machine `machine`. What doesn't fit stays
+/// in the slot and turns back the way it came, to be sent somewhere else; false then.
+fn into_machine(
+    w: &World,
+    id: u64,
+    tube: &mut Tube,
+    slot: usize,
+    machine: u64,
+    stack: ItemStack,
+) -> bool {
+    let left = crate::store::insert(w, machine, stack, false);
+    if left.is_empty() {
+        return true;
+    }
+    w.inventory(id).set(slot as u32, left);
+    tube.moving[slot].turn_back();
+    false
 }
 
 /// Moves the item `m` into a free slot of the tube `id` at `pos`, entering by the side it came
@@ -179,11 +176,6 @@ fn into_tube(w: &World, pos: Pos, id: u64, tube: &mut Tube, m: Motion, stack: It
         return false;
     };
     w.inventory(id).set(free as u32, stack);
-    tube.moving[free] = Motion {
-        pos: (m.pos - 1.0).max(0.0),
-        from: side.face(),
-        to: NONE,
-        ..m
-    };
+    tube.moving[free] = m.handed_on(side);
     true
 }

@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use super::{Motion, SLOTS, Tube, free_slot, visual};
+use super::{Motion, SLOTS, Tube, clear_slot, free_slot};
 use crate::lib::Pos;
 
 /// Ticks a full tube may go without passing an item on before it drops one, and then between
@@ -26,24 +26,22 @@ pub fn check(w: &World, id: u64, pos: Pos, tube: &mut Tube, passed_on: bool) {
     let Some(slot) = (0..SLOTS).find(|&k| waiting(&tube.moving[k])) else {
         return;
     };
-    let inv = w.inventory(id);
-    w.spawn_item(pos.center(), inv.get(slot as u32));
+    w.spawn_item(pos.center(), w.inventory(id).get(slot as u32));
     w.play_sound(&crate::sounds::TUBE_JAM, pos.center(), 1.0);
-    inv.set(slot as u32, ItemStack::EMPTY);
-    visual::remove(w, tube.moving[slot].visual);
-    tube.moving[slot] = Motion::default();
+    clear_slot(w, id, tube, slot);
     tube.stuck = PATIENCE - AGAIN;
 }
 
 /// Whether an item stands still: at the hub with nowhere to go, or at a face it can't pass.
 fn waiting(m: &Motion) -> bool {
-    m.item != 0 && (m.pos >= 1.0 || (m.leaves_by().is_none() && m.pos >= 0.5))
+    let nowhere_to_go = m.leaves_by().is_none() && m.reached_hub();
+    !m.is_none() && (m.at_far_face() || nowhere_to_go)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tube::NONE;
+    use crate::tube::motion::NONE;
 
     #[test]
     fn only_items_standing_still_are_stuck() {

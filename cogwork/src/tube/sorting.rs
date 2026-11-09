@@ -6,7 +6,7 @@
 use weft_sdk::*;
 
 use super::shape::Arms;
-use super::{SLOTS, SORTING_TUBE, TUBE, Tube, kind};
+use super::{Kind, SLOTS, SORTING_TUBE, tube_entity};
 use crate::ghost::{self, ItemKey, SLOT};
 
 static SORTING_MENU: Menu = Menu::named("sorting_tube");
@@ -50,17 +50,7 @@ pub fn register(r: &mut Registry) {
         Arms::PerSide(arm_texture),
     )
     .tab(&crate::TAB)
-    .entity(|e| {
-        e.attach(&SAMPLES)
-            .attach_with(
-                &TUBE,
-                Tube {
-                    kind: kind::SORTING,
-                    ..Tube::default()
-                },
-            )
-            .inventory(SLOTS as u32)
-    })
+    .entity(|e| tube_entity(e.attach(&SAMPLES), Kind::Sorting))
     .opens(&SORTING_MENU);
     r.menu(&SORTING_MENU)
         // So the carried items are slots 0..8 as in every tube; out only, so nothing gets

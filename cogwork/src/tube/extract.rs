@@ -3,7 +3,7 @@
 
 use weft_sdk::*;
 
-use super::{BASE_SPEED, Motion, NONE, TUBE, Tube, free_slot};
+use super::{Motion, TUBE, Tube, free_slot};
 use crate::lib::Pos;
 
 /// Ticks between two pulls of a timber tube: an engine's stroke.
@@ -47,14 +47,7 @@ pub fn pull(w: &World, id: u64, pos: Pos, tube: &mut Tube) {
         }
         left -= stack.count;
         w.inventory(id).set(slot as u32, stack);
-        tube.moving[slot] = Motion {
-            item: stack.item,
-            visual: 0,
-            pos: 0.0,
-            speed: BASE_SPEED,
-            from: d.face(),
-            to: NONE,
-        };
+        tube.moving[slot] = Motion::entering(stack.item, d);
     }
     if left < paid_for {
         w.play_sound(&crate::sounds::TUBE_PULL, pos.center(), 1.0);

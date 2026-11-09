@@ -8,11 +8,12 @@
 //! item is a picture is asked of the entity (`IS_PICTURE`), never of the id alone.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
 
 use weft_sdk::*;
 
+use super::motion::HUB;
 use super::{Motion, TUBES};
 use crate::lib::{BlockState, Pos, TypedWorld, point};
 
@@ -21,12 +22,17 @@ use crate::lib::{BlockState, Pos, TypedWorld, point};
 static PICTURE: Component<u32> = Component::named("cogwork:tube_picture");
 /// 1 on the dropped items that are pictures, saved with them.
 static IS_PICTURE: Component<u32> = Component::named("cogwork:is_picture");
-/// The pictures shown lately, by dimension and entity: the tick a tube last showed each. It
-/// outlives the world, so an entry may name an entity of another world.
-static PICTURES: Mutex<Option<HashMap<(u32, u64), u64>>> = Mutex::new(None);
+/// The pictures shown lately, by dimension and entity: the tick a tube last showed each.
+type Pictures = HashMap<(u32, u64), u64>;
+/// It outlives the world, so an entry may name an entity of another world.
+static PICTURES: LazyLock<Mutex<Pictures>> = LazyLock::new(Default::default);
 static NEXT_MARK: AtomicU32 = AtomicU32::new(0);
 /// Ticks a picture may go unshown before it is taken away.
 const STALE: u64 = 40;
+/// Blocks a dropped item is drawn above where it is, bobbing: a block 0.15 up, a flat item from
+/// 0.15 to 0.65 up.
+const BLOCK_BOB: f64 = 0.15;
+const ITEM_BOB: f64 = 0.4;
 
 pub fn register(r: &mut Registry) {
     r.stack_component(&PICTURE, 0);
@@ -43,9 +49,8 @@ pub fn register(r: &mut Registry) {
     r.world_tick(sweep);
 }
 
-fn pictures<R>(f: impl FnOnce(&mut HashMap<(u32, u64), u64>) -> R) -> R {
-    let mut guard = PICTURES.lock().unwrap_or_else(|e| e.into_inner());
-    f(guard.get_or_insert_with(HashMap::new))
+fn pictures() -> MutexGuard<'static, Pictures> {
+    PICTURES.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 fn is_picture(w: &World, id: u64) -> bool {
@@ -65,30 +70,25 @@ fn sweep(w: &World) {
         return;
     }
     let dim = w.dimension();
-    let stale: Vec<u64> = pictures(|p| {
-        p.iter()
-            .filter(|((d, _), shown)| *d == dim && is_stale(**shown, now))
-            .map(|((_, id), _)| *id)
-            .collect()
-    });
-    for id in stale {
-        // Only what this region holds; another region sweeps its own.
-        if w.entity(id).is_some() {
-            if is_picture(w, id) {
-                w.despawn(id);
-            }
-            pictures(|p| p.remove(&(dim, id)));
-        }
+    // Collected first, so the lock is let go before `remove` takes it.
+    let stale: Vec<u64> = pictures()
+        .iter()
+        .filter(|&(&(of, _), &shown)| of == dim && is_stale(shown, now))
+        .map(|(&(_, id), _)| id)
+        .collect();
+    // Only what this region holds; another region sweeps its own.
+    for id in stale.into_iter().filter(|&id| w.entity(id).is_some()) {
+        remove(w, id);
     }
 }
 
 /// Where in the world an item at `m` in the tube at `pos` is, and how fast it goes there
 /// (blocks per second).
 fn place_of(pos: Pos, m: &Motion) -> (Vec3, Vec3) {
-    let (side, along, sign) = if m.pos < 0.5 {
-        (m.came_by(), 0.5 - m.pos, -1.0)
+    let (side, along, sign) = if m.reached_hub() {
+        (m.leaves_by(), m.pos - HUB, 1.0)
     } else {
-        (m.leaves_by(), m.pos - 0.5, 1.0)
+        (m.came_by(), HUB - m.pos, -1.0)
     };
     let Some(dir) = side else {
         return (pos.center(), Vec3::ZERO);
@@ -102,12 +102,10 @@ fn place_of(pos: Pos, m: &Motion) -> (Vec3, Vec3) {
 /// Shows the item at `m` where it is now, making its picture if it has none.
 pub fn show(w: &World, pos: Pos, m: &mut Motion, stack: ItemStack) {
     let (at, vel) = place_of(pos, m);
-    // A dropped item is drawn bobbing above where it is: a block 0.15 up, a flat item from
-    // 0.15 to 0.65 up.
     let bob = if BlockState::placed_by(stack.item).is_some() {
-        0.15
+        BLOCK_BOB
     } else {
-        0.4
+        ITEM_BOB
     };
     let at = at.offset(0.0, -bob, 0.0);
     let shown = w
@@ -121,7 +119,7 @@ pub fn show(w: &World, pos: Pos, m: &mut Motion, stack: ItemStack) {
     if m.visual != 0 {
         // Again on every show, for pictures saved before they were marked.
         w.set_component(m.visual, &IS_PICTURE, 1);
-        pictures(|p| p.insert((w.dimension(), m.visual), w.game_time()));
+        pictures().insert((w.dimension(), m.visual), w.game_time());
     }
 }
 
@@ -141,7 +139,7 @@ pub fn remove(w: &World, id: u64) {
     if id != 0 && is_picture(w, id) {
         w.despawn(id);
     }
-    pictures(|p| p.remove(&(w.dimension(), id)));
+    pictures().remove(&(w.dimension(), id));
 }
 
 /// Removes the pictures left where a tube was broken; the spilled stacks stay.
@@ -153,7 +151,7 @@ pub fn clear_broken(w: &World, pos: Pos) {
         // Back up by the bob `show` takes off, to find the cell it was drawn for.
         let inside = w
             .entity(id)
-            .is_some_and(|st| Pos::from(st.pos.offset(0.0, 0.4, 0.0).block()) == pos);
+            .is_some_and(|st| Pos::from(st.pos.offset(0.0, ITEM_BOB, 0.0).block()) == pos);
         if inside {
             remove(w, id);
         }
@@ -163,7 +161,7 @@ pub fn clear_broken(w: &World, pos: Pos) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tube::NONE;
+    use crate::tube::motion::NONE;
 
     fn at(pos: f32, from: u32, to: u32) -> Motion {
         Motion {
