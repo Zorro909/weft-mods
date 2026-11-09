@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use weft_sdk::Block;
+use weft_sdk::{Block, Tag};
 use weftkit::{Area, Pos};
 
 use crate::fit::{self, Columns};
@@ -12,10 +12,12 @@ use crate::turn::Turn;
 
 pub(crate) enum Part {
     Piece(Piece),
-    /// Every block of `area`.
+    /// Every block of `area`; with `only`, just those that have that tag in the world as it
+    /// generates.
     Fill {
         area: Area,
         state: u32,
+        only: Option<&'static Tag>,
     },
 }
 

@@ -8,7 +8,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use weft_sdk::terrain::Column;
-use weft_sdk::{Block, Template};
+use weft_sdk::{Block, Tag, Template};
 use weftkit::{Area, BlockState, Pos};
 
 use crate::fit::{Columns, Fit};

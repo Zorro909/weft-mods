@@ -1,6 +1,7 @@
 //! The grid's roads, squares and fields laid onto the ground at each column's own height:
 //! gravel lanes worn in patches, cobbled streets between stone kerbs, wheat on farmland. Above
-//! each, the air is cleared, so no tree the world grew there stands in the way or floats.
+//! each, the air is cleared, and the leaves beside it, so no tree the world grew there stands
+//! in the way or leaves a crown floating.
 
 use structgen_api::{Plan, PlanError};
 use weft_sdk::*;
@@ -16,19 +17,22 @@ static MOSSY: Block = Block::named("base:mossy_cobblestone");
 static KERB: Block = Block::named("base:stone_bricks");
 static FARMLAND: Block = Block::named("base:farmland");
 static WHEAT: Block = Block::named("base:wheat");
+static LEAVES: Tag = Tag::named("leaves");
 
 pub fn draw(p: &mut Plan, grid: &Grid) -> Result<(), PlanError> {
     for ([x, z], cell) in grid.columns() {
         let Some(y) = grid.height([x, z]) else {
             continue;
         };
+        let (from, to) = ([x, y + 2, z], [x, y + CLEAR, z]);
         if let Some((floor, above)) = surface(cell, patch(x, z)) {
             p.set([x, y, z], floor)?;
             p.set_state([x, y + 1, z], above)?;
-        } else if !beside(grid, [x, z], cell) {
-            continue;
+            p.fill(from, to, &AIR)?;
+        } else if beside(grid, [x, z], cell) {
+            // Leaves only: a trunk standing here keeps the crown it still holds up.
+            p.replace(from, to, &LEAVES, &AIR)?;
         }
-        p.fill([x, y + 2, z], [x, y + CLEAR, z], &AIR)?;
     }
     Ok(())
 }
@@ -63,10 +67,10 @@ fn laid(cell: Cell) -> bool {
     matches!(cell, Lane | Kerb | Street | Square | Furrow | Crop(_))
 }
 
-/// How high above a road or field the air is cleared: a tall tree's height.
-const CLEAR: i32 = 10;
+/// How high above a road or field the air is cleared: a tall spruce's height.
+const CLEAR: i32 = 11;
 /// How far a tree's crown reaches out from its trunk.
-const CROWN: i32 = 2;
+const CROWN: i32 = 3;
 
 /// Whether column (`x`, `z`) is worn, in patches of a few blocks rather than single spots.
 fn patch(x: i32, z: i32) -> bool {
@@ -88,7 +92,7 @@ mod tests {
             "the lane is cleared as a lane"
         );
         assert!(!beside(&grid, [1, 0], Cell::Building), "not the house");
-        assert!(beside(&grid, [2, 0], Cell::Free), "two from the lane");
-        assert!(!beside(&grid, [3, 0], Cell::Free), "three from it");
+        assert!(beside(&grid, [3, 0], Cell::Free), "three from the lane");
+        assert!(!beside(&grid, [4, 0], Cell::Free), "four from it");
     }
 }

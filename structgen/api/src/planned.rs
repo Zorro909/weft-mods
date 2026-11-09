@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use weftkit::{Area, Pos};
 
 use crate::part::Part;
-use crate::stamp::{self, Surface};
+use crate::stamp::{self, Set, Surface};
 
 pub(crate) struct Planned {
     parts: Vec<Part>,
@@ -70,7 +70,7 @@ impl Planned {
 
     /// Calls `set` for every block the plan puts into the cube at `origin`, later parts after
     /// earlier ones.
-    pub fn stamp(&self, origin: Pos, surface: Surface, set: &mut dyn FnMut([usize; 3], u32)) {
+    pub fn stamp(&self, origin: Pos, surface: Surface, set: Set) {
         for &i in self.parts_in(origin) {
             stamp::stamp(&self.parts[i], origin, surface, set);
         }
@@ -95,13 +95,14 @@ mod tests {
         Part::Fill {
             area: Area::between(from.into(), to.into()),
             state,
+            only: None,
         }
     }
 
     fn states(planned: &Planned, origin: [i32; 3]) -> Vec<u32> {
         let origin = Pos::from(origin);
         let mut out = Vec::new();
-        planned.stamp(origin, &|_, _| 0, &mut |_, state| out.push(state));
+        planned.stamp(origin, &|_, _| 0, &mut |_, state, _| out.push(state));
         out
     }
 

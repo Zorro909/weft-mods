@@ -10,6 +10,8 @@
   kerbs, a town hall, a guildhall and a coaching inn. `/structure locate town` finds one.
 - `.priority(n)` on planned and placed structures: where two would overlap, only the one of
   higher priority stands, so a lone cottage no longer stands in a village's lane.
+- `p.replace(from, to, &tag, &block)` on a plan: only blocks the world generates with that tag
+  become `block`, such as leaves to air.
 - New buildings in one timber-framed style, Hearthwood: cottages, burgher houses, farm
   buildings, mills, inns, smithies, market stalls and hall, a well and a fountain, workyards,
   a guildhall and town hall, chapels and churches. `/structure load` places any of them.

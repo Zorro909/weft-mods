@@ -99,9 +99,9 @@ over a lone building.
 
 Everything is marked on a grid of the columns round the settlement first, so roads,
 buildings and fields keep out of each other; only then is anything built, roads and fields
-laid at each column's own height with the air above them, and beside them as far as a tree's
-crown reaches, cleared, so no tree the world grew there stands in the way or leaves its crown
-floating. A town paves round its buildings but not round its trees.
+laid at each column's own height with the air above them cleared, and the leaves beside them
+as far as a tree's crown reaches, so no tree the world grew there stands in the way or leaves
+its crown floating. A town paves round its buildings but not round its trees.
 
 ## Finding them
 

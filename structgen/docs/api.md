@@ -121,6 +121,7 @@ What a planner has:
 | `p.is_free(&T, corner, turn)` | whether it would overlap nothing already planned; `corner` is a `Pos` |
 | `p.structure(&T, corner, turn)?` | places it exactly there; `.foundation(..)` fills under it, `.clear_above()` cuts away ground above it and `.materials(&m)` fills its slots, none unless called |
 | `p.set(pos, &B)?`, `p.set_state(pos, state)?`, `p.fill(from, to, &B)?` | blocks, at `Pos`es; `fill` takes two opposite corners in either order, and `set_state` a `BlockState` |
+| `p.replace(from, to, &TAG, &B)?` | every block with a tag, as the world generates there, becomes `B` |
 
 Later parts win where two overlap. A planner must be pure: it runs on the server and on every
 client, in any order, so it may use only the seed (`p.random()`) and the ground.

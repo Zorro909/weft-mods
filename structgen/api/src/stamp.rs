@@ -1,6 +1,7 @@
 //! A part's blocks that fall into one cube: a template with its foundation pillars and the
 //! ground cut away above it, or a box of blocks. Each cube writes only its own share.
 
+use weft_sdk::Tag;
 use weftkit::Pos;
 
 use crate::part::{Foundation, Part, Piece};
@@ -9,26 +10,27 @@ use crate::templates::{FOLLOWS_GROUND, Resolved};
 /// The block the ground has on top of column (`x`, `z`), 0 where there is none.
 pub(crate) type Surface<'a> = &'a dyn Fn(i32, i32) -> u32;
 
+/// Where a block goes: the position inside the cube, its state, and the tag the block already
+/// there must have for it to go there, if any.
+pub(crate) type Set<'a> = &'a mut dyn FnMut([usize; 3], u32, Option<&'static Tag>);
+
 /// Calls `set` with the position inside the cube at `origin` and the state of everything
 /// `part` puts there.
-pub(crate) fn stamp(
-    part: &Part,
-    origin: Pos,
-    surface: Surface,
-    set: &mut dyn FnMut([usize; 3], u32),
-) {
+pub(crate) fn stamp(part: &Part, origin: Pos, surface: Surface, set: Set) {
     match part {
         Part::Piece(piece) => {
             if let Some(resolved) = piece.template.resolved(&piece.materials) {
-                stamp_piece(piece, &resolved, origin, surface, set);
+                stamp_piece(piece, &resolved, origin, surface, &mut |at, state| {
+                    set(at, state, None)
+                });
             }
         }
-        Part::Fill { area, state } => {
+        Part::Fill { area, state, only } => {
             let ([sx, sy, sz], lo) = (area.size(), area.lo);
             for (_, z) in overlap(lo.z, sz, origin.z) {
                 for (_, y) in overlap(lo.y, sy, origin.y) {
                     for (_, x) in overlap(lo.x, sx, origin.x) {
-                        set([x, y, z], *state);
+                        set([x, y, z], *state, *only);
                     }
                 }
             }
@@ -282,9 +284,25 @@ mod tests {
         let fill = Part::Fill {
             area: Area::between(Pos::new(14, 0, 0), Pos::new(17, 0, 0)),
             state: STONE,
+            only: None,
         };
         let mut here = 0;
-        stamp(&fill, Pos::default(), &|_, _| 0, &mut |_, _| here += 1);
+        stamp(&fill, Pos::default(), &|_, _| 0, &mut |_, _, _| here += 1);
         assert_eq!(here, 2, "two of its four blocks are in this cube");
+    }
+
+    #[test]
+    fn a_replacing_fill_names_what_it_replaces() {
+        static LEAVES: Tag = Tag::named("leaves");
+        let fill = Part::Fill {
+            area: Area::between(Pos::new(1, 2, 3), Pos::new(1, 2, 3)),
+            state: AIR,
+            only: Some(&LEAVES),
+        };
+        let mut only = Vec::new();
+        stamp(&fill, Pos::default(), &|_, _| 0, &mut |_, _, tag| {
+            only.push(tag.map(Tag::name))
+        });
+        assert_eq!(only, [Some("leaves")]);
     }
 }

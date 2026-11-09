@@ -165,8 +165,9 @@ impl Generator {
     }
 }
 
-/// Writes the plan's blocks into the cube. They are gathered first: reading the ground's top
-/// blocks and writing the cube both go through `g`.
+/// Writes the plan's blocks into the cube, in order, each that names a tag only over a block
+/// that has it. They are gathered first: reading the ground's top blocks and writing the cube
+/// both go through `g`.
 fn stamp(planned: &Planned, g: &mut Gen) {
     let origin = Pos::from(g.origin());
     if !planned.reaches(origin) {
@@ -174,11 +175,13 @@ fn stamp(planned: &Planned, g: &mut Gen) {
     }
     let mut blocks = Vec::new();
     let surface = |x, z| g.surface_block(x, z);
-    planned.stamp(origin, &surface, &mut |pos, state| {
-        blocks.push((pos, state))
+    planned.stamp(origin, &surface, &mut |pos, state, only| {
+        blocks.push((pos, state, only))
     });
-    for ([x, y, z], state) in blocks {
-        g.set(x, y, z, state);
+    for ([x, y, z], state, only) in blocks {
+        if only.is_none_or(|tag| tag.on_block(g.get(x, y, z))) {
+            g.set(x, y, z, state);
+        }
     }
 }
 
