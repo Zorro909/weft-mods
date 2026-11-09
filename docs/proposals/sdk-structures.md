@@ -110,6 +110,21 @@ are structgen's content and stay there.
 
 ## Grades
 
+Each change has two grades. The first says how whole the structures API is without it, for any
+mod. The second says what structgen needs to move, and is what the levels below are ordered by.
+
+**Completeness**: a structure raises four questions. May it stand here? What is it made of? How
+does it meet the ground? How is it found again?
+
+| Grade | Meaning |
+|---|---|
+| **1** | Hole. Without it the API can't answer one of these, or answers it wrong. |
+| **2** | Lopsided. The API answers it for one of its two kinds of structure only, inside one mod only, or only by the mod doing again what the engine does. |
+| **3** | Extra. An ability of its own; the API is whole without it. |
+| **4** | Comfort. Saves code and nothing else. |
+
+**Move**: what structgen needs.
+
 | Grade | Meaning |
 |---|---|
 | **A** | Needed. Without it structgen can't move off decorations. |
@@ -117,9 +132,40 @@ are structgen's content and stay there.
 | **C** | Helper. A mod can do it itself with A and B; having it once in the engine saves every mod the same code and makes the results alike. |
 | **D** | Later. Becomes possible once the engine owns the plans; nothing structgen needs now. |
 
+### By completeness
+
+| | Change | Completeness | Why | Move |
+|---|---|---|---|---|
+| F1 | `state_turned` turns axes and sides | 1 | a call that answers wrong today | A |
+| M1 | `plan` and `piece` | 1 | the feature itself | A |
+| M2 | what a plan may ask, `Template::size` | 1 | a plan that can't ask the ground can't decide anything, and can't keep a piece in its cell without its size | A |
+| M3 | pieces are turned | 1 | where a piece is takes a corner and a facing; a layout without the second can't put a house on a road | A |
+| M4 | `fill` | 1 | what isn't a template (a road) can't be said | A |
+| M5 | `structure_near` finds planned structures | 1 | an existing call that would not know the new kind | A |
+| H3 | `Fit`, `p.fit` | 1 | whether a structure stands. The engine answers it for one template (biome and height of one column) and would leave a plan no answer of its own | C |
+| P3 | the sea level | 1 | part of the same question; the engine knows it and no mod can find it out | B |
+| M4 | `replace` | 2 | a plan can't read blocks, so this is its only way to mind what is there; scatters have `put` beside `put_force` | A |
+| H4 | turning, fitting, foundation and slots for one template | 2 | else the API has two kinds of structure and the simple one can do less | C |
+| H1 | foundation and clearing on a piece | 2 | `Fit` lets a structure stand on a slope; this is what makes that look right. One template has no fills to do it with | C |
+| P2 | priority | 2 | whether two structures may overlap; only the engine sees all mods | B |
+| H6 | `place_template` turned and filled | 2 | what generation can do with a template, a mod can't do by hand | C |
+| P1 | slots | 3 | every result can be had with more templates, at their number | B |
+| H2 | a slot filled with the ground | 3 | builds on P1 | C |
+| O1 | `structure_at`, the names of all structures | 3 | a second way to find | D |
+| O2 | scatters and spawns keep out | 3 | | D |
+| O3 | what a chest holds | 3 | | D |
+| O4 | structures in distant terrain | 3 | | D |
+| H5 | `Random` | 4 | | C |
+| H7 | `p.is_free` | 4 | | C |
+| H8 | templates from a palette | 4 | speed, not measured | C |
+
+Where the two grades part most: `Fit` and the sea level are small for structgen's move, which
+has both in its own code, and are holes in the API. Slots are what structgen's move waits for,
+and an API without them is whole.
+
 ## Level 0: a fix
 
-### F1. `state_turned` turns axes and sides — grade A
+### F1. `state_turned` turns axes and sides — completeness 1, move A
 
 `weft_sdk::state_turned(state, o)` says it turns "its `facing`, `axis` or sides". Tried on
 2026-11-08 at v26.11.3 with a temporary testkit test (not run again for this paper), it turned
@@ -132,7 +178,7 @@ every block, so it comes first, with a test that fails without it. No new API.
 
 The least that lets a mod build a structure of parts. Four additions and one extension.
 
-### M1. `plan`: a callback lays out one grid cell — grade A
+### M1. `plan`: a callback lays out one grid cell — completeness 1, move A
 
 ```rust
 static VILLAGE: Structure = Structure::named("village");
@@ -175,7 +221,7 @@ impl StructurePlan {
 - `Structure` and the builder exist; `structure_entry` is the private half of
   `structure_named` already. `chance` is asked before the callback and is 1 for a planned
   structure unless said. `biome`, `y` and `buried` belong to the one-template placement; on a
-  planned structure they are a load error, the plan asks the ground itself.
+  planned structure they are a load error: the plan asks the ground itself, with `Fit` (H3).
 - **Everything a plan adds stays inside its cell, seen from above.** A cube then only asks the
   cells it lies in. A piece or box that reaches out drops the whole plan and is logged
   (`misuse`), as structgen does today.
@@ -189,7 +235,7 @@ impl StructurePlan {
 Replaces in structgen: `generator.rs`, `planned.rs`, `planning.rs`, most of `region.rs` and
 `stamp.rs`.
 
-### M2. What a plan may ask — grade A
+### M2. What a plan may ask — completeness 1, move A
 
 ```rust
 impl StructurePlan {
@@ -222,7 +268,7 @@ never reads blocks: they depend on which cube came first.
 With `seed` and `cell` a mod can derive its own random numbers exactly as it does today, so
 structgen's settlements can stay where they are in worlds already begun.
 
-### M3. Pieces are turned — grade A
+### M3. Pieces are turned — completeness 1, move A
 
 `facing` in `piece` is where the template's north side ends up: `Dir::North` leaves it as
 drawn, the three other horizontal directions turn it a quarter each. It follows the rule the
@@ -233,7 +279,7 @@ it short of registering every template four times.
 
 Replaces `Turn` in plans and `turn_state` (`turn.rs`).
 
-### M4. Boxes of blocks — grade A for planned content, not needed for one template
+### M4. Boxes of blocks — completeness 1 (`fill`) and 2 (`replace`), move A
 
 ```rust
 impl StructurePlan {
@@ -250,7 +296,7 @@ is asked per cube against the cube as it stands when structures go in, so after 
 decorations and ores. Foundations and clearing above a piece can be written with these two and
 M2 (see H1), which is why they are helpers and not in this level.
 
-### M5. `structure_near` finds planned structures — grade A
+### M5. `structure_near` finds planned structures — completeness 1, move A
 
 `world.structure_near("mymod:village", pos, radius)` gives a plan's anchor: the corner of its
 first piece, or what `p.anchor(pos)` says. For a planned structure it goes through the cells
@@ -265,7 +311,7 @@ by `src/villages.rs`), and every building would have to be a template of its own
 
 ## Level 2: so that nothing is lost
 
-### P1. Slots: a template names roles, a piece fills them — grade B
+### P1. Slots: a template names roles, a piece fills them — completeness 3, move B
 
 ```rust
 r.template(&HUT)
@@ -304,7 +350,7 @@ impl Piece<'_> {
 
 Replaces `templates.rs`; `Materials` and styles stay in structgen and turn into `slot` calls.
 
-### P2. Priority between structures — grade B
+### P2. Priority between structures — completeness 2, move B
 
 ```rust
 impl StructureBuilder<'_> {
@@ -321,7 +367,7 @@ really stands counts, so a hamlet that gave way to a town doesn't keep a cottage
 are pure and only look at strictly higher priorities, so every machine agrees and it ends.
 With everything at 0, as now, nothing changes.
 
-### P3. The sea level — grade B, very small
+### P3. The sea level — completeness 1, move B, very small
 
 ```rust
 impl Dimension {
@@ -343,7 +389,7 @@ file format, `Materials`, `Fit`, `Random`, `place_in`, and a thin `Plan` over `S
 Each can be written by a mod with levels 1 and 2. They are here because every mod that places
 a house needs the same ones.
 
-### H1. Foundation and clearing on a piece — grade C, the most wanted of them
+### H1. Foundation and clearing on a piece — completeness 2, move C
 
 ```rust
 pub enum Foundation { Surface, Block(&'static Block) }
@@ -361,14 +407,14 @@ As fills from the planner this is one or two boxes per column of every footprint
 planner has to know which bottom cells are empty. In the engine it is two flags on a piece and
 the columns it already has.
 
-### H2. A slot filled with the ground — grade C
+### H2. A slot filled with the ground — completeness 3, move C
 
 `p.piece(..).slot_surface("ground")`: each cell of the slot takes the top block the terrain
 leaves in its column, the default where there is none. A building's rim is then grass on
 plains and snow on snowy plains. It is structgen's `ground` slot, said by the piece instead of
 by the slot's name.
 
-### H3. `Fit`: whether a template suits the ground at a spot — grade C, high: H4 is built on it
+### H3. `Fit`: whether a template suits the ground at a spot — completeness 1, move C
 
 ```rust
 pub struct Fit { .. }
@@ -392,10 +438,17 @@ impl StructurePlan {
 }
 ```
 
+This is the test for whether a structure stands at all. The engine has one for a single
+template, in `structure_in`: the biome and height of the column under its middle. A planned
+structure sets that aside (M1), so without `Fit` the API has `piece`, which places, and nothing
+that says whether to. `structure_near` and generation would still agree, since both run the
+same plan; but each mod would write the test itself, each a little differently, and a mod that
+left it out would have its structures found, and standing, in a lake or over a cave mouth.
+
 `fit.rs` as it is, with `biome` read by the engine's own matcher, which makes structgen's
 `Biomes` parser unnecessary. `buried` counts as the SDK does: 0 stands on the ground.
 
-### H4. The same for one-template structures — grade C
+### H4. The same for one-template structures — completeness 2, move C
 
 ```rust
 r.structure(&HUT)
@@ -412,7 +465,7 @@ The engine's own placement is a built-in planner: a spot, `Fit`, one piece. A st
 sets none of these stands exactly where it does now (middle column only), so old worlds keep
 their obelisks. With it `structgen_api::place` is this call and can go.
 
-### H5. `Random`: numbers from the cell's bits — grade C
+### H5. `Random`: numbers from the cell's bits — completeness 4, move C
 
 ```rust
 pub struct Random { .. }
@@ -430,7 +483,7 @@ Scatters hand out 64 bits and leave the rest to the mod: base cuts them up by ha
 (`s.random() >> 40` in `mods/base/src/worldgen.rs`), structgen wrote this type (`random.rs`).
 Whole numbers only, so nobody reaches for floats in generation.
 
-### H6. `place_template` turned and filled — grade C
+### H6. `place_template` turned and filled — completeness 2, move C
 
 ```rust
 impl World {
@@ -443,12 +496,12 @@ For a registered template this is `Structure::place_in`. structgen keeps `place_
 same: `/structure load` places files a player just saved, which are no templates, and it
 returns what it replaced for `/structure undo`.
 
-### H7. `p.is_free(from, to)` — grade C, low
+### H7. `p.is_free(from, to)` — completeness 4, move C
 
 Whether a box overlaps no piece already in the plan. The engine has the list. A planner of any
 size keeps a grid of its own, as `src/settlement/grid.rs` does, so this serves small plans.
 
-### H8. Templates from a palette — grade C, low
+### H8. Templates from a palette — completeness 4, move C
 
 ```rust
 impl TemplateBuilder<'_> {
@@ -466,7 +519,8 @@ asking.
 
 ## Level 4: later, once the engine owns the plans
 
-Not part of this request; listed so the shape of levels 1 and 2 doesn't shut them out.
+Not part of this request; listed so the shape of levels 1 and 2 doesn't shut them out. All
+are completeness 3.
 
 | | What | Grade |
 |---|---|---|
@@ -562,15 +616,19 @@ What players would notice when structgen moves:
 
 ## In which order
 
-Small pull requests, each with its test and its part of `docs/worldgen.md`:
+Small pull requests, each with its test and its part of `docs/worldgen.md`. By completeness,
+so that the API is whole at each step:
 
 1. F1, the `state_turned` fix.
-2. M1 to M5 together: they are one feature and none is of use without the others. Testmod gets
+2. P3 and `Template::size`: they stand alone and can go ahead of everything.
+3. M1 to M5 together: they are one feature and none is of use without the others. Testmod gets
    a planned structure beside its obelisk.
-3. P3 and `Template::size` could go ahead of everything; they stand alone.
-4. P1, slots.
-5. P2, priority.
-6. Helpers one at a time: H1 and H3 first, then H4, which is built on H3.
+4. H3, `Fit`. With it the planned kind is whole.
+5. H1, then H4, which is built on H3 and H1: one template can then do what a piece can.
+6. P2, priority.
+7. P1, slots. structgen can move after this step and not before; if its move matters more
+   than the order above, P1 goes after step 3.
+8. The rest one at a time.
 
 ## Open questions
 
