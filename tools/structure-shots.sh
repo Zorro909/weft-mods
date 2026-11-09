@@ -64,12 +64,17 @@ mkdir -p "$run/mods/structgen" "$root/Weft/structures"
 cp "$root/structgen/target/release/libstructgen.so" "$run/mods/structgen/"
 cp -r "$root/structgen/assets" "$run/mods/structgen/"
 # `/structure load` reads `structures/` of the folder the game started in before the files built
-# into the mod, so new drafts need no rebuild.
-[[ ${#files[@]} -eq 0 ]] || cp "${files[@]}" "$root/Weft/structures/"
+# into the mod, so new drafts need no rebuild. A copy left behind would hide the file once it
+# changes, so each run takes its own copies away again when it ends.
+copies=()
+copy() { cp "$1" "$root/Weft/structures/" && copies+=("$root/Weft/structures/$(basename "$1")"); }
+remove_copies() { [[ ${#copies[@]} -eq 0 ]] || rm -f "${copies[@]}"; }
+trap remove_copies EXIT
+for file in "${files[@]}"; do copy "$file"; done
 # A layout's own structures, such as a sketch's ground, sit next to it.
 if [[ -n $layout ]]; then
     for own in "$(dirname "$layout")"/*.wst; do
-        [[ -e $own ]] && cp "$own" "$root/Weft/structures/"
+        [[ -e $own ]] && copy "$own"
     done
 fi
 
