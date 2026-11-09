@@ -93,7 +93,7 @@ pub fn lay(
         let from = &roads[random.below(2) as usize];
         let n = from.line.len() as i32;
         let index = random.between(n / 3, (n - 3).max(n / 3)) as usize;
-        let tried = branch(grid, random, from, index, side, s.steps);
+        let tried = branch(grid, random, from, index, side, branch_steps(s.steps));
         side = -side;
         let Some(branch) = tried.filter(|branch| branch.span() >= 2.0 * STEP) else {
             continue;
@@ -102,6 +102,12 @@ pub fn lay(
         roads.push(branch);
     }
     roads
+}
+
+/// A branch's steps: about half the main road's, so it is about as long as the few homes it
+/// gets, and not under the shortest branch kept.
+fn branch_steps(main: usize) -> usize {
+    (main / 2 + 1).max(3)
 }
 
 /// The main road through the heart: out from its edge both ways, bending a little as it passes.

@@ -68,7 +68,7 @@ pub struct Settlement {
     /// over a hamlet over a lone building (0).
     pub priority: i32,
     pub kind: Kind,
-    /// Steps of the main road out of the heart, each way, and of a branch.
+    /// Steps of the main road out of the heart, each way; a branch takes about half as many.
     pub steps: usize,
     /// How many branches leave the main road, at least and at most.
     pub branches: [i32; 2],
@@ -161,6 +161,7 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
     let rules = rules(s);
     let farmland = reach_of(&roads, m) * 0.6;
     sites.extend(buildings::along(p, grid, s, &rules, &fronts, m, farmland)?);
+    // Before the mill goes up, so the road out to it fades like the rest.
     if s.kind == Kind::Town {
         grid.fade_streets(12);
     }

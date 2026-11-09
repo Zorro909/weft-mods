@@ -69,7 +69,9 @@ fn laid(cell: Cell) -> bool {
 /// How high above a road or field the air is cleared: a tall spruce's height.
 const CLEAR: i32 = 11;
 /// How far beside a road or field leaves are cleared: an oak's crown, so one rooted on the road
-/// leaves none behind. Wider would strip trees rooted just beside it bare.
+/// leaves none behind and one two or more off keeps a trimmed crown. One a block off may keep a
+/// slab of leaves apart from its trunk; no width avoids that for every tree, and wider strips
+/// trees beside the road bare.
 const CROWN: i32 = 2;
 
 /// Whether column (`x`, `z`) is worn, in patches of a few blocks rather than single spots.

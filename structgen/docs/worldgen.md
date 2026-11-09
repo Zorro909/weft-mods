@@ -72,9 +72,9 @@ over a lone building.
    the lane's, must be open land a player can walk across, no column more than a block above
    its neighbour; a square tries up to three spots before it goes without a settlement.
 2. **Roads.** The main road leaves the heart's edge both ways along that angle, bending a
-   little as it passes through; a branch or
-   two leave it at roughly a right angle, to either side in turn, and one the ground stops
-   short is tried again elsewhere. A road goes 7 blocks a step, each time the way of
+   little as it passes through; a branch or two, about half as long, leave it at roughly a
+   right angle, to either side in turn, and one the ground stops short is tried again
+   elsewhere. A road goes 7 blocks a step, each time the way of
    three (straight on, or about 20° either side) that climbs least, so it winds along the
    ground. It stops at water, forest, the edge of the square, ground too steep to walk (a step
    of more than a block) and before crossing another road or the heart, and is smoothed into a
@@ -92,8 +92,8 @@ over a lone building.
    gets no settlement.
 4. **Round about.** A mill stands past one end of the main road, a path to its door, small
    strip fields of mostly unripe wheat on even ground past the ends of other roads, a few trees
-   round the heart. A town paves the ground between its streets and its buildings, and its streets turn to
-   gravel lanes, their kerbs to grass, where no building stands near.
+   round the heart. A town paves the ground between its streets and its buildings, and its
+   streets turn to gravel lanes, their kerbs to grass, where no building stands near.
 5. **Materials.** A settlement takes one frame and panel for all its buildings and a roof for
    each.
 
@@ -101,7 +101,9 @@ Everything is marked on a grid of the columns round the settlement first, so roa
 buildings and fields keep out of each other; only then is anything built, roads and fields
 laid at each column's own height with the air above them cleared, and the leaves beside them
 as far as an oak's crown reaches, so no tree the world grew on a road stands in the way or
-leaves its crown floating; one rooted just beside a road keeps its trunk and a trimmed crown. A town paves round its buildings but not round its trees.
+leaves its crown floating; one rooted two or more blocks off keeps its trunk and a trimmed
+crown. Without knowing where the world's trees stand, one rooted a block off may keep a slab
+of leaves apart from its trunk. A town paves round its buildings but not round its trees.
 
 ## Finding them
 

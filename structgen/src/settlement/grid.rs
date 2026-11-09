@@ -4,6 +4,8 @@
 use structgen_api::{Biomes, Plan};
 
 use super::shape::{Point, add, distance, inside, scale};
+
+mod paving;
 use crate::worldgen::SEA;
 
 /// What one column is for.
@@ -191,40 +193,6 @@ impl Grid {
         }
     }
 
-    /// Paves the bare ground between a town's streets and the buildings on them, so no grass is
-    /// left in front of a house: every free column next to a building and near a road.
-    pub fn pave_frontages(&mut self) {
-        let paved: Vec<[i32; 2]> = (self.columns())
-            .filter(|&(at, cell)| {
-                cell == Cell::Free
-                    && self.near(at, 2, |c| c == Cell::Building)
-                    && self.near(at, 3, Cell::is_road)
-            })
-            .map(|(at, _)| at)
-            .collect();
-        for at in paved {
-            self.put(at, Cell::Square);
-        }
-    }
-
-    /// Turns a town's streets into lanes, their kerbs into grass, where no building stands
-    /// within `reach`: the cobbles end where the town does.
-    pub fn fade_streets(&mut self, reach: i32) {
-        let faded: Vec<(usize, Cell)> = (self.columns().enumerate())
-            .filter_map(|(i, (at, cell))| {
-                let to = match cell {
-                    Cell::Street => Cell::Lane,
-                    Cell::Kerb => Cell::Free,
-                    _ => return None,
-                };
-                (!self.near(at, reach, |c| c == Cell::Building)).then_some((i, to))
-            })
-            .collect();
-        for (i, cell) in faded {
-            self.cells[i] = cell;
-        }
-    }
-
     /// Whether a cell within `reach` of `at` passes `test`.
     pub fn near(&self, at: [i32; 2], reach: i32, test: impl Fn(Cell) -> bool) -> bool {
         let from = [at[0] - reach, at[1] - reach];
@@ -318,23 +286,5 @@ mod tests {
         assert!(!ledge.even(&strip, 0.0), "two blocks up at once");
         let pond = row(&[Some(64), None, Some(64), Some(64), Some(64)]);
         assert!(!pond.even(&strip, 0.0), "water in it");
-    }
-
-    #[test]
-    fn a_street_fades_to_a_lane_away_from_the_houses() {
-        let mut street = row(&[Some(64); 20]);
-        for x in 0..19 {
-            street.put([x, 0], Cell::Street);
-        }
-        street.put([19, 0], Cell::Kerb);
-        street.put([1, 0], Cell::Building);
-        street.fade_streets(3);
-        assert_eq!(street.get([4, 0]), Cell::Street, "three from the house");
-        assert_eq!(street.get([5, 0]), Cell::Lane, "four from it");
-        assert_eq!(
-            street.get([19, 0]),
-            Cell::Free,
-            "a kerb out of town is grass"
-        );
     }
 }
