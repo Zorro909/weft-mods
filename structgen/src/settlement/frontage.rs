@@ -1,7 +1,7 @@
 //! Buildings standing along a road or round the heart, each turned to face it: a walk down the
 //! front, a building wherever the ground and its neighbours leave room, then on past it.
 
-use structgen_api::{Fit, Plan, Turn};
+use structgen_api::{Fit, Plan, Pos, Turn};
 use weft_sdk::Template;
 
 use super::grid::{Cell, Grid, column};
@@ -32,7 +32,7 @@ pub struct Front {
 /// A building decided on: where it stands and how it is turned.
 pub struct Site {
     pub template: &'static Template,
-    pub corner: [i32; 3],
+    pub corner: Pos,
     pub turn: Turn,
     pub size: [i32; 3],
 }
@@ -184,7 +184,7 @@ pub fn stand(
         return None;
     }
     let at = p.fit(template, corner, turn, &rules.fit)?;
-    if doorstep.is_some_and(|y| (y - at[1]).abs() > 1) {
+    if doorstep.is_some_and(|y| (y - at.y).abs() > 1) {
         return None;
     }
     for z in corner[1]..=last[1] {

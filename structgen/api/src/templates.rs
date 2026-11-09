@@ -102,7 +102,7 @@ impl Entry {
             (palette.iter().zip(&follows))
                 .map(|(&state, &follows)| match follows {
                     true => FOLLOWS_GROUND,
-                    false => turn_state(state, turn),
+                    false => turn_state(state.id(), turn),
                 })
                 .collect()
         });
@@ -112,7 +112,7 @@ impl Entry {
             indices: self.structure.indices.clone(),
             palettes,
             air,
-            ground: ground.map_or(air, |(&state, _)| state),
+            ground: ground.map_or(air, |(state, _)| state.id()),
         })
     }
 }

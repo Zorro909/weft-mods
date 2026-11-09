@@ -2,7 +2,7 @@
 //! down to the fountain, into the town hall and out again.
 
 use showcase_api::{Film, orbit};
-use structgen_api::Turn;
+use structgen_api::{Pos, Turn};
 
 use super::building::Building;
 use super::{glide, speeds, turn};
@@ -12,13 +12,13 @@ const SQUARE: [f64; 3] = [3500.0, 70.0, -1140.0];
 /// The coaching inn north of the square: a yard behind its west side, out under an arch in
 /// the east.
 const INN: Building = Building {
-    corner: [3513, 73, -1173],
+    corner: Pos::new(3513, 73, -1173),
     size: [17, 17],
     turn: Turn::Left,
 };
 /// The town hall on the square's west side, its door to the fountain.
 const HALL: Building = Building {
-    corner: [3479, 71, -1149],
+    corner: Pos::new(3479, 71, -1149),
     size: [21, 18],
     turn: Turn::Right,
 };

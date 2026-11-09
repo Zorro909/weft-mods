@@ -1,7 +1,7 @@
 //! What grows round a settlement: kitchen gardens behind the houses, a few small strip fields
 //! past the ends of the roads, and trees near the heart.
 
-use structgen_api::{Plan, Turn};
+use structgen_api::{Plan, Pos, Turn};
 use weft_sdk::Template;
 
 use super::frontage::{Rules, Site, stand};
@@ -40,7 +40,7 @@ pub fn fields(grid: &mut Grid, roads: &[Road], count: usize) {
 
 /// A kitchen garden behind a house: a few rows of young wheat, if the ground there is free.
 pub fn garden(grid: &mut Grid, site: &Site) {
-    let [x, _, z] = site.corner;
+    let Pos { x, z, .. } = site.corner;
     let [sx, _, sz] = site.size;
     let (corner, last) = match site.turn {
         Turn::None => ([x + 1, z + sz + 1], [x + sx - 2, z + sz + 4]),

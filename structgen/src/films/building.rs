@@ -1,11 +1,11 @@
 //! A building the film goes into, where seed 42's settlement put it: points in the building as
 //! drawn are turned with it into the world.
 
-use structgen_api::Turn;
+use structgen_api::{Pos, Turn};
 
 pub struct Building {
     /// Its lowest corner in the world.
-    pub corner: [i32; 3],
+    pub corner: Pos,
     /// Along x and z as drawn, before it was turned.
     pub size: [i32; 2],
     pub turn: Turn,
@@ -22,7 +22,7 @@ impl Building {
             Turn::Back => (sx - x, sz - z),
             Turn::Left => (z, sx - x),
         };
-        let [cx, cy, cz] = self.corner.map(f64::from);
+        let [cx, cy, cz]: [f64; 3] = self.corner.into();
         [cx + dx, cy + y, cz + dz]
     }
 }
@@ -35,12 +35,12 @@ mod tests {
     fn points_turn_as_the_blocks_do() {
         for turn in Turn::ALL {
             let building = Building {
-                corner: [100, 64, -50],
+                corner: Pos::new(100, 64, -50),
                 size: [5, 3],
                 turn,
             };
             let block = [4, 2, 1];
-            let [x, y, z] = turn.pos(block, [5, 9, 3]);
+            let Pos { x, y, z } = turn.pos(Pos::from(block), [5, 9, 3]);
             let at = building.at(block.map(|v| v as f64 + 0.5));
             let expected = [100 + x, 64 + y, -50 + z].map(|v| v as f64 + 0.5);
             assert_eq!(

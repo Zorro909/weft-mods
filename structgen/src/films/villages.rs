@@ -2,7 +2,7 @@
 //! church; one out on the plain, past its mill into its smithy and out round the village.
 
 use showcase_api::{Film, orbit};
-use structgen_api::Turn;
+use structgen_api::{Pos, Turn};
 
 use super::building::Building;
 use super::{glide, speeds, turn};
@@ -11,14 +11,14 @@ use super::{glide, speeds, turn};
 const HILLS: [f64; 3] = [4196.0, 108.0, 280.0];
 /// Its tavern, its porch to the east, on the green.
 const TAVERN: Building = Building {
-    corner: [4164, 108, 270],
+    corner: Pos::new(4164, 108, 270),
     size: [11, 15],
     turn: Turn::Right,
 };
 /// Its church, its door to the north in a wall a block in. The ground north of it lies higher
 /// than its floor.
 const CHURCH: Building = Building {
-    corner: [4201, 105, 277],
+    corner: Pos::new(4201, 105, 277),
     size: [11, 18],
     turn: Turn::None,
 };
@@ -30,7 +30,7 @@ const OVER_PLAIN: [f64; 3] = [4450.0, 85.0, -1100.0];
 const MILL: [f64; 3] = [4394.5, 82.0, -1115.5];
 /// Its smithy: the forge open to the south under a stone lintel, the house behind it.
 const SMITHY: Building = Building {
-    corner: [4420, 74, -1127],
+    corner: Pos::new(4420, 74, -1127),
     size: [12, 15],
     turn: Turn::Back,
 };

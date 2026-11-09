@@ -24,6 +24,7 @@ name = "showcase_api"
 version = "0.1.0"
 dependencies = [
  "weft_sdk",
+ "weftkit",
 ]
 
 [[package]]

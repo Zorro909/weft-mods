@@ -96,12 +96,12 @@ impl Structure {
             let defaults = materials::default_names(&self.palette, &self.slots);
             let unknown = defaults
                 .into_iter()
-                .find(|name| Block::lookup(name).is_none());
+                .find(|name| BlockState::named(name).is_none());
             return Err(PlaceError::UnknownBlock(unknown.unwrap_or_default()));
         };
         Ok(states
             .into_iter()
-            .map(|state| turn_state(state, turn).into())
+            .map(|state| turn_state(state.id(), turn).into())
             .collect())
     }
 }

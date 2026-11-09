@@ -3,7 +3,7 @@
 //! each, the air is cleared, and the leaves beside it, so no tree the world grew there stands
 //! in the way or leaves a crown floating.
 
-use structgen_api::{Plan, PlanError};
+use structgen_api::{BlockState, Plan, PlanError, Pos};
 use weft_sdk::*;
 
 use super::grid::{Cell, Grid};
@@ -25,17 +25,17 @@ pub fn draw(p: &mut Plan, grid: &Grid) -> Result<(), PlanError> {
         let Some(y) = grid.height([x, z]) else {
             continue;
         };
-        let (from, to) = ([x, y + 2, z], [x, y + CLEAR, z]);
+        let (from, to) = (Pos::new(x, y + 2, z), Pos::new(x, y + CLEAR, z));
         if let Some((floor, above)) = surface(cell, patch(x, z)) {
-            p.set([x, y, z], floor)?;
-            p.set_state([x, y + 1, z], above)?;
+            p.set(Pos::new(x, y, z), floor)?;
+            p.set_state(Pos::new(x, y + 1, z), above)?;
             p.fill(from, to, &AIR)?;
         } else if beside(grid, [x, z], cell) {
             // Leaves only: a trunk standing here keeps the crown it still holds up, unless it is
             // so near that none would be left.
             p.replace(from, to, &LEAVES, &AIR)?;
             if grid.near([x, z], 1, laid) {
-                p.replace([x, y + 1, z], to, &LOGS, &AIR)?;
+                p.replace(Pos::new(x, y + 1, z), to, &LOGS, &AIR)?;
             }
         }
     }
@@ -44,17 +44,17 @@ pub fn draw(p: &mut Plan, grid: &Grid) -> Result<(), PlanError> {
 
 /// The floor and the block above it of a road or field column, `worn` in patches; `None` for
 /// a column nothing is laid on.
-fn surface(cell: Cell, worn: bool) -> Option<(&'static Block, u32)> {
+fn surface(cell: Cell, worn: bool) -> Option<(&'static Block, BlockState)> {
     Some(match cell {
-        Cell::Lane if worn => (&DIRT, AIR.id()),
-        Cell::Lane => (&GRAVEL, AIR.id()),
-        Cell::Kerb => (&KERB, AIR.id()),
-        Cell::Street | Cell::Square if worn => (&MOSSY, AIR.id()),
-        Cell::Street | Cell::Square => (&COBBLESTONE, AIR.id()),
-        Cell::Furrow => (&DIRT, AIR.id()),
+        Cell::Lane if worn => (&DIRT, BlockState::AIR),
+        Cell::Lane => (&GRAVEL, BlockState::AIR),
+        Cell::Kerb => (&KERB, BlockState::AIR),
+        Cell::Street | Cell::Square if worn => (&MOSSY, BlockState::AIR),
+        Cell::Street | Cell::Square => (&COBBLESTONE, BlockState::AIR),
+        Cell::Furrow => (&DIRT, BlockState::AIR),
         Cell::Crop(age) => {
-            let wheat = state_with(WHEAT.id(), "age", &age.to_string());
-            (&FARMLAND, wheat.unwrap_or(AIR.id()))
+            let wheat = BlockState::of(&WHEAT).with_prop("age", &age.to_string());
+            (&FARMLAND, wheat.unwrap_or(BlockState::AIR))
         }
         Cell::Free | Cell::Green | Cell::Building | Cell::Blocked => return None,
     })

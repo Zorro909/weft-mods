@@ -37,35 +37,34 @@ impl Planned {
         self.parts.first().map(|part| part.bounds().lo)
     }
 
-    /// The box round every part, seen from above and below; `None` for an empty plan.
-    pub fn bounds(&self) -> Option<([i32; 3], [i32; 3])> {
-        let boxes = self.parts.iter().map(Part::bounds);
-        boxes.reduce(|(a, b), (c, d)| {
-            (
-                [0, 1, 2].map(|i| a[i].min(c[i])),
-                [0, 1, 2].map(|i| b[i].max(d[i])),
-            )
-        })
+    /// The box round every part; `None` for an empty plan.
+    pub fn bounds(&self) -> Option<Area> {
+        let mut parts = self.parts.iter().map(Part::bounds);
+        let mut all = parts.next()?;
+        for area in parts {
+            all.grow_to(area.lo);
+            all.grow_to(area.hi);
+        }
+        Some(all)
     }
 
     /// Whether any of its parts comes within `room` blocks of one of `other`'s, seen from above.
     pub fn near(&self, other: &Planned, room: i32) -> bool {
-        self.parts.iter().any(|part| {
-            let (from, to) = part.bounds();
-            other.reaches_into(from.map(|v| v - room), to.map(|v| v + room))
-        })
+        (self.parts.iter()).any(|part| other.reaches_into(&widened(part.bounds(), room)))
     }
 
-    /// Whether any part reaches into the columns from `from` to `to`, seen from above.
-    fn reaches_into(&self, from: [i32; 3], to: [i32; 3]) -> bool {
-        let cubes = |i: usize| from[i].div_euclid(16)..=to[i].div_euclid(16);
-        let columns = cubes(2).flat_map(|z| cubes(0).map(move |x| [x, z]));
-        let nearby = columns
+    /// Whether any part reaches into the columns of `area`, seen from above.
+    fn reaches_into(&self, area: &Area) -> bool {
+        let columns = area.heights(i32::MIN, i32::MAX);
+        let cubes = |lo: i32, hi: i32| lo.div_euclid(16)..=hi.div_euclid(16);
+        let (lo, hi) = (area.lo, area.hi);
+        let cube_columns = cubes(lo.z, hi.z).flat_map(|z| cubes(lo.x, hi.x).map(move |x| [x, z]));
+        let nearby = cube_columns
             .filter_map(|column| self.columns.get(&column))
             .flatten();
         nearby
             .map(|&i| self.parts[i].bounds())
-            .any(|(a, b)| [0, 2].into_iter().all(|i| a[i] <= to[i] && from[i] <= b[i]))
+            .any(|bounds| columns.overlaps(&bounds))
     }
 
     /// Calls `set` for every block the plan puts into the cube at `origin`, later parts after
@@ -85,6 +84,12 @@ impl Planned {
         let column = [origin.x.div_euclid(16), origin.z.div_euclid(16)];
         self.columns.get(&column).into_iter().flatten()
     }
+}
+
+/// `area` with `room` more blocks on every side.
+pub(crate) fn widened(area: Area, room: i32) -> Area {
+    let (out, back) = (Pos::new(room, room, room), Pos::new(-room, -room, -room));
+    Area::between(area.lo + back, area.hi + out)
 }
 
 #[cfg(test)]

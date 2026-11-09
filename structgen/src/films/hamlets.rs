@@ -3,7 +3,7 @@
 //! up and away.
 
 use showcase_api::{Film, flyby, orbit};
-use structgen_api::Turn;
+use structgen_api::{Pos, Turn};
 
 use super::building::Building;
 use super::{glide, speeds, turn};
@@ -12,7 +12,7 @@ use super::{glide, speeds, turn};
 const FIRST: [f64; 3] = [4168.0, 74.0, -205.0];
 /// A crofter's cottage there, its door to the north.
 const CROFT: Building = Building {
-    corner: [4167, 75, -206],
+    corner: Pos::new(4167, 75, -206),
     size: [9, 7],
     turn: Turn::None,
 };
@@ -22,7 +22,7 @@ const LAST: [f64; 3] = [3772.0, 72.0, -2178.0];
 const OVER_LAST: [f64; 3] = [3772.0, 84.0, -2178.0];
 /// A cottage with a loft there, its door to the north, facing the well.
 const DORMER: Building = Building {
-    corner: [3761, 75, -2173],
+    corner: Pos::new(3761, 75, -2173),
     size: [11, 9],
     turn: Turn::None,
 };

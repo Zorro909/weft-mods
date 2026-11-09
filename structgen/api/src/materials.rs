@@ -7,7 +7,8 @@
 
 use std::collections::BTreeMap;
 
-use weft_sdk::{Block, error, state_with};
+use weft_sdk::error;
+use weftkit::BlockState;
 
 /// What marks a palette entry as a slot.
 const SLOT: char = '@';
@@ -120,26 +121,26 @@ pub(crate) fn states(
     palette: &[String],
     slots: &BTreeMap<String, String>,
     materials: &Materials,
-) -> Option<Vec<u32>> {
+) -> Option<Vec<BlockState>> {
     palette
         .iter()
         .map(|entry| match slot_of(entry) {
-            None => Block::lookup(entry),
+            None => BlockState::named(entry),
             Some((slot, props)) => {
                 let chosen = materials.get(slot).and_then(|block| {
-                    let state = Block::lookup(block);
+                    let state = BlockState::named(block);
                     if state.is_none() {
                         error!("{what}: slot {slot} is to be {block}, no block of this game");
                     }
                     state
                 });
-                let state = chosen.or_else(|| Block::lookup(&slots[slot]))?;
+                let state = chosen.or_else(|| BlockState::named(&slots[slot]))?;
                 Some(
                     props
                         .split(',')
                         .filter_map(|p| p.split_once('='))
                         .fold(state, |state, (name, value)| {
-                            state_with(state, name, value).unwrap_or(state)
+                            state.with_prop(name, value).unwrap_or(state)
                         }),
                 )
             }

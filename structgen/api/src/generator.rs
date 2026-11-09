@@ -4,12 +4,12 @@
 use std::sync::{Arc, OnceLock};
 
 use weft_sdk::*;
-use weftkit::Pos;
+use weftkit::{Area, Pos};
 
 use crate::fit::Columns;
 use crate::locate;
 use crate::plan::{Plan, PlanError};
-use crate::planned::Planned;
+use crate::planned::{Planned, widened};
 use crate::random::Random;
 use crate::region::{self, Region};
 
@@ -147,16 +147,15 @@ impl Generator {
     /// priority. Theirs have given way in turn where they had to, so only what is really placed
     /// counts.
     fn gives_way(&self, seed: u64, dimension: u32, planned: &Planned, ground: Columns) -> bool {
-        let Some((from, to)) = planned.bounds() else {
+        let Some(bounds) = planned.bounds() else {
             return false;
         };
-        let (from, to) = (from.map(|v| v - ROOM), to.map(|v| v + ROOM));
+        let Area { lo, hi } = widened(bounds, ROOM);
         let higher = locate::all().into_iter();
         let mut higher = higher.filter(|g| g.priority > self.priority && g.is_in(dimension));
         higher.any(|other| {
-            let mut regions = region::indices(from[2], to[2], other.region).flat_map(|iz| {
-                region::indices(from[0], to[0], other.region).map(move |ix| [ix, iz])
-            });
+            let mut regions = region::indices(lo.z, hi.z, other.region)
+                .flat_map(|iz| region::indices(lo.x, hi.x, other.region).map(move |ix| [ix, iz]));
             regions.any(|index| {
                 let slot = other.planned(seed, dimension, index, ground);
                 matches!(slot.get(), Some(Some(theirs)) if planned.near(theirs, ROOM))
@@ -200,13 +199,15 @@ fn ground(g: &Gen, x: i32, z: i32) -> Option<terrain::Column> {
 
 #[cfg(test)]
 mod tests {
+    use weftkit::BlockState;
+
     use super::*;
 
     /// A generator of `priority` whose plan fills from `from` to `to` in the region holding
     /// them; registered for the others to see. Each test plans in a region of its own.
     fn filling(name: &str, priority: i32, from: [i32; 3], to: [i32; 3]) -> Arc<Generator> {
         let planner = move |p: &mut Plan| match p.region().contains(from[0], from[2]) {
-            true => p.fill_state(from, to, 5),
+            true => p.fill_state(from.into(), to.into(), BlockState::from(5)),
             false => Ok(()),
         };
         let generator = Generator::new(name.to_string(), 512, Vec::new(), Box::new(planner));
@@ -232,8 +233,9 @@ mod tests {
         assert!(placed(&beside, [0, 0]), "a cottage with room between");
         assert!(placed(&level, [0, 0]), "the same priority: both stand");
         let round = move |p: &mut Plan| {
-            p.fill_state([80, 70, 100], [80, 70, 100], 5)?;
-            p.fill_state([130, 70, 100], [130, 70, 100], 5)
+            let stone = BlockState::from(5);
+            p.fill_state(Pos::new(80, 70, 100), Pos::new(80, 70, 100), stone)?;
+            p.fill_state(Pos::new(130, 70, 100), Pos::new(130, 70, 100), stone)
         };
         let round = Generator::new("m:hamlet3".into(), 512, Vec::new(), Box::new(round));
         assert!(
