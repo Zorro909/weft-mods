@@ -128,12 +128,8 @@ fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) -> Result<()
     for site in sites {
         let roof = styles::blocks(one_of(p, s.roofs).unwrap_or(""));
         let mut materials = styles::add(walls.clone(), roof);
-        if s.kind == Kind::Town
-            && !s
-                .trees
-                .iter()
-                .any(|&tree| std::ptr::eq(tree, site.template))
-        {
+        let tree = s.trees.iter().any(|&t| std::ptr::eq(t, site.template));
+        if s.kind == Kind::Town && !tree {
             materials = styles::add(materials, styles::blocks("cobble_ground"));
         }
         p.structure(site.template, site.corner, site.turn)?

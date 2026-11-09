@@ -63,8 +63,7 @@ fn beside(grid: &Grid, at: [i32; 2], cell: Cell) -> bool {
 
 /// Whether a road or field is laid on a column of `cell`.
 fn laid(cell: Cell) -> bool {
-    use Cell::*;
-    matches!(cell, Lane | Kerb | Street | Square | Furrow | Crop(_))
+    cell.is_road() || matches!(cell, Cell::Furrow | Cell::Crop(_))
 }
 
 /// How high above a road or field the air is cleared: a tall spruce's height.

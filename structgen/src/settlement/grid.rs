@@ -211,13 +211,14 @@ impl Grid {
     /// within `reach`: the cobbles end where the town does.
     pub fn fade_streets(&mut self, reach: i32) {
         let faded: Vec<(usize, Cell)> = (self.columns().enumerate())
-            .filter_map(|(i, (at, cell))| match cell {
-                Cell::Street => Some((i, at, Cell::Lane)),
-                Cell::Kerb => Some((i, at, Cell::Free)),
-                _ => None,
+            .filter_map(|(i, (at, cell))| {
+                let to = match cell {
+                    Cell::Street => Cell::Lane,
+                    Cell::Kerb => Cell::Free,
+                    _ => return None,
+                };
+                (!self.near(at, reach, |c| c == Cell::Building)).then_some((i, to))
             })
-            .filter(|&(_, at, _)| !self.near(at, reach, |c| c == Cell::Building))
-            .map(|(i, _, cell)| (i, cell))
             .collect();
         for (i, cell) in faded {
             self.cells[i] = cell;
