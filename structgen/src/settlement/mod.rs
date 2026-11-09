@@ -174,6 +174,10 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
             .and_then(|mill| buildings::outskirts(p, grid, &rules, mill, &roads[..2], from_road)),
     );
     planting::fields(grid, &roads, s.fields);
+    // Before the trees, so paving goes round buildings only.
+    if s.kind == Kind::Town {
+        grid.pave_frontages();
+    }
     let trees = Rules { gap: 3, ..rules };
     sites.extend(planting::trees(
         p,
@@ -183,9 +187,6 @@ fn lay_out(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point) -> Option<Ve
         m,
         s.heart[0] as i32 + 18,
     ));
-    if s.kind == Kind::Town {
-        grid.pave_frontages();
-    }
     Some(sites)
 }
 
