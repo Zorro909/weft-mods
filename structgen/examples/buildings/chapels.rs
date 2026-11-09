@@ -7,7 +7,8 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Building, Ridge, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall, window,
+    Building, Ridge, gable_end, gable_roof, log, plinth, side_windows, slab, slot, stair,
+    timber_wall, window,
 };
 
 pub const BUILDINGS: &[Building] = &[
@@ -28,10 +29,7 @@ fn wayside_chapel() -> Structure {
     }
     bell_gable(&mut d, [3, 1], 7);
     d.fill([3, 1, 1], [3, 2, 1], AIR);
-    for z in [3, 5] {
-        window(&mut d, [1, 2, z], 2, "west");
-        window(&mut d, [5, 2, z], 2, "east");
-    }
+    side_windows(&mut d, [1, 5], 2, 2, &[3, 5]);
     window(&mut d, [3, 2, 7], 3, "south");
     altar(&mut d, [2, 4], 6);
     for z in [3, 4] {
@@ -50,23 +48,21 @@ fn wayside_chapel() -> Structure {
 fn village_church() -> Structure {
     let mut d = Draft::new([11, 18, 18]);
     d.fill([0, 0, 0], [10, 0, 17], &slot("ground"));
-    plinth(&mut d, [1, 1], [9, 11], 0);
-    plinth(&mut d, [3, 11], [7, 16], 0);
-    stone_walls(&mut d, [1, 1], [9, 11], [1, 5]);
-    stone_walls(&mut d, [3, 11], [7, 16], [1, 4]);
-    gable_roof(&mut d, Ridge::Z, [0, 12], [0, 10], 6);
-    gable_roof(&mut d, Ridge::Z, [12, 17], [2, 8], 5);
-    for z in [1, 11] {
-        gable_end(&mut d, Ridge::Z, z, [0, 10], [1, 9], 6, &slot("plinth"));
-    }
-    gable_end(&mut d, Ridge::Z, 16, [2, 8], [3, 7], 5, &slot("plinth"));
+    let nave = Room {
+        from: [1, 1],
+        to: [9, 11],
+        top: 5,
+    };
+    let chancel = Room {
+        from: [3, 11],
+        to: [7, 16],
+        top: 4,
+    };
+    nave_and_chancel(&mut d, nave, chancel);
     d.fill([4, 1, 11], [6, 4, 11], AIR);
     d.fill([5, 1, 1], [5, 3, 1], AIR);
     d.fill([5, 7, 1], [5, 8, 1], &slot("window"));
-    for z in [3, 6, 9] {
-        window(&mut d, [1, 2, z], 3, "west");
-        window(&mut d, [9, 2, z], 3, "east");
-    }
+    side_windows(&mut d, [1, 9], 2, 3, &[3, 6, 9]);
     window(&mut d, [5, 2, 16], 5, "south");
     window(&mut d, [3, 2, 14], 2, "west");
     window(&mut d, [7, 2, 14], 2, "east");
@@ -125,6 +121,59 @@ pub fn stone_walls(d: &mut Draft, from: [usize; 2], to: [usize; 2], y: [usize; 2
     }
     for [x, z] in [from, [to[0], from[1]], [from[0], to[1]], to] {
         d.fill([x, y[0], z], [x, y[1], z], &slot("plinth/corner"));
+    }
+}
+
+/// A stone room of a church, from `from` to `to` in x and z, its walls up to `top`.
+pub struct Room {
+    pub from: [usize; 2],
+    pub to: [usize; 2],
+    pub top: usize,
+}
+
+impl Room {
+    /// From the column west of it to the column east of it: what its roof spans.
+    fn across(&self) -> [usize; 2] {
+        [self.from[0] - 1, self.to[0] + 1]
+    }
+}
+
+/// A stone nave and the narrower chancel behind it, starting at the nave's back wall, each
+/// under a steep roof along z with stone gables: the nave's at both ends, the chancel's at the
+/// back.
+pub fn nave_and_chancel(d: &mut Draft, nave: Room, chancel: Room) {
+    for room in [&nave, &chancel] {
+        plinth(d, room.from, room.to, 0);
+    }
+    for room in [&nave, &chancel] {
+        stone_walls(d, room.from, room.to, [1, room.top]);
+    }
+    let nave_along = [nave.from[1] - 1, nave.to[1] + 1];
+    gable_roof(d, Ridge::Z, nave_along, nave.across(), nave.top + 1);
+    let chancel_along = [chancel.from[1] + 1, chancel.to[1] + 1];
+    gable_roof(
+        d,
+        Ridge::Z,
+        chancel_along,
+        chancel.across(),
+        chancel.top + 1,
+    );
+    let gables = [
+        (&nave, nave.from[1]),
+        (&nave, nave.to[1]),
+        (&chancel, chancel.to[1]),
+    ];
+    for (room, z) in gables {
+        let inside = [room.from[0], room.to[0]];
+        gable_end(
+            d,
+            Ridge::Z,
+            z,
+            room.across(),
+            inside,
+            room.top + 1,
+            &slot("plinth"),
+        );
     }
 }
 

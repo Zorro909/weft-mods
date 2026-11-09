@@ -7,8 +7,8 @@ use structgen_api::Structure;
 use crate::chapels::stone_walls;
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Building, Ridge, chimney, gable_end, gable_roof, log, plinth, slab, slot, stair, timber_wall,
-    window,
+    Building, Ridge, chimney, gable_end, gable_roof, log, plinth, side_windows, slab, slot, stair,
+    timber_wall, window,
 };
 
 pub const BUILDINGS: &[Building] = &[
@@ -140,14 +140,8 @@ fn guildhall_openings(d: &mut Draft) {
     for x in [4, 6, 10, 12] {
         window(d, [x, 5, 11], 2, "south");
     }
-    for z in [4, 8] {
-        window(d, [1, 5, z], 2, "west");
-        window(d, [15, 5, z], 2, "east");
-    }
-    for z in [5, 8] {
-        window(d, [1, 2, z], 1, "west");
-        window(d, [15, 2, z], 1, "east");
-    }
+    side_windows(d, [1, 15], 5, 2, &[4, 8]);
+    side_windows(d, [1, 15], 2, 1, &[5, 8]);
 }
 
 /// A flight of stairs up the back wall into the hall, a rail along its well.

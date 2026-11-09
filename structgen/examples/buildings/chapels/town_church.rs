@@ -2,25 +2,26 @@
 
 use structgen_api::Structure;
 
-use super::{altar, pew, stone_walls};
+use super::{Room, altar, nave_and_chancel, pew, stone_walls};
 use crate::draft::{AIR, Draft};
-use crate::kit::{Ridge, gable_end, gable_roof, ladder, log, plinth, slab, slot, stair, window};
+use crate::kit::{ladder, log, plinth, slab, slot, stair, window};
 
 /// An 11 x 13 nave of stone between buttresses, lit by tall pointed windows, a chancel behind
 /// it, and a square tower at the front, 25 tall with battlements, the doorway at its foot.
 pub fn town_church() -> Structure {
     let mut d = Draft::new([13, 25, 23]);
     d.fill([0, 0, 0], [12, 0, 22], &slot("ground"));
-    plinth(&mut d, [1, 5], [11, 17], 0);
-    plinth(&mut d, [3, 17], [9, 21], 0);
-    stone_walls(&mut d, [1, 5], [11, 17], [1, 7]);
-    stone_walls(&mut d, [3, 17], [9, 21], [1, 6]);
-    gable_roof(&mut d, Ridge::Z, [4, 18], [0, 12], 8);
-    gable_roof(&mut d, Ridge::Z, [18, 22], [2, 10], 7);
-    for z in [5, 17] {
-        gable_end(&mut d, Ridge::Z, z, [0, 12], [1, 11], 8, &slot("plinth"));
-    }
-    gable_end(&mut d, Ridge::Z, 21, [2, 10], [3, 9], 7, &slot("plinth"));
+    let nave = Room {
+        from: [1, 5],
+        to: [11, 17],
+        top: 7,
+    };
+    let chancel = Room {
+        from: [3, 17],
+        to: [9, 21],
+        top: 6,
+    };
+    nave_and_chancel(&mut d, nave, chancel);
     d.fill([5, 1, 17], [7, 5, 17], AIR);
     for z in [6, 10, 14] {
         pointed_window(&mut d, [1, z], "west");

@@ -4,8 +4,8 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Building, Ridge, chimney, gable_end, gable_roof, ladder_up, log, plinth, slab, slot, stair,
-    timber_wall, window,
+    Building, Ridge, bed, chimney, gable_end, gable_roof, ladder_up, log, plinth, side_windows,
+    slab, slot, stair, timber_wall, window,
 };
 
 pub const BUILDINGS: &[Building] = &[
@@ -48,8 +48,7 @@ fn crofter_cottage() -> Structure {
 /// A hearth, bed, workbench and chest, and a torch either side of the door.
 fn furnish_cottage(d: &mut Draft) {
     d.set([6, 1, 4], "base:furnace[facing=north,lit=false]");
-    d.set([2, 1, 4], "base:bed[facing=west,part=foot]");
-    d.set([3, 1, 4], "base:bed[facing=west,part=head]");
+    bed(d, [2, 1, 4], "west");
     d.set([2, 1, 2], "base:crafting_table");
     d.set([5, 1, 4], "base:chest[facing=north]");
     d.set([3, 2, 0], "@light[facing=north]");
@@ -114,8 +113,7 @@ fn byre(d: &mut Draft) {
 /// A hearth under the chimney, bed, chest, table and stools, workbench, and torches.
 fn furnish_longhouse(d: &mut Draft) {
     d.set([2, 1, 4], "base:furnace[facing=east,lit=false]");
-    d.set([3, 1, 6], "base:bed[facing=east,part=foot]");
-    d.set([2, 1, 6], "base:bed[facing=east,part=head]");
+    bed(d, [3, 1, 6], "east");
     d.set([2, 1, 2], "base:chest[facing=east]");
     d.set([7, 1, 6], "base:crafting_table");
     d.set([5, 1, 4], &slab("trim/slab", "top"));
@@ -164,10 +162,7 @@ fn dormer_cottage() -> Structure {
     for x in [3, 5, 7] {
         window(&mut d, [x, 2, 7], 1, "south");
     }
-    for z in [2, 6] {
-        window(&mut d, [1, 2, z], 1, "west");
-        window(&mut d, [9, 2, z], 1, "east");
-    }
+    side_windows(&mut d, [1, 9], 2, 1, &[2, 6]);
     window(&mut d, [1, 6, 4], 1, "west");
     chimney(&mut d, [9, 4], [1, 10]);
     ladder_up(&mut d, [2, 4], [1, 4], "west");
@@ -187,8 +182,7 @@ fn furnish_dormer_cottage(d: &mut Draft) {
     d.set([7, 3, 6], "@light[facing=north]");
     d.set([4, 2, 0], "@light[facing=north]");
     d.set([6, 2, 0], "@light[facing=north]");
-    d.set([6, 5, 5], "base:bed[facing=west,part=foot]");
-    d.set([7, 5, 5], "base:bed[facing=west,part=head]");
+    bed(d, [6, 5, 5], "west");
     d.set([8, 5, 4], "base:chest[facing=west]");
     d.set([2, 6, 3], "@light[facing=east]");
     d.set([8, 6, 5], "@light[facing=west]");

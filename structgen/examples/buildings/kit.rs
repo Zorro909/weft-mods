@@ -69,6 +69,30 @@ pub fn light_at(d: &mut Draft, pos: [usize; 3], facing: &str) {
     d.set(pos, &light(facing));
 }
 
+/// A `light` at each position, facing as given (see `light`).
+pub fn lights(d: &mut Draft, lights: &[([usize; 3], &str)]) {
+    for &(pos, facing) in lights {
+        light_at(d, pos, facing);
+    }
+}
+
+/// Windows `height` tall from height `y` in the west wall at `x[0]` and the east wall at
+/// `x[1]`, a pair at each of `zs`.
+pub fn side_windows(d: &mut Draft, x: [usize; 2], y: usize, height: usize, zs: &[usize]) {
+    for &z in zs {
+        window(d, [x[0], y, z], height, "west");
+        window(d, [x[1], y, z], height, "east");
+    }
+}
+
+/// A bed with its foot at `foot`, facing `facing`: the head lies the other way.
+pub fn bed(d: &mut Draft, foot: [usize; 3], facing: &str) {
+    d.set(foot, &format!("base:bed[facing={facing},part=foot]"));
+    if let Some(head) = step(foot, opposite(facing)) {
+        d.set(head, &format!("base:bed[facing={facing},part=head]"));
+    }
+}
+
 /// A ladder hung on the wall on its `side`. Every side is written, or a ladder keeps its
 /// default plate on the north side as well.
 pub fn ladder(side: &str) -> String {

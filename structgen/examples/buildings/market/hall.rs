@@ -3,7 +3,7 @@
 use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
-use crate::kit::{Ridge, gable_end, gable_roof, log, slot, stair, timber_wall, window};
+use crate::kit::{Ridge, gable_end, gable_roof, lights, log, slot, stair, timber_wall, window};
 
 /// The hall's east wall; the west wall is at x = 1.
 const EAST: usize = 17;
@@ -91,14 +91,15 @@ fn market_floor(d: &mut Draft) {
     d.fill([12, 1, 6], [14, 1, 6], &stair("trim/stair", "south", "top"));
     d.set([12, 1, 7], "base:chest[facing=north]");
     d.set([13, 1, 7], "base:crafting_table");
-    for (pos, facing) in [
-        ([2, 3, 5], "east"),
-        ([EAST - 1, 3, 5], "west"),
-        ([9, 3, 3], "south"),
-        ([9, 3, 7], "north"),
-    ] {
-        d.set(pos, &format!("@light[facing={facing}]"));
-    }
+    lights(
+        d,
+        &[
+            ([2, 3, 5], "east"),
+            ([EAST - 1, 3, 5], "west"),
+            ([9, 3, 3], "south"),
+            ([9, 3, 7], "north"),
+        ],
+    );
 }
 
 /// A long table with benches down the hall, chests and a workbench, and lights on the walls.
@@ -117,12 +118,13 @@ fn furnish_hall(d: &mut Draft) {
     d.set([2, 5, 2], "base:crafting_table");
     d.set([EAST - 1, 5, 8], "base:chest[facing=west]");
     d.set([EAST - 1, 5, 2], "base:chest[facing=west]");
-    for (pos, facing) in [
-        ([2, 6, 5], "east"),
-        ([9, 6, 2], "south"),
-        ([9, 6, 8], "north"),
-        ([EAST - 1, 6, 6], "west"),
-    ] {
-        d.set(pos, &format!("@light[facing={facing}]"));
-    }
+    lights(
+        d,
+        &[
+            ([2, 6, 5], "east"),
+            ([9, 6, 2], "south"),
+            ([9, 6, 8], "north"),
+            ([EAST - 1, 6, 6], "west"),
+        ],
+    );
 }

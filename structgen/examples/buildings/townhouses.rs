@@ -9,8 +9,8 @@ use structgen_api::Structure;
 use crate::cottages::dormer;
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Building, Ridge, chimney, gable_roof, ladder_up, log, plinth, slab, slot, stair, timber_wall,
-    window,
+    Building, Ridge, bed, chimney, gable_roof, ladder_up, lights, log, plinth, slab, slot, stair,
+    timber_wall, window,
 };
 
 pub const BUILDINGS: &[Building] = &[
@@ -62,23 +62,23 @@ fn furnish_narrow_gable(d: &mut Draft) {
     d.set([3, 5, 10], "base:furnace[facing=north,lit=false]");
     d.set([4, 5, 10], "base:chest[facing=north]");
     table(d, [3, 5, 6]);
-    d.set([4, 9, 4], "base:bed[facing=south,part=foot]");
-    d.set([4, 9, 3], "base:bed[facing=south,part=head]");
+    bed(d, [4, 9, 4], "south");
     d.set([2, 9, 3], "base:chest[facing=east]");
     d.set([3, 13, 6], "base:chest[facing=north]");
-    for (pos, facing) in [
-        ([1, 2, 2], "north"),
-        ([5, 2, 2], "north"),
-        ([3, 3, 4], "south"),
-        ([4, 3, 10], "north"),
-        ([3, 7, 3], "south"),
-        ([4, 7, 9], "west"),
-        ([3, 11, 2], "south"),
-        ([2, 11, 8], "east"),
-        ([3, 13, 9], "up"),
-    ] {
-        d.set(pos, &format!("@light[facing={facing}]"));
-    }
+    lights(
+        d,
+        &[
+            ([1, 2, 2], "north"),
+            ([5, 2, 2], "north"),
+            ([3, 3, 4], "south"),
+            ([4, 3, 10], "north"),
+            ([3, 7, 3], "south"),
+            ([4, 7, 9], "west"),
+            ([3, 11, 2], "south"),
+            ([2, 11, 8], "east"),
+            ([3, 13, 9], "up"),
+        ],
+    );
 }
 
 /// 9 x 9, two storeys and an attic with the ridge along the street: a stone ground floor with
@@ -129,25 +129,25 @@ fn furnish_hall_house(d: &mut Draft) {
         d.set([x, 1, 7], &stair("trim/stair", "south", "bottom"));
     }
     for x in [4, 6] {
-        d.set([x, 5, 7], "base:bed[facing=north,part=foot]");
-        d.set([x, 5, 8], "base:bed[facing=north,part=head]");
+        bed(d, [x, 5, 7], "north");
         d.set([x, 9, 5], "base:chest[facing=north]");
     }
     d.set([5, 5, 8], "base:chest[facing=north]");
-    for (pos, facing) in [
-        ([4, 2, 1], "north"),
-        ([6, 2, 1], "north"),
-        ([2, 3, 3], "south"),
-        ([8, 3, 3], "south"),
-        ([5, 3, 8], "north"),
-        ([3, 7, 2], "south"),
-        ([7, 7, 2], "south"),
-        ([5, 7, 8], "north"),
-        ([8, 10, 5], "west"),
-        ([2, 10, 4], "east"),
-    ] {
-        d.set(pos, &format!("@light[facing={facing}]"));
-    }
+    lights(
+        d,
+        &[
+            ([4, 2, 1], "north"),
+            ([6, 2, 1], "north"),
+            ([2, 3, 3], "south"),
+            ([8, 3, 3], "south"),
+            ([5, 3, 8], "north"),
+            ([3, 7, 2], "south"),
+            ([7, 7, 2], "south"),
+            ([5, 7, 8], "north"),
+            ([8, 10, 5], "west"),
+            ([2, 10, 4], "east"),
+        ],
+    );
 }
 
 /// 7 x 7, two storeys and an attic for a street corner: the framed upper storey juts out over
@@ -193,23 +193,22 @@ fn furnish_corner_house(d: &mut Draft) {
     d.set([5, 1, 6], "base:crafting_table");
     d.set([5, 1, 3], "base:chest[facing=west]");
     table(d, [3, 5, 3]);
-    d.set([5, 5, 5], "base:bed[facing=north,part=foot]");
-    d.set([5, 5, 6], "base:bed[facing=north,part=head]");
+    bed(d, [5, 5, 5], "north");
     d.set([6, 5, 6], "base:chest[facing=west]");
-    d.set([5, 9, 4], "base:bed[facing=west,part=foot]");
-    d.set([6, 9, 4], "base:bed[facing=west,part=head]");
+    bed(d, [5, 9, 4], "west");
     d.set([4, 9, 2], "base:chest[facing=south]");
-    for (pos, facing) in [
-        ([2, 2, 1], "north"),
-        ([4, 2, 1], "north"),
-        ([3, 3, 3], "south"),
-        ([5, 3, 5], "west"),
-        ([3, 7, 2], "south"),
-        ([6, 7, 3], "west"),
-        ([2, 9, 4], "up"),
-    ] {
-        d.set(pos, &format!("@light[facing={facing}]"));
-    }
+    lights(
+        d,
+        &[
+            ([2, 2, 1], "north"),
+            ([4, 2, 1], "north"),
+            ([3, 3, 3], "south"),
+            ([5, 3, 5], "west"),
+            ([3, 7, 2], "south"),
+            ([6, 7, 3], "west"),
+            ([2, 9, 4], "up"),
+        ],
+    );
 }
 
 /// A table with a stool either side of it along x, the table at `pos`.

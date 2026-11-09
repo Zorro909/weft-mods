@@ -4,7 +4,8 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Building, Ridge, gable_end, gable_roof, log, plinth, slot, stair, timber_wall, window,
+    Building, Ridge, gable_end, gable_roof, lights, log, plinth, side_windows, slot, stair,
+    timber_wall, window,
 };
 
 /// A building's file name and how it is drawn.
@@ -100,10 +101,7 @@ fn stone_ground_floor(d: &mut Draft) {
         d.set([x, 3, 2], &stair("trim/stair", "south", "top"));
     }
     d.fill([4, 1, 3], [6, 3, 3], AIR);
-    for z in [6, 12] {
-        window(d, [1, 2, z], 1, "west");
-        window(d, [9, 2, z], 1, "east");
-    }
+    side_windows(d, [1, 9], 2, 1, &[6, 12]);
     window(d, [5, 2, 16], 1, "south");
     d.set([3, 2, 2], "@light[facing=north]");
     d.set([7, 2, 2], "@light[facing=north]");
@@ -124,10 +122,7 @@ fn loft_storey(d: &mut Draft) {
     ] {
         timber_wall(d, from, to, [5, 7], 2);
     }
-    for z in [5, 9, 13] {
-        window(d, [1, 5, z], 2, "west");
-        window(d, [9, 5, z], 2, "east");
-    }
+    side_windows(d, [1, 9], 5, 2, &[5, 9, 13]);
     for x in [2, 8] {
         window(d, [x, 5, 2], 2, "north");
     }
@@ -154,14 +149,15 @@ fn stock_ground_floor(d: &mut Draft) {
     d.fill([2, 2, 13], [2, 2, 14], "base:oak_planks");
     d.set([8, 1, 11], "base:crafting_table");
     d.fill([5, 1, 15], [5, 5, 15], LADDER_ON_SOUTH);
-    for (pos, facing) in [
-        ([2, 2, 4], "east"),
-        ([8, 2, 4], "west"),
-        ([2, 2, 10], "east"),
-        ([8, 2, 13], "west"),
-    ] {
-        d.set(pos, &format!("@light[facing={facing}]"));
-    }
+    lights(
+        d,
+        &[
+            ([2, 2, 4], "east"),
+            ([8, 2, 4], "west"),
+            ([2, 2, 10], "east"),
+            ([8, 2, 13], "west"),
+        ],
+    );
 }
 
 /// Sacks of wool, chests and crates in the loft, and lights.
@@ -171,12 +167,13 @@ fn stock_loft(d: &mut Draft) {
     d.set([2, 5, 13], "base:chest[facing=east]");
     d.set([2, 5, 14], "base:chest[facing=east]");
     d.fill([8, 5, 12], [8, 5, 14], "base:spruce_planks");
-    for (pos, facing) in [
-        ([2, 6, 11], "east"),
-        ([8, 6, 11], "west"),
-        ([3, 6, 3], "south"),
-        ([7, 6, 15], "north"),
-    ] {
-        d.set(pos, &format!("@light[facing={facing}]"));
-    }
+    lights(
+        d,
+        &[
+            ([2, 6, 11], "east"),
+            ([8, 6, 11], "west"),
+            ([3, 6, 3], "south"),
+            ([7, 6, 15], "north"),
+        ],
+    );
 }

@@ -2,11 +2,11 @@
 
 use structgen_api::Structure;
 
-use super::{bed, cross_gable, floor_line, open_side, stone_walls, table, timber_storey};
+use super::{cross_gable, floor_line, open_side, stone_walls, table, timber_storey};
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, chimney, gable_end, gable_roof, ladder_up, light_at, plinth, slab, slot, stair,
-    timber_wall, window,
+    Ridge, bed, chimney, gable_end, gable_roof, ladder_up, light_at, lights, plinth, slab, slot,
+    stair, timber_wall, window,
 };
 
 /// 15 x 15 in an L: a range of three storeys on the street, jettied twice, with three dormers in
@@ -182,13 +182,14 @@ fn furnish_taproom(d: &mut Draft) {
     d.set([7, 1, 8], "base:crafting_table");
     d.set([14, 1, 6], "base:furnace[facing=west,lit=true]");
     ladder_up(d, [14, 7], [1, 12], "east");
-    for (pos, facing) in [
-        ([6, 2, 4], "south"),
-        ([12, 2, 4], "south"),
-        ([8, 2, 8], "north"),
-    ] {
-        light_at(d, pos, facing);
-    }
+    lights(
+        d,
+        &[
+            ([6, 2, 4], "south"),
+            ([12, 2, 4], "south"),
+            ([8, 2, 8], "north"),
+        ],
+    );
 }
 
 /// A dining room by the west hearth and a guest room with two beds.
@@ -200,13 +201,14 @@ fn furnish_first_floor(d: &mut Draft) {
         bed(d, [x, 5, 4], "south");
     }
     d.set([12, 5, 3], "base:chest[facing=south]");
-    for (pos, facing) in [
-        ([2, 6, 4], "east"),
-        ([8, 6, 4], "west"),
-        ([10, 6, 8], "north"),
-    ] {
-        light_at(d, pos, facing);
-    }
+    lights(
+        d,
+        &[
+            ([2, 6, 4], "east"),
+            ([8, 6, 4], "west"),
+            ([10, 6, 8], "north"),
+        ],
+    );
 }
 
 /// Three guest rooms in a row, through doorways in the partitions.

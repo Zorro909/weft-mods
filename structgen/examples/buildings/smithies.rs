@@ -3,10 +3,10 @@
 use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
-use crate::inns::{bed, floor_line, open_side, stone_walls, table, timber_storey};
+use crate::inns::{floor_line, open_side, stone_walls, table, timber_storey};
 use crate::kit::{
-    Building, Ridge, chimney, gable_end, gable_roof, ladder_up, light_at, opposite, plinth, slab,
-    slot, stair, step, window,
+    Building, Ridge, bed, chimney, gable_end, gable_roof, ladder_up, light_at, lights, opposite,
+    plinth, slab, slot, stair, step, window,
 };
 
 pub const BUILDINGS: &[Building] = &[("open_forge", open_forge), ("smithy_house", smithy_house)];
@@ -135,14 +135,15 @@ fn furnish_smith_house(d: &mut Draft) {
         bed(d, [x, 5, 11], "north");
     }
     d.set([4, 5, 12], "base:chest[facing=north]");
-    for (pos, facing) in [
-        ([3, 2, 8], "south"),
-        ([7, 2, 12], "north"),
-        ([5, 6, 8], "south"),
-        ([7, 6, 12], "north"),
-    ] {
-        light_at(d, pos, facing);
-    }
+    lights(
+        d,
+        &[
+            ([3, 2, 8], "south"),
+            ([7, 2, 12], "north"),
+            ([5, 6, 8], "south"),
+            ([7, 6, 12], "north"),
+        ],
+    );
 }
 
 /// Lava sunk in a 3 x 3 block of stone at `lava`, seen over a slab in front, the brick

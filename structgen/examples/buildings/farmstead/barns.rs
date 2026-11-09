@@ -4,8 +4,8 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Ridge, gable_end, gable_roof, ladder, light, log, plinth, slab, slot, stair, timber_wall,
-    window,
+    Ridge, gable_end, gable_roof, ladder, light, log, plinth, side_windows, slab, slot, stair,
+    timber_wall, window,
 };
 
 /// 9 x 15 inside its walls: buttressed stone lower walls under oak-boarded upper walls, a tall
@@ -43,10 +43,7 @@ fn barn_walls(d: &mut Draft) {
     ] {
         timber_wall(d, from, to, [3, 5], spacing);
     }
-    for z in [5, 11] {
-        window(d, [1, 3, z], 2, "west");
-        window(d, [9, 3, z], 2, "east");
-    }
+    side_windows(d, [1, 9], 3, 2, &[5, 11]);
 }
 
 /// Stone buttresses against the long sides, stepping back at the top.

@@ -9,8 +9,8 @@ use structgen_api::Structure;
 
 use crate::draft::{AIR, Draft};
 use crate::kit::{
-    Building, Ridge, chimney, gable_end, gable_roof, ladder_up, light_at, log, opposite, plinth,
-    slab, slot, stair, step, timber_wall, window,
+    Building, Ridge, bed, chimney, gable_end, gable_roof, ladder_up, light_at, lights, log, plinth,
+    side_windows, slab, slot, stair, timber_wall, window,
 };
 
 pub const BUILDINGS: &[Building] = &[
@@ -74,14 +74,8 @@ fn tavern_openings(d: &mut Draft) {
     for x in [2, 4, 6, 8] {
         window(d, [x, 6, 13], 1, "south");
     }
-    for z in [7, 11] {
-        window(d, [1, 2, z], 1, "west");
-        window(d, [9, 2, z], 1, "east");
-    }
-    for z in [8, 10] {
-        window(d, [1, 6, z], 1, "west");
-        window(d, [9, 6, z], 1, "east");
-    }
+    side_windows(d, [1, 9], 2, 1, &[7, 11]);
+    side_windows(d, [1, 9], 6, 1, &[8, 10]);
 }
 
 /// Before the front: a pergola of logs on four posts over two tables with benches, torches on
@@ -115,13 +109,14 @@ fn furnish_taproom(d: &mut Draft) {
     d.set([4, 1, 12], "base:crafting_table");
     d.set([8, 1, 9], "base:furnace[facing=west,lit=true]");
     ladder_up(d, [8, 12], [1, 5], "east");
-    for (pos, facing) in [
-        ([3, 2, 6], "south"),
-        ([7, 2, 6], "south"),
-        ([3, 2, 12], "north"),
-    ] {
-        light_at(d, pos, facing);
-    }
+    lights(
+        d,
+        &[
+            ([3, 2, 6], "south"),
+            ([7, 2, 6], "south"),
+            ([3, 2, 12], "north"),
+        ],
+    );
 }
 
 /// Two guest rooms either side of a partition, with two beds and a chest each.
@@ -259,14 +254,6 @@ pub fn table(d: &mut Draft, x: [usize; 2], y: usize, z: usize) {
         [x[1], y, z + 1],
         &stair("trim/stair", "south", "bottom"),
     );
-}
-
-/// A bed with its foot at `foot`, facing `facing`: the head lies the other way.
-pub fn bed(d: &mut Draft, foot: [usize; 3], facing: &str) {
-    d.set(foot, &format!("base:bed[facing={facing},part=foot]"));
-    if let Some(head) = step(foot, opposite(facing)) {
-        d.set(head, &format!("base:bed[facing={facing},part=head]"));
-    }
 }
 
 fn corners(from: [usize; 2], to: [usize; 2]) -> [[usize; 2]; 4] {
