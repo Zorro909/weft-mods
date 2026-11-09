@@ -39,8 +39,8 @@ still a template, so `/structure load` and other mods' plans can place them.
 
 ## Alone
 
-A few buildings also stand alone in the country. The world is split into squares, and each
-square has a chance of one:
+A few buildings also stand alone in the country, never where they would touch a settlement.
+The world is split into squares, and each square has a chance of one:
 
 | Building | Square | Chance |
 |---|---|---|
@@ -64,11 +64,13 @@ overlap.
 | Of the squares of 512 blocks | 25% | 32% | 25% |
 | Heart | a green with a well | a green with a well | a cobbled market square, fountain and stalls |
 | Roads | gravel lanes | gravel lanes | cobbled streets between stone kerbs |
-| Buildings | 4 cottages or farms | a church, a tavern, a smithy and forge, 5 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 12 town houses, a tower mill |
+| Buildings | 5 cottages or farms | a church, a tavern, a smithy and forge, 5 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 12 town houses, a tower mill |
 | Fields | 1 | 2 | 2 |
 
 1. **The heart.** A blob of nine jittered corners round a spot in the square, stretched along
-   a random angle: the village green, ringed by a lane, or the town's square.
+   a random angle: the village green, ringed by a lane, or the town's square. Its ground, and
+   the lane's, must be open land a player can walk across, no column more than a block above
+   its neighbour; a square tries up to three spots before it goes without a settlement.
 2. **Roads.** The main road leaves the heart's edge both ways along that angle; a branch or
    two leave it at roughly a right angle. A road goes 7 blocks a step, each time the way of
    three (straight on, or about 20° either side) that climbs least, so it winds along the
@@ -76,7 +78,7 @@ overlap.
    of more than a block) and before crossing another road or the heart, and is smoothed into a
    curve, cut short where the curve leaves walkable ground.
 3. **Buildings.** The heart's own buildings stand in it first: the well, or the fountain and
-   stalls. Then the planner walks round the heart and down both sides of every road a block at
+   stalls; a heart with no room for its well or fountain gives the spot up. Then the planner walks round the heart and down both sides of every road a block at
    a time, putting a building wherever it fits, its front turned toward the road (one of four
    turns, whichever is nearest). Landmarks go first, each at the first spot along a front of
    its kind (the church on the green, the smithy on a road), the walk round the heart starting

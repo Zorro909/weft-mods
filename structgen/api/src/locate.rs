@@ -20,6 +20,11 @@ pub(crate) fn add(generator: Arc<Generator>) {
         .push(generator);
 }
 
+/// Every structure registered so far.
+pub(crate) fn all() -> Vec<Arc<Generator>> {
+    STRUCTURES.read().unwrap_or_else(|e| e.into_inner()).clone()
+}
+
 /// The full names of the structures this mod registered with `place` and `plan`.
 pub fn names() -> Vec<String> {
     let structures = STRUCTURES.read().unwrap_or_else(|e| e.into_inner());
@@ -33,9 +38,7 @@ pub fn names() -> Vec<String> {
 pub fn locate(world: &World, name: &str, from: Pos, radius: i32) -> Option<Pos> {
     let generator = find(name)?;
     let dimension_id = world.dimension();
-    let allowed = generator.dimensions.is_empty()
-        || generator.dimensions.iter().any(|d| d.id() == dimension_id);
-    if !allowed {
+    if !generator.is_in(dimension_id) {
         return None;
     }
     let seed = world.seed();

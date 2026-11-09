@@ -37,6 +37,25 @@ impl Planned {
         self.parts.first().map(|part| part.bounds().lo)
     }
 
+    /// The box round every part, seen from above and below; `None` for an empty plan.
+    pub fn bounds(&self) -> Option<([i32; 3], [i32; 3])> {
+        let boxes = self.parts.iter().map(Part::bounds);
+        boxes.reduce(|(a, b), (c, d)| {
+            (
+                [0, 1, 2].map(|i| a[i].min(c[i])),
+                [0, 1, 2].map(|i| b[i].max(d[i])),
+            )
+        })
+    }
+
+    /// Whether any part reaches into the columns from `from` to `to`, seen from above.
+    pub fn touches(&self, from: [i32; 3], to: [i32; 3]) -> bool {
+        self.parts
+            .iter()
+            .map(Part::bounds)
+            .any(|(a, b)| [0, 2].into_iter().all(|i| a[i] <= to[i] && from[i] <= b[i]))
+    }
+
     /// Calls `set` for every block the plan puts into the cube at `origin`, later parts after
     /// earlier ones.
     pub fn stamp(&self, origin: Pos, surface: Surface, set: &mut dyn FnMut([usize; 3], u32)) {

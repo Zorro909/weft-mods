@@ -7,7 +7,7 @@ use structgen_api::Random;
 
 use super::grid::{Cell, Grid, column};
 use super::shape::{Point, add, blob, heading, inside, length_of, scale, smooth, sub};
-use super::{Kind, Settlement};
+use super::{Kind, Settlement, unit};
 
 /// How far a road goes in one step, in blocks.
 pub const STEP: f32 = 7.0;
@@ -29,11 +29,6 @@ impl Road {
         let length = length_of(way);
         (length > 0.0).then(|| (end, scale(way, 1.0 / length)))
     }
-}
-
-/// A number from 0 to 1.
-pub fn unit(random: &mut Random) -> f32 {
-    random.below(1 << 16) as f32 / 65536.0
 }
 
 /// The heart's outline: a blob round `middle`, stretched along `angle`.

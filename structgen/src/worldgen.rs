@@ -4,7 +4,7 @@
 use structgen_api::{Foundation, Structure};
 use weft_sdk::*;
 
-use crate::styles;
+use crate::{settlement, styles};
 
 /// Open land to build on: plains and snowy plains, without the trees of forests, which would
 /// stand cut through a building.
@@ -64,7 +64,8 @@ fn alone(r: &mut Registry, name: &str, structure: Structure, spacing: u32, chanc
         .biome(OPEN)
         .min_height(SEA)
         .foundation(Foundation::Ground)
-        .max_slope(MAX_SLOPE);
+        .max_slope(MAX_SLOPE)
+        .avoid(settlement::GROUP);
     for roof in ROOFS {
         placement = placement.materials(styles::add(Default::default(), styles::blocks(roof)));
     }

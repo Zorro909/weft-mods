@@ -114,6 +114,27 @@ impl Grid {
         Some(last)
     }
 
+    /// Whether every column inside `area`, or within `margin` of its edge, has ground no more
+    /// than a block above or below its neighbours there: a heart a player can walk across.
+    pub fn even(&self, area: &[Point], margin: f32) -> bool {
+        let mut edge = area.to_vec();
+        edge.push(area[0]);
+        let within =
+            |at: [i32; 2]| inside(area, middle(at)) || distance(&edge, middle(at)) <= margin;
+        let (from, to) = bounds(area, margin + 1.0);
+        let columns = (from[1]..=to[1]).flat_map(|z| (from[0]..=to[0]).map(move |x| [x, z]));
+        columns.filter(|&at| within(at)).all(|at| {
+            let Some(height) = self.height(at) else {
+                return false;
+            };
+            let next = [[at[0] + 1, at[1]], [at[0], at[1] + 1]]
+                .into_iter()
+                .filter(|&n| within(n));
+            next.filter_map(|n| self.height(n))
+                .all(|h| (h - height).abs() <= 1)
+        })
+    }
+
     /// Puts `cell` at `at` unless what is there ranks higher.
     pub fn put(&mut self, at: [i32; 2], cell: Cell) {
         if let Some(i) = self.index(at)

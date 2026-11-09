@@ -7,7 +7,7 @@ use weft_sdk::Template;
 use super::frontage::{Faces, Front, Rules, Site, facing, next_site, stand_round};
 use super::grid::{Cell, Grid};
 use super::roads::Road;
-use super::shape::{Point, add, heading, scale};
+use super::shape::{Point, add, heading, length_of, scale, sub};
 use super::{Kind, Settlement, one_of, planting};
 use crate::worldgen::SEA;
 
@@ -39,8 +39,27 @@ pub fn centre(p: &mut Plan, grid: &mut Grid, s: &Settlement, m: Point, angle: f3
     sites
 }
 
+/// The landmarks, then the homes, along `fronts`; `None` if fewer than four in five of them
+/// fit. Homes further than `farmland` from the middle `m` are farms.
+pub fn along(
+    p: &mut Plan,
+    grid: &mut Grid,
+    s: &Settlement,
+    rules: &Rules,
+    fronts: &[Front],
+    m: Point,
+    farmland: f32,
+) -> Option<Vec<Site>> {
+    let mut next = vec![0; fronts.len()];
+    let mut sites = landmarks(p, grid, s, rules, fronts, &mut next);
+    let far = |at: Point| length_of(sub(at, m)) > farmland;
+    sites.extend(homes(p, grid, s, rules, fronts, &mut next, &far));
+    let wanted = s.landmarks.len() + s.homes;
+    (sites.len() * 5 >= wanted * 4).then_some(sites)
+}
+
 /// Each landmark at the first spot with room along a front of its kind; `next` moves past it.
-pub fn landmarks(
+fn landmarks(
     p: &mut Plan,
     grid: &mut Grid,
     s: &Settlement,
@@ -69,7 +88,7 @@ pub fn landmarks(
 /// Homes, one to each front in turn from where `next` says, until there are `s.homes` or no
 /// front has room left: houses, and farms where `far` says the farmland starts. A village house
 /// gets a kitchen garden.
-pub fn homes(
+fn homes(
     p: &mut Plan,
     grid: &mut Grid,
     s: &Settlement,
@@ -107,22 +126,29 @@ pub fn homes(
     sites
 }
 
-/// `template` past one end or the other of the main road, its front toward it, along a way
-/// from the road's end as a building along a road has.
+/// `template` past one end or the other of the main road, `reach` from its middle line, its
+/// front toward it and a way to its door as a building along a road has.
 pub fn outskirts(
     p: &mut Plan,
     grid: &mut Grid,
     rules: &Rules,
     template: &'static Template,
     main: &[Road],
+    reach: f32,
 ) -> Option<Site> {
-    main.iter().filter_map(Road::end).find_map(|end| {
+    let rules = Rules {
+        setback: [1, 6],
+        ..*rules
+    };
+    let ends: Vec<_> = main.iter().filter_map(Road::end).collect();
+    // A few tries at each end, each standing it a different way back.
+    ends.iter().cycle().take(ends.len() * 4).find_map(|&end| {
         let front = Front {
             points: vec![end],
-            reach: 2.0,
+            reach,
             faces: Faces::Road,
         };
-        let (placed, _) = next_site(p, grid, rules, &front, 0, &mut |_, _| template)?;
+        let (placed, _) = next_site(p, grid, &rules, &front, 0, &mut |_, _| template)?;
         Some(placed)
     })
 }

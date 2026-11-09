@@ -35,6 +35,9 @@ pub(crate) struct Generator {
     plans: ColumnCache<Slot>,
     /// Where a region's random numbers start: from the name, or a group's.
     salt: u64,
+    /// The group it belongs to, and the one whose plans it keeps off.
+    group: Option<String>,
+    avoids: Option<String>,
 }
 
 impl Generator {
@@ -51,13 +54,27 @@ impl Generator {
             region: region.max(1),
             planner,
             plans: ColumnCache::new(CACHED_REGIONS),
+            group: None,
+            avoids: None,
         }
     }
 
     /// Draws the same random numbers in a region as every other generator of `group` there.
     pub fn in_group(mut self, group: &str) -> Generator {
         self.salt = salt(group);
+        self.group = Some(group.to_string());
         self
+    }
+
+    /// Gives up a plan that would touch a plan of `group`'s.
+    pub fn avoiding(mut self, group: &str) -> Generator {
+        self.avoids = Some(group.to_string());
+        self
+    }
+
+    /// Whether it generates in dimension `id`.
+    pub fn is_in(&self, id: u32) -> bool {
+        self.dimensions.is_empty() || self.dimensions.iter().any(|d| d.id() == id)
     }
 
     /// Registers it for `locate`, and as one of the calling mod's decorations, named like the
@@ -110,7 +127,13 @@ impl Generator {
         match plan.finish(result) {
             Ok(parts) => {
                 let planned = Planned::new(parts);
-                if let Some(anchor) = planned.anchor() {
+                if self.crowded(&locate::all(), seed, dimension, &planned, ground) {
+                    return None;
+                }
+                // The log needs the game, which unit tests run without.
+                if let Some(anchor) = planned.anchor()
+                    && !cfg!(test)
+                {
                     debug!(
                         "structure {} at {anchor:?} in dimension {dimension}, {} parts",
                         self.name,
@@ -127,6 +150,34 @@ impl Generator {
                 None
             }
         }
+    }
+}
+
+impl Generator {
+    /// Whether `planned` would touch a plan of the group it avoids, among `others`.
+    fn crowded(
+        &self,
+        others: &[Arc<Generator>],
+        seed: u64,
+        dimension: u32,
+        planned: &Planned,
+        ground: Columns,
+    ) -> bool {
+        let (Some(group), Some((from, to))) = (&self.avoids, planned.bounds()) else {
+            return false;
+        };
+        let ours = others
+            .iter()
+            .filter(|g| g.group.as_ref() == Some(group) && g.is_in(dimension));
+        ours.into_iter().any(|other| {
+            let regions = region::indices(from[2], to[2], other.region).flat_map(|iz| {
+                region::indices(from[0], to[0], other.region).map(move |ix| [ix, iz])
+            });
+            regions.into_iter().any(|index| {
+                let slot = other.planned(seed, dimension, index, ground);
+                matches!(slot.get(), Some(Some(theirs)) if theirs.touches(from, to))
+            })
+        })
     }
 }
 
@@ -188,5 +239,26 @@ mod tests {
         let drawn = drawn.lock().unwrap();
         assert_eq!(drawn[0], drawn[1], "one group, one roll");
         assert_ne!(drawn[0], drawn[2], "alone, its own roll");
+    }
+
+    /// A generator whose plan is one block at `at` in every region.
+    fn block_at(name: &str, at: [i32; 3]) -> Generator {
+        let planner = move |p: &mut Plan| p.set_state(at, 5);
+        Generator::new(name.to_string(), 512, Vec::new(), Box::new(planner))
+    }
+
+    #[test]
+    fn a_plan_that_would_touch_one_of_the_group_it_avoids_is_given_up() {
+        let none = |_: i32, _: i32| None;
+        let village = Arc::new(block_at("m:village", [100, 70, 100]).in_group("m:settlement"));
+        let others = [village];
+        let on_it = block_at("m:cottage", [100, 70, 100]).avoiding("m:settlement");
+        let beside = block_at("m:cottage2", [104, 70, 100]).avoiding("m:settlement");
+        let planned = |g: &Generator| {
+            g.make(42, 0, [0, 0], &none)
+                .map(|plan| g.crowded(&others, 42, 0, &plan, &none))
+        };
+        assert_eq!(planned(&on_it), Some(true), "on the village's block");
+        assert_eq!(planned(&beside), Some(false), "a few blocks away");
     }
 }

@@ -66,7 +66,7 @@ static HAMLET: Settlement = Settlement {
     gap: 3,
     centre: &[&DRAW_WELL],
     landmarks: &[],
-    homes: 4,
+    homes: 5,
     houses: COTTAGES,
     farms: &[&HOF, &STADDLE_GRANARY],
     mill: None,
@@ -80,7 +80,7 @@ static HAMLET: Settlement = Settlement {
 static VILLAGE: Settlement = Settlement {
     share: [0.25, 0.57],
     kind: Kind::Village,
-    steps: [6, 4],
+    steps: [5, 5],
     branches: [1, 2],
     heart: [14.0, 10.0],
     setback: [2, 6],
@@ -106,7 +106,7 @@ static VILLAGE: Settlement = Settlement {
 static TOWN: Settlement = Settlement {
     share: [0.57, 0.82],
     kind: Kind::Town,
-    steps: [7, 5],
+    steps: [6, 6],
     branches: [2, 3],
     heart: [15.0, 11.0],
     setback: [0, 1],
@@ -135,6 +135,6 @@ pub fn register(r: &mut Registry) {
         structgen_api::plan(r, name, move |p| settlement::plan(p, settlement))
             .dimension(&base_api::OVERWORLD)
             .region(settlement::REGION)
-            .group("settlement");
+            .group(settlement::GROUP);
     }
 }

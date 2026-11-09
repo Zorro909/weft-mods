@@ -10,6 +10,7 @@ use crate::generator::Generator;
 use crate::materials::Materials;
 use crate::part::Foundation;
 use crate::plan::{Plan, PlanError};
+use crate::planning::full_name;
 use crate::templates;
 use crate::turn::Turn;
 
@@ -36,6 +37,7 @@ pub fn place<'a>(registry: &'a mut Registry, name: &str, structure: Structure) -
         spacing: 256,
         chance: 0.3,
         turns: true,
+        avoid: None,
     }
 }
 
@@ -51,6 +53,7 @@ pub struct Placement<'a> {
     spacing: i32,
     chance: f32,
     turns: bool,
+    avoid: Option<String>,
 }
 
 impl Placement<'_> {
@@ -109,6 +112,12 @@ impl Placement<'_> {
         self.turns = false;
         self
     }
+    /// Never where it would touch a structure of `group` (see `Planning::group`): a village's
+    /// houses and lanes, say.
+    pub fn avoid(mut self, group: &str) -> Self {
+        self.avoid = Some(full_name(group));
+        self
+    }
 }
 
 impl Drop for Placement<'_> {
@@ -132,8 +141,12 @@ impl Drop for Placement<'_> {
         let region = self.spacing.max(size[0].max(size[2]) + 2);
         let dimensions = std::mem::take(&mut self.dimensions);
         let planner = Box::new(move |p: &mut Plan| single.plan(p));
-        Generator::new(template.name().to_string(), region, dimensions, planner)
-            .register(self.registry);
+        let mut generator =
+            Generator::new(template.name().to_string(), region, dimensions, planner);
+        if let Some(group) = &self.avoid {
+            generator = generator.avoiding(group);
+        }
+        generator.register(self.registry);
     }
 }
 
