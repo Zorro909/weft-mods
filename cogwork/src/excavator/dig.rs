@@ -5,7 +5,7 @@ use weft_sdk::*;
 use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
 use super::power::{hold, pay};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status, rig};
-use crate::lib::{BlockState, Pos};
+use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::sounds;
 
 /// Energy to put up one block of frame.
@@ -28,7 +28,7 @@ pub fn tick(b: &mut SystemBatch<Dig>) {
     for (id, d, _ticks) in b.iter_mut() {
         let Some(st) = w.entity(id) else { continue };
         let pos = Pos::from(st.block_pos());
-        if !BlockState::at(&w, pos).is(&EXCAVATOR) {
+        if !w.block_typed(pos).is(&EXCAVATOR) {
             continue;
         }
         work(&w, id, pos, d);
@@ -62,7 +62,7 @@ fn start(w: &World, pos: Pos, d: &mut Dig) {
 fn build_frame(w: &World, id: u64, d: &mut Dig) {
     let cells = d.frame.cells();
     while let Some(&c) = cells.get(d.step as usize) {
-        let Some(block_state) = BlockState::loaded_at(w, c) else {
+        let Some(block_state) = w.block_loaded_typed(c) else {
             d.set_status(Status::Blocked);
             return;
         };
@@ -77,7 +77,7 @@ fn build_frame(w: &World, id: u64, d: &mut Dig) {
         d.set_status(Status::Frame);
         d.refused = 0;
         if pay(w, id, d, FRAME_COST) {
-            BlockState::of(&GANTRY_FRAME).place(w, c);
+            w.set_block_typed(c, BlockState::of(&GANTRY_FRAME));
             if d.step.is_multiple_of(FRAME_SOUND_EVERY) {
                 w.play_sound(&sounds::FRAME_PLACE, c.center(), 1.0);
             }
@@ -154,7 +154,7 @@ fn mine_next(w: &World, id: u64, pos: Pos, d: &mut Dig) {
         }
         return;
     };
-    let block_state = BlockState::at(w, target);
+    let block_state = w.block_typed(target);
     let cost = block_cost(block_state);
     // Where the energy paid so far has the drill: into a block it has begun, it carries on from
     // there instead of going back to its edge.
@@ -184,7 +184,7 @@ fn find_target(w: &World, d: &mut Dig) -> Option<Pos> {
             finish(d);
             return None;
         }
-        let Some(block_state) = BlockState::loaded_at(w, c) else {
+        let Some(block_state) = w.block_loaded_typed(c) else {
             wait_for_load(d);
             return None;
         };

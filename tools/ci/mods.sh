@@ -12,6 +12,34 @@ all_mods() {
     done
 }
 
+# The libraries the mods share, such as `weftkit`, one per line: a folder this repository tracks
+# whose `Cargo.toml` builds no `cdylib`, so not the engine's checkout in `Weft/`. They build on
+# Weft like a mod but are no mod: the workflows don't release them.
+all_libraries() {
+    for toml in $(git ls-files | grep -E '^[^/]+/Cargo\.toml$'); do
+        if ! grep -q 'cdylib' "$toml"; then
+            dirname "$toml"
+        fi
+    done
+}
+
+# Every folder whose tests, clippy and coverage CI runs: the mods, then the libraries.
+all_crates() {
+    all_mods
+    all_libraries
+}
+
+# The mods that take library $1 by path, from any of their crates.
+users_of() {
+    local library=$1
+    for folder in $(all_mods); do
+        if find "$folder" -name Cargo.toml -not -path '*/target/*' -print0 |
+            xargs -0 grep -qE "path *= *\"(\.\./)+$library\""; then
+            echo "$folder"
+        fi
+    done
+}
+
 # The crate name of the mod in folder $1, which the game expects as its library's and zip's name.
 mod_id() {
     sed -n 's/^name *= *"\(.*\)"/\1/p' "$1/Cargo.toml" | head -n 1

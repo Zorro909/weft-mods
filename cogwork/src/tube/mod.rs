@@ -16,7 +16,7 @@ pub use shape::{connects_to_tube, turn_directing};
 pub use sorting::set_sample;
 use weft_sdk::*;
 
-use crate::lib::{BlockState, Pos};
+use crate::lib::{Pos, TypedWorld};
 
 /// Items one tube carries at once.
 pub const SLOTS: usize = 8;
@@ -138,7 +138,7 @@ fn tube_entity(e: EntityBuilder<'_>, kind: u32) -> EntityBuilder<'_> {
 /// Whether the block at `pos` is a tube. Asked of its block, which is cheaper than reading
 /// its `Tube`.
 pub fn is_tube(w: &World, pos: Pos) -> bool {
-    BlockState::at(w, pos).has(&TUBES)
+    w.block_typed(pos).has(&TUBES)
 }
 
 /// A slot of the tube `at` (its entity, or its block) that neither holds a stack nor has an

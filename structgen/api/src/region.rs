@@ -3,6 +3,8 @@
 
 use std::ops::RangeInclusive;
 
+use weftkit::Area;
+
 /// A square of the world one plan may fill, in blocks, both corners included. Plans may reach
 /// any height.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -29,9 +31,10 @@ impl Region {
         (self.min[0]..=self.max[0]).contains(&x) && (self.min[1]..=self.max[1]).contains(&z)
     }
 
-    /// Whether the box from `from` to `to` (included) lies inside, seen from above.
-    pub fn holds(&self, from: [i32; 3], to: [i32; 3]) -> bool {
-        self.contains(from[0], from[2]) && self.contains(to[0], to[2])
+    /// Whether all of `area` lies inside, seen from above.
+    pub fn holds(&self, area: &Area) -> bool {
+        let (lo, hi) = (area.lo, area.hi);
+        self.contains(lo.x, lo.z) && self.contains(hi.x, hi.z)
     }
 
     /// The squared distance from (`x`, `z`) to the nearest column of the region.
@@ -61,6 +64,8 @@ pub(crate) fn around(x: i32, z: i32, radius: i32, size: i32) -> Vec<([i32; 2], i
 
 #[cfg(test)]
 mod tests {
+    use weftkit::Pos;
+
     use super::*;
 
     #[test]
@@ -84,11 +89,10 @@ mod tests {
     #[test]
     fn a_box_holds_only_when_all_of_it_is_inside() {
         let region = Region::at([0, 0], 32);
-        assert!(region.holds([0, -50, 0], [31, 300, 31]), "any height");
-        assert!(
-            !region.holds([20, 0, 20], [32, 0, 25]),
-            "one block over the edge"
-        );
+        let whole = Area::between(Pos::new(0, -50, 0), Pos::new(31, 300, 31));
+        assert!(region.holds(&whole), "any height");
+        let over = Area::between(Pos::new(20, 0, 20), Pos::new(32, 0, 25));
+        assert!(!region.holds(&over), "one block over the edge");
     }
 
     #[test]

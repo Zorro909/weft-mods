@@ -25,13 +25,13 @@ static GRASS: Block = Block::named("base:grass");
 
 pub fn build(set: &Set) {
     for marker in MARKERS {
-        set.place(marker.into(), SURVEY_MARKER.id().into());
+        set.place(marker, SURVEY_MARKER.id().into());
     }
     let hill = area(Pos::new(13, 0, 16), Pos::new(16, 0, 19));
-    set.fill(hill, BlockState::of(&DIRT).into());
+    set.fill(hill, BlockState::of(&DIRT));
     let top = area(Pos::new(14, 1, 17), Pos::new(15, 1, 18));
-    set.fill(top, BlockState::of(&GRASS).into());
-    let air = BlockState::AIR.into();
+    set.fill(top, BlockState::of(&GRASS));
+    let air = BlockState::AIR;
     set.fill(area(Pos::new(11, -2, 15), Pos::new(12, -1, 16)), air);
     set.fill(area(Pos::new(16, -1, 20), Pos::new(17, -1, 21)), air);
     // Pointing away from where the leveler goes, until the wrench turns it.
@@ -45,10 +45,7 @@ pub fn survey(set: &Set) {
 
 /// The leveler goes down next to the corner marker and takes the markers' rectangle.
 pub fn place_leveler(set: &Set) {
-    set.place(
-        LEVELER_AT.into(),
-        LEVELER.with(&[("facing", "south")]).into(),
-    );
+    set.place(LEVELER_AT, LEVELER.with(&[("facing", "south")]).into());
 }
 
 /// Fills the leveler's stock and lights the engine, which the wrench then turns into it.

@@ -169,7 +169,7 @@ fn screen(ui: &mut Ui) {
                 ui.text_bind(|c, out| {
                     let l = c.menu_component(&LEVEL).unwrap_or_default();
                     let planned = l.stage() != Stage::New;
-                    let [x, z] = if planned { l.area.size() } else { [0, 0] };
+                    let [x, _, z] = if planned { l.area.size() } else { [0; 3] };
                     let height = l.area.lo.y;
                     out.set(
                         "cogwork.leveler.area",

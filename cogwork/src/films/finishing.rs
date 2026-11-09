@@ -10,7 +10,7 @@ use weft_sdk::*;
 
 use super::parts::{engine, fuel, in_world};
 use crate::excavator::{DIG, EXCAVATOR, FLOOR_Y, Frame, GANTRY_FRAME, Stage, Status};
-use crate::lib::{BlockState, Pos};
+use crate::lib::{BlockState, Pos, TypedWorld};
 
 pub const FINISHER: Pos = Pos::new(32, 0, 4);
 /// The signal the film waits for once the engines are lit.
@@ -29,10 +29,7 @@ pub fn register(r: &mut Registry) {
 
 /// The excavator, its engines, its frame and its pit.
 pub fn build(set: &Set) {
-    set.place(
-        FINISHER.into(),
-        EXCAVATOR.with(&[("facing", "south")]).into(),
-    );
+    set.place(FINISHER, EXCAVATOR.with(&[("facing", "south")]).into());
     for (at, toward) in engines() {
         engine(set, at, toward);
     }
@@ -40,13 +37,12 @@ pub fn build(set: &Set) {
     let pos = in_world(set, FINISHER);
     let frame = Frame::plan(&world, pos, Dir::South);
     for cell in frame.cells().into_iter().filter(|&c| c != pos) {
-        BlockState::of(&GANTRY_FRAME).place(&world, cell);
+        world.set_block_typed(cell, BlockState::of(&GANTRY_FRAME));
     }
-    let air = Block::lookup("core:air").unwrap_or(0);
     for y in pos.y - PIT_DEPTH..pos.y {
         for z in frame.lo.z + 1..frame.hi.z {
             for x in frame.lo.x + 1..frame.hi.x {
-                world.set_block([x, y, z], air);
+                world.set_block_typed([x, y, z], BlockState::AIR);
             }
         }
     }

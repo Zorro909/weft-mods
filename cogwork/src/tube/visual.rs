@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use weft_sdk::*;
 
 use super::{Motion, TUBES};
-use crate::lib::{BlockState, Pos, point};
+use crate::lib::{BlockState, Pos, TypedWorld, point};
 
 /// Marks a picture's stack, a different value for neighbors, so two pictures of the same item
 /// never merge into one the way dropped items do.
@@ -146,7 +146,7 @@ pub fn remove(w: &World, id: u64) {
 
 /// Removes the pictures left where a tube was broken; the spilled stacks stay.
 pub fn clear_broken(w: &World, pos: Pos) {
-    if BlockState::at(w, pos).has(&TUBES) {
+    if w.block_typed(pos).has(&TUBES) {
         return;
     }
     for id in w.entities_near(pos.center(), 1.5, Some(&ITEM)) {

@@ -1,11 +1,9 @@
 //! A block as it stands in the world: which block, and the values of its properties (a tube's
 //! arms, an engine's facing). The SDK passes these around as bare `u32` states; here they are a
-//! `BlockState` that answers what cogwork asks of a block.
+//! `BlockState` that answers what mods ask of a block. `BlockState::from` takes a bare state.
 
 use weft_sdk::abi::block_flags::{LIQUID, OPAQUE, REPLACEABLE, SOLID};
-use weft_sdk::*;
-
-use super::Pos;
+use weft_sdk::{Block, HARDNESS, Tag, block_info, item_block, state_flags, state_prop, state_with};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct BlockState(u32);
@@ -13,29 +11,20 @@ pub struct BlockState(u32);
 impl BlockState {
     pub const AIR: BlockState = BlockState(0);
 
-    /// The block at `pos`.
-    pub fn at(w: &World, pos: Pos) -> BlockState {
-        BlockState(w.block(pos))
-    }
-
-    /// The block at `pos`, `None` while that part of the world isn't loaded.
-    pub fn loaded_at(w: &World, pos: Pos) -> Option<BlockState> {
-        w.block_loaded(pos).map(BlockState)
-    }
-
     /// `block` with its properties at their defaults.
     pub fn of(block: &Block) -> BlockState {
         BlockState(block.id())
     }
 
+    /// The block named `name` (`base:stone`) with its properties at their defaults, if a mod
+    /// registered it.
+    pub fn named(name: &str) -> Option<BlockState> {
+        Block::lookup(name).map(BlockState)
+    }
+
     /// The block `item` places, if it places one.
     pub fn placed_by(item: u32) -> Option<BlockState> {
         item_block(item).map(BlockState)
-    }
-
-    /// Puts it at `pos`; false where the world isn't loaded.
-    pub fn place(self, w: &World, pos: Pos) -> bool {
-        w.set_block(pos, self.0)
     }
 
     /// The SDK's number for it, for the SDK calls that take one.
@@ -105,6 +94,12 @@ impl BlockState {
             flags: state_flags(self.0),
             hardness: self.hardness(),
         }
+    }
+}
+
+impl From<u32> for BlockState {
+    fn from(state: u32) -> BlockState {
+        BlockState(state)
     }
 }
 

@@ -7,3 +7,5 @@ rust-version = "1.95"
 
 [dependencies]
 weft_sdk.workspace = true
+# Block positions and states, the same types the other mods here use.
+weftkit = { path = "../../weftkit" }

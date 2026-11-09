@@ -26,14 +26,14 @@ const ROW_Z: i32 = 7;
 
 pub fn build(set: &Set) {
     for at in [BUILDER, SHALLOW, DEEP] {
-        set.place(at.into(), EXCAVATOR.with(&[("facing", "south")]).into());
+        set.place(at, EXCAVATOR.with(&[("facing", "south")]).into());
         for (place, toward) in engines(at) {
             engine(set, place, toward);
         }
     }
     pit(set, SHALLOW, SHALLOW_DEPTH);
     pit(set, DEEP, DEEP_DEPTH);
-    set.place(BUILDER.toward(Dir::South).into(), CHEST.id().into());
+    set.place(BUILDER.toward(Dir::South), CHEST.id().into());
     output_lines(set);
     sorting_station(set);
 }
@@ -82,7 +82,7 @@ fn engines(at: Pos) -> Vec<(Pos, Dir)> {
 fn pit(set: &Set, at: Pos, depth: i32) {
     let near_corner = at.add_x(-4).add_z(-10).with_y(-depth);
     let far_corner = at.add_x(4).add_z(-2).with_y(-1);
-    set.fill(area(near_corner, far_corner), BlockState::AIR.into());
+    set.fill(area(near_corner, far_corner), BlockState::AIR);
 }
 
 /// From each digging excavator's front south to the row, then west along it to the sorter; a
@@ -95,14 +95,14 @@ fn output_lines(set: &Set) {
     line(set, on_row(DEEP.x - 1), on_row(11));
     line_of(set, on_row(10), on_row(6), BlockState::of(&GILDED_TUBE));
     line(set, on_row(5), meet.add_x(1));
-    set.place(meet.into(), DIRECTING_TUBE.with(&[("out", "west")]).into());
+    set.place(meet, DIRECTING_TUBE.with(&[("out", "west")]).into());
     line(set, meet.add_x(-1), SORTER.toward(Dir::East));
 }
 
 /// The sorting tube with a chest on three sides: cobblestone north, dirt south, the rest west.
 fn sorting_station(set: &Set) {
-    set.place(SORTER.into(), SORTING_TUBE.id().into());
+    set.place(SORTER, SORTING_TUBE.id().into());
     for side in [Dir::North, Dir::South, Dir::West] {
-        set.place(SORTER.toward(side).into(), CHEST.id().into());
+        set.place(SORTER.toward(side), CHEST.id().into());
     }
 }

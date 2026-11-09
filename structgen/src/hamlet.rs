@@ -1,7 +1,7 @@
 //! The hamlet: a well with cottages and wheat farms around it, joined to it by gravel paths. A
 //! dynamic structure, built from the same files the single structures use.
 
-use structgen_api::{Biomes, Fit, Foundation, Plan, PlanError, Turn};
+use structgen_api::{Biomes, Fit, Foundation, Plan, PlanError, Pos, Turn};
 use weft_sdk::*;
 
 static WELL: Template = Template::named("well");
@@ -39,23 +39,23 @@ fn hamlet(p: &mut Plan) -> Result<(), PlanError> {
     let Some(well) = well(p, centre)? else {
         return Ok(());
     };
-    let mut areas = vec![well];
+    let mut footprints = vec![well];
     for _ in 0..TRIES {
-        if areas.len() > MOST_BUILDINGS {
+        if footprints.len() > MOST_BUILDINGS {
             break;
         }
-        if let Some(area) = building(p, centre, &areas)? {
-            areas.push(area);
+        if let Some(footprint) = building(p, centre, &footprints)? {
+            footprints.push(footprint);
         }
     }
-    for building in &areas[1..] {
-        path(p, centre, building.middle(), &areas)?;
+    for building in &footprints[1..] {
+        path(p, centre, building.middle(), &footprints)?;
     }
     Ok(())
 }
 
 /// The well with its middle at `centre`, if the ground there suits a hamlet.
-fn well(p: &mut Plan, centre: [i32; 2]) -> Result<Option<Area>, PlanError> {
+fn well(p: &mut Plan, centre: [i32; 2]) -> Result<Option<Footprint>, PlanError> {
     let Some([sx, _, sz]) = p.size(&WELL, Turn::None) else {
         return Ok(None);
     };
@@ -67,12 +67,16 @@ fn well(p: &mut Plan, centre: [i32; 2]) -> Result<Option<Area>, PlanError> {
     p.structure(&WELL, well, Turn::None)?
         .foundation(Foundation::Ground)
         .clear_above();
-    Ok(Some(Area::of(corner, [sx, sz])))
+    Ok(Some(Footprint::of(corner, [sx, sz])))
 }
 
 /// Tries one building at a random spot around the well: a cottage with its door towards the
 /// well, or a farm. `None` where it doesn't fit.
-fn building(p: &mut Plan, centre: [i32; 2], areas: &[Area]) -> Result<Option<Area>, PlanError> {
+fn building(
+    p: &mut Plan,
+    centre: [i32; 2],
+    footprints: &[Footprint],
+) -> Result<Option<Footprint>, PlanError> {
     let dx = p.random().between(-REACH, REACH);
     let dz = p.random().between(-REACH, REACH);
     let (template, turn) = if p.random().chance(COTTAGES) {
@@ -85,8 +89,8 @@ fn building(p: &mut Plan, centre: [i32; 2], areas: &[Area]) -> Result<Option<Are
         return Ok(None);
     };
     let corner = [centre[0] + dx - sx / 2, centre[1] + dz - sz / 2];
-    let area = Area::of(corner, [sx, sz]);
-    if areas.iter().any(|other| other.near(&area, GAP)) {
+    let footprint = Footprint::of(corner, [sx, sz]);
+    if footprints.iter().any(|other| other.near(&footprint, GAP)) {
         return Ok(None);
     }
     let fit = Fit::new().max_slope(4);
@@ -96,7 +100,7 @@ fn building(p: &mut Plan, centre: [i32; 2], areas: &[Area]) -> Result<Option<Are
     p.structure(template, corner, turn)?
         .foundation(Foundation::Ground)
         .clear_above();
-    Ok(Some(area))
+    Ok(Some(footprint))
 }
 
 /// The turn that points a cottage's door, on its north side as saved, along (`dx`, `dz`).
@@ -111,7 +115,12 @@ fn door_towards(dx: i32, dz: i32) -> Turn {
 
 /// Gravel along the ground from `from` to `to`: first across, then straight in, so it meets a
 /// cottage at its door. Not inside any building.
-fn path(p: &mut Plan, from: [i32; 2], to: [i32; 2], areas: &[Area]) -> Result<(), PlanError> {
+fn path(
+    p: &mut Plan,
+    from: [i32; 2],
+    to: [i32; 2],
+    footprints: &[Footprint],
+) -> Result<(), PlanError> {
     let across_x = (to[0] - from[0]).abs() <= (to[1] - from[1]).abs();
     let bend = if across_x {
         [to[0], from[1]]
@@ -119,11 +128,11 @@ fn path(p: &mut Plan, from: [i32; 2], to: [i32; 2], areas: &[Area]) -> Result<()
         [from[0], to[1]]
     };
     for [x, z] in line(from, bend).chain(line(bend, to)) {
-        if areas.iter().any(|area| area.contains(x, z)) {
+        if footprints.iter().any(|footprint| footprint.contains(x, z)) {
             continue;
         }
         if let Some(ground) = p.ground(x, z) {
-            p.set([x, ground.height, z], &GRAVEL)?;
+            p.set(Pos::new(x, ground.height, z), &GRAVEL)?;
         }
     }
     Ok(())
@@ -138,14 +147,14 @@ fn line(from: [i32; 2], to: [i32; 2]) -> impl Iterator<Item = [i32; 2]> {
 
 /// A building's footprint seen from above, both corners included.
 #[derive(Clone, Copy, Debug)]
-struct Area {
+struct Footprint {
     from: [i32; 2],
     to: [i32; 2],
 }
 
-impl Area {
-    fn of(corner: [i32; 2], [sx, sz]: [i32; 2]) -> Area {
-        Area {
+impl Footprint {
+    fn of(corner: [i32; 2], [sx, sz]: [i32; 2]) -> Footprint {
+        Footprint {
             from: corner,
             to: [corner[0] + sx - 1, corner[1] + sz - 1],
         }
@@ -163,7 +172,7 @@ impl Area {
     }
 
     /// Whether `other` comes within `gap` blocks of it.
-    fn near(&self, other: &Area, gap: i32) -> bool {
+    fn near(&self, other: &Footprint, gap: i32) -> bool {
         (0..2).all(|i| other.from[i] <= self.to[i] + gap && self.from[i] <= other.to[i] + gap)
     }
 }
@@ -182,16 +191,19 @@ mod tests {
 
     #[test]
     fn buildings_keep_their_gap() {
-        let house = Area::of([0, 0], [5, 5]);
+        let house = Footprint::of([0, 0], [5, 5]);
         assert!(
-            house.near(&Area::of([7, 0], [3, 3]), GAP),
+            house.near(&Footprint::of([7, 0], [3, 3]), GAP),
             "two blocks between"
         );
         assert!(
-            !house.near(&Area::of([8, 0], [3, 3]), GAP),
+            !house.near(&Footprint::of([8, 0], [3, 3]), GAP),
             "three blocks between"
         );
-        assert!(!house.near(&Area::of([0, -10], [5, 5]), GAP), "far along z");
+        assert!(
+            !house.near(&Footprint::of([0, -10], [5, 5]), GAP),
+            "far along z"
+        );
     }
 
     #[test]

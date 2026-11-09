@@ -7,5 +7,8 @@ rust-version = "1.95"
 
 [dependencies]
 weft_sdk.workspace = true
+# Block positions and states, the same types the other mods here use; re-exported, so users
+# of this crate need no dependency of their own.
+weftkit = { path = "../../weftkit" }
 # The compression world saves use for their cubes.
 lz4_flex = "0.14"

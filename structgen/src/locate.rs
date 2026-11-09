@@ -1,6 +1,7 @@
 //! `/structure locate <structure> [radius]`: where the nearest structure of this mod is,
 //! generated yet or not.
 
+use structgen_api::Pos;
 use weft_sdk::*;
 
 /// Blocks searched around the player without a radius.
@@ -24,10 +25,10 @@ pub fn run(cmd: &mut ServerCommand) {
     // From the world's middle when no player ran it.
     let from = world
         .entity(cmd.player())
-        .map_or([0; 3], |player| player.pos.block().into());
+        .map_or(Pos::default(), |player| player.pos.block().into());
     match structgen_api::locate(&world, &name, from, radius as i32) {
         Some(found) => {
-            let [x, y, z] = found.map(|v| Arg::Int(v as i64));
+            let [x, y, z] = <[i32; 3]>::from(found).map(|v| Arg::Int(v as i64));
             let distance = Arg::Int(horizontal_distance(from, found));
             cmd.reply("structgen.located", &[Arg::Text(&name), x, y, z, distance]);
         }
@@ -54,8 +55,8 @@ fn full_name(name: &str) -> String {
     }
 }
 
-fn horizontal_distance(from: [i32; 3], to: [i32; 3]) -> i64 {
-    let (dx, dz) = ((to[0] - from[0]) as f64, (to[2] - from[2]) as f64);
+fn horizontal_distance(from: Pos, to: Pos) -> i64 {
+    let (dx, dz) = ((to.x - from.x) as f64, (to.z - from.z) as f64);
     (dx * dx + dz * dz).sqrt().round() as i64
 }
 
@@ -66,7 +67,7 @@ mod tests {
     #[test]
     fn distance_is_seen_from_above() {
         assert_eq!(
-            horizontal_distance([0, 64, 0], [3, -20, 4]),
+            horizontal_distance(Pos::new(0, 64, 0), Pos::new(3, -20, 4)),
             5,
             "height left out"
         );

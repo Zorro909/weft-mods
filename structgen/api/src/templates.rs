@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock, RwLock};
 
 use weft_sdk::*;
+use weftkit::Pos;
 
 use crate::format::Structure;
 use crate::turn::{Turn, turn_state};
@@ -111,8 +112,8 @@ pub(crate) struct Resolved {
 
 impl Resolved {
     /// The state at `pos` of the template turned by `turn`, `pos` counted in the turned box.
-    pub fn state(&self, turn: Turn, pos: [i32; 3]) -> u32 {
-        let [x, y, z] = turn.inverse().pos(pos, turn.size(self.size));
+    pub fn state(&self, turn: Turn, pos: Pos) -> u32 {
+        let Pos { x, y, z } = turn.inverse().pos(pos, turn.size(self.size));
         let [sx, _, sz] = self.size;
         let index = self.indices[((y * sz + z) * sx + x) as usize];
         self.palettes[turn as usize][index as usize]
@@ -137,8 +138,8 @@ mod tests {
     #[test]
     fn unturned_blocks_read_in_order() {
         let resolved = resolved();
-        assert_eq!(resolved.state(Turn::None, [1, 0, 0]), 11, "x first");
-        assert_eq!(resolved.state(Turn::None, [0, 0, 2]), 14, "then z");
+        assert_eq!(resolved.state(Turn::None, Pos::new(1, 0, 0)), 11, "x first");
+        assert_eq!(resolved.state(Turn::None, Pos::new(0, 0, 2)), 14, "then z");
     }
 
     #[test]
@@ -147,12 +148,12 @@ mod tests {
         // Turned right the box is 3 x 1 x 2, and the unturned north-west corner (index 0) is
         // now the north-east one.
         assert_eq!(
-            resolved.state(Turn::Right, [2, 0, 0]),
+            resolved.state(Turn::Right, Pos::new(2, 0, 0)),
             10,
             "north-west went east"
         );
         assert_eq!(
-            resolved.state(Turn::Right, [0, 0, 1]),
+            resolved.state(Turn::Right, Pos::new(0, 0, 1)),
             15,
             "the far corner came round"
         );

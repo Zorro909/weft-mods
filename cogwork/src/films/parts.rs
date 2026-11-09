@@ -12,23 +12,23 @@ pub static CHEST: Block = Block::named("base:chest");
 /// An ember engine at `at` whose trunk points `toward` (the base plate is on the other side).
 pub fn engine(set: &Set, at: Pos, toward: Dir) {
     let facing = toward.opposite().name();
-    set.place(at.into(), EMBER_ENGINE.with(&[("facing", facing)]).into());
+    set.place(at, EMBER_ENGINE.with(&[("facing", facing)]).into());
 }
 
 /// A spring engine at `at`, which runs while it has redstone power.
 pub fn spring(set: &Set, at: Pos, toward: Dir) {
     let facing = toward.opposite().name();
-    set.place(at.into(), SPRING_ENGINE.with(&[("facing", facing)]).into());
+    set.place(at, SPRING_ENGINE.with(&[("facing", facing)]).into());
 }
 
 /// `offset` from the set's origin, in the world.
 pub fn in_world(set: &Set, offset: Pos) -> Pos {
-    set.at(offset.into()).into()
+    set.at(offset)
 }
 
 /// The box between two corners, both included, in the showcase API's terms.
 pub fn area(a: Pos, b: Pos) -> Area {
-    Area::between(a.into(), b.into())
+    Area::between(a, b)
 }
 
 /// A stack of coal into the engine at `at`, which starts it.
@@ -58,5 +58,5 @@ pub fn line(set: &Set, from: Pos, to: Pos) {
 
 /// `block_state` on every block from `from` to `to`, both included, along one axis.
 pub fn line_of(set: &Set, from: Pos, to: Pos, block_state: BlockState) {
-    set.fill(area(from, to), block_state.into());
+    set.fill(area(from, to), block_state);
 }

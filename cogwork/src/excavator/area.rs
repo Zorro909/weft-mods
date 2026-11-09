@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use weft_sdk::*;
 
 use super::GANTRY_FRAME;
-use crate::lib::{Area, BlockState, Pos};
+use crate::lib::{Area, Pos, TypedWorld};
 use crate::markers::{square_behind, take_area};
 
 /// The frame's height above the excavator's block.
@@ -126,7 +126,7 @@ impl From<([i32; 3], [i32; 3])> for Frame {
 
 /// The bottom ring of a frame beside `pos` at its height, with `pos` outside it.
 fn standing_frame(w: &World, pos: Pos) -> Option<Area> {
-    let ring = ring_bounds(pos, |p| BlockState::at(w, p).is(&GANTRY_FRAME))?;
+    let ring = ring_bounds(pos, |p| w.block_typed(p).is(&GANTRY_FRAME))?;
     (!ring.spans(pos)).then_some(ring)
 }
 

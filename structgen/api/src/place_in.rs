@@ -5,12 +5,13 @@ use std::collections::HashMap;
 use std::fmt;
 
 use weft_sdk::*;
+use weftkit::{BlockState, Pos, TypedWorld};
 
 use crate::format::Structure;
 use crate::turn::{Turn, turn_state};
 
 /// What `place_in` replaced: each cell's position and all it held (`World::parts`).
-pub type Replaced = Vec<([i32; 3], Vec<u32>)>;
+pub type Replaced = Vec<(Pos, Vec<BlockState>)>;
 
 /// Why `place_in` placed nothing.
 #[derive(Clone, Debug, PartialEq)]
@@ -39,17 +40,18 @@ pub fn put_back(world: &World, replaced: &Replaced) {
 
 /// Makes the cell at `pos` hold just `parts`, left alone if it does. Its first block is
 /// replaced in place, so a chest turned or put back keeps what is in it.
-fn write_cell(world: &World, pos: [i32; 3], parts: &[u32]) {
-    let now = world.parts(pos);
+fn write_cell(world: &World, pos: Pos, parts: &[BlockState]) {
+    let now = world.parts_typed(pos);
     if now == parts {
         return;
     }
     for &extra in now.iter().skip(1) {
-        world.part_remove(pos, extra);
+        world.part_remove_typed(pos, extra);
     }
-    world.set_block(pos, parts.first().copied().unwrap_or(0));
+    let first = parts.first().copied().unwrap_or(BlockState::AIR);
+    world.set_block_typed(pos, first);
     for &part in parts.iter().skip(1) {
-        world.part_add(pos, part);
+        world.part_add_typed(pos, part);
     }
 }
 
@@ -57,26 +59,18 @@ impl Structure {
     /// Puts it into `world` turned by `turn`, the lowest corner of the turned box at `corner`.
     /// Every block is set, air too. On an error nothing is. Gives back what it replaced, for
     /// `put_back`.
-    pub fn place_in(
-        &self,
-        world: &World,
-        corner: [i32; 3],
-        turn: Turn,
-    ) -> Result<Replaced, PlaceError> {
+    pub fn place_in(&self, world: &World, corner: Pos, turn: Turn) -> Result<Replaced, PlaceError> {
         let states = self.states(turn)?;
-        let (size, corner) = (self.size(), BlockPos::from(corner));
-        let blocks: Vec<([i32; 3], u32)> = self
+        let size = self.size();
+        let blocks: Vec<(Pos, BlockState)> = self
             .blocks()
-            .map(|(pos, name)| {
-                let pos = corner + turn.pos(pos, size).into();
-                (pos.to_array(), states[name])
-            })
+            .map(|(pos, name)| (corner + turn.pos(pos, size), states[name]))
             .collect();
         let replaced: Option<Replaced> = blocks
             .iter()
             .map(|&(pos, _)| {
-                world.block_loaded(pos)?;
-                Some((pos, world.parts(pos)))
+                world.block_loaded_typed(pos)?;
+                Some((pos, world.parts_typed(pos)))
             })
             .collect();
         let replaced = replaced.ok_or(PlaceError::NotLoaded)?;
@@ -87,11 +81,11 @@ impl Structure {
     }
 
     /// Each block name as a state, turned.
-    fn states(&self, turn: Turn) -> Result<HashMap<&str, u32>, PlaceError> {
+    fn states(&self, turn: Turn) -> Result<HashMap<&str, BlockState>, PlaceError> {
         self.palette
             .iter()
-            .map(|name| match Block::lookup(name) {
-                Some(state) => Ok((name.as_str(), turn_state(state, turn))),
+            .map(|name| match BlockState::named(name) {
+                Some(state) => Ok((name.as_str(), turn_state(state.id(), turn).into())),
                 None => Err(PlaceError::UnknownBlock(name.clone())),
             })
             .collect()

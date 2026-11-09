@@ -47,16 +47,13 @@ static LEVER_BLOCK: Block = Block::named("base:lever");
 
 pub fn build(set: &Set) {
     for chest in [STICKS, COBBLE, OUTPUT] {
-        set.place(chest.into(), CHEST.id().into());
+        set.place(chest, CHEST.id().into());
     }
     for bench in [COGS, STONE_COGS] {
-        set.place(
-            bench.into(),
-            ASSEMBLY_BENCH.with(&[("facing", "south")]).into(),
-        );
+        set.place(bench, ASSEMBLY_BENCH.with(&[("facing", "south")]).into());
     }
     for pull in PULLS {
-        set.place(pull.into(), TIMBER_TUBE.id().into());
+        set.place(pull, TIMBER_TUBE.id().into());
     }
     for machine in [COGS, STONE_COGS].into_iter().chain(PULLS) {
         spring(set, machine.toward(Dir::Up), Dir::Down);
@@ -77,13 +74,13 @@ fn power_line(set: &Set) {
         // The cobblestone's tube runs under the wall.
         let ground = Pos::new(x, 0, WALL_Z);
         if x != COBBLE.x {
-            set.place(ground.into(), STONE_BRICKS.id().into());
+            set.place(ground, STONE_BRICKS.id().into());
         }
-        set.place(ground.add_y(1).into(), STONE_BRICKS.id().into());
-        set.place(ground.add_y(2).into(), floor_wire);
+        set.place(ground.add_y(1), STONE_BRICKS.id().into());
+        set.place(ground.add_y(2), floor_wire);
     }
     let lever = [("attach", "north"), ("front", "down"), ("power", "off")];
-    set.place(LEVER.into(), LEVER_BLOCK.with(&lever).into());
+    set.place(LEVER, LEVER_BLOCK.with(&lever).into());
 }
 
 /// Fills the supply chests and lays out both patterns; the machines wait for the lever.

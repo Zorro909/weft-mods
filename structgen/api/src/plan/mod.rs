@@ -9,9 +9,10 @@ use std::sync::Arc;
 
 use weft_sdk::terrain::Column;
 use weft_sdk::{Block, Template};
+use weftkit::{Area, BlockState, Pos};
 
 use crate::fit::{Columns, Fit};
-use crate::part::{Part, Piece, Placed, box_of};
+use crate::part::{Part, Piece, Placed};
 use crate::random::Random;
 use crate::region::Region;
 use crate::templates::{self, Entry};
@@ -20,13 +21,8 @@ use crate::turn::Turn;
 /// Why a plan was given up. Nothing of it is placed, and generation logs why.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PlanError {
-    /// `what` (a template's name, or `blocks`) would cover `from..=to`, reaching outside the
-    /// region.
-    OutsideRegion {
-        what: String,
-        from: [i32; 3],
-        to: [i32; 3],
-    },
+    /// `what` (a template's name, or `blocks`) would cover `area`, reaching outside the region.
+    OutsideRegion { what: String, area: Area },
     /// A template this mod didn't register with `structgen_api::template` or `place`.
     UnknownTemplate(String),
 }
@@ -34,7 +30,8 @@ pub enum PlanError {
 impl fmt::Display for PlanError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PlanError::OutsideRegion { what, from, to } => {
+            PlanError::OutsideRegion { what, area } => {
+                let (from, to) = (<[i32; 3]>::from(area.lo), <[i32; 3]>::from(area.hi));
                 write!(
                     f,
                     "{what} from {from:?} to {to:?} reaches outside the region"
@@ -110,27 +107,27 @@ impl<'a> Plan<'a> {
         [x, z]: [i32; 2],
         turn: Turn,
         fit: &Fit,
-    ) -> Option<[i32; 3]> {
+    ) -> Option<Pos> {
         let entry = self.entry(template).ok()?;
         let [sx, _, sz] = turn.size(entry.size());
-        if !self.region.holds([x, 0, z], [x + sx - 1, 0, z + sz - 1]) {
+        if !self
+            .region
+            .holds(&Area::sized(Pos::new(x, 0, z), [sx, 1, sz]))
+        {
             return None;
         }
         let y = fit.floor([x, z], [sx, sz], self.ground)?;
-        Some([x, y, z])
+        Some(Pos::new(x, y, z))
     }
 
     /// Whether `template`, turned by `turn` with its lowest corner at `corner`, would overlap
     /// nothing already in this plan.
-    pub fn is_free(&mut self, template: &Template, corner: [i32; 3], turn: Turn) -> bool {
+    pub fn is_free(&mut self, template: &Template, corner: Pos, turn: Turn) -> bool {
         let Ok(entry) = self.entry(template) else {
             return false;
         };
-        let (from, to) = box_of(corner, turn.size(entry.size()));
-        self.parts.iter().all(|part| {
-            let (other_from, other_to) = part.bounds();
-            (0..3).any(|i| to[i] < other_from[i] || other_to[i] < from[i])
-        })
+        let area = Area::sized(corner, turn.size(entry.size()));
+        self.parts.iter().all(|part| !area.overlaps(&part.bounds()))
     }
 
     /// The parts, or why the plan was given up: `result` is what the planner returned, and a
@@ -202,7 +199,7 @@ mod tests {
         let mut plan = plan();
         assert_eq!(
             plan.fit(&HUT, [10, 10], Turn::None, &Fit::new()),
-            Some([10, 63, 10]),
+            Some(Pos::new(10, 63, 10)),
             "level with the ground"
         );
         assert_eq!(
@@ -216,10 +213,12 @@ mod tests {
     #[test]
     fn overlaps_are_seen() {
         let mut plan = plan();
-        let _ = plan.structure(&HUT, [10, 64, 10], Turn::None);
-        assert!(!plan.is_free(&HUT, [12, 65, 11], Turn::None), "overlapping");
+        let _ = plan.structure(&HUT, Pos::new(10, 64, 10), Turn::None);
+        let overlapping = Pos::new(12, 65, 11);
+        assert!(!plan.is_free(&HUT, overlapping, Turn::None), "overlapping");
+        let next_to_it = Pos::new(14, 64, 10);
         assert!(
-            plan.is_free(&HUT, [14, 64, 10], Turn::None),
+            plan.is_free(&HUT, next_to_it, Turn::None),
             "right next to it"
         );
     }

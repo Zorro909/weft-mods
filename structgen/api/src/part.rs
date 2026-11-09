@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use weft_sdk::Block;
+use weftkit::{Area, Pos};
 
 use crate::fit::{self, Columns};
 use crate::templates::Entry;
@@ -10,10 +11,9 @@ use crate::turn::Turn;
 
 pub(crate) enum Part {
     Piece(Piece),
-    /// Every block from `from` to `to`, both included.
+    /// Every block of `area`.
     Fill {
-        from: [i32; 3],
-        to: [i32; 3],
+        area: Area,
         state: u32,
     },
 }
@@ -31,7 +31,7 @@ pub enum Foundation {
 pub(crate) struct Piece {
     pub template: Arc<Entry>,
     /// Its lowest corner.
-    pub corner: [i32; 3],
+    pub corner: Pos,
     pub turn: Turn,
     pub foundation: Option<Foundation>,
     /// Ground rising above its bottom layer is cut away.
@@ -49,20 +49,13 @@ impl Piece {
 }
 
 impl Part {
-    /// The box of the blocks it sets itself (not counting foundations and clearing), both
-    /// corners included.
-    pub fn bounds(&self) -> ([i32; 3], [i32; 3]) {
+    /// The box of the blocks it sets itself, not counting foundations and clearing.
+    pub fn bounds(&self) -> Area {
         match self {
-            Part::Piece(piece) => box_of(piece.corner, piece.size()),
-            Part::Fill { from, to, .. } => (*from, *to),
+            Part::Piece(piece) => Area::sized(piece.corner, piece.size()),
+            Part::Fill { area, .. } => *area,
         }
     }
-}
-
-/// The box of `size` blocks from `corner`, both corners included.
-pub(crate) fn box_of(corner: [i32; 3], size: [i32; 3]) -> ([i32; 3], [i32; 3]) {
-    let to = [0, 1, 2].map(|i| corner[i] + size[i] - 1);
-    (corner, to)
 }
 
 /// A template just added to a plan, to say how it meets the ground.
@@ -85,7 +78,7 @@ impl Placed<'_> {
 
     fn with_ground(self) -> Self {
         if self.piece.ground.is_empty() {
-            let [x, _, z] = self.piece.corner;
+            let Pos { x, z, .. } = self.piece.corner;
             let [sx, _, sz] = self.piece.size();
             self.piece.ground = fit::heights([x, z], [sx, sz], self.ground);
         }

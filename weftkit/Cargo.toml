@@ -1,0 +1,14 @@
+[package]
+name = "weftkit"
+version = "0.1.0"
+edition = "2024"
+# As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
+rust-version = "1.95"
+
+[dependencies]
+# The same Weft release as every mod that uses weftkit: with another tag, cargo would build two
+# SDKs whose types don't match.
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
+
+# Its own cargo root, as each mod is.
+[workspace]

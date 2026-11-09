@@ -2,6 +2,7 @@
 //! which way the blocks then face.
 
 use weft_sdk::{state_prop, state_with};
+use weftkit::Pos;
 
 /// The horizontal directions in clockwise order seen from above (north is -z, east +x).
 const CLOCKWISE: [&str; 4] = ["north", "east", "south", "west"];
@@ -33,12 +34,12 @@ impl Turn {
     }
 
     /// Where block `pos` of a structure of `size` lands once the structure is turned.
-    pub fn pos(self, [x, y, z]: [i32; 3], [sx, _, sz]: [i32; 3]) -> [i32; 3] {
+    pub fn pos(self, Pos { x, y, z }: Pos, [sx, _, sz]: [i32; 3]) -> Pos {
         match self {
-            Turn::None => [x, y, z],
-            Turn::Right => [sz - 1 - z, y, x],
-            Turn::Back => [sx - 1 - x, y, sz - 1 - z],
-            Turn::Left => [z, y, sx - 1 - x],
+            Turn::None => Pos::new(x, y, z),
+            Turn::Right => Pos::new(sz - 1 - z, y, x),
+            Turn::Back => Pos::new(sx - 1 - x, y, sz - 1 - z),
+            Turn::Left => Pos::new(z, y, sx - 1 - x),
         }
     }
 
@@ -105,13 +106,13 @@ mod tests {
     fn turning_right_moves_east_to_south() {
         let size = [4, 1, 2];
         assert_eq!(
-            Turn::Right.pos([3, 0, 0], size),
-            [1, 0, 3],
+            Turn::Right.pos(Pos::new(3, 0, 0), size),
+            Pos::new(1, 0, 3),
             "the north-east corner becomes the south-east one"
         );
         assert_eq!(
-            Turn::Left.pos([3, 0, 0], size),
-            [0, 0, 0],
+            Turn::Left.pos(Pos::new(3, 0, 0), size),
+            Pos::new(0, 0, 0),
             "and turning left, the north-west one"
         );
     }
@@ -122,8 +123,9 @@ mod tests {
         for turn in Turn::ALL {
             let turned = turn.size(size);
             for (x, z) in (0..4).flat_map(|x| (0..3).map(move |z| (x, z))) {
-                let back = turn.inverse().pos(turn.pos([x, 1, z], size), turned);
-                assert_eq!(back, [x, 1, z], "{turn:?} undone");
+                let pos = Pos::new(x, 1, z);
+                let back = turn.inverse().pos(turn.pos(pos, size), turned);
+                assert_eq!(back, pos, "{turn:?} undone");
             }
         }
     }

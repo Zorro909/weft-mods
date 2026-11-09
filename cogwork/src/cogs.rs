@@ -3,7 +3,7 @@
 use weft_sdk::*;
 
 use crate::engines::{EMBER_ENGINE, SPRING_ENGINE};
-use crate::lib::{BlockState, Pos};
+use crate::lib::{Pos, TypedWorld};
 use crate::tube::DIRECTING_TUBE;
 
 pub static WOODEN_COG: Item = Item::named("wooden_cog");
@@ -43,7 +43,7 @@ fn turn_aimed(u: &mut ItemUse) -> bool {
         return false;
     };
     let (w, pos) = (u.world(), Pos::from(pos));
-    let block = BlockState::at(&w, pos);
+    let block = w.block_typed(pos);
     if block.is(&SPRING_ENGINE) || block.is(&EMBER_ENGINE) {
         crate::engines::turn(&w, pos);
     } else if block.is(&DIRECTING_TUBE) {
