@@ -10,6 +10,11 @@
 - An engine's piston makes its stroke as an animation of its model
   (`assets/animations/piston.animation.json`), at the pace it had.
 
+### Fixed
+
+- An engine's piston no longer flickers over the end of its trunk at the top of its stroke:
+  the trunk's end stays in view, flush with the plate.
+
 ## 0.3.0 - 2026-11-08
 
 ### Added

@@ -3,6 +3,10 @@
 //! or `piston_standing.geo.json` on an engine lying on its side), and each stroke is a clip of
 //! `assets/animations/piston.animation.json` that the server starts, so every engine's piston
 //! keeps time with the world's ticks.
+//!
+//! The plate's texture is clear in the middle of its top and bottom, where the trunk goes
+//! through it. At the top of a stroke the plate is flush with the trunk's end, and a solid plate
+//! would lie in the same plane as that end and flicker with it.
 
 use weft_sdk::*;
 
@@ -194,6 +198,48 @@ mod tests {
             let forth = up_the_model.contains(&out);
             assert_eq!(clip == STROKE, forth, "{out:?}: the clip");
             assert_eq!(toward(&SPRING, out.opposite()).2 == STROKE, !forth);
+        }
+    }
+
+    /// The texels of the texture `name`, in rows of (red, green, blue, alpha).
+    fn texels(name: &str) -> Vec<Vec<[u8; 4]>> {
+        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+        let path = assets.join(format!("textures/entity/{name}.png"));
+        let file = std::fs::File::open(&path).expect("the texture did not open");
+        let decoder = png::Decoder::new(std::io::BufReader::new(file));
+        let mut reader = decoder.read_info().expect("the texture is not a PNG");
+        let size = reader
+            .output_buffer_size()
+            .expect("the texture is too large");
+        let mut bytes = vec![0; size];
+        let frame = reader
+            .next_frame(&mut bytes)
+            .expect("the texture did not decode");
+        assert_eq!(frame.color_type, png::ColorType::Rgba, "{name}: with alpha");
+        let row = |texels: &[u8]| texels.chunks(4).map(|t| [t[0], t[1], t[2], t[3]]).collect();
+        bytes[..frame.buffer_size()]
+            .chunks(frame.line_size)
+            .map(row)
+            .collect()
+    }
+
+    #[test]
+    fn the_plate_is_clear_only_where_the_trunk_goes_through() {
+        // Where the model's unwrap puts the 16 by 16 top and bottom, and the trunk's 8 by 8 in
+        // them.
+        let faces = [16, 32];
+        let trunk = 4..12;
+        for pistons in [&SPRING, &EMBER] {
+            let texels = texels(pistons.texture);
+            for (left, x, y) in faces
+                .iter()
+                .flat_map(|&left| (0..16).flat_map(move |x| (0..16).map(move |y| (left, x, y))))
+            {
+                let clear = texels[y][left + x][3] == 0;
+                let in_trunk = trunk.contains(&x) && trunk.contains(&y);
+                let name = pistons.texture;
+                assert_eq!(clear, in_trunk, "{name} at {x}, {y} of the face at {left}");
+            }
         }
     }
 
