@@ -4,15 +4,13 @@
 
 use weft_sdk::*;
 
-use crate::lib::{Area, ModelBox, Pos, TypedWorld};
+use crate::lib::{Area, Pos, TypedWorld};
 
 pub static SURVEY_MARKER: Block = Block::named("survey_marker");
 static SURVEY_GLOW: Particle = Particle::named("survey_glow");
-/// A marker: a thin post with a wider head on top, and the box round both that is aimed at and
-/// bumped into.
-const POST: ModelBox = ModelBox::new([7.0, 0.0, 7.0], [9.0, 9.0, 9.0]);
-const HEAD: ModelBox = ModelBox::new([6.0, 9.0, 6.0], [10.0, 13.0, 10.0]);
-const HITBOX: ModelBox = ModelBox::new([6.0, 0.0, 6.0], [10.0, 13.0, 10.0]);
+/// The two corners, in texels, of the box that is aimed at and bumped into: round the thin post
+/// and the wider head on it, which are the Blockbench model `models/block/survey_marker.json`.
+const HITBOX: ([f32; 3], [f32; 3]) = ([6.0, 0.0, 6.0], [10.0, 13.0, 10.0]);
 
 /// How far along a line a marker looks for the next one. It starts 2 blocks away: markers side
 /// by side would leave an excavator's frame nothing inside.
@@ -20,10 +18,7 @@ const REACH: i32 = 64;
 
 pub fn register(r: &mut Registry) {
     r.block(&SURVEY_MARKER)
-        .texture("survey_marker")
-        .model_box(POST.lo, POST.hi)
-        .model_box(HEAD.lo, HEAD.hi)
-        .hitbox(HITBOX.lo, HITBOX.hi)
+        .hitbox(HITBOX.0, HITBOX.1)
         .needs_below("")
         .hardness(0.0)
         .light(4)
@@ -135,6 +130,12 @@ fn outline(world: &World, area: &Area) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_marker_has_its_model() {
+        let model = "models/block/survey_marker.json";
+        assert!(crate::has_asset(model), "no {model}");
+    }
 
     fn area(lo: [i32; 3], hi: [i32; 3]) -> Area {
         Area::between(lo.into(), hi.into())

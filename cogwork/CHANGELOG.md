@@ -5,7 +5,8 @@
 ### Changed
 
 - The mod's description opens with a shorter summary, which the Weft mod index also shows.
-- The excavator's rig and the engines' pistons are Blockbench models under `assets/models/`.
+- The excavator's rig, the engines and their pistons and survey markers are Blockbench models
+  under `assets/models/`.
 - An engine's piston makes its stroke as an animation of its model
   (`assets/animations/piston.animation.json`), at the pace it had.
 

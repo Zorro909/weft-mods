@@ -13,9 +13,6 @@ pub struct ModelBox {
 }
 
 impl ModelBox {
-    /// The whole cell of a block.
-    pub const BLOCK: ModelBox = ModelBox::new([0.0; 3], [16.0; 3]);
-
     pub const fn new(lo: [f32; 3], hi: [f32; 3]) -> ModelBox {
         ModelBox { lo, hi }
     }
