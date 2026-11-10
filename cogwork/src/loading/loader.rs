@@ -56,6 +56,10 @@ impl Loader {
     pub fn mode(&self) -> Mode {
         Mode::from_repr(self.mode).unwrap_or_default()
     }
+
+    fn kept(&self) -> Kept {
+        Kept::from_repr(self.kept).unwrap_or_default()
+    }
 }
 
 value! {
@@ -100,8 +104,8 @@ fn loader(
         .light(7)
         .on_break(super::let_go)
         .tab(&crate::TAB)
-        .entity(move |e| {
-            e.attach_with(
+        .entity(move |entity| {
+            entity.attach_with(
                 &LOADER,
                 Loader {
                     range,
@@ -113,51 +117,52 @@ fn loader(
     r.menu(menu).screen(screen);
 }
 
-fn tick(b: &mut SystemBatch<Loader>) {
-    let w = b.world();
-    for (id, l, _) in b.iter_mut() {
-        if let Some(st) = w.entity(id) {
-            keep_loaded(&w, Pos::from(st.block_pos()), l);
+fn tick(batch: &mut SystemBatch<Loader>) {
+    let world = batch.world();
+    for (id, loader, _) in batch.iter_mut() {
+        if let Some(entity) = world.entity(id) {
+            keep_loaded(&world, Pos::from(entity.block_pos()), loader);
         }
     }
 }
 
 /// Keeps the cubes of the loader at `pos` loaded, and notes for its screen what came of it and
 /// how many cubes cogwork keeps of the world's limit.
-fn keep_loaded(w: &World, pos: Pos, l: &mut Loader) {
-    let key = super::key(w, pos, Role::Home);
-    let cubes = Cubes::around(pos, l.range as i32);
-    l.kept = tickets::keep(w, key, cubes, l.mode().keeper()) as u32;
-    l.used = tickets::used(w.game_time());
-    l.limit = tickets::limit();
+fn keep_loaded(world: &World, pos: Pos, loader: &mut Loader) {
+    let key = super::key(world, pos, Role::Home);
+    let cubes = Cubes::around(pos, loader.range as i32);
+    loader.kept = tickets::keep(world, key, cubes, loader.mode().keeper()) as u32;
+    loader.used = tickets::used(world.game_time());
+    loader.limit = tickets::limit();
 }
 
 /// Server side: switches the loader to the mode asked for, when the player is at it.
-fn set_mode(p: &Packet, mode: SetMode) {
-    let w = p.world();
-    let (Some(loader), Some(player)) = (w.entity(mode.owner), w.entity(p.player())) else {
+fn set_mode(packet: &Packet, mode: SetMode) {
+    let world = packet.world();
+    let (Some(block), Some(player)) = (world.entity(mode.owner), world.entity(packet.player()))
+    else {
         return;
     };
-    if !crate::ghost::within_reach(loader.pos, player.pos) {
+    if !crate::ghost::within_reach(block.pos, player.pos) {
         return;
     }
-    if let (Some(l), Some(picked)) = (
-        w.component_mut(mode.owner, &LOADER),
+    if let (Some(loader), Some(picked)) = (
+        world.component_mut(mode.owner, &LOADER),
         Mode::from_repr(mode.mode),
     ) {
-        l.mode = picked as u32;
+        loader.mode = picked as u32;
     }
 }
 
 /// Client side: a button that switches the loader whose screen is open to `mode`.
 fn mode_button(ui: &mut Ui, key: &str, mode: Mode) {
-    ui.button(key, S::default().size(80.0, 20.0), move |c| {
-        if let Some(owner) = c.menu_owner() {
+    ui.button(key, S::default().size(80.0, 20.0), move |view| {
+        if let Some(owner) = view.menu_owner() {
             let mode = SetMode {
                 owner,
                 mode: mode as u32,
             };
-            c.client().send(&SET_MODE, &mode);
+            view.client().send(&SET_MODE, &mode);
         }
     });
 }
@@ -176,37 +181,37 @@ fn mode_button(ui: &mut Ui, key: &str, mode: Mode) {
 fn screen(ui: &mut Ui) {
     ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
         ui.title();
-        ui.text_bind(|c, out| {
-            let l = c.menu_component(&LOADER).unwrap_or_default();
-            let across = Arg::Int(2 * l.range as i64 + 1);
-            let key = if l.range == 0 { "own" } else { "area" };
+        ui.text_bind(|view, out| {
+            let loader = view.menu_component(&LOADER).unwrap_or_default();
+            let across = Arg::Int(2 * loader.range as i64 + 1);
+            let key = if loader.range == 0 { "own" } else { "area" };
             out.set(&format!("cogwork.loader.{key}"), &[across]);
         });
-        ui.text_bind(|c, out| {
-            let l = c.menu_component(&LOADER).unwrap_or_default();
-            out.set(status_key(&l), &[]);
+        ui.text_bind(|view, out| {
+            let loader = view.menu_component(&LOADER).unwrap_or_default();
+            out.set(status_key(&loader), &[]);
         });
         ui.row(S::row().gap(4.0), |ui| {
             mode_button(ui, "cogwork.loader.machines", Mode::Machines);
             mode_button(ui, "cogwork.loader.everything", Mode::Everything);
         });
-        ui.text_bind(|c, out| {
-            let l = c.menu_component(&LOADER).unwrap_or_default();
-            let key = if near_limit(l.used, l.limit) {
+        ui.text_bind(|view, out| {
+            let loader = view.menu_component(&LOADER).unwrap_or_default();
+            let key = if near_limit(loader.used, loader.limit) {
                 "cogwork.loader.used_near"
             } else {
                 "cogwork.loader.used"
             };
-            let (used, limit) = (i64::from(l.used), i64::from(l.limit));
+            let (used, limit) = (i64::from(loader.used), i64::from(loader.limit));
             out.set(key, &[Arg::Int(used), Arg::Int(limit)]);
         });
     });
 }
 
 /// What the loader is doing: what it keeps running, or why it keeps nothing.
-fn status_key(l: &Loader) -> &'static str {
-    match Kept::from_repr(l.kept).unwrap_or_default() {
-        Kept::Loading => match l.mode() {
+fn status_key(loader: &Loader) -> &'static str {
+    match loader.kept() {
+        Kept::Loading => match loader.mode() {
             Mode::Machines => "cogwork.loader.loading",
             Mode::Everything => "cogwork.loader.loading_all",
         },
@@ -238,9 +243,9 @@ mod tests {
             ..Loader::default()
         });
         let keys = keys
-            .map(|k| format!("cogwork.loader.{k}"))
+            .map(|line| format!("cogwork.loader.{line}"))
             .into_iter()
-            .chain(modes.iter().map(|l| status_key(l).to_string()));
+            .chain(modes.iter().map(|loader| status_key(loader).to_string()));
         for key in keys {
             assert!(crate::translated(&key), "{key} in every lang file");
         }

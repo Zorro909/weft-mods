@@ -16,9 +16,9 @@ pub fn free_cell(pattern: &[u32], grid: &[ItemStack], stack: ItemStack, cap: u32
 
 /// Whether every cell holds what its ghost asks for, and only that.
 pub fn complete(pattern: &[u32], grid: &[ItemStack]) -> bool {
-    pattern.iter().zip(grid).all(|(&ghost, s)| match ghost {
-        0 => s.is_empty(),
-        _ => !s.is_empty() && s.item == ghost,
+    pattern.iter().zip(grid).all(|(&ghost, stack)| match ghost {
+        0 => stack.is_empty(),
+        _ => !stack.is_empty() && stack.item == ghost,
     })
 }
 

@@ -96,19 +96,33 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 
 | Module | What it holds |
 |---|---|
-| `lib/` | The types the whole mod builds on: `Pos` (a block), helpers for points in the world (`point`), `BlockState`, `Area` (a rectangle on the ground), `ModelBox` (a model box in texels) |
+| `lib/` | The types the whole mod builds on: `Pos` (a block), helpers for points in the world (`point`), `BlockState`, `Area` (a rectangle on the ground) |
 | `tube/` | The tubes: their shape, routing, moving items along, pulling, sorting, jams, the pictures of items |
 | `engines/` | Spring and ember engines: their block, tick, heat and piston |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
 | `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar |
-| `store.rs` | Putting items into and taking them out of any mod's machines, by slot group |
+| `store/` | Putting items into and taking them out of any mod's machines, by slot group |
 | `harvest.rs` | Breaking a block by machine into its output |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
 | `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
+| `arms/` | Which model a hub with arms draws (tubes and torque shafts), and the writer of those model files |
 | `recipes.rs` | Registers the crafting recipes, which are written in `assets/recipes/*.toml` and checked by `build.rs` when the mod is built |
 | `films/` | The showcase film, only with `--features showcase` |
 
 Unit tests sit at the end of the files whose logic they check; `cargo test --release` runs them.
+
+Every shape is a [Blockbench](https://www.blockbench.net) model under `assets/models/`; the code
+only picks one and its textures. Entities (the excavator's rig, the engines' pistons) are
+"Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
+are "Java Block/Item" models in `block/`: the survey marker, the engine, and for tubes and torque
+shafts one model for every set of arms on a hub, named after its arms (`tube/west_up_north.json`).
+A tube's model names a texture for each side, shown in Blockbench with the sorting tube's
+colors.
+
+Those 128 models of tubes and shafts are written by `src/arms/files.rs`, as Blockbench saves
+them: change the hub or the arms there, then run `WRITE_ARM_MODELS=1 cargo test --release arms`
+in `cogwork/`. Without the variable the same test fails when a file differs from what it would
+write, so a model changed by hand in Blockbench has to be changed there too.
 
 ## Showcase film
 

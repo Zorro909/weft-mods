@@ -30,32 +30,32 @@ pub fn cost(block_state: BlockState, base: f32, per_hardness: f32) -> i64 {
     (base + per_hardness * block_state.hardness().unwrap_or(1.0)) as i64
 }
 
-/// Breaks `block_state` at `c` into the `output` group of the machine `id`, only when
+/// Breaks `block_state` at `cell` into the `output` group of the machine `id`, only when
 /// everything it drops fits there.
-pub fn harvest(w: &World, id: u64, c: Pos, block_state: BlockState) -> Harvest {
-    let output = || w.inventory(id).group("output");
+pub fn harvest(world: &World, id: u64, cell: Pos, block_state: BlockState) -> Harvest {
+    let output = || world.inventory(id).group("output");
     let tool = ItemStack::new(TOOL.id(), 1);
     // The loot table is the block's, whatever its properties.
     let name = block_state.block_name();
-    let ctx = LootCtx {
+    let context = LootCtx {
         tool,
         mined: block_state.id(),
         ..LootCtx::default()
     };
-    let drops = w.roll_loot(&TableOf(name), &ctx);
+    let drops = world.roll_loot(&TableOf(name), &context);
     if drops
         .iter()
-        .any(|s| !crate::store::insert_into(output(), *s, true).is_empty())
+        .any(|stack| !crate::store::insert_into(output(), *stack, true).is_empty())
     {
         return Harvest::Full;
     }
-    if !w.break_block(c, tool, 0, false) {
+    if !world.break_block(cell, tool, 0, false) {
         return Harvest::Refused;
     }
-    for s in drops {
-        let left = crate::store::insert_into(output(), s, false);
+    for stack in drops {
+        let left = crate::store::insert_into(output(), stack, false);
         if !left.is_empty() {
-            w.spawn_item(c.center(), left);
+            world.spawn_item(cell.center(), left);
         }
     }
     Harvest::Done

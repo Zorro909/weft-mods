@@ -2,6 +2,7 @@
 //! jobs (an excavator, an assembly bench and a leveler) and cuboid loaders that keep them running
 //! with nobody near. Everything goes through `weft_sdk` and `base_api`.
 
+mod arms;
 mod bench;
 mod cogs;
 mod engines;
@@ -11,13 +12,11 @@ mod films;
 mod ghost;
 mod harvest;
 mod leveler;
-/// The types the whole mod builds on: model boxes and helpers for points in the world, in
-/// `src/lib/`, and block positions, areas, states and typed world calls from `weftkit`.
+/// The types the whole mod builds on: helpers for points in the world, in `src/lib/`, and block
+/// positions, areas, states and typed world calls from `weftkit`.
 mod lib {
-    mod model_box;
     pub mod point;
 
-    pub use model_box::ModelBox;
     pub use weftkit::{Area, BlockState, Pos, TypedWorld};
 }
 mod loading;
@@ -56,6 +55,13 @@ fn init(r: &mut Registry) {
     recipes::register(r);
     #[cfg(feature = "showcase")]
     films::register(r);
+}
+
+/// Whether the mod has the file `path` under `assets/`.
+#[cfg(test)]
+fn has_asset(path: &str) -> bool {
+    let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+    assets.join(path).is_file()
 }
 
 /// Whether every language file of the mod has `key`.

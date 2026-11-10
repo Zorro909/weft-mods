@@ -12,7 +12,7 @@ const RECIPES: &str = "assets/recipes";
 fn main() {
     println!("cargo::rerun-if-changed={RECIPES}");
     let mut files: Vec<PathBuf> = std::fs::read_dir(RECIPES)
-        .unwrap_or_else(|e| panic!("cannot read {RECIPES}: {e}"))
+        .unwrap_or_else(|error| panic!("cannot read {RECIPES}: {error}"))
         .map(|entry| entry.expect("cannot list the recipe files").path())
         .filter(|path| path.extension().is_some_and(|ext| ext == "toml"))
         .collect();
@@ -25,16 +25,18 @@ fn main() {
     }
     table.push(']');
     let out = Path::new(&std::env::var("OUT_DIR").unwrap()).join("recipes.rs");
-    std::fs::write(&out, table).unwrap_or_else(|e| panic!("cannot write {}: {e}", out.display()));
+    std::fs::write(&out, table)
+        .unwrap_or_else(|error| panic!("cannot write {}: {error}", out.display()));
 }
 
 /// Every recipe in the file at `path`, as the Rust that makes its `Recipe`.
 fn recipes_in(path: &Path) -> Vec<String> {
     let name = path.display();
-    let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("cannot read {name}: {e}"));
+    let text =
+        std::fs::read_to_string(path).unwrap_or_else(|error| panic!("cannot read {name}: {error}"));
     let file: Table = text
         .parse()
-        .unwrap_or_else(|e| panic!("{name} is not TOML: {e}"));
+        .unwrap_or_else(|error| panic!("{name} is not TOML: {error}"));
     let mut out = Vec::new();
     for (kind, list) in &file {
         let Some(list) = list.as_array() else {
@@ -51,7 +53,7 @@ fn recipes_in(path: &Path) -> Vec<String> {
                     "`{kind}` is no kind of recipe: shaped or shapeless"
                 )),
             };
-            out.push(made.unwrap_or_else(|e| panic!("{name}: {e}")));
+            out.push(made.unwrap_or_else(|error| panic!("{name}: {error}")));
         }
     }
     out
@@ -67,6 +69,17 @@ fn shaped(recipe: &Table) -> Result<String, String> {
             "{result}: the pattern must be 1 to 3 rows of 1 to 3, all as wide"
         ));
     }
+    let keys = keys(recipe, &pattern, &result)?;
+    let count = count(recipe, &result)?;
+    Ok(format!(
+        "Recipe::Shaped {{ result: {result:?}, count: {count}, pattern: &{pattern:?}, key: &[{}] }}",
+        keys.join(", ")
+    ))
+}
+
+/// What each letter of `pattern` is, from the recipe's `key` table, as the Rust of each pair.
+/// Every key is one letter of the pattern, and every letter of the pattern has a key.
+fn keys(recipe: &Table, pattern: &[String], result: &str) -> Result<Vec<String>, String> {
     let Some(key) = recipe.get("key").and_then(Value::as_table) else {
         return Err(format!(
             "{result}: no `key` table naming what the pattern's letters are"
@@ -75,29 +88,25 @@ fn shaped(recipe: &Table) -> Result<String, String> {
     let mut keys = Vec::new();
     for (letter, ingredient) in key {
         let mut chars = letter.chars();
-        let (Some(c), None, Some(ingredient)) = (chars.next(), chars.next(), ingredient.as_str())
+        let (Some(symbol), None, Some(ingredient)) =
+            (chars.next(), chars.next(), ingredient.as_str())
         else {
             return Err(format!(
                 "{result}: key `{letter}` must be one letter naming an item"
             ));
         };
-        if !pattern.iter().any(|row| row.contains(c)) {
-            return Err(format!("{result}: key `{c}` is not in the pattern"));
+        if !pattern.iter().any(|row| row.contains(symbol)) {
+            return Err(format!("{result}: key `{symbol}` is not in the pattern"));
         }
-        keys.push(format!("({c:?}, {ingredient:?})"));
+        keys.push(format!("({symbol:?}, {ingredient:?})"));
     }
-    let unnamed = pattern.iter().flat_map(|row| row.chars());
-    if let Some(c) = unnamed
-        .filter(|&c| c != ' ')
-        .find(|c| !key.contains_key(&c.to_string()))
-    {
-        return Err(format!("{result}: the pattern's `{c}` is not in the key"));
+    let mut letters = pattern.iter().flat_map(|row| row.chars());
+    match letters.find(|&symbol| symbol != ' ' && !key.contains_key(&symbol.to_string())) {
+        Some(symbol) => Err(format!(
+            "{result}: the pattern's `{symbol}` is not in the key"
+        )),
+        None => Ok(keys),
     }
-    let count = count(recipe, &result)?;
-    Ok(format!(
-        "Recipe::Shaped {{ result: {result:?}, count: {count}, pattern: &{pattern:?}, key: &[{}] }}",
-        keys.join(", ")
-    ))
 }
 
 fn shapeless(recipe: &Table) -> Result<String, String> {
@@ -134,22 +143,19 @@ fn count(recipe: &Table, result: &str) -> Result<u32, String> {
         None => Ok(1),
         Some(count) => count
             .as_integer()
-            .and_then(|n| u32::try_from(n).ok())
-            .filter(|&n| n >= 1)
-            .ok_or(format!("{result}: `count` must be a whole number from 1")),
+            .and_then(|number| u32::try_from(number).ok())
+            .filter(|&number| number >= 1)
+            .ok_or_else(|| format!("{result}: `count` must be a whole number from 1")),
     }
 }
 
 /// The list of strings `field`.
 fn strings(recipe: &Table, field: &str, result: &str) -> Result<Vec<String>, String> {
-    let strings: Option<Vec<String>> =
-        recipe
-            .get(field)
-            .and_then(Value::as_array)
-            .and_then(|list| {
-                list.iter()
-                    .map(|v| v.as_str().map(str::to_string))
-                    .collect()
-            });
-    strings.ok_or(format!("{result}: `{field}` must be a list of strings"))
+    let list = recipe.get(field).and_then(Value::as_array);
+    let strings = list.and_then(|list| list.iter().map(string).collect());
+    strings.ok_or_else(|| format!("{result}: `{field}` must be a list of strings"))
+}
+
+fn string(value: &Value) -> Option<String> {
+    value.as_str().map(str::to_string)
 }

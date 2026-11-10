@@ -4,15 +4,13 @@
 
 use weft_sdk::*;
 
-use crate::lib::{Area, ModelBox, Pos, TypedWorld};
+use crate::lib::{Area, Pos, TypedWorld};
 
 pub static SURVEY_MARKER: Block = Block::named("survey_marker");
 static SURVEY_GLOW: Particle = Particle::named("survey_glow");
-/// A marker: a thin post with a wider head on top, and the box round both that is aimed at and
-/// bumped into.
-const POST: ModelBox = ModelBox::new([7.0, 0.0, 7.0], [9.0, 9.0, 9.0]);
-const HEAD: ModelBox = ModelBox::new([6.0, 9.0, 6.0], [10.0, 13.0, 10.0]);
-const HITBOX: ModelBox = ModelBox::new([6.0, 0.0, 6.0], [10.0, 13.0, 10.0]);
+/// The two corners, in texels, of the box that is aimed at and bumped into: round the thin post
+/// and the wider head on it, which are the Blockbench model `models/block/survey_marker.json`.
+const HITBOX: ([f32; 3], [f32; 3]) = ([6.0, 0.0, 6.0], [10.0, 13.0, 10.0]);
 
 /// How far along a line a marker looks for the next one. It starts 2 blocks away: markers side
 /// by side would leave an excavator's frame nothing inside.
@@ -20,10 +18,7 @@ const REACH: i32 = 64;
 
 pub fn register(r: &mut Registry) {
     r.block(&SURVEY_MARKER)
-        .texture("survey_marker")
-        .model_box(POST.lo, POST.hi)
-        .model_box(HEAD.lo, HEAD.hi)
-        .hitbox(HITBOX.lo, HITBOX.hi)
+        .hitbox(HITBOX.0, HITBOX.1)
         .needs_below("")
         .hardness(0.0)
         .light(4)
@@ -42,12 +37,12 @@ pub fn register(r: &mut Registry) {
 }
 
 /// The rectangle of markers that `pos` is a corner of, at `pos`'s height.
-pub fn rectangle(w: &World, pos: Pos) -> Option<Area> {
+pub fn rectangle(world: &World, pos: Pos) -> Option<Area> {
     let marker_along = |step: fn(Pos, i32) -> Pos| {
         [1, -1].into_iter().find_map(|sign| {
             (2..=REACH)
-                .map(|k| step(pos, sign * k))
-                .find(|&p| w.block_typed(p).is(&SURVEY_MARKER))
+                .map(|blocks| step(pos, sign * blocks))
+                .find(|&at| world.block_typed(at).is(&SURVEY_MARKER))
         })
     };
     let (x, z) = (marker_along(Pos::add_x)?, marker_along(Pos::add_z)?);
@@ -56,14 +51,14 @@ pub fn rectangle(w: &World, pos: Pos) -> Option<Area> {
 
 /// The rectangle of the markers next to a machine at `pos`, when the machine is outside it, at
 /// the markers' height. The machine takes the markers down.
-pub fn take_area(w: &World, pos: Pos) -> Option<Area> {
-    let area = rectangle(w, beside(w, pos)?)?;
+pub fn take_area(world: &World, pos: Pos) -> Option<Area> {
+    let area = rectangle(world, beside(world, pos)?)?;
     if area.spans(pos) {
         return None;
     }
     for corner in area.bottom_corners() {
-        if w.block_typed(corner).is(&SURVEY_MARKER) {
-            w.break_block(corner, ItemStack::EMPTY, 0, true);
+        if world.block_typed(corner).is(&SURVEY_MARKER) {
+            world.break_block(corner, ItemStack::EMPTY, 0, true);
         }
     }
     Some(area)
@@ -85,33 +80,33 @@ pub fn square_behind(pos: Pos, front: Dir, size: i32, margin: i32) -> Area {
 }
 
 /// A marker next to `pos`, if any, on the four sides.
-fn beside(w: &World, pos: Pos) -> Option<Pos> {
+fn beside(world: &World, pos: Pos) -> Option<Pos> {
     [Dir::West, Dir::East, Dir::North, Dir::South]
-        .map(|d| pos.toward(d))
+        .map(|dir| pos.toward(dir))
         .into_iter()
-        .find(|&p| w.block_typed(p).is(&SURVEY_MARKER))
+        .find(|&at| world.block_typed(at).is(&SURVEY_MARKER))
 }
 
-fn show(u: &mut Use) -> bool {
-    survey(&u.world(), Pos::from(u.pos()));
+fn show(click: &mut Use) -> bool {
+    survey(&click.world(), Pos::from(click.pos()));
     true
 }
 
 /// Using the marker at `pos`: its rectangle drawn in the air for a few seconds, or a puff from a
 /// marker without one.
-pub fn survey(w: &World, pos: Pos) {
+pub fn survey(world: &World, pos: Pos) {
     static POOF: Particle = Particle::named("core:poof");
-    match rectangle(w, pos) {
+    match rectangle(world, pos) {
         Some(area) => {
-            outline(w, &area);
-            w.play_sound(&crate::sounds::SURVEY, pos.center(), 1.0);
+            outline(world, &area);
+            world.play_sound(&crate::sounds::SURVEY, pos.center(), 1.0);
         }
-        None => drop(w.spawn_particles(&POOF, pos.center()).count(6)),
+        None => drop(world.spawn_particles(&POOF, pos.center()).count(6)),
     }
 }
 
 /// Glowing points along the edges of the rectangle, every half block.
-fn outline(w: &World, area: &Area) {
+fn outline(world: &World, area: &Area) {
     // A little above the middle of the markers.
     let (lo, hi) = (
         area.lo.center().offset(0.0, 0.1, 0.0),
@@ -127,14 +122,20 @@ fn outline(w: &World, area: &Area) {
         let z = lo.z + along;
         points.extend([Vec3 { z, ..lo }, Vec3 { z, x: hi.x, ..lo }]);
     }
-    for p in points {
-        drop(w.spawn_particles(&SURVEY_GLOW, p).count(1));
+    for point in points {
+        drop(world.spawn_particles(&SURVEY_GLOW, point).count(1));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_marker_has_its_model() {
+        let model = "models/block/survey_marker.json";
+        assert!(crate::has_asset(model), "no {model}");
+    }
 
     fn area(lo: [i32; 3], hi: [i32; 3]) -> Area {
         Area::between(lo.into(), hi.into())

@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn every_sound_has_files() {
         let sounds = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sounds");
-        let files = IN_WORLD.iter().map(|s| s.1).chain(["ui/ghost"]);
+        let files = IN_WORLD.iter().map(|entry| entry.1).chain(["ui/ghost"]);
         for file in files {
             assert!(
                 sounds.join(format!("{file}1.ogg")).is_file(),

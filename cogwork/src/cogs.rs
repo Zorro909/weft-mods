@@ -38,16 +38,16 @@ fn cog(r: &mut Registry, cog: &'static Item, material: &str) {
 
 /// The tuning wrench used on a block that leaves the click to it, as every block does for a
 /// sneaking player: this is how it turns an ember engine, which opens its screen otherwise.
-fn turn_aimed(u: &mut ItemUse) -> bool {
-    let Some((pos, _)) = u.target_block() else {
+fn turn_aimed(click: &mut ItemUse) -> bool {
+    let Some((pos, _)) = click.target_block() else {
         return false;
     };
-    let (w, pos) = (u.world(), Pos::from(pos));
-    let block = w.block_typed(pos);
+    let (world, pos) = (click.world(), Pos::from(pos));
+    let block = world.block_typed(pos);
     if block.is(&SPRING_ENGINE) || block.is(&EMBER_ENGINE) {
-        crate::engines::turn(&w, pos);
+        crate::engines::turn(&world, pos);
     } else if block.is(&DIRECTING_TUBE) {
-        crate::tube::turn_directing(&w, pos);
+        crate::tube::turn_directing(&world, pos);
     } else {
         return false;
     }
@@ -55,8 +55,8 @@ fn turn_aimed(u: &mut ItemUse) -> bool {
 }
 
 /// Whether `player` holds a wrench, this mod's or any other tagged `wrenches`.
-pub fn holds_wrench(w: &World, player: u64) -> bool {
+pub fn holds_wrench(world: &World, player: u64) -> bool {
     static WRENCHES: Tag = Tag::named("wrenches");
-    let held = w.inventory(player).get(w.selected_slot(player));
+    let held = world.inventory(player).get(world.selected_slot(player));
     !held.is_empty() && WRENCHES.on_item(held.item)
 }

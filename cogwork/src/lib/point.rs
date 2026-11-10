@@ -33,14 +33,14 @@ mod tests {
 
     #[test]
     fn a_point_moves_toward_a_direction() {
-        let p = Vec3::new(1.0, 2.0, 3.0);
+        let start = Vec3::new(1.0, 2.0, 3.0);
         assert_eq!(
-            toward(p, Dir::Down, 0.25),
+            toward(start, Dir::Down, 0.25),
             Vec3::new(1.0, 1.75, 3.0),
             "a quarter down"
         );
         assert_eq!(
-            toward(p, Dir::East, -2.0),
+            toward(start, Dir::East, -2.0),
             Vec3::new(-1.0, 2.0, 3.0),
             "two west"
         );

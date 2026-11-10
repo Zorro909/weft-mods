@@ -7,10 +7,10 @@ use super::{BENCH, cells, pattern};
 
 /// Puts what of `stack` the pattern of the bench `at` has room for into its cells, one item at a
 /// time into the emptiest; returns the rest. `None` when `at` is no bench.
-pub fn insert(w: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
-    let pattern = pattern(&w.component(at, &BENCH)?);
-    let grid = w.inventory(at).group("grid");
-    let mut cells: Vec<ItemStack> = (0..grid.len()).map(|i| grid.get(i)).collect();
+pub fn insert(world: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
+    let pattern = pattern(&world.component(at, &BENCH)?);
+    let grid = world.inventory(at).group("grid");
+    let mut cells = crate::store::stacks(&grid);
     let mut left = stack;
     let cap = max_stack(stack.item);
     while let Some(i) = cells::free_cell(&pattern, &cells, left, cap).filter(|_| !left.is_empty()) {

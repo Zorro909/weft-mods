@@ -77,10 +77,10 @@ enum Plan {
 static TICKETS: LazyLock<Mutex<Tickets>> = LazyLock::new(Default::default);
 
 /// Keeps `cubes` loaded for `keeper` under ticket `key`, renewed as it runs out.
-pub fn keep(w: &World, key: u64, cubes: Cubes, keeper: Keeper) -> Kept {
-    let now = w.game_time();
+pub fn keep(world: &World, key: u64, cubes: Cubes, keeper: Keeper) -> Kept {
+    let now = world.game_time();
     let wanted = Ticket {
-        dimension: w.dimension(),
+        dimension: world.dimension(),
         cubes,
         keeper,
     };
@@ -89,13 +89,13 @@ pub fn keep(w: &World, key: u64, cubes: Cubes, keeper: Keeper) -> Kept {
     match planned {
         Plan::Nothing => return Kept::Loading,
         Plan::OverLimit => {
-            release(w, key);
+            release(world, key);
             return Kept::OverLimit;
         }
         Plan::Renew => {}
     }
     let (from, to) = cubes.blocks();
-    if !w.keep_loaded(key, from, to, keeper.loading(), LIFETIME) {
+    if !world.keep_loaded(key, from, to, keeper.loading(), LIFETIME) {
         lock().remove(&key);
         return Kept::Refused;
     }
@@ -115,8 +115,8 @@ fn plan(tickets: &mut Tickets, key: u64, wanted: Ticket, now: u64, limit: i32) -
     }
     let others: i32 = tickets
         .iter()
-        .filter(|&(&k, _)| k != key)
-        .map(|(_, (t, _))| t.cubes.count())
+        .filter(|&(&other, _)| other != key)
+        .map(|(_, (ticket, _))| ticket.cubes.count())
         .sum();
     if others + wanted.cubes.count() > limit {
         return Plan::OverLimit;
@@ -130,26 +130,29 @@ fn forget_stale(tickets: &mut Tickets, now: u64) {
 }
 
 /// Lets ticket `key` go, if cogwork holds it; whether it did.
-pub fn release(w: &World, key: u64) -> bool {
+pub fn release(world: &World, key: u64) -> bool {
     let held = lock().remove(&key).is_some();
     if held {
-        w.release_loaded(key);
+        world.release_loaded(key);
     }
     held
 }
 
 /// Lets ticket `key` go even when cogwork doesn't hold it: one restored with the world is not
 /// noted again until it is renewed.
-pub fn release_any(w: &World, key: u64) {
+pub fn release_any(world: &World, key: u64) {
     lock().remove(&key);
-    w.release_loaded(key);
+    world.release_loaded(key);
 }
 
 /// Cubes cogwork's tickets keep in all, counted like the engine counts them: each ticket's own.
 pub fn used(now: u64) -> i32 {
     let mut tickets = lock();
     forget_stale(&mut tickets, now);
-    tickets.values().map(|(t, _)| t.cubes.count()).sum()
+    tickets
+        .values()
+        .map(|(ticket, _)| ticket.cubes.count())
+        .sum()
 }
 
 /// The world's limit on the cubes all tickets keep together.
@@ -163,8 +166,8 @@ pub fn shown(dimension: u32, now: u64) -> Vec<(Cubes, Keeper)> {
     forget_stale(&mut tickets, now);
     tickets
         .values()
-        .filter(|(t, _)| t.dimension == dimension)
-        .map(|(t, _)| (t.cubes, t.keeper))
+        .filter(|(ticket, _)| ticket.dimension == dimension)
+        .map(|(ticket, _)| (ticket.cubes, ticket.keeper))
         .collect()
 }
 
@@ -190,7 +193,7 @@ mod tests {
     #[test]
     fn a_ticket_is_renewed_only_when_changed_or_running_out() {
         let mut tickets = Tickets::from([(1, (ticket(0), NOW + 90))]);
-        let plan_now = |tickets: &mut Tickets, t| plan(tickets, 1, t, NOW, 4096);
+        let plan_now = |tickets: &mut Tickets, wanted| plan(tickets, 1, wanted, NOW, 4096);
         assert_eq!(plan_now(&mut tickets, ticket(0)), Plan::Nothing, "fresh");
         assert_eq!(plan_now(&mut tickets, ticket(1)), Plan::Renew, "grown");
         let everything = Ticket {

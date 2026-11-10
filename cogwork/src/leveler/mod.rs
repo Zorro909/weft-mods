@@ -85,10 +85,10 @@ impl Level {
 
 /// Keeps the cubes the leveler at `pos` needs loaded until it is done, then lets them go: its
 /// own and those around it, and those it works in.
-fn keep_loaded(w: &World, pos: Pos, l: &Level) {
-    match l.stage() {
-        Stage::Done => crate::loading::release_machine(w, pos),
-        _ => crate::loading::keep_machine(w, pos, work_cubes(l)),
+fn keep_loaded(world: &World, pos: Pos, level: &Level) {
+    match level.stage() {
+        Stage::Done => crate::loading::release_machine(world, pos),
+        _ => crate::loading::keep_machine(world, pos, work_cubes(level)),
     }
 }
 
@@ -96,9 +96,9 @@ fn keep_loaded(w: &World, pos: Pos, l: &Level) {
 /// clears; while it fills, those of every layer left to fill. Filling ends just below the
 /// height clearing ended at, so the cubes there stay rather than going and coming back. None
 /// once the cursor has passed the last layer to fill: the stage ends on the next tick.
-fn work_cubes(l: &Level) -> Option<Cubes> {
-    let (lo, hi, y) = (l.area.lo, l.area.hi, l.cursor.y);
-    match l.stage() {
+fn work_cubes(level: &Level) -> Option<Cubes> {
+    let (lo, hi, y) = (level.area.lo, level.area.hi, level.cursor.y);
+    match level.stage() {
         Stage::Clear => Some(Cubes::spanning(lo.with_y(y), hi.with_y(y))),
         Stage::Fill if y < lo.y => Some(Cubes::spanning(lo.with_y(y), hi.with_y(lo.y - 1))),
         Stage::Fill | Stage::New | Stage::Done => None,
@@ -115,17 +115,10 @@ pub fn register(r: &mut Registry) {
     crate::machine::block(r.block(&LEVELER), "leveler")
         .hardness(4.0)
         .on_break(crate::loading::let_go)
-        .entity(|e| {
-            e.attach(&LEVEL)
-                .attach_with(
-                    &ENERGY,
-                    Energy {
-                        stored: 0,
-                        capacity: 10_000,
-                        max_in: 1_000,
-                        max_out: 0,
-                    },
-                )
+        .entity(|entity| {
+            entity
+                .attach(&LEVEL)
+                .attach_with(&ENERGY, crate::machine::energy(10_000, 1_000))
                 // The input, then the output.
                 .inventory(18 + 9)
         })
@@ -157,20 +150,20 @@ fn screen(ui: &mut Ui) {
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
-                ui.text_bind(|c, out| {
-                    let l = c.menu_component(&LEVEL).unwrap_or_default();
-                    let status: &str = l.status().into();
-                    let layer = l.cursor.y;
+                ui.text_bind(|view, out| {
+                    let level = view.menu_component(&LEVEL).unwrap_or_default();
+                    let status: &str = level.status().into();
+                    let layer = level.cursor.y;
                     out.set(
                         &format!("cogwork.leveler.{status}"),
                         &[Arg::Int(layer as i64)],
                     );
                 });
-                ui.text_bind(|c, out| {
-                    let l = c.menu_component(&LEVEL).unwrap_or_default();
-                    let planned = l.stage() != Stage::New;
-                    let [x, _, z] = if planned { l.area.size() } else { [0; 3] };
-                    let height = l.area.lo.y;
+                ui.text_bind(|view, out| {
+                    let level = view.menu_component(&LEVEL).unwrap_or_default();
+                    let planned = level.stage() != Stage::New;
+                    let [x, _, z] = if planned { level.area.size() } else { [0; 3] };
+                    let height = level.area.lo.y;
                     out.set(
                         "cogwork.leveler.area",
                         &[
@@ -214,12 +207,16 @@ mod tests {
 
     #[test]
     fn an_unknown_saved_number_reads_as_the_default() {
-        let l = Level {
+        let level = Level {
             stage: 99,
             status: 99,
             ..Level::default()
         };
-        assert_eq!(l.stage(), Stage::New, "a stage from a newer cogwork");
-        assert_eq!(l.status(), Status::Idle, "a status from a newer cogwork");
+        assert_eq!(level.stage(), Stage::New, "a stage from a newer cogwork");
+        assert_eq!(
+            level.status(),
+            Status::Idle,
+            "a status from a newer cogwork"
+        );
     }
 }

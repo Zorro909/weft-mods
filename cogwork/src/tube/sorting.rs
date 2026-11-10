@@ -6,7 +6,7 @@
 use weft_sdk::*;
 
 use super::shape::Arms;
-use super::{SLOTS, SORTING_TUBE, TUBE, Tube, kind};
+use super::{Kind, SLOTS, SORTING_TUBE, tube_entity};
 use crate::ghost::{self, ItemKey, SLOT};
 
 static SORTING_MENU: Menu = Menu::named("sorting_tube");
@@ -34,8 +34,8 @@ const SIDES: [(&str, &str); 6] = [
     ("blue", "tube_sorting_blue"),
 ];
 
-fn arm_texture(d: Dir) -> &'static str {
-    SIDES[d.face() as usize].1
+pub(crate) fn arm_texture(dir: Dir) -> &'static str {
+    SIDES[dir.face() as usize].1
 }
 
 pub fn register(r: &mut Registry) {
@@ -50,17 +50,7 @@ pub fn register(r: &mut Registry) {
         Arms::PerSide(arm_texture),
     )
     .tab(&crate::TAB)
-    .entity(|e| {
-        e.attach(&SAMPLES)
-            .attach_with(
-                &TUBE,
-                Tube {
-                    kind: kind::SORTING,
-                    ..Tube::default()
-                },
-            )
-            .inventory(SLOTS as u32)
-    })
+    .entity(|entity| tube_entity(entity.attach(&SAMPLES), Kind::Sorting))
     .opens(&SORTING_MENU);
     r.menu(&SORTING_MENU)
         // So the carried items are slots 0..8 as in every tube; out only, so nothing gets
@@ -87,41 +77,41 @@ fn screen(ui: &mut Ui) {
 /// The ghost cell of sample `i` in the row of `face`.
 fn sample(ui: &mut Ui, face: usize, i: usize) {
     let under = |ui: &mut Ui| ui.image("base:gui/slot", SLOT, SLOT);
-    ghost::cell(ui, under, (face * ROW + i) as u32, move |c| {
-        ghost::item_of(c.menu_component(&SAMPLES).unwrap_or_default().rows[face][i])
+    ghost::cell(ui, under, (face * ROW + i) as u32, move |view| {
+        ghost::item_of(view.menu_component(&SAMPLES).unwrap_or_default().rows[face][i])
     });
 }
 
 /// Sets sample `cell`, counted along the rows, to `item` (0 clears it) when `owner` is a
 /// sorting tube.
-pub fn set_sample(w: &World, owner: u64, cell: u32, item: u32) {
-    let Some(s) = w.component_mut(owner, &SAMPLES) else {
+pub fn set_sample(world: &World, owner: u64, cell: u32, item: u32) {
+    let Some(samples) = world.component_mut(owner, &SAMPLES) else {
         return;
     };
-    let Some(sample) = s.rows.as_flattened_mut().get_mut(cell as usize) else {
+    let Some(sample) = samples.rows.as_flattened_mut().get_mut(cell as usize) else {
         return;
     };
     *sample = ghost::key_of(item);
 }
 
-/// Whether the row of side `d` names the item.
-pub fn passes(w: &World, id: u64, d: Dir, stack: ItemStack) -> bool {
-    let Some(samples) = w.component(id, &SAMPLES) else {
+/// Whether the row of side `dir` names the item.
+pub fn passes(world: &World, id: u64, dir: Dir, stack: ItemStack) -> bool {
+    let Some(samples) = world.component(id, &SAMPLES) else {
         return false;
     };
-    samples.rows[d.face() as usize].contains(&ghost::key_of(stack.item))
+    samples.rows[dir.face() as usize].contains(&ghost::key_of(stack.item))
 }
 
 /// The sides whose rows are empty, or name only items no loaded mod has: they take whatever no
 /// row names.
-pub fn unfiltered(w: &World, id: u64) -> Vec<Dir> {
-    let Some(samples) = w.component(id, &SAMPLES) else {
+pub fn unfiltered(world: &World, id: u64) -> Vec<Dir> {
+    let Some(samples) = world.component(id, &SAMPLES) else {
         return Dir::ALL.to_vec();
     };
     Dir::ALL
         .into_iter()
-        .filter(|&d| {
-            samples.rows[d.face() as usize]
+        .filter(|&dir| {
+            samples.rows[dir.face() as usize]
                 .iter()
                 .all(|&key| ghost::item_of(key) == 0)
         })
@@ -132,22 +122,15 @@ pub fn unfiltered(w: &World, id: u64) -> Vec<Dir> {
 mod tests {
     use super::*;
 
-    fn asset(path: &str) -> bool {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("assets")
-            .join(path)
-            .exists()
-    }
-
     #[test]
     fn every_side_has_its_own_color_pictures_and_name() {
         for (i, (color, texture)) in SIDES.iter().enumerate() {
             assert!(
-                asset(&format!("textures/block/{texture}.png")),
+                crate::has_asset(&format!("textures/block/{texture}.png")),
                 "{color} arm texture"
             );
             assert!(
-                asset(&format!("textures/gui/swatch_{color}.png")),
+                crate::has_asset(&format!("textures/gui/swatch_{color}.png")),
                 "{color} swatch"
             );
             assert!(
@@ -155,7 +138,7 @@ mod tests {
                 "{color} name in every lang file"
             );
             assert!(
-                SIDES[..i].iter().all(|s| s.0 != *color),
+                SIDES[..i].iter().all(|side| side.0 != *color),
                 "{color} used once"
             );
         }

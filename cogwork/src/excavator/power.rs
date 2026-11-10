@@ -5,6 +5,7 @@
 use weft_sdk::*;
 
 use super::{Dig, Frame, Status};
+use crate::machine::{self, Payment};
 
 /// Standby energy per tick: a base, and one more per four blocks of area (9 by 9: 30).
 const STANDBY_BASE: i64 = 10;
@@ -24,40 +25,37 @@ impl Frame {
 
 /// Draws this tick's standby; false when there isn't enough. What there was is used up all the
 /// same, so a weak supply can't save up to run in bursts.
-pub fn hold(w: &World, id: u64, d: &mut Dig) -> bool {
-    let need = d.frame.standby();
-    let Some(e) = w.component_mut(id, &ENERGY) else {
+pub fn hold(world: &World, id: u64, dig: &mut Dig) -> bool {
+    let need = dig.frame.standby();
+    let Some(energy) = world.component_mut(id, &ENERGY) else {
         return false;
     };
-    let drawn = e.stored.min(need);
-    e.stored -= drawn;
+    let drawn = energy.stored.min(need);
+    energy.stored -= drawn;
     if drawn < need {
-        d.set_status(Status::NoPower);
+        dig.set_status(Status::NoPower);
         return false;
     }
     true
 }
 
-/// Puts stored energy into a job of `cost` until `d.spent` covers it; true once it does. The
+/// Puts stored energy into a job of `cost` until `dig.spent` covers it; true once it does. The
 /// caller starts `spent` over when the job is done.
-pub fn pay(w: &World, id: u64, d: &mut Dig, cost: i64) -> bool {
-    let drawn = crate::machine::draw(w, id, &mut d.spent, cost, DRAW_RATE);
-    if d.spent >= cost {
-        return true;
+pub fn pay(world: &World, id: u64, dig: &mut Dig, cost: i64) -> bool {
+    let payment = machine::pay(world, id, &mut dig.spent, cost, DRAW_RATE);
+    if payment == Payment::NoPower {
+        dig.set_status(Status::NoPower);
     }
-    if drawn == 0 {
-        d.set_status(Status::NoPower);
-    }
-    false
+    payment == Payment::Paid
 }
 
 /// Pays for up to `max` blocks of drill travel; returns how far the energy took it.
-pub fn travel(w: &World, id: u64, max: f64) -> f64 {
-    let Some(e) = w.component_mut(id, &ENERGY) else {
+pub fn travel(world: &World, id: u64, max: f64) -> f64 {
+    let Some(energy) = world.component_mut(id, &ENERGY) else {
         return 0.0;
     };
-    let cost = e.stored.min((max * TRAVEL_COST as f64).ceil() as i64);
-    e.stored -= cost;
+    let cost = energy.stored.min((max * TRAVEL_COST as f64).ceil() as i64);
+    energy.stored -= cost;
     (cost as f64 / TRAVEL_COST as f64).min(max)
 }
 

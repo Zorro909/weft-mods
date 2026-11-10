@@ -35,7 +35,7 @@ impl Role {
         match self {
             Role::Home => 0,
             Role::Work => 1,
-            Role::Link(n) => 2 + n as i32,
+            Role::Link(nth) => 2 + nth as i32,
         }
     }
 }
@@ -47,17 +47,46 @@ pub fn register(r: &mut Registry) {
 
 /// The key of the ticket in `role` of the block at `pos`: the same for that block across
 /// restarts, so its ticket can be let go when it breaks.
-fn key(w: &World, pos: Pos, role: Role) -> u64 {
-    let numbers = [w.dimension() as i32, pos.x, pos.y, pos.z, role.number()];
-    let bytes: Vec<u8> = numbers.iter().flat_map(|n| n.to_le_bytes()).collect();
+fn key(world: &World, pos: Pos, role: Role) -> u64 {
+    key_in(world.dimension(), pos, role)
+}
+
+/// The key of that ticket in the dimension numbered `dimension`.
+fn key_in(dimension: u32, pos: Pos, role: Role) -> u64 {
+    let numbers = [dimension as i32, pos.x, pos.y, pos.z, role.number()];
+    let bytes: Vec<u8> = numbers
+        .iter()
+        .flat_map(|number| number.to_le_bytes())
+        .collect();
     XxHash3_64::oneshot(&bytes)
 }
 
 /// A block that keeps cubes loaded was broken: its tickets go now, even its own and its work's
 /// restored with the world that cogwork has not noted again yet.
-pub fn let_go(w: &World, change: &BlockChange) {
+pub fn let_go(world: &World, change: &BlockChange) {
     let pos = Pos::from(change.pos);
-    tickets::release_any(w, key(w, pos, Role::Home));
-    tickets::release_any(w, key(w, pos, Role::Work));
-    machines::release_links(w, pos, 0);
+    tickets::release_any(world, key(world, pos, Role::Home));
+    tickets::release_any(world, key(world, pos, Role::Work));
+    machines::release_links(world, pos, 0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_ticket_has_a_key_of_its_own() {
+        let pos = Pos::new(3, -20, 7);
+        let roles = [Role::Home, Role::Work, Role::Link(0), Role::Link(1)];
+        let mut keys: Vec<u64> = roles.map(|role| key_in(0, pos, role)).to_vec();
+        keys.push(key_in(1, pos, Role::Home));
+        keys.push(key_in(0, pos.add_y(1), Role::Home));
+        // The numbers of a block swapped around are another block.
+        keys.push(key_in(0, Pos::new(7, -20, 3), Role::Home));
+        let mut distinct = keys.clone();
+        distinct.sort_unstable();
+        distinct.dedup();
+        assert_eq!(distinct.len(), keys.len(), "no two alike: {keys:?}");
+        assert_eq!(key_in(0, pos, Role::Work), keys[1], "the same each time");
+    }
 }
