@@ -17,8 +17,8 @@ static EMBER_MENU: Menu = Menu::named("ember_engine");
 
 value! {
     /// An engine's state: its kind (`Kind`), `heat` 0..1000, `overheated` (1 while it cools
-    /// down), the ticks of fuel left burning out of `burn_max`, ticks into the piston's stroke,
-    /// and the piston entity.
+    /// down), the ticks of fuel left burning out of `burn_max`, `stroke` (anything but 0 while
+    /// the piston makes a stroke), and the piston entity.
     #[derive(Default)]
     pub struct Engine {
         pub kind: u32,
@@ -60,6 +60,11 @@ impl Engine {
     /// Whether it has stopped to cool down.
     pub fn is_overheated(&self) -> bool {
         self.overheated != 0
+    }
+
+    /// Whether its piston is making a stroke.
+    pub fn is_stroking(&self) -> bool {
+        self.stroke != 0
     }
 }
 

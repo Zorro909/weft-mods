@@ -1,0 +1,24 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.drill_shaft",
+				"texture_width": 32,
+				"texture_height": 80,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 5,
+				"visible_bounds_offset": [0, -1.5, 0]
+			},
+			"bones": [
+				{
+					"name": "body",
+					"pivot": [0, 0, 0],
+					"cubes": [
+						{"origin": [-2, -64, -2], "size": [4, 64, 4], "uv": [0, 0]}
+					]
+				}
+			]
+		}
+	]
+}

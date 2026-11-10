@@ -1,19 +1,23 @@
 //! The gantry players see over a working excavator: a carriage riding on two beams across the
 //! frame, and a drill on a pipe of shaft pieces reaching down from it to the block being mined.
 //! They are entities that only show where the drill is; each one leaves when its excavator is
-//! gone.
+//! gone. Their shapes are Blockbench models, `assets/models/<kind>.geo.json`, and the bit turns
+//! by `assets/animations/drill_bit.animation.json`.
 
 use weft_sdk::*;
 
 use super::{Dig, Frame, Stage};
-use crate::lib::ModelBox;
 
 static CARRIAGE: EntityKind = EntityKind::named("drill_carriage");
 static BIT: EntityKind = EntityKind::named("drill_bit");
+/// Its model hangs below its place, which is its top: the engine lights an entity by the block
+/// just above its place, and the lowest piece's foot is down in the ground.
 static SHAFT: EntityKind = EntityKind::named("drill_shaft");
 static BEAM: EntityKind = EntityKind::named("gantry_beam");
 /// A block of beam, to end a beam flush with the frame where a whole piece would stick out.
 static BEAM_END: EntityKind = EntityKind::named("gantry_beam_end");
+/// The pieces with a model and a texture named like them.
+static MODELED: [&EntityKind; 4] = [&CARRIAGE, &BIT, &SHAFT, &BEAM];
 
 value! {
     /// The rig's entities: carriage, bit, then shaft pieces, then beams along x and along z.
@@ -40,41 +44,16 @@ const BIT_HEIGHT: f64 = 0.75;
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
-    let body = |lo, size| vec![ModelBox::sized(lo, size).part("body", [0.0, 0.0])];
-    let carriage = body([-7.0, 0.0, -7.0], [14.0, 8.0, 14.0]);
-    piece(r, &CARRIAGE, carriage, [64, 32]);
-    piece(r, &BIT, bit_parts(), [64, 32]);
-    // Hangs below its place, which is its top: the engine lights an entity by the block just
-    // above its place, and the lowest piece's foot is down in the ground.
-    let shaft = body([-2.0, -64.0, -2.0], [4.0, 64.0, 4.0]);
-    piece(r, &SHAFT, shaft, [32, 80]);
-    let beam = body([-32.0, 0.0, -2.0], [64.0, 4.0, 4.0]);
-    piece(r, &BEAM, beam, [144, 16]);
+    for kind in MODELED {
+        piece(r, kind);
+    }
     // A short piece of the same beam, so it wears the beam's skin.
-    let end = body([-8.0, 0.0, -2.0], [16.0, 4.0, 4.0]);
-    piece(r, &BEAM_END, end, [144, 16]).texture("gantry_beam");
+    piece(r, &BEAM_END).texture("gantry_beam");
 }
 
-/// The drill's bit and its tip. `bit` turns about its own axis
-/// (`animations/drill_bit.animation.json`), the tip with it.
-fn bit_parts() -> Vec<ModelPart> {
-    let bit = ModelBox::sized([-4.0, 0.0, -4.0], [8.0, 12.0, 8.0]);
-    let tip = ModelBox::sized([-2.0, -4.0, -2.0], [4.0, 4.0, 4.0]);
-    vec![
-        bit.part("bit", [0.0, 0.0]),
-        tip.part("tip", [32.0, 0.0]).child_of(0),
-    ]
-}
-
-fn piece<'a>(
-    r: &'a mut Registry,
-    kind: &'static EntityKind,
-    parts: Vec<ModelPart>,
-    uv: [u32; 2],
-) -> EntityBuilder<'a> {
-    crate::owned::kind(r.entity(kind), claims)
-        .model(Model::from(parts).uv_size(uv[0], uv[1]))
-        .size(0.5, 0.5)
+/// A piece of the rig, drawn by the Blockbench model named like it.
+fn piece<'a>(r: &'a mut Registry, kind: &'static EntityKind) -> EntityBuilder<'a> {
+    crate::owned::kind(r.entity(kind), claims).size(0.5, 0.5)
 }
 
 fn claims(world: &World, owner: u64, id: u64) -> bool {
@@ -196,6 +175,22 @@ mod tests {
         pieces
             .filter(move |piece| std::ptr::eq(piece.kind, kind))
             .map(|piece| piece.at)
+    }
+
+    #[test]
+    fn every_piece_has_its_model() {
+        for kind in MODELED.into_iter().chain([&BEAM_END]) {
+            let model = format!("models/{}.geo.json", kind.path());
+            assert!(crate::has_asset(&model), "no {model}");
+        }
+        for kind in MODELED {
+            let texture = format!("textures/entity/{}.png", kind.path());
+            assert!(crate::has_asset(&texture), "no {texture}");
+        }
+        assert!(
+            crate::has_asset("animations/drill_bit.animation.json"),
+            "the bit's turning"
+        );
     }
 
     #[test]

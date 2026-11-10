@@ -1,5 +1,5 @@
-//! The engines' tick: make energy, push it out of the trunk, warm up or cool down, and move the
-//! piston while running.
+//! The engines' tick: make energy, push it out of the trunk, warm up or cool down, and start
+//! the piston's strokes while running.
 
 use base_api::FUEL;
 use weft_sdk::*;
@@ -36,10 +36,11 @@ pub fn tick_engines(batch: &mut SystemBatch<Engine>) {
         push(&world, id, pos);
         let was_overheated = engine.is_overheated();
         warm(engine, running, full, ticks);
-        engine.stroke = piston::advance(engine.stroke, running, world.game_time());
-        sound(&world, pos, engine, running, was_overheated);
+        let time = world.game_time();
+        engine.stroke = piston::stroking(engine.is_stroking(), running, time) as u32;
+        sound(&world, pos, engine, time, was_overheated);
         show_heat(&world, pos, engine);
-        piston::show(&world, id, pos, engine);
+        piston::show(&world, id, pos, engine, time);
     }
 }
 
@@ -126,9 +127,9 @@ fn warm(engine: &mut Engine, running: bool, full: bool, ticks: u32) {
 
 /// The piston's knock at the top of each stroke, and the ember engine cutting out as it
 /// overheats and starting again once cooled.
-fn sound(world: &World, pos: Pos, engine: &Engine, running: bool, was_overheated: bool) {
+fn sound(world: &World, pos: Pos, engine: &Engine, time: u64, was_overheated: bool) {
     let at = pos.center();
-    if running && piston::at_top(engine.stroke) {
+    if engine.is_stroking() && piston::at_top(time) {
         let stroke = match engine.kind() {
             Kind::Spring => &sounds::SPRING_STROKE,
             Kind::Ember => &sounds::EMBER_STROKE,

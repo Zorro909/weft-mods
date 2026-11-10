@@ -58,6 +58,13 @@ fn init(r: &mut Registry) {
     films::register(r);
 }
 
+/// Whether the mod has the file `path` under `assets/`.
+#[cfg(test)]
+fn has_asset(path: &str) -> bool {
+    let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+    assets.join(path).is_file()
+}
+
 /// Whether every language file of the mod has `key`.
 #[cfg(test)]
 fn translated(key: &str) -> bool {

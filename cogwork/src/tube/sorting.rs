@@ -122,22 +122,15 @@ pub fn unfiltered(world: &World, id: u64) -> Vec<Dir> {
 mod tests {
     use super::*;
 
-    fn asset(path: &str) -> bool {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("assets")
-            .join(path)
-            .exists()
-    }
-
     #[test]
     fn every_side_has_its_own_color_pictures_and_name() {
         for (i, (color, texture)) in SIDES.iter().enumerate() {
             assert!(
-                asset(&format!("textures/block/{texture}.png")),
+                crate::has_asset(&format!("textures/block/{texture}.png")),
                 "{color} arm texture"
             );
             assert!(
-                asset(&format!("textures/gui/swatch_{color}.png")),
+                crate::has_asset(&format!("textures/gui/swatch_{color}.png")),
                 "{color} swatch"
             );
             assert!(
