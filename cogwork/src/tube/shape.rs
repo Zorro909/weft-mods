@@ -1,15 +1,14 @@
 //! What a tube looks like and what it joins: a hub in the middle of the block and an arm toward
 //! every neighbor it connects to, one `true`/`false` property per direction. A directing tube
 //! always has its arm toward `out`, so it keeps properties only for the other five. A sorting
-//! tube draws each direction in its own texture.
+//! tube draws each direction in its own texture. The hub and arms are the Blockbench models in
+//! `assets/models/block/tube/`, which name a texture for each side.
 
 use weft_sdk::*;
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
-use crate::lib::{BlockState, ModelBox, Pos, TypedWorld};
+use crate::lib::{BlockState, Pos, TypedWorld};
 
-/// The tube's hub: 8 texels wide in the middle of the block. Its arms are as thick.
-const HUB: ModelBox = ModelBox::new([4.0; 3], [12.0; 3]);
 /// A directing tube's arms besides its output, by their place among the other five directions.
 const OTHER_ARMS: [&str; 5] = ["arm1", "arm2", "arm3", "arm4", "arm5"];
 const BOOL: [&str; 2] = ["false", "true"];
@@ -49,31 +48,28 @@ pub fn tube<'a>(builder: BlockBuilder<'a>, texture: &'static str, arms: Arms) ->
         .on_break(|world, change| super::visual::clear_broken(world, change.pos.into()))
 }
 
-/// The hub and the connected arms, each a box of its own, which is what it collides with too.
+/// The model with the connected arms, and each side's texture on the hub's face and the arm
+/// that way. Its boxes are what it collides with, too.
 fn model<'s>(props: &Props, state: State<'s>, texture: &'static str, arms: Arms) -> State<'s> {
-    let side = |dir| side_texture(texture, arms, dir);
-    let hub = Dir::ALL.map(|dir| (side(dir), abi::UV_FROM_BOX));
-    let mut state = state.texture(texture).model_box_faces(HUB.lo, HUB.hi, hub);
-    let (out, out_texture) = match arms {
-        Arms::Output(out_texture) => (Dir::from_name(props.get("out")), out_texture),
-        _ => (None, texture),
+    let out = match arms {
+        Arms::Output(_) => Dir::from_name(props.get("out")),
+        _ => None,
     };
-    for dir in Dir::ALL {
-        let face_texture = match arm_prop(out, dir) {
-            None => out_texture,
-            Some(name) if props.is(name, "true") => side(dir),
-            Some(_) => continue,
-        };
-        let arm = HUB.arm(dir);
-        state = state.model_box_faces(arm.lo, arm.hi, [(face_texture, abi::UV_FROM_BOX); 6]);
-    }
-    state
+    // The output has no property: its arm is always there.
+    let has_arm = |dir| arm_prop(out, dir).is_none_or(|name| props.is(name, "true"));
+    let state = state
+        .texture(texture)
+        .model_file(&crate::arms::model("tube", has_arm));
+    Dir::ALL.into_iter().fold(state, |state, dir| {
+        state.model_texture(dir.name(), side_texture(texture, arms, out, dir))
+    })
 }
 
-/// The texture of the hub face and arm toward `dir`, unless that arm is a directing tube's output.
-fn side_texture(texture: &'static str, arms: Arms, dir: Dir) -> &'static str {
+/// The texture of the hub face and arm toward `dir` of a tube that sends its items `out`.
+fn side_texture(texture: &'static str, arms: Arms, out: Option<Dir>, dir: Dir) -> &'static str {
     match arms {
         Arms::PerSide(texture_toward) => texture_toward(dir),
+        Arms::Output(out_texture) if out == Some(dir) => out_texture,
         _ => texture,
     }
 }
@@ -165,6 +161,33 @@ pub fn turn_directing(world: &World, pos: Pos) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_directing_tube_colors_only_the_side_of_its_output() {
+        let arms = Arms::Output("out");
+        let toward = |dir| side_texture("tube", arms, Some(Dir::East), dir);
+        assert_eq!(toward(Dir::East), "out", "the output");
+        assert_eq!(toward(Dir::West), "tube", "any other side");
+        let plain = side_texture("tube", Arms::Same, None, Dir::East);
+        assert_eq!(plain, "tube", "a plain tube all round");
+    }
+
+    #[test]
+    fn every_tube_model_has_a_texture_to_set_for_each_side() {
+        let models = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/models/block/tube");
+        let files = std::fs::read_dir(models).expect("cogwork has no tube models");
+        for file in files.flatten() {
+            let model = std::fs::read_to_string(file.path()).unwrap_or_default();
+            for dir in Dir::ALL {
+                let texture = format!("\"{}\": \"block/", dir.name());
+                assert!(
+                    model.contains(&texture),
+                    "{:?} has none {texture}",
+                    file.path()
+                );
+            }
+        }
+    }
 
     #[test]
     fn a_directing_tube_names_its_arms_after_the_output() {
