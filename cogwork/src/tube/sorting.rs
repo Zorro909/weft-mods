@@ -34,7 +34,7 @@ const SIDES: [(&str, &str); 6] = [
     ("blue", "tube_sorting_blue"),
 ];
 
-fn arm_texture(dir: Dir) -> &'static str {
+pub(crate) fn arm_texture(dir: Dir) -> &'static str {
     SIDES[dir.face() as usize].1
 }
 
