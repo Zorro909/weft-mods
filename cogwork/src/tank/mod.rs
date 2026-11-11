@@ -13,7 +13,7 @@ mod shape;
 use std::collections::HashSet;
 
 use merge::{MOST, forms_box, spread};
-use weft_sdk::*;
+use weft_sdk::{Block, BlockEvent, Dir, Registry, Use, World, abi, tool_tier};
 
 use crate::fill::{self, TANK_LEVELS};
 use crate::lib::{Pos, TypedWorld};

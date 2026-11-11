@@ -4,7 +4,7 @@
 //! sides, a slim frame along the edges where two outer sides meet, brass caps on its corners,
 //! and a riveted base around its bottom layer.
 
-use weft_sdk::*;
+use weft_sdk::Dir;
 
 use crate::boxes::Piece;
 

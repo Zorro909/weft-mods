@@ -4,7 +4,7 @@
 //! deep underground, and above its middle a seep: a puddle of oil in oil-soaked ground.
 
 use twox_hash::XxHash3_64;
-use weft_sdk::*;
+use weft_sdk::{Gen, Tag};
 
 use super::{OIL, OIL_SAND, OILY_DIRT};
 use crate::lib::Pos;

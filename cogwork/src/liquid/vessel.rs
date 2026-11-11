@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use weft_sdk::*;
+use weft_sdk::{Dir, SystemBatch, World};
 
 use super::{Held, Level, LiquidKey, share};
 use crate::lib::{Pos, TypedWorld};

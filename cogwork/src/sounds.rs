@@ -1,7 +1,7 @@
 //! Cogwork's sound events. Their files are `assets/sounds/<file><n>.ogg`, one picked at random,
 //! made with `tools/sfx.sh` from the prompts in `sounds.tsv`.
 
-use weft_sdk::*;
+use weft_sdk::{Registry, Sound, sound_categories};
 
 pub static SPRING_STROKE: Sound = Sound::named("engine.spring_stroke");
 pub static EMBER_STROKE: Sound = Sound::named("engine.ember_stroke");

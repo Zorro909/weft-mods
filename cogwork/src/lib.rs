@@ -41,7 +41,7 @@ mod store;
 mod tank;
 mod tube;
 
-use weft_sdk::*;
+use weft_sdk::{CreativeTab, Item, Registry, declare_mod};
 
 #[cfg(not(feature = "showcase"))]
 declare_mod!(deps: ["base"], init: init);

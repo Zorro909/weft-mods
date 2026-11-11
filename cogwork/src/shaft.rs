@@ -3,7 +3,9 @@
 //! Its middle and its arms are drawn from the Blockbench model
 //! `assets/models/block/torque_shaft/hub_and_arm.json` (`arms`).
 
-use weft_sdk::*;
+use weft_sdk::{
+    Block, CONDUCTOR, Dir, ENERGY, Props, Registry, State, WithComponents, World, tool_tier,
+};
 
 use crate::lib::{Pos, TypedWorld};
 
