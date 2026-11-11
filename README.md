@@ -11,7 +11,7 @@ ships as its own mod.
 | | Mod | What it adds |
 |---|---|---|
 | <img src="cogwork/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
-| <img src="structgen/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structgen](structgen/README.md) | Buildings and hamlets across the overworld, a wand and `/structure` command to save and place structures in the game, and `structgen_api` for other mods to place their own. |
+| <img src="structgen/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structgen](structgen/README.md) | Hamlets, villages and towns across the overworld, each laid out afresh from the land, built of timber-framed buildings in the engine's structure files. |
 | | [Showcase](showcase/README.md) | A tool for mod makers: plays films that mods make of their content in code, and records them to video. |
 
 Each mod's README gives an overview; Cogwork's and Structgen's `docs/` folders describe every

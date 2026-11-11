@@ -5,9 +5,9 @@ drawn in `examples/buildings/` with the Hearthwood kit; see [Material slots](doc
 
 ## Buildings that need more than a spot of land
 
-These need the planner to know about water, which the SDK doesn't tell a mod yet (see
-[Not done yet](docs/README.md#not-done-yet)): no sea level, and a plan sees the terrain's
-height and biome only.
+These need the planner to know about water, which the SDK doesn't tell a plan yet (see
+[Missing in the engine](docs/README.md#missing-in-the-engine)): no sea level, and a plan sees
+the terrain's height and biome only.
 
 - **Watermill.** About 9 x 11 with a wheel, on a river or a stream. Needs a way to find a
   column of water next to a bank, or a biome tag for rivers.
@@ -34,7 +34,9 @@ The tiles are drawn (`examples/buildings/paths.rs` and `streets.rs`, sample layo
 `examples/layouts/`): village paths and cart tracks on a grid of 5, town streets and squares on
 a grid of 7, with corners, tees, crossings, ends, slopes and the pieces where one gives way to
 another. The settlements draw their roads as curves instead (`src/settlement/`), which looks
-older; the tiles remain for a planned grid, such as a walled town's.
+older; the tiles remain for a planned grid, such as a walled town's. They have no styles now and
+show their slots' defaults, gravel and cobblestone: laying them would want palettes for dirt
+paths and stone, brick or sandstone streets again.
 
 ## What the sketched settlements show
 
@@ -59,7 +61,7 @@ generator has to do:
   where a street runs along an axis, since at an angle a line of slabs steps like a staircase;
   paths wear in patches of a few blocks, not single spots; field strips run along their plot.
   Roads go down before buildings; a village building keeps grass round it, a town building
-  stands on paving (`cobble_ground`).
+  stands on paving (its paved copy, `cobble_ground` in a layout).
 - **Still to solve**: cart ruts and kerbs at an angle still step; a gutter ends in an open slab
   where its street turns; a street's paving reaches only 4 blocks toward a building.
 - **Size**: a village is 9 or 10 buildings in about 95 by 85 blocks, a small town about 20 in
@@ -81,6 +83,7 @@ door itself.
 - **Slots from the game.** `/structure save` writes plain blocks. A way to mark blocks as slots
   while building (a block standing for each slot, or a rule such as "every spruce stair is
   `roof/stair`") would let builders make restylable structures without code.
-- **Leaving the world as it is.** Every cell of a structure is set. The `ground` slot puts the
-  ground's own top block back in the bottom layer, but the air above clears the flowers and
-  tall grass there. A "keep" entry that leaves the world as it is would spare them.
+- **Leaving the world as it is.** The engine's files leave a cell out to keep what is there,
+  but the drawn buildings set every cell. `@ground` puts the ground's own top block back in the
+  bottom layer, but the air above it clears the flowers and tall grass there. Leaving that air
+  out of the drafts would spare them.

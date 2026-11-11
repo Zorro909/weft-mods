@@ -1,9 +1,8 @@
 //! The market hall: a timber-framed hall raised on log posts over an open, paved market floor.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{Ridge, gable_end, gable_roof, lights, log, slot, stair, timber_wall, window};
+use crate::structure_file::Structure;
 
 /// The hall's east wall; the west wall is at x = 1.
 const EAST: usize = 17;

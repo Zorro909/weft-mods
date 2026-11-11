@@ -1,5 +1,5 @@
-//! Compiles every `assets/structures/<name>.wst` into the mod as `EMBEDDED` (read in
-//! `worldgen`): the SDK gives a mod no way to read its own files while the game runs.
+//! Compiles every `assets/structures/<name>.json` into the mod as `EMBEDDED` (read in
+//! `buildings`): the SDK gives a mod no way to read its own files while the game runs.
 
 use std::path::{Path, PathBuf};
 
@@ -21,12 +21,12 @@ fn main() {
         let full = std::fs::canonicalize(&path)
             .unwrap_or_else(|e| panic!("could not resolve {}: {e}", path.display()));
         entries.push_str(&format!(
-            "    ({name:?}, include_bytes!({:?})),\n",
+            "    ({name:?}, include_str!({:?})),\n",
             full.to_string_lossy()
         ));
     }
     let code = format!(
-        "/// Every structure file compiled in: its name and its contents.\nconst EMBEDDED: &[(&str, &[u8])] = &[\n{entries}];\n"
+        "/// Every structure file compiled in: its name and its contents.\nconst EMBEDDED: &[(&str, &str)] = &[\n{entries}];\n"
     );
     let out =
         PathBuf::from(std::env::var("OUT_DIR").expect("cargo sets OUT_DIR for build scripts"))
@@ -34,14 +34,14 @@ fn main() {
     std::fs::write(&out, code).unwrap_or_else(|e| panic!("could not write {}: {e}", out.display()));
 }
 
-/// The `.wst` files in `dir`, sorted so every build registers them in the same order.
+/// The `.json` files in `dir`, sorted so every build registers them in the same order.
 fn structure_files(dir: &Path) -> Vec<PathBuf> {
     let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
         .into_iter()
         .flatten()
         .flatten()
         .map(|entry| entry.path())
-        .filter(|path| path.extension().is_some_and(|e| e == "wst"))
+        .filter(|path| path.extension().is_some_and(|e| e == "json"))
         .collect();
     files.sort();
     files

@@ -2,10 +2,11 @@
 //! down to the fountain, into the town hall and out again.
 
 use showcase_api::{Film, orbit};
-use structgen_api::{Pos, Turn};
+use weftkit::Pos;
 
 use super::building::Building;
 use super::{glide, speeds, turn};
+use crate::turn::Turn;
 
 /// The market square, the fountain in its middle.
 const SQUARE: [f64; 3] = [3500.0, 70.0, -1140.0];

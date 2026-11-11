@@ -2,7 +2,7 @@
 //! that curve, squares, fields and hedges drawn onto the ground, and this mod's buildings and
 //! trees placed on it. `cargo run --example sketch -- <sketch.txt> <out dir>` writes:
 //!
-//! - `<sketch>_ground_<n>.wst`: the ground, in pieces `/structure load` can take;
+//! - `<sketch>_ground_<n>.json`: the ground, in pieces `/structure load` can take;
 //! - `<sketch>.txt`: a layout of the pieces and buildings for `tools/structure-shots.sh --layout`;
 //! - `<sketch>.map`: a text map from above, to check what stands where.
 //!
@@ -18,11 +18,15 @@ mod map;
 mod parse;
 mod pieces;
 mod raster;
+// The mod's own file reader and writer; each example uses part of it.
+#[allow(dead_code)]
+#[path = "../../src/structure_file.rs"]
+mod structure_file;
 
 use std::fmt::Write;
 use std::path::Path;
 
-use structgen_api::Structure;
+use crate::structure_file::Structure;
 
 /// A placed structure's footprint as turned: its north-west corner and size along x and z.
 pub struct Footprint {
@@ -55,8 +59,8 @@ fn main() {
     for (n, piece) in pieces::cut(&ground).iter().enumerate() {
         let piece_name = format!("{name}_ground_{n}");
         write(
-            &out.join(format!("{piece_name}.wst")),
-            &piece.structure.encode(),
+            &out.join(format!("{piece_name}.json")),
+            piece.structure.to_json().as_bytes(),
         );
         let [x, z] = piece.corner;
         writeln!(layout, "{piece_name} none {x} {z}").ok();
@@ -92,11 +96,12 @@ fn main() {
 
 /// Where `place` stands, from the size of its file in `assets/structures/`.
 fn footprint(place: &parse::Place) -> Footprint {
-    let path =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("assets/structures/{}.wst", place.name));
-    let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("no structure {}: {e}", place.name));
-    let structure =
-        Structure::decode(&bytes).unwrap_or_else(|| panic!("{} is no structure file", place.name));
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(format!("assets/structures/{}.json", place.name));
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("no structure {}: {e}", place.name));
+    let structure = Structure::from_json(&text)
+        .unwrap_or_else(|why| panic!("{} is no structure file: {why}", place.name));
     let [sx, _, sz] = structure.size();
     let size = match place.turn.as_str() {
         "right" | "left" => [sz, sx],

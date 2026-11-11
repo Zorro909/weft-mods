@@ -1,9 +1,8 @@
 //! The hof: house and barn under one roof, as farms in the hills are built.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{bed, chimney, ladder, light, plinth, slab, slot, stair, timber_wall, window};
+use crate::structure_file::Structure;
 
 /// 11 x 15 inside its walls: house and barn under one huge hipped roof whose eaves come down to
 /// the top of the ground floor. The house end faces the front with its door and windows, the

@@ -1,55 +1,54 @@
 # Material slots
 
-A structure can name a role instead of a block: `roof/stair` with a default of spruce stairs.
-Where it is placed, code fills the role with another block, so one drawing is built of spruce,
-oak or brick. Weft's tags work the same way for recipes: a name stands for whichever block fills
-it.
+A building can name a role instead of a block: `roof/stair` with a default of spruce stairs.
+Where it is placed, a palette fills the role with another block, so one drawing is built of
+spruce, oak or brick. Slots and palettes are the engine's (`Weft/docs/worldgen.md`,
+"Structures"); this page is how structgen uses them.
 
-## In a structure
+## In a building
 
 A palette entry `@<slot>[props]` is slot `<slot>` with those properties:
-`@roof/stair[facing=north,half=bottom]`. The structure keeps each slot's default block, and
-`/structure load` and the world place that unless told otherwise. The properties go onto
-whichever block fills the slot, so a roof turns with the structure, and a property the block
-doesn't have is left out: a full block in a stair slot just stays a full block.
+`@roof/stair[facing=north,half=bottom]`. The file keeps each slot's default block, which goes
+there unless a palette says otherwise. The properties go onto whichever block fills the slot,
+so a roof turns with the building, and a property the block doesn't have is left out: a full
+block in a stair slot just stays a full block.
 
-In code, `Structure::with_slots(size, names, &[("roof/stair", "base:spruce_planks_stairs")])`
-builds one, and `structure.slots()` lists them. A slot name is lowercase letters, digits, `_`
-and `/`. Structures saved with `/structure save` have no slots.
+In code, `Structure::from_names(size, names, &[("roof/stair", "base:spruce_planks_stairs")])`
+(`src/structure_file.rs`) builds one, and `structure.slots()` lists them. Structures saved with
+`/structure save` have no slots.
 
 ## Filling slots
 
-`Materials` says which block fills which slot:
+A palette says which block fills which slot:
 
 ```rust
-let brick = Materials::new()
-    .with("roof/stair", "base:bricks_stairs")
-    .with("roof/slab", "base:bricks_slab")
-    .with("roof/block", "base:bricks");
+static BRICK: Palette = Palette::named("brick");
+r.palette(&BRICK)
+    .slot("roof/stair", "base:bricks_stairs")
+    .slot("roof/slab", "base:bricks_slab")
+    .slot("roof/block", "base:bricks");
 ```
 
-| Where | How |
-|---|---|
-| a plan | `p.structure(&T, corner, turn)?.materials(&brick)` |
-| a static structure | `place(..).materials(brick).materials(oak)`: the seed picks one of them per place |
-| now | `structure.place_in(&world, corner, turn, &brick)` |
-| a command | `/structure load <name> [turn] [styles]` with this mod's styles, below |
-
-A block in `Materials` the game doesn't have is logged, and the slot's default goes there.
+The settlements give each building one, `p.template(..).palette(&P)` on its piece
+(`src/settlement/plan.rs`); `w.place_template(&T, pos, transform, Some(&P))` places one now.
+`/structure load` takes none, so it always shows the defaults. A palette's blocks are checked
+when the game loads, as a template's are.
 
 ## The ground
 
-Slot `ground` is filled differently: where the world generates a structure, a `ground` cell
-takes the top block the ground has in its column, so grass on plains, snow on snowy plains,
-sand on a beach. A building's bottom layer uses it around its walls, and a path for the grass
-beside it, so the ground looks as it did. Its default goes where the ground has no top block,
-and wherever `place_in` and `/structure load` place it. `Materials` that fill `ground` fill it
-everywhere: `.with("ground", "base:cobblestone")` paves it.
+`@ground` is filled differently: it takes the top block the ground has in its column, so grass on
+plains, snow on snowy plains, sand on a beach. A building's bottom layer uses it around its
+walls, and a path for the grass beside it, so the ground looks as it did. The `ground` slot's
+block goes only where the column has no top block, from a palette too: no palette paves it.
+
+So a town paves round its buildings with copies of them instead (`src/buildings.rs`):
+`structgen:hof/paved`, `structgen:hof/right/paved` and so on, whose `@ground` cells are slot
+`paving`, cobblestone unless a palette fills it.
 
 ## This mod's slots
 
-Every building of this mod is drawn with these slots (`examples/buildings/kit.rs`), so one set
-of `Materials` restyles any of them. A building may give a slot its own default: a barn's
+Every building of this mod is drawn with these slots (`examples/buildings/kit.rs`), so one
+palette restyles any of them. A building may give a slot its own default: a barn's
 `wall/infill` is oak.
 
 | Slot | Default | For |
@@ -68,24 +67,29 @@ of `Materials` restyles any of them. A building may give a slot its own default:
 | `window` | glass | windows |
 | `chimney` | bricks | chimneys |
 | `light` | torch | lights |
-| `ground` | grass | the ground around a building: see [The ground](#the-ground) |
-| `path/surface`, `path/worn` | gravel, dirt | a village path, and its worn patches and cart ruts |
+| `ground` | grass | where the column has no top block: see [The ground](#the-ground) |
+| `paving` | cobblestone | only in the paved copies: a town's paving round a building |
+| `path/surface`, `path/worn` | gravel, dirt | a village path tile, and its worn patches and cart ruts |
 | `path/step` | cobblestone stairs | the step where a path rises |
-| `street/paving`, `street/patch` | cobblestone, mossy cobblestone | a town street, and its worn patches |
+| `street/paving`, `street/patch` | cobblestone, mossy cobblestone | a town street tile, and its worn patches |
 | `street/kerb` | stone bricks | kerbs, and the lattice of a square |
 | `street/gutter` | stone brick slab | the gutter down a street's middle |
 | `street/step` | stone brick stairs | the steps where a street rises |
 
 ## Styles
 
-`/structure load` and the settlements take these sets by name (`src/styles.rs`), several split
-by commas, each over the one before: `/structure load crofter_cottage none brick_roof,spruce_frame`.
+A style fills a few slots (`src/styles.rs`):
 
 | Style | Fills |
 |---|---|
 | `spruce_roof`, `oak_roof`, `birch_roof`, `brick_roof`, `stone_roof` | `roof/stair`, `roof/slab`, `roof/block` |
 | `oak_frame`, `spruce_frame`, `birch_frame` | `frame/log` |
 | `birch_infill`, `oak_infill`, `spruce_infill`, `white_infill` | `wall/infill` |
-| `gravel_path`, `dirt_path` | `path/surface`, `path/worn` |
-| `cobble_ground` | `ground`: cobblestone, for a building on a paved street |
-| `cobble_street`, `stone_street`, `brick_street`, `sandstone_street` | `street/paving`, `street/patch`, `street/kerb`, `street/gutter`, `street/step` |
+
+A piece takes one palette, so structgen registers one for every mix of a roof, a frame and an
+infill, each or none: `structgen:styles/<roof>/<frame>/<infill>`, each part left out when there
+is none. `structgen:styles/brick_roof/white_infill` is a brick roof, the default frame and white
+panels. Another mod can place a
+building in a style with `Palette::named` of one of these names.
+
+The path and street tiles have no styles: they show their defaults.

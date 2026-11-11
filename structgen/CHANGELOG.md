@@ -2,10 +2,25 @@
 
 ## Unreleased
 
+### Added
+
+- One or two buildings of each hamlet, village and town have something in their chests: bread,
+  apples, wheat, torches, coal, iron, now and then gold or arrows.
+
 ### Changed
 
-- Built for Weft 26.11.4.
+- Built for Weft 26.11.4, on the engine's own structures: hamlets, villages and towns are
+  features of base's overworld, and the buildings are templates in the engine's structure files
+  (`assets/structures/*.json`), turned by this mod as before so frames and ladders stay right.
+- `/structure` is the engine's command now: `save` takes both corners, `load` takes a template
+  (`structgen:hof`, `structgen:hof/right`) or a saved file and places it at a corner,
+  `locate structgen:village` finds a settlement. Saved files keep chest contents and mobs.
+- The world grows no trees inside a settlement, which the engine keeps them out of.
 - The buildings' beds are base's new beds, one block over two cells.
+- No more `structgen_api`: another mod uses the engine's templates, palettes and features.
+- No more `.wst` files, Structure Wand or structgen `/structure` of its own (`pos1`, `pos2`,
+  styles in `load`).
+- No more cottages, farms, chapels and mills standing alone in the country.
 
 ## 0.3.0 - 2026-11-09
 

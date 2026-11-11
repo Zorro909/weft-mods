@@ -17,6 +17,10 @@ mod paths;
 mod props;
 mod smithies;
 mod streets;
+// The mod's own file reader and writer; each example uses part of it.
+#[allow(dead_code)]
+#[path = "../../src/structure_file.rs"]
+mod structure_file;
 mod townhouses;
 mod workyards;
 
@@ -63,8 +67,8 @@ fn main() {
         if !wanted.is_empty() && !wanted.iter().any(|w| w == name) {
             continue;
         }
-        let path = dir.join(format!("{name}.wst"));
-        std::fs::write(&path, draw().encode())
+        let path = dir.join(format!("{name}.json"));
+        std::fs::write(&path, draw().to_json())
             .unwrap_or_else(|e| panic!("could not write {}: {e}", path.display()));
         println!("{}", path.display());
     }

@@ -5,34 +5,50 @@
 //! turned to face it (`frontage.rs`); gardens, a few small fields and trees fill in. What a kind
 //! of settlement holds is data, `Settlement`; this is the planner they share.
 
+mod biomes;
 mod buildings;
 mod draw;
+mod fit;
 mod frontage;
 mod grid;
+mod plan;
 mod planting;
+mod random;
 mod roads;
 mod shape;
 
 use std::f32::consts::TAU;
 
+use biomes::Biomes;
+use fit::Fit;
 pub use frontage::Faces;
 use frontage::{Rules, Site, fronts};
 use grid::{Cell, Grid};
+use plan::Plan;
+use random::Random;
 use roads::Road;
 use shape::{Point, length_of, sub};
-use structgen_api::{Biomes, Fit, Foundation, Materials, Plan, PlanError, Random};
 use weft_sdk::*;
+use weftkit::Pos;
 
 use crate::styles;
-use crate::worldgen::{OPEN, SEA};
 
+/// Open land to build on: plains and snowy plains, without the trees of forests, which would
+/// stand cut through a building.
+pub const OPEN: &str = "#animals !#forest !#mountain";
 static OPEN_LAND: Biomes = Biomes::named(OPEN);
+/// Base's sea level: lakes and the sea fill the ground below it, so buildings stand at least
+/// this high.
+const SEA: i32 = 63;
+/// How many spots a settlement tries, and how far from its start the others are at most.
+const SPOTS: usize = 3;
+pub const SHIFT: i32 = 48;
+/// What one or two buildings of every settlement keep in their chests.
+pub static CHESTS: LootTable = LootTable::named("settlement_chest");
 
 /// A village's lane is this wide; a town's street, kerbs included, `STREET`.
 const LANE: f32 = 3.0;
 const STREET: f32 = 7.0;
-/// How many spots in a region a settlement tries.
-const SPOTS: usize = 3;
 
 /// A village of lanes round a green, or a town of streets round a market square.
 #[derive(Clone, Copy, PartialEq)]
@@ -86,8 +102,8 @@ impl Kind {
 
 /// One kind of settlement.
 pub struct Settlement {
-    /// One per region of this many blocks square, at most, with this chance.
-    pub region: u32,
+    /// One per square of this many blocks, at most, with this chance.
+    pub spacing: i32,
     pub chance: f32,
     /// Where two kinds would overlap, the one of higher priority stands: a town over a village
     /// over a hamlet over a lone building (0).
@@ -125,45 +141,86 @@ pub struct Settlement {
     pub infills: &'static [&'static str],
 }
 
-/// Lays out one settlement in the region, if the seed wants one there: at the first of a few
-/// spots where the ground leaves room for it.
-pub fn plan(p: &mut Plan, s: &Settlement) -> Result<(), PlanError> {
-    if !p.random().chance(s.chance) {
-        return Ok(());
+impl Settlement {
+    /// How far from its middle a settlement reaches: its roads, and the buildings and fields
+    /// along them.
+    pub fn reach(&self) -> i32 {
+        (self.steps as f32 * roads::STEP + self.heart[0]) as i32 + 20
     }
-    let reach = (s.steps as f32 * roads::STEP + s.heart[0]) as i32 + 20;
-    for _ in 0..SPOTS {
-        let middle = p.spot(reach);
-        let open = p.ground(middle[0], middle[1]);
-        if !open.is_some_and(|g| g.height >= SEA && OPEN_LAND.contains(g.biome)) {
-            continue;
-        }
-        let mut grid = Grid::new(p, middle, reach, &OPEN_LAND);
-        if let Some(sites) = lay_out(p, &mut grid, s, grid::middle(middle)) {
-            return build(p, s, &grid, &sites);
-        }
+
+    /// Whether a settlement with its middle at `middle` keeps to the square of `start`, so it
+    /// overlaps none of its kind from the squares around.
+    fn keeps_to_its_square(&self, start: Pos, [x, z]: [i32; 2]) -> bool {
+        let inside = |start: i32, v: i32| {
+            let square = start.div_euclid(self.spacing) * self.spacing;
+            (square + self.reach()..square + self.spacing - self.reach()).contains(&v)
+        };
+        inside(start.x, x) && inside(start.z, z)
     }
-    Ok(())
 }
 
-/// Puts up the buildings in a settlement's materials, a town's paved round (but not its trees
-/// or its mill out in the fields), then lays its roads, squares and fields.
-fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) -> Result<(), PlanError> {
-    let walls = walls(p, s);
+/// Lays out the settlement of `start`, if the ground leaves room for one: with its middle at
+/// the start, or else at one of a few spots up to `SHIFT` from it.
+pub fn plan(start: &mut weft_sdk::Plan, s: &Settlement) {
+    let mut p = Plan::new(start);
+    let at = p.start();
+    for spot in 0..SPOTS {
+        let middle = match spot {
+            0 => [at.x, at.z],
+            _ => [
+                at.x + p.random().between(-SHIFT, SHIFT),
+                at.z + p.random().between(-SHIFT, SHIFT),
+            ],
+        };
+        let open = p.ground(middle[0], middle[1]);
+        let open = open.is_some_and(|g| g.height >= SEA && OPEN_LAND.contains(g.biome));
+        if !open || !s.keeps_to_its_square(at, middle) {
+            continue;
+        }
+        let mut grid = Grid::new(&p, middle, s.reach(), &OPEN_LAND);
+        if let Some(sites) = lay_out(&mut p, &mut grid, s, grid::middle(middle)) {
+            return build(&mut p, s, &grid, &sites);
+        }
+    }
+}
+
+/// Puts up the buildings in a settlement's styles, a town's paved round (but not its trees or
+/// its mill out in the fields), stocks the chests of one or two, then lays its roads, squares
+/// and fields.
+fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) {
+    let walls = [one_of(p, s.frames), one_of(p, s.infills)].map(Option::unwrap_or_default);
     for site in sites {
-        let roof = one_of(p, s.roofs).unwrap_or("");
-        let mut materials = styles::add(walls.clone(), roof);
+        let roof = one_of(p, s.roofs).unwrap_or_default();
         let is = |t: &Template| std::ptr::eq(t, site.template);
         let outside = s.trees.iter().any(|&t| is(t)) || s.mill.is_some_and(is);
-        if s.kind == Kind::Town && !outside {
-            materials = styles::add(materials, "cobble_ground");
-        }
-        p.structure(site.template, site.corner, site.turn)?
-            .materials(&materials)
-            .foundation(Foundation::Ground)
-            .clear_above();
+        let paved = s.kind == Kind::Town && !outside;
+        let palette = styles::palette(&[roof, walls[0], walls[1]]);
+        p.building(site.template, site.corner, site.turn, palette, paved);
     }
+    stock_chests(p, sites);
     draw::draw(p, grid)
+}
+
+/// Fills the chests of one or two of `sites` from `CHESTS`.
+fn stock_chests(p: &mut Plan, sites: &[Site]) {
+    let with_chests: Vec<(&Site, Vec<Pos>)> = (sites.iter())
+        .map(|site| (site, crate::buildings::chests(site.template, site.turn)))
+        .filter(|(_, chests)| !chests.is_empty())
+        .collect();
+    let n = with_chests.len() as u64;
+    if n == 0 {
+        return;
+    }
+    let first = p.random().below(n);
+    // Half the time a second, another one.
+    let second =
+        (n > 1 && p.random().chance(0.5)).then(|| (first + 1 + p.random().below(n - 1)) % n);
+    for i in [Some(first), second].into_iter().flatten() {
+        let (site, chests) = &with_chests[i as usize];
+        for &chest in chests {
+            p.loot(site.corner + chest, &CHESTS);
+        }
+    }
 }
 
 /// Where everything stands round the middle `m`, marked on `grid`: `None` when the ground leaves
@@ -234,11 +291,4 @@ fn one_of<T: Copy>(p: &mut Plan, items: &[T]) -> Option<T> {
         0 => None,
         n => Some(items[p.random().below(n as u64) as usize]),
     }
-}
-
-/// The frame and infill all of a settlement's buildings share.
-fn walls(p: &mut Plan, s: &Settlement) -> Materials {
-    let frame = one_of(p, s.frames).unwrap_or("");
-    let infill = one_of(p, s.infills).unwrap_or("");
-    styles::add(styles::add(Materials::new(), frame), infill)
 }

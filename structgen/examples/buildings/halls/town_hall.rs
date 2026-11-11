@@ -1,7 +1,5 @@
 //! The town hall: the landmark of a town, its belfry and spire seen from every street.
 
-use structgen_api::Structure;
-
 use super::{civic_roof, cross_gable, upper_storey};
 use crate::chapels::{spire, stone_walls};
 use crate::draft::{AIR, Draft};
@@ -9,6 +7,7 @@ use crate::kit::{
     Ridge, chimney, gable_end, gable_roof, ladder, log, plinth, slab, slot, stair, timber_wall,
     window,
 };
+use crate::structure_file::Structure;
 
 /// 19 x 15, a timber storey jutting over a stone hall: a double stair climbs the front to the council
 /// chamber's door over the arched entrance below, and a belfry tower rises from the middle

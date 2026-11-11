@@ -3,10 +3,11 @@
 //! up and away.
 
 use showcase_api::{Film, flyby, orbit};
-use structgen_api::{Pos, Turn};
+use weftkit::Pos;
 
 use super::building::Building;
 use super::{glide, speeds, turn};
+use crate::turn::Turn;
 
 /// The first hamlet, round its well in a shallow valley.
 const FIRST: [f64; 3] = [4168.0, 74.0, -205.0];

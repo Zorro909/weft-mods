@@ -15,17 +15,17 @@ Look a call up in this order. The engine's own source (`Weft/crates/engine`, `We
 | Content | Weft doc | Example here |
 |---|---|---|
 | Block | `modding.md` "Blocks", `registration.md` | `cogwork/src/markers.rs` |
-| Item | `modding.md` "Items" | `structgen/src/wand.rs`, `cogwork/src/cogs.rs` |
+| Item | `modding.md` "Items" | `cogwork/src/cogs.rs` |
 | Block entity, machine, energy | `block_entities.md` | `cogwork/src/leveler/`, `cogwork/src/machine.rs` |
 | Screen | `ui.md` | `screen` in `cogwork/src/bench/mod.rs` |
 | Recipe | `modding.md` "Recipes" | `cogwork/assets/recipes/`, `cogwork/src/recipes.rs` |
-| Command | `modding.md` "Commands" | `structgen/src/command.rs` |
-| Worldgen | `worldgen.md` | `structgen/src/worldgen.rs`, `structgen/api/` |
+| Command | `modding.md` "Commands" | `showcase/src/server.rs` |
+| Worldgen, structure, template, palette | `worldgen.md` | `structgen/src/villages.rs`, `structgen/src/buildings.rs`, `structgen/src/settlement/plan.rs` |
 | Entity, model, animation | `modding.md` "Entities", `models.md` | `cogwork/src/engines/piston.rs`, `cogwork/src/arms/` |
 | Sound | `modding.md` "World API" | `cogwork/src/sounds.rs` |
 | Component, tag | `modding.md` "Components and tags" | `cogwork/src/owned.rs` |
-| Event, interceptor | `modding.md` "Hooking into the game" | `structgen/src/wand.rs` |
-| Channel between client and server | `modding.md` "Client side" | `cogwork/src/ghost.rs`, `structgen/src/selection.rs` |
+| Event, interceptor | `modding.md` "Hooking into the game" | `cogwork/src/tube/visual.rs` |
+| Channel between client and server | `modding.md` "Client side" | `cogwork/src/ghost.rs`, `cogwork/src/loading/lens.rs` |
 | Client drawing | `modding.md` "Client side", `shaders.md` | `cogwork/src/loading/lens.rs`, `showcase/src/view.rs` |
 | Text | `localization.md` | any mod's `assets/lang/en_us.lang` |
 

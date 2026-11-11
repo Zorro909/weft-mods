@@ -2,10 +2,11 @@
 //! church; one out on the plain, past its mill into its smithy and out round the village.
 
 use showcase_api::{Film, orbit};
-use structgen_api::{Pos, Turn};
+use weftkit::Pos;
 
 use super::building::Building;
 use super::{glide, speeds, turn};
+use crate::turn::Turn;
 
 /// The village in the hills, round its green.
 const HILLS: [f64; 3] = [4196.0, 108.0, 280.0];

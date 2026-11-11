@@ -33,9 +33,8 @@ At Weft v26.11.4, checked with and without the mods of this repository:
 |---|---|
 | `ctm_any_model` | Fails alone too: "plant: green in the middle" and more. The engine's, not a mod's |
 | `edit_while_loading` | Fails alone too: "shown after 2456 ms". The engine's, not a mod's |
-| `worldgen` | Fails with structgen only: "mirrored, the stairs face the other way: core:air". Structgen's `/structure` replaces the engine's, so the engine's `save <name> <from> <to>` and `load <name> <pos> <transform>` the test calls are not there |
 
-A run with these three and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
+A run with these two and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
 
 ## Pictures
 

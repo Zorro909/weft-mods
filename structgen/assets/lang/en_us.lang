@@ -1,28 +1,5 @@
 mod.structgen.name = Structgen
-mod.structgen.description = Generates structures and hamlets across the overworld, and lets you save and load your own. /structure saves a selected box of the world to a file, loads one in front of you, and finds the nearest structure.
-structgen.saved = Saved {0} ({1} x {2} x {3} blocks) to {4}
-structgen.bad_name = A structure's name is lowercase letters, digits and underscores, not {0}
-structgen.too_big = A structure is at most {0} blocks along each side
-structgen.not_loaded = Part of that box isn't loaded
-structgen.write_failed = Could not save {0}: {1}
-structgen.too_many_states = A structure holds at most 65535 different block states
-structgen.located = {0} is at {1} {2} {3}, {4} blocks away
-structgen.not_found = No {0} within {1} blocks
-structgen.unknown = There is no structure {0}. This mod has: {1}
-structgen.bad_radius = The radius is 1 to {0} blocks
-structgen.no_selection = Give both corners, or select a box first with /structure pos1 and /structure pos2
-structgen.corner_set = Corner {0} at {1} {2} {3}
-structgen.no_player = Only a player can do that
-structgen.bad_turn = A turn is none, right, back or left
-structgen.bad_style = No such style. Styles are {0}, several split by commas
-structgen.no_file = There is no structure {0}: no file {1}, and none built in
-structgen.bad_file = {0} is not a structure file of this version
-structgen.unknown_block = {0} has {1}, which is no block of this game
-structgen.loaded = Placed {0} at {1} {2} {3}
-structgen.nothing_to_undo = Nothing to undo here
-structgen.undone = Put back {0} blocks
-item.structgen.wand = Structure Wand
-item.structgen.wand.tooltip = Hit a block for the first corner of a box, use it on one for the second. /structure save <name> saves the box.
+mod.structgen.description = Hamlets, villages and towns across the overworld, each laid out afresh from the land it stands on, with roads, gardens, fields and timber-framed buildings.
 
 # Film titles (the film itself is only built with the showcase feature)
 structgen.film.hamlet = A hamlet: a few cottages and a farm round a well

@@ -1,10 +1,9 @@
 //! Trees and bushes for greens, orchards and gardens: the green between a settlement's
 //! buildings. Their bottom layer is the trunk and the ground around it.
 
-use structgen_api::Structure;
-
 use crate::draft::Draft;
 use crate::kit::{Building, slot};
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("oak_tree", oak_tree),

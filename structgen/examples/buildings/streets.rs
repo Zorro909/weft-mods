@@ -5,10 +5,9 @@
 //!
 //! A square tile is paving to every edge, so squares of any size are laid from them.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{Building, light, log, slab, stair};
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("street_straight", straight),

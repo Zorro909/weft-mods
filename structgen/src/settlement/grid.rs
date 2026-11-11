@@ -1,14 +1,14 @@
 //! A settlement's ground seen from above, a cell per column: what each column is for, so roads,
 //! buildings and fields keep out of each other, and how high its ground is.
 
-use structgen_api::{Biomes, Plan};
-
+use super::biomes::Biomes;
+use super::plan::Plan;
 use super::shape::{Point, add, distance, inside, scale};
 
 mod paving;
 mod walking;
 
-use crate::worldgen::SEA;
+use super::SEA;
 
 /// What one column is for.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -25,8 +25,7 @@ pub enum Cell {
     /// A town's market square, or paving up to a building.
     Square,
     Building,
-    /// Water, no ground, land of another kind (a forest), or outside the region: nothing goes
-    /// here.
+    /// Water, no ground, or land of another kind (a forest): nothing goes here.
     Blocked,
 }
 
@@ -62,7 +61,6 @@ impl Grid {
     /// The columns within `reach` of `middle`, read from the ground; only `land` is free.
     pub fn new(p: &Plan, middle: [i32; 2], reach: i32, land: &Biomes) -> Grid {
         let (origin, side) = ([middle[0] - reach, middle[1] - reach], 2 * reach + 1);
-        let region = p.region();
         let mut grid = Grid {
             origin,
             side,
@@ -73,7 +71,7 @@ impl Grid {
             for x in origin[0]..origin[0] + side {
                 let ground = p
                     .ground(x, z)
-                    .filter(|g| g.height >= SEA && region.contains(x, z) && land.contains(g.biome));
+                    .filter(|g| g.height >= SEA && land.contains(g.biome));
                 let usable = ground.is_some();
                 grid.cells
                     .push(if usable { Cell::Free } else { Cell::Blocked });

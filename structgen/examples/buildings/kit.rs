@@ -2,9 +2,8 @@
 //! the parts the style repeats (45° roofs, timber-framed walls, windows, chimneys). See
 //! `docs/materials.md` for what each slot is for.
 
-use structgen_api::Structure;
-
 use crate::draft::Draft;
+use crate::structure_file::Structure;
 
 /// One building of a family: its file name and how it is drawn.
 pub type Building = (&'static str, fn() -> Structure);

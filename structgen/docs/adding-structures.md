@@ -1,26 +1,25 @@
 # Adding a structure to this mod
 
-Every `.wst` file in `assets/structures/` is compiled into the mod and becomes a template of
-it (`structgen:<name>`). Which of them appear in the world, and where, is set in
-`src/worldgen.rs` (buildings alone) and `src/villages.rs` (hamlets, villages and towns); see
-[In the world](worldgen.md).
+Every `.json` file in `assets/structures/` is a [structure file](file-format.md) the engine makes
+a template of (`structgen:<name>`), and structgen adds its turned and paved copies. Which of them
+appear in the world, and where, is set in `src/villages.rs`; see [In the world](worldgen.md).
 
 There are two ways to make one: build it in the game and save it, or draw it in code with the
 kit, as this mod's own buildings are.
 
 ## Saved in the game
 
-1. In the game, select a box with the wand (or `/structure pos1` and `pos2`) and run
-   `/structure save <name>`, or give the two corners: `/structure save <name> <from> <to>`
-   (`~ ~ ~` works). Start the box at the floor: the bottom layer is laid level with the ground,
-   and the foundation goes under it.
-2. The file goes to `structures/<name>.wst`; the reply shows the full path. `/structure load
-   <name>` places it again to look at it from every side, and `/structure undo` takes it away.
+1. Build it, then run `/structure save <name> <from> <to>` with two opposite corners (`~ ~ ~`
+   works). Start the box at the floor: the bottom layer is laid level with the ground, and the
+   foundation goes under it.
+2. The file goes to `structures/<name>.json` beside the game's saves. `/structure load <name>`
+   places it again to look at it from every side, and `/structure undo` takes it away.
 3. Copy it into `assets/structures/` and rebuild. `build.rs` compiles every file there in;
    a file not named in lowercase letters, digits and underscores fails the build.
 
-See [Wand and commands](commands.md) for the limits on saving. A saved structure has no
-[material slots](materials.md), so styles don't change it.
+See [Commands](commands.md) for the limits on saving. A saved structure has no
+[material slots](materials.md), so styles don't change it. It keeps what its chests hold and
+the mobs in it only as `structgen:<name>`; the turned and paved copies leave them out.
 
 ## Drawn in code
 
@@ -44,10 +43,11 @@ settlement's `houses`, `farms`, `landmarks` or another list.
 
 `tools/structure-shots.sh <name>...` places each structure in the flatlands at noon and
 photographs it from the front, the back, a side, above and inside, into
-`structgen/out/shots/`. `--styles "brick_roof;birch_roof,white_infill"` shoots it in other
-looks, and `--turn right` turned. `--layout structgen/examples/layouts/town_streets.txt` lays
-several side by side, turned as the file says, and shoots them together, to see tiles join up.
-Run `--help` for the rest.
+`structgen/out/shots/`; a path to a `.json` file works too. Slots show their defaults, since
+`/structure load` takes no palette. `--turn right` shoots it turned, a building of this mod as
+its turned copy. `--layout structgen/examples/layouts/town_streets.txt` lays several side by
+side, turned as the file says, and shoots them together, to see tiles join up; of a layout's
+styles only `cobble_ground` shows, as the building's paved copy. Run `--help` for the rest.
 
 ## Sketching a settlement
 
@@ -61,16 +61,18 @@ cargo run --release --example sketch -- examples/sketches/green_village.txt out/
 tools/structure-shots.sh --layout structgen/out/green_village/green_village.txt
 ```
 
-It writes the ground in pieces of at most 64 by 64, a layout of the pieces and buildings for
-the shot tool, and `<sketch>.map`, the plan as text from above with each building a letter;
-buildings that overlap are named as it runs. A sketch's `view` lines add shots of their own,
-from street level say. The format is at the top of `examples/sketch/parse.rs`.
+It writes the ground in pieces of at most 64 by 64, `<sketch>_ground_<n>.json`, a layout of the
+pieces and buildings for the shot tool, and `<sketch>.map`, the plan as text from above with
+each building a letter; buildings that overlap are named as it runs. A sketch's `view` lines
+add shots of their own, from street level say. The format is at the top of
+`examples/sketch/parse.rs`.
 
 ## Tips
 
 - Draw the front on the north side (z = 0): a settlement turns a building so that side faces
   the road it stands on, or the green or square.
-- Air in the box is saved too and clears what was there, so a house keeps its rooms empty when
-  it lands in a hill. Under a roof's overhang, put the `ground` slot in the bottom layer rather
-  than air, or the ground there is dug out.
-- Chests and machines are placed empty: their contents aren't saved yet.
+- Air in the box clears what was there, so a house keeps its rooms empty when it lands in a
+  hill. Under a roof's overhang, put the `ground` slot in the bottom layer rather than air, or
+  the ground there is dug out.
+- Chests are placed empty; the settlements fill one or two buildings' chests from their own
+  loot table.

@@ -4,7 +4,6 @@
 mod roofs;
 
 use roofs::{cross_roof, fill_up, steep_roof};
-use structgen_api::Structure;
 
 use crate::cottages::dormer;
 use crate::draft::{AIR, Draft};
@@ -12,6 +11,7 @@ use crate::kit::{
     Building, Ridge, bed, chimney, gable_roof, ladder_up, lights, log, plinth, slab, slot, stair,
     timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("narrow_gable", narrow_gable),

@@ -1,12 +1,15 @@
 //! Buildings standing along a road or round the heart, each turned to face it: a walk down the
 //! front, a building wherever the ground and its neighbours leave room, then on past it.
 
-use structgen_api::{Fit, Plan, Pos, Turn};
 use weft_sdk::Template;
+use weftkit::Pos;
 
+use super::fit::Fit;
 use super::grid::{Cell, Grid, column};
+use super::plan::Plan;
 use super::roads::Road;
 use super::shape::{Point, add, inside, scale, walk};
+use crate::turn::Turn;
 
 mod door;
 

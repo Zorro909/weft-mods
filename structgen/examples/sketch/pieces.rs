@@ -1,10 +1,9 @@
 //! The drawn ground cut into structures `/structure load` can take: pieces of at most 64 by
 //! 64, each a layer of ground with a layer above for crops, hedges and air.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::raster::{Cell, Ground};
+use crate::structure_file::Structure;
 
 /// The longest side of a piece.
 const SIDE: usize = 64;

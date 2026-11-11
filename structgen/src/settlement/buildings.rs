@@ -1,15 +1,15 @@
 //! Which buildings go where: the heart's own, the landmarks, the homes along the fronts and
 //! the mill outside.
 
-use structgen_api::{Fit, Plan};
 use weft_sdk::Template;
 
+use super::fit::Fit;
 use super::frontage::{Faces, Front, Rules, Site, facing, next_site, stand_round};
 use super::grid::{Cell, Grid};
+use super::plan::Plan;
 use super::roads::Road;
 use super::shape::{Point, add, heading, length_of, scale, sub};
-use super::{Kind, Settlement, one_of, planting};
-use crate::worldgen::SEA;
+use super::{Kind, SEA, Settlement, one_of, planting};
 
 /// The heart's own buildings, in it along the main road, the first in the middle; `None` if the
 /// first, the well or fountain, has no room.

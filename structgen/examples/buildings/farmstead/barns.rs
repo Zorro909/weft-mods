@@ -1,12 +1,11 @@
 //! Barns and granaries: where the harvest is threshed and kept.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{
     Ridge, gable_end, gable_roof, ladder, light, log, plinth, side_windows, slab, slot, stair,
     timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 /// 9 x 15 inside its walls: buttressed stone lower walls under oak-boarded upper walls, a tall
 /// roof whose ridge runs front to back, a cart doorway at each end and a loft at the back.

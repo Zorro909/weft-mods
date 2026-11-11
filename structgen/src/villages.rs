@@ -4,7 +4,7 @@
 
 use weft_sdk::*;
 
-use crate::settlement::{self, Faces, Kind, Settlement};
+use crate::settlement::{self, CHESTS, Faces, Kind, OPEN, Settlement};
 
 static DRAW_WELL: Template = Template::named("draw_well");
 static CROFTER_COTTAGE: Template = Template::named("crofter_cottage");
@@ -57,7 +57,7 @@ static TREES: &[&Template] = &[
 ];
 
 static HAMLET: Settlement = Settlement {
-    region: 384,
+    spacing: 384,
     chance: 0.38,
     priority: 1,
     kind: Kind::Village,
@@ -80,7 +80,7 @@ static HAMLET: Settlement = Settlement {
 };
 
 static VILLAGE: Settlement = Settlement {
-    region: 512,
+    spacing: 512,
     chance: 0.38,
     priority: 2,
     kind: Kind::Village,
@@ -108,7 +108,7 @@ static VILLAGE: Settlement = Settlement {
 };
 
 static TOWN: Settlement = Settlement {
-    region: 640,
+    spacing: 640,
     chance: 0.5,
     priority: 3,
     kind: Kind::Town,
@@ -136,11 +136,49 @@ static TOWN: Settlement = Settlement {
     infills: &["", "white_infill"],
 };
 
+static HAMLETS: Feature = Feature::named("hamlet");
+static VILLAGES: Feature = Feature::named("village");
+static TOWNS: Feature = Feature::named("town");
+
+/// How far above and below its start a settlement may build: more than base's overworld is
+/// high, so no hillside drops a building or a road.
+const REACH_UP: i32 = 512;
+const REACH_DOWN: i32 = 512;
+
+/// Each kind of settlement a feature of base's overworld: `/structure locate structgen:village`
+/// finds the nearest one's start, at most `SHIFT` from its middle.
 pub fn register(r: &mut Registry) {
-    for (name, settlement) in [("hamlet", &HAMLET), ("village", &VILLAGE), ("town", &TOWN)] {
-        structgen_api::plan(r, name, move |p| settlement::plan(p, settlement))
+    for (feature, settlement) in [(&HAMLETS, &HAMLET), (&VILLAGES, &VILLAGE), (&TOWNS, &TOWN)] {
+        r.feature(feature)
             .dimension(&base_api::OVERWORLD)
-            .region(settlement.region)
-            .priority(settlement.priority);
+            .biome(OPEN)
+            .spacing(settlement.spacing)
+            .chance(settlement.chance)
+            .reach(settlement.reach() + settlement::SHIFT)
+            .reach_y(REACH_UP, REACH_DOWN)
+            .priority(settlement.priority)
+            .plan(move |p| settlement::plan(p, settlement));
     }
+    r.loot(&CHESTS)
+        .pool(
+            Pool::new()
+                .rolls(2, 4)
+                .item("base:bread")
+                .item("base:apple")
+                .item("base:wheat")
+                .item("base:torch"),
+        )
+        .pool(
+            Pool::new()
+                .rolls(1, 2)
+                .items("base:coal", 1, 4)
+                .items("base:iron_ingot", 1, 3)
+                .item("base:flint"),
+        )
+        .pool(
+            Pool::new()
+                .rolls(0, 1)
+                .item("base:gold_ingot")
+                .item("base:arrow"),
+        );
 }

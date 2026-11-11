@@ -3,9 +3,8 @@
 
 use std::f32::consts::{FRAC_PI_2, PI};
 
-use structgen_api::Random;
-
 use super::grid::{Cell, Grid, column};
+use super::random::Random;
 use super::shape::{Point, add, blob, heading, inside, length_of, scale, smooth, sub, walk};
 use super::{Kind, Settlement, unit};
 
