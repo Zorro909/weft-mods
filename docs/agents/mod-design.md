@@ -47,12 +47,13 @@ SDK calls only work inside the game, so a unit test can't run them. Keep the dec
 
 ## An API crate
 
-What a mod shows other mods is a crate of its own, `<mod>/api`: `showcase/api`. What the engine already offers, such as structures, templates and palettes, needs none.
+What a mod shows other mods is a crate of its own, `<mod>/api`: `showcase/api`, `almanac/api`. What the engine already offers, such as structures, templates and palettes, needs none.
 
 - It holds types, handles and helpers other mods call; what this mod chose (its styles, its settlements, its commands) stays in the mod.
 - Names in it are written in full, `Event::named("showcase:play")`, since a handle belongs to whichever mod compiles it.
-- `showcase_api` talks to a running mod, so its users list `showcase` in `declare_mod!(deps: [..])`; a plain library linked into each user would need no entry. A new API crate says which kind it is at the top of its `lib.rs`.
+- `showcase_api` talks to a running mod, so its users list `showcase` in `declare_mod!(deps: [..])`. `almanac_api` does too, but a mod whose quests are an extra lists `almanac` under `after:` and loads without it. A plain library linked into each user would need no entry. A new API crate says which kind it is at the top of its `lib.rs`.
 - Registering is a free function taking the registry and returning a builder of options: `film(r, ..)`.
+- What other mods should be able to change is kept in the registry as records, a component per setting, so that `r.edit` changes one without restating the rest; the mod reads them once the game is loaded: `almanac/api/src/record.rs`.
 - A value crossing between mods is a `value!` struct; text in one is a fixed-size `Name` (`showcase/api/src/name.rs`); anything longer is bytes with a version number, read back by code that refuses every other version (`showcase/api/src/wire/`). A changed format takes a new version and a `Changed` line in the changelog.
 - It re-exports the `weftkit` types it hands out.
 

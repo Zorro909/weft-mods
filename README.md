@@ -10,6 +10,7 @@ ships as its own mod.
 
 | | Mod | What it adds |
 |---|---|---|
+| <img src="almanac/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Almanac](almanac/README.md) | A quest book that other mods add chapters to: do what a quest asks, claim its rewards, and see what comes next. `almanac_api` is how a mod writes its chapter. |
 | <img src="cogwork/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
 | <img src="structgen/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structgen](structgen/README.md) | Hamlets, villages and towns across the overworld, each laid out afresh from the land, built of timber-framed buildings in the engine's structure files. |
 | | [Showcase](showcase/README.md) | A tool for mod makers: plays films that mods make of their content in code, and records them to video. |
@@ -46,7 +47,7 @@ each mod; [`docs/agents/mods.md`](docs/agents/mods.md) has the build, load and c
 
 | Path | What it holds |
 |---|---|
-| `cogwork/`, `structgen/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
+| `almanac/`, `cogwork/`, `structgen/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
 | `Weft/` | The engine, checked out by `init.sh` and not tracked here |
 | `weftkit/` | A library the mods share: typed block positions, areas and block states |
 | `docs/agents/` | Guides for working on this repository: code style, mod design, mods, testing, engine, releasing |
