@@ -2,13 +2,14 @@
 //! liquid and how many millibuckets of it, and liquid moves between holders that touch, from
 //! where it stands or pushes higher to where it stands lower (`flow`). A full holder passes on
 //! the push of what fills it, so liquid stands in a tube before it rises, and a pump pushes it
-//! up. Holders that have settled sleep until a neighbour changes (`vessel`).
+//! up. Holders that have settled sleep until a neighbour changes (`turn`).
 //!
 //! A liquid is kept by the key of its name, as ghosts keep items: a liquid's item is named like
 //! it, so `ghost::item_of` finds that item again.
 
 mod bucket;
 mod flow;
+mod turn;
 mod vessel;
 
 pub use bucket::use_bucket;
@@ -111,7 +112,7 @@ pub fn register(r: &mut Registry) {
         Held::default(),
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
-    r.system(&HELD, vessel::tick);
+    r.system(&HELD, turn::tick);
 }
 
 /// The key of the liquid named `name` (`cogwork:oil`).
