@@ -38,12 +38,13 @@ ici
 
 ### Bigger tanks
 
-Tanks placed next to each other become one tank when together they make a box (a full
-rectangle on every layer) of up to 3 by 3 blocks and up to 6 high, holding no more than one
-liquid: from a single block up to 54 blocks and 864 buckets. The frame then runs round the
-outside of the whole tank and the glass between its blocks goes. Its liquid fills it from the
-bottom layer up, so the level is the same across it. Tanks that don't make such a box, or hold
-different liquids, stay tanks of their own.
+A tank placed next to another joins it when together they make a box (a full rectangle on
+every layer) of up to 3 by 3 blocks and up to 6 high, holding no more than one liquid: from a
+single block up to 54 blocks and 864 buckets. A tank grows a block or a tank at a time, so a
+3 by 3 layer can be laid a row at a time. The frame then runs round the outside of the whole
+tank and the glass between its blocks goes. Its liquid fills it from the bottom layer up, so the
+level is the same across it. A tank that doesn't fit, or holds another liquid, stays a tank of
+its own beside it, and the tank it touches stays whole.
 
-Breaking a block of a tank loses the liquid that block held, its share of the tank's; the
-other blocks keep theirs and regroup into the tanks they still make.
+Breaking a block of a tank keeps its liquid: the rest of the tank parts into tanks that make
+boxes again, and they share the liquid by their size, as much as they hold.

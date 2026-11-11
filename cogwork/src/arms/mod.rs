@@ -5,7 +5,9 @@
 //! the arm's side (`#north`) shows the texture of the side it is turned to.
 //!
 //! The model is built into the mod and put together when its block states are made (`boxes`),
-//! so there is no file for each set of arms.
+//! so there is no file for each set of arms. Where the hub and an arm meet neither has a face,
+//! and an open arm has none at its end either: through a see-through texture they would show as
+//! panes across the tube.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -31,6 +33,15 @@ pub static TORQUE_SHAFT: LazyLock<HubAndArms> = LazyLock::new(|| {
 
 /// The side the arms of a hub-and-arm model point to.
 const MODEL_ARM: Dir = Dir::North;
+
+/// An arm of a hub, by whether its end has a face.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Arm {
+    /// Its end drawn: there may be nothing beside it, as beside a directing tube's output.
+    Closed,
+    /// Its end left out: it lies against what it joins.
+    Open,
+}
 
 /// A hub with arms, as its model file has it.
 pub struct HubAndArms {
@@ -83,11 +94,11 @@ impl HubAndArms {
         self.textures.get(name).map_or("", String::as_str)
     }
 
-    /// The pieces of the hub with an arm toward every side `has_arm` says, each face showing the
-    /// texture `texture` gives for its name in the file.
+    /// The pieces of the hub with the arm `arm` gives toward each side, if any, each face
+    /// showing the texture `texture` gives for its name in the file.
     pub fn pieces(
         &self,
-        has_arm: impl Fn(Dir) -> bool,
+        arm: impl Fn(Dir) -> Option<Arm>,
         texture: impl Fn(&str) -> String,
     ) -> Vec<Piece> {
         let shown = |part: &Part| Piece {
@@ -98,9 +109,19 @@ impl HubAndArms {
                 .map(|name| name.map(|name| texture(&name))),
         };
         let mut pieces: Vec<Piece> = self.hub.iter().map(shown).collect();
-        for side in Dir::ALL.into_iter().filter(|&side| has_arm(side)) {
-            pieces.extend(self.arm.iter().map(|part| shown(&turned(part, side))));
+        for side in Dir::ALL {
+            let Some(kind) = arm(side) else {
+                continue;
+            };
+            for part in &self.arm {
+                let mut piece = shown(&turned(part, side));
+                if kind == Arm::Open {
+                    piece.faces[side.face() as usize] = None;
+                }
+                pieces.push(piece);
+            }
         }
+        crate::boxes::hide_shared_faces(&mut pieces);
         pieces
     }
 }
@@ -183,7 +204,7 @@ mod tests {
     #[test]
     fn an_arm_turns_to_its_side() {
         let model = HubAndArms::read("test", MODEL);
-        let pieces = model.pieces(|dir| dir == Dir::West, named);
+        let pieces = model.pieces(|dir| (dir == Dir::West).then_some(Arm::Closed), named);
         assert_eq!(pieces.len(), 2, "the hub and one arm");
         let west = &pieces[1];
         assert_eq!(
@@ -204,13 +225,27 @@ mod tests {
     #[test]
     fn an_arm_up_reaches_the_top() {
         let model = HubAndArms::read("test", MODEL);
-        let up = &model.pieces(|dir| dir == Dir::Up, named)[1];
+        let up = &model.pieces(|dir| (dir == Dir::Up).then_some(Arm::Closed), named)[1];
         assert_eq!(up.corners, ([4.0, 12.0, 4.0], [12.0, 16.0, 12.0]), "up");
         assert_eq!(
             up.faces[Dir::Up.face() as usize].as_deref(),
             Some("up"),
             "its end"
         );
+    }
+
+    #[test]
+    fn a_see_through_tube_shows_no_pane_inside() {
+        let model = HubAndArms::read("test", MODEL);
+        let pieces = model.pieces(|dir| (dir == Dir::West).then_some(Arm::Open), named);
+        let [hub, west] = &pieces[..] else {
+            panic!("the hub and one arm");
+        };
+        let face = |piece: &Piece, dir: Dir| piece.faces[dir.face() as usize].is_some();
+        assert!(!face(hub, Dir::West), "none where the arm meets the hub");
+        assert!(!face(west, Dir::East), "nor on the arm there");
+        assert!(!face(west, Dir::West), "an open end has none");
+        assert!(face(west, Dir::Up), "its sides stay");
     }
 
     #[test]
@@ -227,7 +262,7 @@ mod tests {
     #[test]
     fn a_hub_alone_has_no_arms() {
         let model = HubAndArms::read("test", MODEL);
-        assert_eq!(model.pieces(|_| false, named).len(), 1, "the hub");
+        assert_eq!(model.pieces(|_| None, named).len(), 1, "the hub");
         assert_eq!(model.texture("particle"), "tube", "under block/");
     }
 }

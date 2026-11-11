@@ -6,6 +6,7 @@
 
 use weft_sdk::{BlockBuilder, Dir, Registry, Tag, WithComponents, World, abi};
 
+use crate::boxes::{Corners, Piece};
 use crate::lib::{BlockState, Pos};
 use crate::liquid::{self, LiquidKey};
 
@@ -20,10 +21,7 @@ pub const TANK_LEVELS: u32 = 16;
 /// Inside a tube's hub, in texels: the hub is 4 to 12, the fill half a texel in from its glass.
 const TUBE_LOW: f32 = 4.5;
 const TUBE_HIGH: f32 = 11.5;
-/// Where an arm's fill stops short of the block's edge, so it never lies in the plane of the
-/// arm's end.
-const TUBE_EDGE: f32 = 0.25;
-/// Inside a tank block, in texels: half a texel in from its glass (`tank::files`), above its
+/// Inside a tank block, in texels: half a texel in from its glass (`tank::shape`), above its
 /// base and below its lid on the outside of the tank, edge to edge where it goes on.
 const TANK_WALL: f32 = 1.5;
 const TANK_FLOOR: f32 = 4.0;
@@ -32,14 +30,13 @@ const TANK_LID: f32 = 14.5;
 pub fn register(r: &mut Registry) {
     let in_tube = r.shapes_of("liquid_in_tube", "#liquids", "_in_tube");
     with_sides(fill_block(in_tube, &IN_TUBE, TUBE_LEVELS)).states(|props, state| {
-        tube_boxes(props.int("level"), |dir| props.is(dir.name(), "true"))
-            .into_iter()
-            .fold(state, |state, (min, max)| state.model_box(min, max))
+        let pieces = tube_pieces(props.int("level"), |dir| props.is(dir.name(), "true"));
+        crate::boxes::draw(state, &pieces)
     });
     let in_tank = r.shapes_of("liquid_in_tank", "#liquids", "_in_tank");
     with_sides(fill_block(in_tank, &IN_TANK, TANK_LEVELS)).states(|props, state| {
-        let (min, max) = tank_box(props.int("level"), |dir| props.is(dir.name(), "true"));
-        state.model_box(min, max)
+        let piece = tank_piece(props.int("level"), |dir| props.is(dir.name(), "true"));
+        crate::boxes::draw(state, &[piece])
     });
 }
 
@@ -62,44 +59,69 @@ fn with_sides(mut builder: BlockBuilder<'_>) -> BlockBuilder<'_> {
     builder
 }
 
-/// The boxes of a tube's fill `level` eighths up its hub, with `arm` toward each side it has an
-/// arm: a level surface through the hub and the sideways arms, the arm down full whenever there
-/// is any, the arm up only when the tube is full.
-fn tube_boxes(level: u32, arm: impl Fn(Dir) -> bool) -> Vec<([f32; 3], [f32; 3])> {
+/// The liquid's own picture on each face, by `Dir::face`.
+const SOURCE_FACES: [&str; 6] = [
+    "{source.west}",
+    "{source.east}",
+    "{source.down}",
+    "{source.up}",
+    "{source.north}",
+    "{source.south}",
+];
+
+/// A piece of fill: `corners`, with a face toward each side `face` says.
+fn liquid(corners: Corners, face: impl Fn(Dir) -> bool) -> Piece {
+    Piece::new(corners, |dir| {
+        face(dir).then_some(SOURCE_FACES[dir.face() as usize])
+    })
+}
+
+/// The pieces of a tube's fill `level` eighths up its hub, with `arm` toward each side it has
+/// an arm: a level surface through the hub and the sideways arms, the arm down full whenever
+/// there is any, the arm up only when the tube is full. The liquid goes on into what each arm
+/// joins, so an arm's end has no face but up, where the liquid stops.
+fn tube_pieces(level: u32, arm: impl Fn(Dir) -> bool) -> Vec<Piece> {
     let top = TUBE_LOW + (TUBE_HIGH - TUBE_LOW) * level as f32 / TUBE_LEVELS as f32;
     let hub = ([TUBE_LOW; 3], [TUBE_HIGH, top, TUBE_HIGH]);
-    let mut boxes = vec![hub];
-    for dir in Dir::ALL.into_iter().filter(|&dir| arm(dir)) {
+    let mut pieces = vec![liquid(hub, |_| true)];
+    for side in Dir::ALL.into_iter().filter(|&dir| arm(dir)) {
         let (mut min, mut max) = hub;
-        let axis = dir.face() as usize / 2;
+        let axis = side.face() as usize / 2;
         // Even faces are the low side of their axis.
-        if dir.face().is_multiple_of(2) {
-            (min[axis], max[axis]) = (TUBE_EDGE, TUBE_LOW);
+        if side.face().is_multiple_of(2) {
+            (min[axis], max[axis]) = (0.0, TUBE_LOW);
         } else {
-            (min[axis], max[axis]) = (TUBE_HIGH, 16.0 - TUBE_EDGE);
+            (min[axis], max[axis]) = (TUBE_HIGH, 16.0);
         }
-        match dir {
+        match side {
             Dir::Up if level < TUBE_LEVELS => continue,
             Dir::Down | Dir::Up => {}
             _ => max[1] = top,
         }
-        boxes.push((min, max));
+        pieces.push(liquid((min, max), |dir| dir != side || dir == Dir::Up));
     }
-    boxes
+    crate::boxes::hide_shared_faces(&mut pieces);
+    pieces
 }
 
-/// The box of a tank block's fill `level` sixteenths up its inside, reaching the edge on each
-/// side `joined` to more of the tank.
-fn tank_box(level: u32, joined: impl Fn(Dir) -> bool) -> ([f32; 3], [f32; 3]) {
+/// The fill of a tank block `level` sixteenths up its inside, reaching the edge on each side
+/// `joined` to more of the tank, with no face there: the liquid goes on. Its top shows unless
+/// the block is full and joined above, where the liquid goes on up.
+fn tank_piece(level: u32, joined: impl Fn(Dir) -> bool) -> Piece {
     let low = |dir| if joined(dir) { 0.0 } else { TANK_WALL };
     let high = |dir| if joined(dir) { 16.0 } else { 16.0 - TANK_WALL };
     let floor = if joined(Dir::Down) { 0.0 } else { TANK_FLOOR };
     let lid = if joined(Dir::Up) { 16.0 } else { TANK_LID };
     let top = floor + (lid - floor) * level as f32 / TANK_LEVELS as f32;
-    (
+    let corners = (
         [low(Dir::West), floor, low(Dir::North)],
         [high(Dir::East), top, high(Dir::South)],
-    )
+    );
+    let full = level >= TANK_LEVELS;
+    liquid(corners, |dir| match dir {
+        Dir::Up => !(full && joined(Dir::Up)),
+        _ => !joined(dir),
+    })
 }
 
 /// The fill of `liquid` for a tube at `level` (1 and up) with arms toward `arm`, if a loaded
@@ -167,28 +189,50 @@ pub fn level_of(amount: u32, capacity: u32, levels: u32) -> u32 {
 mod tests {
     use super::*;
 
+    fn has(piece: &Piece, dir: Dir) -> bool {
+        piece.faces[dir.face() as usize].is_some()
+    }
+
     #[test]
     fn a_tube_shows_one_level_through_its_hub_and_sideways_arms() {
-        let boxes = tube_boxes(4, |dir| matches!(dir, Dir::West | Dir::Up | Dir::Down));
-        assert_eq!(boxes.len(), 3, "the hub, the arm west and down, not up");
-        let [hub, west, down] = [boxes[0], boxes[1], boxes[2]];
-        assert_eq!(hub.1[1], 8.0, "halfway up the hub");
-        assert_eq!(west.1[1], 8.0, "the arm as high");
+        let pieces = tube_pieces(4, |dir| matches!(dir, Dir::West | Dir::Up | Dir::Down));
+        assert_eq!(pieces.len(), 3, "the hub, the arm west and down, not up");
+        let [hub, west, down] = [&pieces[0], &pieces[1], &pieces[2]];
+        assert_eq!(hub.corners.1[1], 8.0, "halfway up the hub");
+        assert_eq!(west.corners.1[1], 8.0, "the arm as high");
         assert_eq!(
-            (down.0[1], down.1[1]),
-            (TUBE_EDGE, TUBE_LOW),
+            (down.corners.0[1], down.corners.1[1]),
+            (0.0, TUBE_LOW),
             "the arm down full"
         );
         assert_eq!(
-            tube_boxes(TUBE_LEVELS, |dir| dir == Dir::Up).len(),
+            tube_pieces(TUBE_LEVELS, |dir| dir == Dir::Up).len(),
             2,
             "up once full"
         );
     }
 
     #[test]
+    fn liquid_shows_no_face_where_it_goes_on() {
+        let pieces = tube_pieces(TUBE_LEVELS, |dir| matches!(dir, Dir::West | Dir::Up));
+        let [hub, west, up] = [&pieces[0], &pieces[1], &pieces[2]];
+        assert!(
+            !has(hub, Dir::West) && !has(west, Dir::East),
+            "into the arm"
+        );
+        assert!(!has(west, Dir::West), "into what the arm joins");
+        assert!(has(up, Dir::Up), "its surface, at the top of the arm up");
+        let inside = tank_piece(TANK_LEVELS, |dir| dir != Dir::North);
+        assert!(has(&inside, Dir::North), "behind the glass");
+        assert!(!has(&inside, Dir::East), "on into the next block");
+        assert!(!has(&inside, Dir::Up), "on up, full");
+        let below_the_top = tank_piece(TANK_LEVELS - 1, |_| true);
+        assert!(has(&below_the_top, Dir::Up), "its surface");
+    }
+
+    #[test]
     fn a_tank_fill_reaches_through_to_the_rest_of_the_tank() {
-        let (min, max) = tank_box(TANK_LEVELS, |dir| matches!(dir, Dir::East | Dir::Up));
+        let (min, max) = tank_piece(TANK_LEVELS, |dir| matches!(dir, Dir::East | Dir::Up)).corners;
         assert_eq!(
             (min[0], max[0]),
             (TANK_WALL, 16.0),
@@ -199,7 +243,7 @@ mod tests {
             (TANK_FLOOR, 16.0),
             "on its base, into the block above"
         );
-        let (_, half) = tank_box(TANK_LEVELS / 2, |dir| dir == Dir::Down);
+        let (_, half) = tank_piece(TANK_LEVELS / 2, |dir| dir == Dir::Down).corners;
         assert_eq!(
             half[1],
             (0.0 + TANK_LID) / 2.0,

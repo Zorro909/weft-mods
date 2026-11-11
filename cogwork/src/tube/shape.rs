@@ -8,6 +8,7 @@
 use weft_sdk::{BlockBuilder, Dir, Props, State, Use, WithComponents, World, tool_tier};
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
+use crate::arms::Arm;
 use crate::lib::{BlockState, Pos, TypedWorld};
 
 /// A directing tube's arms besides its output, by their place among the other five directions.
@@ -56,13 +57,16 @@ fn model<'s>(props: &Props, state: State<'s>, texture: &'static str, arms: Arms)
         Arms::Output(_) => Dir::from_name(props.get("out")),
         _ => None,
     };
-    // The output has no property: its arm is always there.
-    let has_arm = |dir| arm_prop(out, dir).is_none_or(|name| props.is(name, "true"));
+    // The output has no property: its arm is always there, closed, as nothing may be beside it.
+    let arm = |dir| match arm_prop(out, dir) {
+        None => Some(Arm::Closed),
+        Some(name) => props.is(name, "true").then_some(Arm::Open),
+    };
     let side = |name: &str| {
         let dir = Dir::from_name(name).expect("a tube's model names its textures after sides");
         side_texture(texture, arms, out, dir).to_string()
     };
-    let pieces = crate::arms::TUBE.pieces(has_arm, side);
+    let pieces = crate::arms::TUBE.pieces(arm, side);
     crate::boxes::draw(state.texture(texture), &pieces)
 }
 
