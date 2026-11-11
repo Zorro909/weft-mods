@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Runs the unit tests and clippy of this repository's mods and of the libraries they share, each
-# with all its features, so code behind a feature (a mod's films, `--features showcase`) is
-# checked too. A mod's own API crates are covered when its `Cargo.toml` makes them workspace
-# members. CI runs this on every pull request; warnings fail it.
+# Checks this repository's mods and the libraries they share as CI does on every pull request:
+# formatting, unit tests and clippy, each with all its features, so code behind a feature (a
+# mod's films, `--features showcase`) is checked too. A mod's own API crates are covered when its
+# `Cargo.toml` makes them workspace members. Warnings fail it.
 #
 #   tools/check-mods.sh                 every mod and library
 #   tools/check-mods.sh cogwork ...     only these folders
@@ -18,8 +18,21 @@ for folder in "${folders[@]}"; do
     fi
 done
 
+# Whether the folder's Rust is formatted by the root `rustfmt.toml`, which needs nightly rustfmt.
+# In CI the `format` job of `check.yml` checks that, so this job gets by with stable Rust.
+check_format() {
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+        return
+    fi
+    if ! git ls-files -z -- "$1/*.rs" | xargs -0 -r rustfmt +nightly --check; then
+        echo "check-mods.sh: unformatted Rust in $1; run: git ls-files -z '*.rs' | xargs -0 rustfmt +nightly" >&2
+        exit 1
+    fi
+}
+
 for folder in "${folders[@]}"; do
     echo "::group::checking $folder"
+    check_format "$folder"
     manifest=(--manifest-path "$folder/Cargo.toml" --release --workspace --all-features)
     cargo test "${manifest[@]}"
     cargo clippy "${manifest[@]}" --all-targets -- -D warnings
