@@ -22,20 +22,21 @@ From inside `Weft/`, with your mods installed (they load for every test):
 
 - `--test <name>` runs one test and `--test list` names them. The exit code is the number of failures, `Weft/run/test-reports/report.txt` has each result, and the whole run takes about six minutes.
 - `run-headless.sh` runs the game in a compositor without a monitor, so nothing opens on your user's desktop. `--gpu` picks the card by PCI address: this machine has two identical ones, `0000:0f:00.0` and `0000:03:00.0`, for two runs side by side.
-- Keep its defaults: at `--hz 60` `edit_while_loading` times out, and with `--run-dir` `names_translated` can't find base's lang files.
+- Keep its defaults: with `--run-dir` `names_translated` can't find base's lang files.
 - Where weston is missing, `MESA_VK_WSI_DEBUG=sw xvfb-run -a -s "-screen 0 640x480x24" target/release/weft --test all` works, slower.
 
 ### Known failures
 
-At Weft v26.11.3, checked with and without the mods of this repository:
+At Weft v26.11.4, checked with and without the mods of this repository:
 
 | Test | What happens |
 |---|---|
-| `chat` | Fails alone too: "timed out waiting for the command list". The engine's, not a mod's |
-| `broken_shader_pack` | Fails alone too: "the texture table still reads as packs read it". The engine's, not a mod's |
-| `neutral_mobs` | Fails now and then in `--test all`, which runs several games at once; passes alone |
+| `ctm_any_model` | Fails alone too: "plant: green in the middle". The engine's, not a mod's |
+| `edit_while_loading` | Fails alone too: "the placed block shows", the block showing after two to five seconds. The engine's, not a mod's |
+| `worldgen` | Fails with structgen installed: "mirrored, the stairs face the other way". structgen's `/structure` takes the place of the engine's command of that name, whose `save` and `load` the test uses |
+| `redstone_flying_machine` | Fails now and then in `--test all`, which runs several games at once; passes alone |
 
-A run with these three and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
+A run with these four and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
 
 ## Pictures
 

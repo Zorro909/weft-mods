@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Builds against Weft v26.11.4, where a bed is one block on two cells: the buildings' beds are
+  drawn that way.
+
 ## 0.3.0 - 2026-11-09
 
 ### Added

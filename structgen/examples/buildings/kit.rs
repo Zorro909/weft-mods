@@ -85,11 +85,12 @@ pub fn side_windows(d: &mut Draft, x: [usize; 2], y: usize, height: usize, zs: &
     }
 }
 
-/// A bed with its foot at `foot`, facing `facing`: the head lies the other way.
+/// A bed with its foot at `foot`, facing `facing`: the head lies the other way. A bed is one
+/// block on two cells, so the head's cell only points back to the foot.
 pub fn bed(d: &mut Draft, foot: [usize; 3], facing: &str) {
-    d.set(foot, &format!("base:bed[facing={facing},part=foot]"));
+    d.set(foot, &format!("base:bed[facing={facing}]"));
     if let Some(head) = step(foot, opposite(facing)) {
-        d.set(head, &format!("base:bed[facing={facing},part=head]"));
+        d.set(head, &format!("core:covered[to={facing}]"));
     }
 }
 

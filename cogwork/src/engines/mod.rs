@@ -108,7 +108,7 @@ fn ember_engine(r: &mut Registry) {
         })
         .opens(&EMBER_MENU);
     r.menu(&EMBER_MENU)
-        .group("fuel", Slots::single().accepts("fuel").holder())
+        .group("fuel", Slots::single().accepts("#fuel").holder())
         .player_inventory()
         .screen(ember_screen);
 }

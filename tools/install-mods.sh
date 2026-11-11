@@ -102,7 +102,7 @@ all_loaded() {
 run_server() {
     local server waited=0
     rm -f "$log"
-    (cd Weft && exec target/release/weft --server >/dev/null 2>&1) &
+    (cd Weft && exec target/release/weft server >/dev/null 2>&1) &
     server=$!
     until all_loaded || ! kill -0 "$server" 2>/dev/null || [[ $waited -ge $load_wait ]]; do
         sleep 1

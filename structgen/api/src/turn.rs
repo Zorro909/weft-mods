@@ -68,7 +68,7 @@ impl Turn {
     /// Property `name=value` once turned: directions and axes turn, and so do sides.
     fn prop<'a>(self, name: &'a str, value: &'a str) -> (&'a str, &'a str) {
         match name {
-            "facing" | "front" | "attach" => (name, self.direction(value)),
+            "facing" | "front" | "attach" | "to" => (name, self.direction(value)),
             "axis" => (name, self.axis(value)),
             "north" | "east" | "south" | "west" => (self.direction(name), value),
             _ => (name, value),
@@ -77,8 +77,8 @@ impl Turn {
 }
 
 /// The properties `Turn::prop` turns; keep the two in step.
-const TURNING: [&str; 8] = [
-    "facing", "front", "attach", "axis", "north", "east", "south", "west",
+const TURNING: [&str; 9] = [
+    "facing", "front", "attach", "to", "axis", "north", "east", "south", "west",
 ];
 
 /// `state` turned. A property the block doesn't have is left alone, and so is a value it can't
@@ -158,6 +158,17 @@ mod tests {
         assert_eq!(lever, ("attach", "east"), "a lever on a wall");
         let button = Turn::Left.prop("attach", "down");
         assert_eq!(button, ("attach", "down"), "one on the floor stays");
+    }
+
+    #[test]
+    fn a_big_blocks_other_cell_keeps_pointing_at_it() {
+        let head = Turn::Right.prop("to", "south");
+        assert_eq!(head, ("to", "west"), "a bed's head, toward its foot");
+        assert_eq!(
+            Turn::Back.prop("to", "down"),
+            ("to", "down"),
+            "a door's top"
+        );
     }
 
     #[test]

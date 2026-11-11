@@ -82,7 +82,13 @@ pub fn register(r: &mut Registry) {
         .opens(&BENCH_MENU);
     r.menu(&BENCH_MENU)
         // Filled by tubes only, through `insert`; taken from only by crafting.
-        .group("grid", Slots::grid(3, 3).input().accepts(NOTHING).holder())
+        .group(
+            "grid",
+            Slots::grid(3, 3)
+                .input()
+                .accepts(&format!("#{NOTHING}"))
+                .holder(),
+        )
         .group("output", Slots::row(3).output().holder())
         .recipes(&CRAFTING)
         .player_inventory()

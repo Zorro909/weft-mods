@@ -19,7 +19,7 @@ members = ["api"]
 # The Weft release the mod and its API crate build against, from the game's repository as the
 # mod index wants it; `init.sh` checks out the newest one any mod names into `Weft/`.
 [workspace.dependencies]
-weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.4" }
 
 [profile.release]
 debug = "line-tables-only"

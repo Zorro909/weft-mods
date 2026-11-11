@@ -79,7 +79,7 @@ fn set(cmd: &mut ServerCommand, corner: usize) {
         .map(Vec3::block)
         .or_else(|| {
             world
-                .target_block(player, REACH, false)
+                .looked_at(player, REACH, Ray::blocks())
                 .map(|look| look.pos)
         })
         .or_else(|| world.entity(player).map(|me| me.pos.block()));
