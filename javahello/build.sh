@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds the javahello mod with GraalVM native-image into `build/javahello/`, and puts it into
-# `Weft/run/mods/javahello/` for the game to load.
+# Builds the javahello mod with GraalVM native-image into `build/javahello.zip`, the one file a
+# player drops into their `mods/` folder, and puts it into `Weft/run/mods/` for the game to load.
 #
 #   javahello/build.sh
 #
@@ -33,8 +33,10 @@ gcc -c -fPIC -O2 -Wall -o "$out/entry.o" native/entry.c
 cp -r assets "$mod/"
 # native-image writes C headers beside the library; the game wants only the library.
 rm -f "$mod"/*.h
+# Laid out as the engine's `--pack-mod` packs a mod: the library and `assets/` at the top.
+"$bin/jar" --create --no-manifest --file "$out/javahello.zip" -C "$mod" .
 
-rm -rf ../Weft/run/mods/javahello
+rm -rf ../Weft/run/mods/javahello ../Weft/run/mods/javahello.zip
 mkdir -p ../Weft/run/mods
-cp -r "$mod" ../Weft/run/mods/
-echo "installed $mod into Weft/run/mods/javahello"
+cp "$out/javahello.zip" ../Weft/run/mods/
+echo "built $out/javahello.zip and installed it into Weft/run/mods/"

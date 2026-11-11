@@ -18,8 +18,11 @@ against. With sdkman: `sdk install java 25.5.5.0+3-graalce`.
 GRAALVM_HOME=~/.sdkman/candidates/java/25.5.5.0+3-graalce javahello/build.sh
 ```
 
-This builds `build/javahello/` (`libjavahello.so` and `assets/`) and copies it into
-`Weft/run/mods/javahello/`. Rebuild it after every move to a new Weft, as any mod is.
+This builds `build/javahello.zip`, the file to share: a player drops it into their game's `mods/`
+folder. It holds `libjavahello.so` and `assets/`, as the engine's `--pack-mod` lays a mod out,
+and `build.sh` also copies it into `Weft/run/mods/`. The library is for Linux on x86-64 only, and
+loads only into the Weft release it was built against: rebuild it for every new Weft, as any mod
+is.
 
 ## How it reaches the engine
 
@@ -40,7 +43,7 @@ it, adds `weft_mod` to the export list before the link.
 
 | File | What |
 |---|---|
-| `build.sh` | Generates `Abi.java`, compiles the C and the Java, links them into one library and installs it |
+| `build.sh` | Generates `Abi.java`, compiles the C and the Java, links them into one library, zips it with the assets and installs that |
 | `native/entry.c` | `weft_mod`, `init` and the callback trampoline: C the engine calls, handing over to Java |
 | `native/cc.sh` | gcc, exporting `weft_mod` from the library too |
 | `tools/GenerateAbi.java` | Writes `Abi.java`: the ABI version and the `Host` offsets the mod uses |
