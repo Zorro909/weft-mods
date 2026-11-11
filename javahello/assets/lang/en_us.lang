@@ -1,0 +1,3 @@
+mod.javahello.name = Java Hello
+mod.javahello.description = Adds /hellojava, a command written in Java and compiled to native code by GraalVM native-image.
+javahello.hello = Hello from Java {0}, compiled ahead of time by GraalVM native-image

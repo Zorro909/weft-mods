@@ -47,6 +47,7 @@ each mod; [`docs/agents/mods.md`](docs/agents/mods.md) has the build, load and c
 | Path | What it holds |
 |---|---|
 | `cogwork/`, `structgen/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
+| `javahello/` | An experiment, not released: a mod in Java, compiled by GraalVM native-image, with its own `build.sh` |
 | `Weft/` | The engine, checked out by `init.sh` and not tracked here |
 | `weftkit/` | A library the mods share: typed block positions, areas and block states |
 | `docs/agents/` | Guides for working on this repository: code style, mod design, mods, testing, engine, releasing |
