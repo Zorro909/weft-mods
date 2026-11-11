@@ -4,11 +4,21 @@ Liquid tubes carry liquid from a [pump](oil.md#pump) to tanks and on. They work 
 of any mod: water, lava, [oil](oil.md#oil) or another mod's. A tube or tank holds one liquid at a
 time, and you can see how full it is: the liquid stands in it at its level, in its own colors.
 
-Liquid moves between the liquid tubes, tanks and pumps that touch. Each tick, every one of them
-hands each neighbour up to 100 mB, as much as evens out how full the two are, so liquid spreads
-from the fuller to the emptier, the way it would settle. Two different liquids don't mix: one
-waits until the other has moved on. What is left of a liquid once it has drained (less than a
-thousandth of a tank) gives way to the next liquid that comes.
+Liquid moves between the liquid tubes, tanks and pumps that touch, the way it would in pipes:
+from where it stands higher to where it stands lower, up to 100 mB a tick to each neighbour. It
+falls down a tube and levels out sideways, and a pipe into a lower tank drains into it.
+
+- **Pressure.** A full tube or tank passes on the push of what fills it. So liquid stands in a
+  tube going up and rises further only once the tube below is full, and a line fed from a pump
+  stays full while it delivers.
+- **Pumps push.** A pump holding liquid pushes it up to 16 blocks above itself. Each full tube or
+  tank on the way loses a sixteenth of a block of that push, so a long line lifts less. Liquid
+  never runs back into a pump. Without a pump, liquid rises no higher than where it stands.
+- **Two liquids** don't mix: one waits until the other has moved on. What is left of a liquid
+  once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
+
+A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
+still line costs almost nothing.
 
 Liquid tubes and tanks join only Cogwork's own blocks for now: other mods' machines don't say
 which of their slots hold liquid, so tubes leave them alone (see

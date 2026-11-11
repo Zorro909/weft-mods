@@ -102,6 +102,27 @@ impl Tank {
         CELL_CAPACITY * self.cells.len() as u32
     }
 
+    /// How high its bottom layer stands.
+    pub fn floor(&self) -> i32 {
+        self.blocks().map(|pos| pos.y).min().unwrap_or_default()
+    }
+
+    /// Millibuckets that raise its liquid a block: a layer's worth.
+    pub fn per_block(&self) -> u32 {
+        let floor = self.floor();
+        let bottom = self.blocks().filter(|pos| pos.y == floor).count();
+        CELL_CAPACITY * bottom as u32
+    }
+
+    /// Its blocks, and their block entities.
+    pub fn blocks(&self) -> impl Iterator<Item = Pos> + '_ {
+        self.cells.iter().map(|cell| cell.pos)
+    }
+
+    pub fn ids(&self) -> impl Iterator<Item = u64> + '_ {
+        self.cells.iter().map(|cell| cell.id)
+    }
+
     /// Lays `held` in the tank from the bottom up and shows each block's fill.
     pub fn settle(&self, holders: &mut Holders, held: Held) {
         let mut cells = self.cells.clone();
@@ -121,6 +142,8 @@ impl Tank {
             let mut share = holders.get(cell.id);
             share.amount = amount;
             share.liquid = if amount == 0 { NO_LIQUID } else { held.liquid };
+            // Its liquid is laid out anew: every block takes a turn again.
+            share.asleep = 0;
             let above = at.get(&cell.pos.toward(Dir::Up));
             let covered = above.is_some_and(|&above| above >= DRIBBLE);
             show(&world, cell.pos, &mut share, covered);
@@ -141,7 +164,7 @@ fn together(shares: impl IntoIterator<Item = Held>) -> Held {
     Held {
         liquid,
         amount: of_it.map(|share| share.amount).sum(),
-        shown: 0,
+        ..Held::default()
     }
 }
 
@@ -391,7 +414,7 @@ mod tests {
         Held {
             liquid,
             amount,
-            shown: 0,
+            ..Held::default()
         }
     }
 

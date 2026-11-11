@@ -9,7 +9,7 @@ use weft_sdk::{Block, Dir, Registry, World, tool_tier};
 use crate::arms::Arm;
 use crate::fill::{self, TUBE_LEVELS};
 use crate::lib::{Pos, TypedWorld};
-use crate::liquid::{Held, is_vessel, reaches};
+use crate::liquid::{HELD, Held, is_full, is_vessel, reaches};
 
 pub static LIQUID_TUBE: Block = Block::named("liquid_tube");
 
@@ -40,7 +40,8 @@ pub fn register(r: &mut Registry) {
         .entity(|entity| entity.attach(&crate::liquid::HELD));
 }
 
-/// Sets every arm of the tube at `pos` to what its neighbors are now.
+/// Sets every arm of the tube at `pos` to what its neighbors are now, and wakes it: what it
+/// touches may have changed.
 fn refresh(world: &World, pos: Pos) {
     let tube = world.block_typed(pos);
     if !tube.is(&LIQUID_TUBE) {
@@ -51,6 +52,9 @@ fn refresh(world: &World, pos: Pos) {
     });
     if next != tube {
         world.set_block_typed(pos, next);
+    }
+    if let Some(held) = world.component_mut(world.block_entity(pos), &HELD) {
+        held.asleep = 0;
     }
 }
 
@@ -65,7 +69,11 @@ fn joins(world: &World, pos: Pos, dir: Dir) -> bool {
 pub fn show(world: &World, pos: Pos, held: &mut Held) {
     let tube = world.block_typed(pos);
     let has_arm = |dir: Dir| tube.prop(dir.name()) == Some("true");
-    let level = fill::level_of(held.amount, CAPACITY, TUBE_LEVELS);
+    let level = if is_full(held.amount, CAPACITY) {
+        TUBE_LEVELS
+    } else {
+        fill::level_of(held.amount, CAPACITY, TUBE_LEVELS)
+    };
     let shown = shown_as(level, has_arm);
     if shown == held.shown {
         return;
