@@ -21,6 +21,8 @@
 - No more `.wst` files, Structure Wand or structgen `/structure` of its own (`pos1`, `pos2`,
   styles in `load`).
 - No more cottages, farms, chapels and mills standing alone in the country.
+- The showcase film flies where seed 42 now puts its settlements: a hamlet, a village, a town
+  and, over the mountains, a last hamlet.
 
 ## 0.3.0 - 2026-11-09
 
