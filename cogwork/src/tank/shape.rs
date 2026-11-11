@@ -11,13 +11,13 @@ use weft_sdk::Dir;
 
 use crate::boxes::Piece;
 
-/// Texels in from an outer side its glass lies: inside the frame.
+/// Texels in from an outer side its glass lies: behind the frame.
 pub const GLASS: f32 = 2.0;
 /// How far in from an outer side the frame and base lie, and how thick the frame is.
 const INSET: f32 = 1.0;
-const FRAME: f32 = 2.0;
-/// How far a corner cap reaches along each edge.
-const CAP: f32 = 3.0;
+const FRAME: f32 = 1.0;
+/// How far a corner cap reaches along each edge: a texel past the frame.
+const CAP: f32 = 2.0;
 /// How high the base of the bottom layer is.
 pub const BASE: f32 = 5.0;
 
