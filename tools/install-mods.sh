@@ -32,7 +32,7 @@ done
 
 mapfile -t available < <(all_mods)
 chosen=("$@")
-if [ ${#chosen[@]} -eq 0 ]; then
+if [[ ${#chosen[@]} -eq 0 ]]; then
     chosen=("${available[@]}")
 fi
 for mod in "${chosen[@]}"; do
@@ -44,7 +44,7 @@ done
 
 # Whether to build in the toolbox: not when already inside one (`/run/.toolboxenv`).
 use_toolbox() {
-    [ ! -e /run/.toolboxenv ] && command -v toolbox >/dev/null &&
+    [[ ! -e /run/.toolboxenv ]] && command -v toolbox >/dev/null &&
         toolbox list --containers 2>/dev/null | awk 'NR > 1 { print $2 }' | grep -qx "$toolbox_name"
 }
 
@@ -70,21 +70,22 @@ install_mod() {
     remove_mod "$folder"
     mkdir -p "$mods_dir/$id"
     cp "$folder/target/release/$prefix$id.$suffix" "$mods_dir/$id/"
-    if [ -d "$folder/assets" ]; then
+    if [[ -d $folder/assets ]]; then
         cp -r "$folder/assets" "$mods_dir/$id/"
     fi
 }
 
 # Takes a mod of this repository out of `run/mods/`, so it doesn't load.
 remove_mod() {
-    local id
-    id="$(mod_id "$1")"
+    local folder=$1 id
+    id="$(mod_id "$folder")"
     rm -rf "${mods_dir:?}/$id" "$mods_dir/$id.zip"
 }
 
-# Whether the log says the game loaded mod $1.
+# Whether the log says the game loaded the mod of this id.
 loaded() {
-    grep -q "loaded mod $1 " "$log" 2>/dev/null
+    local id=$1
+    grep -q "loaded mod $id " "$log" 2>/dev/null
 }
 
 # Whether the log says so of every chosen mod.
@@ -103,7 +104,7 @@ run_server() {
     rm -f "$log"
     (cd Weft && exec target/release/weft --server >/dev/null 2>&1) &
     server=$!
-    until all_loaded || ! kill -0 "$server" 2>/dev/null || [ "$waited" -ge "$load_wait" ]; do
+    until all_loaded || ! kill -0 "$server" 2>/dev/null || [[ $waited -ge $load_wait ]]; do
         sleep 1
         waited=$((waited + 1))
     done
@@ -141,7 +142,7 @@ for mod in "${available[@]}"; do
     fi
 done
 
-if [ "$check" -eq 1 ]; then
+if [[ $check -eq 1 ]]; then
     echo "checking that the game loads: ${chosen[*]}"
     check_loads
 fi

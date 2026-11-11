@@ -10,9 +10,9 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 source tools/ci/mods.sh
 
-mapfile -t folders < <(if [ $# -gt 0 ]; then printf '%s\n' "$@"; else all_crates; fi)
+mapfile -t folders < <(if [[ $# -gt 0 ]]; then printf '%s\n' "$@"; else all_crates; fi)
 for folder in "${folders[@]}"; do
-    if [ ! -f "$folder/Cargo.toml" ]; then
+    if [[ ! -f $folder/Cargo.toml ]]; then
         echo "check-mods.sh: no mod $folder here; the mods and libraries are: $(all_crates | xargs)" >&2
         exit 2
     fi
@@ -21,11 +21,12 @@ done
 # Whether the folder's Rust is formatted by the root `rustfmt.toml`, which needs nightly rustfmt.
 # In CI the `format` job of `check.yml` checks that, so this job gets by with stable Rust.
 check_format() {
-    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    local folder=$1
+    if [[ -n ${GITHUB_ACTIONS:-} ]]; then
         return
     fi
-    if ! git ls-files -z -- "$1/*.rs" | xargs -0 -r rustfmt +nightly --check; then
-        echo "check-mods.sh: unformatted Rust in $1; run: git ls-files -z '*.rs' | xargs -0 rustfmt +nightly" >&2
+    if ! git ls-files -z -- "$folder/*.rs" | xargs -0 -r rustfmt +nightly --check; then
+        echo "check-mods.sh: unformatted Rust in $folder; run: git ls-files -z '*.rs' | xargs -0 rustfmt +nightly" >&2
         exit 1
     fi
 }

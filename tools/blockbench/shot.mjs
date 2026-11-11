@@ -58,9 +58,13 @@ function addEntityTexture(file) {
 
 // Waits until every texture is read or given up on, and gives the files of the latter.
 async function texturesNotFound() {
-    while (!Texture.all.every((texture) => texture.img.complete)) {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-    }
+    const settled = (image) =>
+        image.complete ||
+        new Promise((resolve) => {
+            image.addEventListener('load', resolve, { once: true });
+            image.addEventListener('error', resolve, { once: true });
+        });
+    await Promise.all(Texture.all.map((texture) => settled(texture.img)));
     return Texture.all.filter((texture) => texture.error).map((texture) => texture.path);
 }
 

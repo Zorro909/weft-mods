@@ -50,12 +50,21 @@ require_files() {
     done
 }
 
-# Waits up to 30 seconds for the file a program started here makes once it is up, and shows the
-# program's log when it ends or stays silent instead.
-wait_for() { # <test flag> <file> <process id> <program>
-    local flag=$1 file=$2 pid=$3 program=$4
+# Whether the file a program makes once it is up is there: a socket, or a file with text in it.
+is_up() { # <socket | written> <file>
+    local kind=$1 file=$2
+    case $kind in
+        socket) [[ -S $file ]] ;;
+        written) [[ -s $file ]] ;;
+    esac
+}
+
+# Waits up to 30 seconds for that file of a program started here, and shows the program's log
+# when it ends or stays silent instead.
+wait_for() { # <socket | written> <file> <process id> <program>
+    local kind=$1 file=$2 pid=$3 program=$4
     for _ in $(seq 300); do
-        test "$flag" "$file" && return
+        is_up "$kind" "$file" && return
         kill -0 "$pid" 2>/dev/null || break
         sleep 0.1
     done
@@ -71,7 +80,7 @@ start_weston() {
     weston --backend=headless --width=1600 --height=1200 --shell=kiosk-shell.so --no-config \
         --idle-time=0 --socket="$socket" >"$work/weston.log" 2>&1 &
     weston_pid=$!
-    wait_for -S "$XDG_RUNTIME_DIR/$socket" "$weston_pid" weston
+    wait_for socket "$XDG_RUNTIME_DIR/$socket" "$weston_pid" weston
 }
 
 # With port 0 Chromium takes a free port and writes it to a file in its user-data folder.
@@ -79,7 +88,7 @@ start_blockbench() {
     env -u DISPLAY WAYLAND_DISPLAY="$socket" blockbench --ozone-platform=wayland \
         --remote-debugging-port=0 --user-data-dir="$work/profile" >"$work/blockbench.log" 2>&1 &
     blockbench_pid=$!
-    wait_for -s "$work/profile/DevToolsActivePort" "$blockbench_pid" blockbench
+    wait_for written "$work/profile/DevToolsActivePort" "$blockbench_pid" blockbench
     port=$(head -n 1 "$work/profile/DevToolsActivePort")
 }
 
@@ -118,9 +127,10 @@ check_models() {
 shoot_model() {
     [[ $# -eq 2 || $# -eq 3 ]] ||
         fail "shot: name a model file and the picture to write (see --help)"
-    require_files "$1" "${@:3}"
+    local model=$1 picture=$2 textures=("${@:3}")
+    require_files "$model" "${textures[@]}"
     start_headless
-    node "$scripts/shot.mjs" "$port" "$@"
+    node "$scripts/shot.mjs" "$port" "$model" "$picture" "${textures[@]}"
 }
 
 case ${1:-} in

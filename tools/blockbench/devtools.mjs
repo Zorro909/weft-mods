@@ -29,14 +29,22 @@ async function connect(port) {
 }
 
 // The address of the window's page, which the port lists a moment after it opens.
-async function pageSocketUrl(port, deadline) {
-    while (Date.now() < deadline) {
+function pageSocketUrl(port, deadline) {
+    const listedPage = async () => {
         const targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
-        const page = targets.find((target) => target.type === 'page');
-        if (page) return page.webSocketDebuggerUrl;
-        await sleep(100);
-    }
-    throw new Error('Blockbench opened no window');
+        return targets.find((target) => target.type === 'page')?.webSocketDebuggerUrl;
+    };
+    return eventually(listedPage, deadline, 'Blockbench opened no window');
+}
+
+// What `ask` answers once that is no longer nothing: asks ten times a second until `deadline`,
+// and fails with `failure` after it.
+async function eventually(ask, deadline, failure) {
+    const answer = await ask();
+    if (answer) return answer;
+    if (Date.now() > deadline) throw new Error(failure);
+    await sleep(100);
+    return eventually(ask, deadline, failure);
 }
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -72,13 +80,11 @@ class BlockbenchPage {
         return Buffer.from(reply.data, 'base64');
     }
 
-    async waitUntilSetUp(deadline) {
+    waitUntilSetUp(deadline) {
         const isSetUp = () =>
             typeof Blockbench !== 'undefined' && Blockbench.setup_successful === true;
-        while (!(await this.evaluate(isSetUp))) {
-            if (Date.now() > deadline) throw new Error('Blockbench did not finish starting');
-            await sleep(100);
-        }
+        const failure = 'Blockbench did not finish starting';
+        return eventually(() => this.evaluate(isSetUp), deadline, failure);
     }
 
     close() {
