@@ -56,6 +56,7 @@ is_up() { # <socket | written> <file>
     case $kind in
         socket) [[ -S $file ]] ;;
         written) [[ -s $file ]] ;;
+        *) fail "is_up: no kind of file \"$kind\"" ;;
     esac
 }
 
