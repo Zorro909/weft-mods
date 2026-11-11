@@ -1,14 +1,14 @@
 # Mod design
 
-How a mod here is laid out, so that a new feature lands where a reader expects it. Each habit names the file that shows it best; read that file before writing the same kind of thing.
+Where each part of a mod goes, and the habits that keep saves and worlds stable. Each names the file that shows it best: read that before writing the same kind of thing.
 
 ## Layout
 
-- `lib.rs` holds the `mod` lines, `declare_mod!`, and an `init` that calls one `register(r)` per area in a fixed order. It holds no content of its own: `cogwork/src/lib.rs`.
-- An area is a file, or a folder once it needs more than one. In a folder, `mod.rs` holds the handles, the state, its enums, `register` and the screen; the tick gets a file named for the work (`work.rs`, `dig.rs`, `craft.rs`); logic that needs no world gets a file of its own, where its tests can reach it (`cogwork/src/bench/cells.rs`). `cogwork/src/leveler/` is the smallest whole example.
-- What several areas share lives beside them, named for what it does: `cogwork/src/machine.rs` (the machine block builder and its power bar), `harvest.rs`, `store/`. A helper used by one area stays in that area.
+- `lib.rs` holds the `mod` lines, `declare_mod!`, and an `init` that calls one `register(r)` per area. It holds no content of its own: `cogwork/src/lib.rs`.
+- An area is a file, or a folder once it needs more than one. In a folder, `mod.rs` holds the handles, the state, its enums, `register` and the screen; the tick gets a file named for the work (`work.rs`, `dig.rs`, `craft.rs`); logic that needs no world gets a file of its own, where tests reach it (`cogwork/src/bench/cells.rs`). `cogwork/src/leveler/` is the smallest whole example.
+- What several areas share lives beside them, named for what it does: `cogwork/src/machine.rs`, `harvest.rs`, `store/`. A helper used by one area stays in that area.
 - A type the whole repository can use belongs in `weftkit/`; `cogwork` reaches it as `crate::lib::{Pos, ..}`, `structgen` through `structgen_api`'s re-exports.
-- A shared builder fixes the asset names of its family: `machine::block(.., "leveler")` reads `leveler_front`, `_front_on`, `_side` and `_top` from `textures/block/`. Read the builder for the names before making the textures.
+- A shared builder fixes the asset names of its family: `machine::block(.., "leveler")` reads `leveler_front`, `_front_on`, `_side` and `_top` from `textures/block/`. Read the builder before making the textures.
 
 ## Blocks with state
 
@@ -28,7 +28,7 @@ A `SAVE` component is written to disk as its bytes, so its layout is a file form
 - No ids of blocks, items or dimensions: they shift when a mod comes or goes. Keep a slot group, which saves items by name, or a hash of the name (`cogwork/src/ghost.rs`).
 - Tests pin it: `offset_of!` for the layout and "an unknown saved number reads as the default" for each enum, both in `cogwork/src/leveler/mod.rs`.
 
-## Text and status
+## Text and assets
 
 - A status enum derives `IntoStaticStr` in snake case and its screen says `<mod>.<area>.<status>`; a test named `every_status_has_a_name` checks each variant against the lang files with `crate::translated`.
 - A file the code names (a model, a texture, a sound) has a test with `crate::has_asset`, so a missing asset fails `tools/check-mods.sh` instead of the game.
@@ -42,17 +42,16 @@ A `SAVE` component is written to disk as its bytes, so its layout is a file form
 
 SDK calls only work inside the game, so a unit test can't run them. Keep the decision out of the call:
 
-- Pull the decision into a function over plain values and test that: `try_now` and `cleared` in `cogwork/src/excavator/framing.rs`.
+- Pull it into a function over plain values and test that: `try_now` and `cleared` in `cogwork/src/excavator/framing.rs`.
 - Hand the world in as a closure where the logic needs to ask it: `Columns` in `structgen/api/src/fit.rs`, `Waiting::take_ready` in `showcase/api/src/waiting.rs`.
-- What is left, registration and calls straight through to the engine, is glue. `sonar-project.properties` lists such files under `sonar.coverage.exclusions`; a file with logic of its own stays measured.
 
 ## An API crate
 
 What a mod shows other mods is a crate of its own, `<mod>/api`: `structgen/api`, `showcase/api`.
 
 - It holds types, handles and helpers other mods call; what this mod chose (its styles, its settlements, its commands) stays in the mod.
-- Names in it are written in full, `Event::named("showcase:play")`, since a handle belongs to whichever mod compiles it. The mod's private channels stay bare.
-- `showcase_api` talks to a running mod, so its users list `showcase` in `declare_mod!(deps: [..])`. `structgen_api` is a plain library linked into each user, with a registry per mod, and needs no entry. Say which kind a new API crate is at the top of its `lib.rs`.
+- Names in it are written in full, `Event::named("showcase:play")`, since a handle belongs to whichever mod compiles it.
+- `showcase_api` talks to a running mod, so its users list `showcase` in `declare_mod!(deps: [..])`. `structgen_api` is a plain library linked into each user, with a registry per mod, and needs no entry. A new API crate says which kind it is at the top of its `lib.rs`.
 - Registering is a free function taking the registry and returning a builder of options: `place(r, ..)`, `film(r, ..)`.
 - A value crossing between mods is a `value!` struct; text in one is a fixed-size `Name` (`showcase/api/src/name.rs`); anything longer is bytes with a version number, read back by code that refuses every other version (`showcase/api/src/wire/`, `structgen/api/src/format.rs`). A changed format takes a new version and a `Changed` line in the changelog.
 - It re-exports the `weftkit` types it hands out.
@@ -65,7 +64,7 @@ What a mod shows other mods is a crate of its own, `<mod>/api`: `structgen/api`,
 
 ## Generated assets
 
-Code that makes a committed file is committed with it, and the place that describes the files says how to run it:
+Code that makes a committed file is committed with it:
 
 | Files | Made by |
 |---|---|
@@ -74,4 +73,4 @@ Code that makes a committed file is committed with it, and the place that descri
 | `structgen/assets/structures/*.wst` | `cargo run --release --example buildings` in `structgen/` |
 | cogwork's recipes | written by hand in `cogwork/assets/recipes/*.toml`; `cogwork/build.rs` turns them into code |
 
-A model made or changed by hand is saved from Blockbench; `tools/blockbench.sh check` says whether a file is what Blockbench saves, and `shot` gives a picture of it.
+A model made by hand is a Blockbench save, which `tools/blockbench.sh check` confirms.

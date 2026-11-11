@@ -1,25 +1,27 @@
 ---
 name: add-content
-description: Add content to a Weft mod in this repository. Use when adding or reworking a block, item, machine, screen, recipe, command, entity, model or sound of a mod here.
+description: Use when adding or reworking a block, item, machine, screen, recipe, command, entity, model or sound of a mod.
 ---
 
 # Add content to a mod
 
-Content is done when a player can find it, use it and read about it, and you have seen it in the game. The code is one row of that.
-
 ## 1. Find the model
 
-Read `docs/agents/mods.md` ("Where to look") and `docs/agents/mod-design.md`, then the Weft doc for this kind of content and the example file the table in `mods.md` names for it.
+Read `docs/agents/mods.md` ("Where to look") and `docs/agents/mod-design.md`, then the Weft doc for this kind of content and the example file `mods.md` names for it.
 
-Done when you can name the SDK calls you will use and the file in this mod yours sits beside. If the SDK can't express the content, or the change alters what another mod sees, stop: `AGENTS.md` says what to agree with your user first.
+## 2. Propose a bigger addition first
 
-## 2. Write it
+A new machine or module, new saved state, or a change to code several areas share: before writing it, give your user
 
-Follow `docs/agents/code-style.md` and the layout in `mod-design.md`. For a bug in existing content, write the failing test before the fix.
+- the data structures: components and their fields, enums, channels;
+- where each part goes: the modules, and what is shared or moves;
+- the files you will add and change.
 
-## 3. Everything a player meets
+Done when they have answered. A small addition inside an existing area needs no proposal.
 
-Go through every row. Each is done, or named in your hand-over with the reason it doesn't apply.
+## 3. Write it
+
+By `docs/agents/code-style.md`, with the parts below that the content has:
 
 | Part | Where |
 |---|---|
@@ -28,19 +30,14 @@ Go through every row. Each is done, or named in your hand-over with the reason i
 | Textures | `assets/textures/<block, item, entity or gui>/`, named as the builder that reads them expects |
 | Model | A Blockbench save under `assets/models/`; `tools/blockbench.sh check <file>` passes |
 | Recipe | An entry in `assets/recipes/*.toml` (cogwork: a test fails while a named block has none) |
-| Sound | See "Sounds" below |
+| Sound | "Sounds" below |
 | Tests | The logic, and what `mod-design.md` pins: saved layout, enum fallbacks, status names, assets |
-| The mod's docs | Its page under `<mod>/docs/`, a row in `docs/README.md`, links from the pages of what it works with, and the feature list of the mod's `README.md` |
+| The mod's docs | Its page under `<mod>/docs/` with a row in `docs/README.md`, links from the pages of what it works with, and the feature list of the mod's `README.md` |
 | Changelog | A bullet under `## Unreleased` in `<mod>/CHANGELOG.md` |
-| Film | The mod's film doesn't show new content by itself. Say so at hand-over; a scene for it is the `film` skill |
 
-## 4. Check
+## 4. Check and look
 
-`tools/check-mods.sh <mod>`, then `tools/install-mods.sh <mod>`, then the in-game tests as `docs/agents/testing.md` runs them.
-
-## 5. Look at it in the game
-
-Take pictures as `docs/agents/testing.md` ("Pictures") says and read every one. Look for what has come back from players before:
+`tools/check-mods.sh <mod>`, `tools/install-mods.sh <mod>`, the in-game tests, then pictures of it in the game (`docs/agents/testing.md`). In the pictures, look for what players have sent back before:
 
 - every face has its texture: no see-through lines, no missing sides;
 - parts meet: no gap between neighbours, and no two faces in one plane, which flicker;
@@ -48,9 +45,7 @@ Take pictures as `docs/agents/testing.md` ("Pictures") says and read every one. 
 - the block faces the way it was placed, with its working side toward the player;
 - a screen matches the mock in its doc, in every status.
 
-A still shows no motion: for an animation, take pictures at several moments of it, or record a short film.
-
-Done when every picture has been read and shown to your user, with what you could not judge (motion, sound, feel) named.
+A still shows no motion: take pictures at several moments of an animation, or record a short film.
 
 ## Sounds
 
@@ -58,4 +53,3 @@ Done when every picture has been read and shown to your user, with what you coul
 2. Write the prompt as the thing that makes the sound: its size, its material, what it does, then "isolated game sound effect, no music". Heavy machinery is low, weighty and large; a hand tool is not.
 3. `tools/sfx.sh <mod>` makes every file that is missing; `tools/sfx.sh <mod> <file>` makes one again.
 4. Give it a handle and its row in the mod's sound table (`cogwork/src/sounds.rs`): volume, pitch range, and how many blocks it carries. Large machines carry far (40 and more), small parts stay close.
-5. You can't hear it. Tell your user which sounds are new; the mod's film records them with the picture.

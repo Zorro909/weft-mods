@@ -18,6 +18,7 @@ How the engine, the server and mods connect, and where engine features plug in. 
 ## Shape
 
 - **ABI.** `Weft/crates/abi` is `repr(C)` and `no_std`. `ABI_VERSION` hashes its two files, `lib.rs` and `data.rs`, so it stays those two, and any edit to either (a comment too) makes built mods refuse to load. That is intended: mods are rebuilt with the engine.
+- **SDK errors.** The SDK reports recoverable failure to mods as `Option` or `bool`. A wrong registration is a load error naming the mod, and content loading collects every problem and reports them together.
 - **Client and server.** Single player still runs a server thread. Client and server only see channel endpoints (`net`); a transport bridges them.
 - **Registries.** Mods fill them in parallel, then they are frozen into a global (`content()`), with ids assigned by sorted name. Content declares behaviour through builder calls, and the engine runs it (ticks, spreading, liquids: `server/dim.rs`, `server/liquid.rs`).
 - **Threads.** Parallel work stays deterministic: results are applied in list order. The pools in `lib.rs` protect frame time: work queued by the thousand goes to `background()` or `meshing()`, and the global rayon pool is for work something waits on.
