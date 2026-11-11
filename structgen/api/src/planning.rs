@@ -61,8 +61,10 @@ impl Planning<'_> {
         self
     }
     /// Where its plan would come within 8 blocks of that of a structure with a higher priority
-    /// (any of this or another mod's, `place`d or `plan`ned), it isn't placed: a town over a
-    /// village over a lone cottage. Both stand where the priorities are the same. 0 by default.
+    /// (any the calling mod `place`d or `plan`ned), it isn't placed: a town over a village over a
+    /// lone cottage. Both stand where the priorities are the same. Another mod's structures don't
+    /// count either way: every mod links its own copy of this crate, which knows only the
+    /// structures that mod registered. 0 by default.
     pub fn priority(mut self, priority: i32) -> Self {
         self.priority = priority;
         self

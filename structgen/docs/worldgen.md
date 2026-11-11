@@ -1,7 +1,7 @@
 # In the world
 
-The mod adds buildings to the base game's overworld while it generates: hamlets, villages, and
-now and then a building on its own. They appear in new parts of a world, in any world, old or
+The mod adds buildings to the base game's overworld while it generates: hamlets, villages, towns,
+and now and then a building on its own. They appear in new parts of a world, in any world, old or
 new.
 
 All of them stand on open land: plains and snowy plains (biome tag `#animals`, without
@@ -32,10 +32,9 @@ Paths and streets come as tiles to lay side by side: village paths and cart trac
 for gravel or dirt paths and cobbled, stone, brick or sandstone streets. Nothing lays them yet;
 see the [roadmap](../ROADMAP.md#paths-and-streets).
 
-The town buildings (`hall_house`, `narrow_gable`, `corner_house`, `coaching_inn`,
-`market_fountain`, `market_hall`, `guildhall`, `town_hall`, `town_church`, `storehouse`) don't
-appear in the world yet: they wait for towns, see the [roadmap](../ROADMAP.md). Every file is
-still a template, so `/structure load` and other mods' plans can place them.
+Two of the buildings don't appear in the world yet: no settlement holds a `market_hall`, and
+none a `wheat_field`, since a settlement lays its fields strip by strip itself. Every file is
+still a template, so `/structure load` can place them.
 
 ## Alone
 

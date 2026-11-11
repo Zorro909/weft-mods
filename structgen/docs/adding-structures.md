@@ -2,7 +2,7 @@
 
 Every `.wst` file in `assets/structures/` is compiled into the mod and becomes a template of
 it (`structgen:<name>`). Which of them appear in the world, and where, is set in
-`src/worldgen.rs` (buildings alone) and `src/villages.rs` (hamlets and villages); see
+`src/worldgen.rs` (buildings alone) and `src/villages.rs` (hamlets, villages and towns); see
 [In the world](worldgen.md).
 
 There are two ways to make one: build it in the game and save it, or draw it in code with the
@@ -69,7 +69,7 @@ from street level say. The format is at the top of `examples/sketch/parse.rs`.
 ## Tips
 
 - Draw the front on the north side (z = 0): a settlement turns a building so that side faces
-  its well.
+  the road it stands on, or the green or square.
 - Air in the box is saved too and clears what was there, so a house keeps its rooms empty when
   it lands in a hill. Under a roof's overhang, put the `ground` slot in the bottom layer rather
   than air, or the ground there is dug out.

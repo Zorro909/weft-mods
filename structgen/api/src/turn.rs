@@ -1,5 +1,10 @@
 //! Turning a structure a quarter at a time about the vertical axis: where its blocks go, and
 //! which way the blocks then face.
+//!
+//! Block states are turned here and not by `weft_sdk::state_turned`: tested in the game at Weft
+//! v26.11.3, that turns `facing`, `attach` and `front` but leaves a log's `axis` and a ladder's
+//! sides as they were, though its doc says it turns axes and sides. Test it again on a newer
+//! Weft before swapping it in.
 
 use weft_sdk::{state_prop, state_with};
 use weftkit::Pos;

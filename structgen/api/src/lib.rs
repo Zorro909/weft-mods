@@ -12,8 +12,9 @@
 //! - `Materials`: the blocks a structure's material slots are filled with, where it is placed.
 //!
 //! Everything is worked out from the seed and the terrain's columns, never from blocks, so
-//! every cube and every client gets the same answer. Structures don't know about each other,
-//! so two can overlap.
+//! every cube and every client gets the same answer. A structure gives way to one of higher
+//! `priority` that the same mod registered. Structures of the same priority don't know about
+//! each other, nor do those of different mods, so two of them can overlap.
 
 mod biomes;
 mod fit;

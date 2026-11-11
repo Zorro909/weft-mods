@@ -19,4 +19,7 @@ every client gets the same answer:
 4. A turned structure turns its blocks too: `facing`, `axis` and the sides a block connects to
    (`north=true`) follow the turn.
 
-Structures don't know about each other, so two can overlap.
+A structure whose plan would come within 8 blocks of the plan of one with a higher priority
+(`.priority(n)`, 0 by default) isn't placed there, if the same mod registered both. Structures
+of the same priority don't know about each other, nor do those of different mods, so two of
+them can overlap.
