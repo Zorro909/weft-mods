@@ -18,6 +18,15 @@ showcase_api = { path = "../showcase/api", optional = true }
 # Builds the film (`src/films/`), played by the showcase mod: `--features showcase`.
 showcase = ["dep:showcase_api"]
 
+# The example programs that have unit tests: `cargo test` leaves an example's tests out unless told.
+[[example]]
+name = "sketch"
+test = true
+
+[[example]]
+name = "shot_script"
+test = true
+
 # Its own cargo root. `cargo build` and `cargo test` here cover `structgen_api` too.
 [workspace]
 members = ["api"]

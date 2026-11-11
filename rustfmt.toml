@@ -1,6 +1,6 @@
 # Formatting for every mod here, checked on each pull request. `Weft/` has a `rustfmt.toml` of its
 # own. Format everything with `git ls-files -z '*.rs' | xargs -0 rustfmt +nightly`, which leaves
-# out the submodule.
+# out the engine's checkout.
 edition = "2024"
 style_edition = "2024"
 max_width = 100

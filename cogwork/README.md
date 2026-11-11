@@ -80,11 +80,13 @@ from this folder, with the engine built in `../Weft` (see
 
 ```
 cargo build --release
-cargo test --release
 mkdir -p ../Weft/run/mods/cogwork
 cp target/release/libcogwork.so ../Weft/run/mods/cogwork/
 cp -r assets ../Weft/run/mods/cogwork/
 ```
+
+To check it, run `tools/check-mods.sh cogwork` from the repository root: its formatting, unit
+tests and clippy, with all its features.
 
 The library is `libcogwork.so` on Linux; on Windows it is `cogwork.dll`, on macOS
 `libcogwork.dylib`. `../start.sh cogwork` builds the engine and the mod, installs it and starts the
@@ -96,7 +98,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 
 | Module | What it holds |
 |---|---|
-| `lib/` | The types the whole mod builds on: `Pos` (a block), helpers for points in the world (`point`), `BlockState`, `Area` (a rectangle on the ground) |
+| `lib` | The types the whole mod builds on: helpers for points in the world (`lib/point.rs`), and from the shared [`weftkit`](../weftkit) library `Pos` (a block), `Area` (a box of blocks), `BlockState` and `TypedWorld` (the world's block calls with those types), which `lib.rs` re-exports |
 | `tube/` | The tubes: their shape, routing, moving items along, pulling, sorting, jams, the pictures of items |
 | `engines/` | Spring and ember engines: their block, tick, heat and piston |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
@@ -104,12 +106,15 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |
 | `harvest.rs` | Breaking a block by machine into its output |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
+| `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
 | `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
+| `sounds.rs` | The sound events, whose files are under `assets/sounds/` |
 | `arms/` | Which model a hub with arms draws (tubes and torque shafts), and the writer of those model files |
 | `recipes.rs` | Registers the crafting recipes, which are written in `assets/recipes/*.toml` and checked by `build.rs` when the mod is built |
 | `films/` | The showcase film, only with `--features showcase` |
 
-Unit tests sit at the end of the files whose logic they check; `cargo test --release` runs them.
+Unit tests sit at the end of the files whose logic they check; `tools/check-mods.sh cogwork`,
+run from the repository root, runs them.
 
 Every shape is a [Blockbench](https://www.blockbench.net) model under `assets/models/`; the code
 only picks one and its textures. Entities (the excavator's rig, the engines' pistons) are
@@ -128,8 +133,10 @@ write, so a model changed by hand in Blockbench has to be changed there too.
 
 With the `showcase` feature, cogwork brings a film for the [showcase](../showcase) mod: a
 builder excavator that puts up its frame, two others already digging, their output sorted by
-tubes, and a two-bench assembly line. It takes about 1:50. Record it with
-`tools/showcase.sh cogwork:showcase`, or play it in game with `/showcase play cogwork:showcase`.
+tubes, a two-bench assembly line started by a lever, a leveler that takes its area from survey
+markers and flattens a hill once the tuning wrench turns its engine to it, and a fourth
+excavator finishing its job. Record it with `tools/showcase.sh cogwork:showcase`, or play it in
+game with `/showcase play cogwork:showcase`.
 Without the feature, none of this is compiled in, and showcase is not a dependency.
 
 ## Status

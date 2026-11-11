@@ -2,8 +2,8 @@
 # Checks out the engine into `Weft/` at the newest Weft release any mod here builds against: the
 # highest tag of the mods' `weft_sdk` lines. The first run clones it; later ones move it only when
 # that tag changed, and need no network when it didn't. A `Weft/` holding engine work (a branch, or
-# commits or changes of its own) is left as it is. `start.sh` runs it first, as does every new
-# T3 thread.
+# commits or changes of its own) is left as it is. `tools/install-mods.sh` runs it first, as does
+# every new T3 thread.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 source tools/ci/mods.sh

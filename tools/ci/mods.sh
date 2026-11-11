@@ -1,7 +1,7 @@
 # shellcheck shell=bash
-# Sourced by `init.sh`, `tools/check-mods.sh`, `tools/showcase.sh` and the scripts in `tools/ci`,
-# from the repository root: which folders are mods, their crate names, and the Weft they build
-# against. A mod is a folder whose `Cargo.toml` builds a `cdylib`, as `start.sh` finds them.
+# Sourced by `init.sh`, `tools/install-mods.sh`, `tools/check-mods.sh`, `tools/showcase.sh` and the
+# scripts in `tools/ci`, from the repository root: which folders are mods, their crate names, and
+# the Weft they build against. A mod is a folder whose `Cargo.toml` builds a `cdylib`.
 
 # The mod folders, one per line.
 all_mods() {
