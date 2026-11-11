@@ -1,6 +1,6 @@
 //! Pictures of the liquid tank: clear glass with a glint, a slim dark steel frame, brass corner
 //! caps, and a riveted copper base round its bottom with a steel floor inside. Where a picture
-//! lies on the model is `tank::files`: the base's sides take its bottom four rows.
+//! lies on the model is `tank::shape`: the base's sides take its bottom five rows.
 
 use super::{BRASS, CLEAR, COPPER, GLINT, Picture, STEEL};
 
@@ -44,15 +44,15 @@ fn cap() -> Picture {
     picture
 }
 
-/// Copper plate, its bottom four rows a band between steel edges with a rivet every four pixels.
+/// Copper plate, its bottom five rows a band between steel edges with a rivet every four pixels.
 /// The band is flat copper: it is all of the base a side shows, and noise there reads as dirt.
 fn base() -> Picture {
     let mut picture = Picture::surface(&COPPER[1..4], 41);
     picture.each(|x, y, color| match (y, x % 4) {
-        (12 | 15, _) => STEEL[1],
+        (11 | 15, _) => STEEL[1],
         (13, 1) => COPPER[4],
         (14, 1) => COPPER[0],
-        (13, _) => COPPER[3],
+        (12 | 13, _) => COPPER[3],
         (14, _) => COPPER[2],
         _ => color,
     });
