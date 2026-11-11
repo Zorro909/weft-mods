@@ -9,13 +9,15 @@ description: Use when adding or reworking a block, item, machine, screen, recipe
 
 Read `docs/agents/mods.md` ("Where to look") and `docs/agents/mod-design.md`, then the Weft doc for this kind of content and the example file `mods.md` names for it.
 
-## 2. Propose a bigger addition first
+## 2. Propose a bigger addition, and a new look, first
 
 A new machine or module, new saved state, or a change to code several areas share: before writing it, give your user
 
 - the data structures: components and their fields, enums, channels;
 - where each part goes: the modules, and what is shared or moves;
 - the files you will add and change.
+
+A new model or a new look comes with mockup images: `docs/agents/mod-design.md`, "Mockups".
 
 Done when they have answered. A small addition inside an existing area needs no proposal.
 

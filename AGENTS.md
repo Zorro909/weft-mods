@@ -29,6 +29,7 @@ Some older engine code is denser than this. That is growth, not a model: leave i
 Put these to your user as a numbered list they can answer point by point, before you build them:
 
 - a bigger addition or rework: its data structures, where its parts go, and the files it touches;
+- the look of a building, a 3D model or another complex asset: as mockup images (`docs/agents/mod-design.md`, "Mockups");
 - what another mod sees: an API crate's public interface, a file or wire format;
 - how a port to a new Weft release changes each mod.
 
@@ -39,7 +40,7 @@ A mod's version is theirs to set: leave it as it is unless asked.
 Read the matching guide before you start; each is short.
 
 - `docs/agents/code-style.md`: before writing or changing Rust, here or in `Weft/`.
-- `docs/agents/mod-design.md`: before adding a module, a block with state, a screen, a channel, an API crate or worldgen to a mod.
+- `docs/agents/mod-design.md`: before adding a module, a block with state, a screen, a channel, an API crate, worldgen or a complex asset to a mod.
 - `docs/agents/mods.md`: before looking up an SDK call, or building and loading a mod.
 - `docs/agents/testing.md`: before writing a test, running the game's tests, or looking at your work in the game.
 - `docs/agents/engine.md`: before changing anything under `Weft/crates/` or `Weft/backends/`.

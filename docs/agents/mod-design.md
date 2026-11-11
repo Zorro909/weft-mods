@@ -62,6 +62,15 @@ What a mod shows other mods is a crate of its own, `<mod>/api`: `structgen/api`,
 - All randomness comes from the plan's `random()`, and the order of its draws is part of the world: a draw added or moved in `structgen/src/settlement/` moves every settlement. `structgen/api/src/random.rs` pins the numbers with a test.
 - Registration order is part of it too: `structgen/build.rs` sorts the structure files.
 
+## Mockups
+
+Before you make a building or other structure, a 3D model, or a new look for a family of textures, your user sees a mockup image of it and answers. A variation of what exists (another wood, another size) needs none.
+
+- A GPT Astra model makes the image: it has an image tool. In T3, start it with `delegate_task`, on the newest Astra that `orchestrator_capabilities` lists. Where no Astra can be reached, tell your user instead of going on without a mockup.
+- The brief says what the asset is and what it does, the view wanted, and what keeps it buildable: blocks are 1 m cubes with 16x16 pixel textures; a structure is cubes, stairs and slabs of blocks base has; a model is a few boxes. Give it a screenshot of the game, or of the content the asset stands beside, as the style to match, and an absolute path outside the repository to save the PNG to.
+- Where the style is open, ask for two or three variants.
+- Show your user the images with your proposal. A mockup is a look to match, not a plan: its proportions and its block grid are approximate.
+
 ## Generated assets
 
 Code that makes a committed file is committed with it:

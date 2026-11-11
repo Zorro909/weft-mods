@@ -5,9 +5,15 @@ description: Use when drawing or changing a structgen building or other structur
 
 # Draw a structgen structure
 
-A structure is drawn in code, written to a `.wst` file, and judged by its pictures. Read `structgen/docs/adding-structures.md` and `structgen/docs/materials.md` first; `crofter_cottage` in `structgen/examples/buildings/cottages.rs` shows how a building is written.
+A structure is mocked up as an image, drawn in code, written to a `.wst` file, and judged by its pictures. Read `structgen/docs/adding-structures.md` and `structgen/docs/materials.md` first; `crofter_cottage` in `structgen/examples/buildings/cottages.rs` shows how a building is written.
 
-## 1. Draw
+## 1. Mock up the look
+
+Have mockup images made as `docs/agents/mod-design.md` ("Mockups") says: one per structure, or one per family where its structures share a look. Pictures of the structures it will stand among (`tools/structure-shots.sh`) are the style reference.
+
+Done when your user has answered them.
+
+## 2. Draw
 
 - One function per structure in its family's file under `structgen/examples/buildings/`, listed in that file's `BUILDINGS`. A new family also takes a `mod` line and an entry in `buildings()` in `main.rs`.
 - The function reads as named steps (walls, floors, roof, furnish), each a function of its own; its doc says in a sentence or two what the structure looks like and where its doorway is.
@@ -15,7 +21,7 @@ A structure is drawn in code, written to a `.wst` file, and judged by its pictur
 - A new material slot goes into `kit::SLOTS`, or the draft panics when it is written, and into the slot table of `structgen/docs/materials.md`.
 - Use only blocks base has: `Weft/mods/base/src/blocks.rs`.
 
-## 2. What placing relies on
+## 3. What placing relies on
 
 - **Front north.** A building's main entrance is on the north side (z = 0), near the middle: a settlement turns it so that side faces its road, green or square.
 - **Ground.** The bottom layer (y = 0) is ground level. Every cell of it that would be open ground, under eaves or in a yard, gets the `ground` or `path` slot, never air: air there digs a hole.
@@ -23,7 +29,7 @@ A structure is drawn in code, written to a `.wst` file, and judged by its pictur
 - **Stairs.** A stair's `facing` is the side of its high back: a roof slope rising northward has `facing=north`. Its `shape` is not worked out when a structure is placed, so set it where a corner needs it.
 - **Original.** Take proportions from references, never a build.
 
-## 3. Write and photograph
+## 4. Write and photograph
 
 ```
 (cd structgen && cargo run --release --example buildings -- <name>...)
@@ -34,11 +40,11 @@ The pictures land in `structgen/out/shots/`: front, back, a side, above and insi
 
 Read every picture of every structure. Change and shoot again until:
 
-- it reads well from the front and from above, in each look;
+- it matches the mockup your user chose, and reads well from the front and from above, in each look;
 - there is no hole, no floating block, no stair facing the wrong way or straight where it should be a corner;
 - no room is dark, and every floor can be reached and walked.
 
-## 4. Into the world
+## 5. Into the world
 
 Every file in `structgen/assets/structures/` is a template by itself. To make it appear:
 
@@ -47,7 +53,7 @@ Every file in `structgen/assets/structures/` is a template by itself. To make it
 
 A longer list changes what the planner draws, so every settlement of every seed moves: say so in the changelog. The mod's film flies through settlements of seed 42 by fixed coordinates (`structgen/src/films/`) and then needs a new take: the `film` skill.
 
-## 5. Finish
+## 6. Finish
 
 - Commit the generator code and the `.wst` files together.
 - The building count and tables in `structgen/README.md` and `structgen/docs/`, and a bullet in `structgen/CHANGELOG.md`.
