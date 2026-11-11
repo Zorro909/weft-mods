@@ -21,7 +21,7 @@ How Rust is written here and in Weft. The examples are files of this repository;
 - Data with behaviour of its own is a struct with methods (`Frame` in `cogwork/src/excavator/area.rs`) instead of loose values passed from function to function.
 - The mods have one trait, the extension `weftkit::TypedWorld` over an SDK type. A derive from a crate the mod already uses (`strum::FromRepr`) comes before a hand-written `match` over the same variants.
 - A missing value is handled first and the work follows unindented: `let Some(entity) = world.entity(id) else { continue };`.
-- A mod's file takes the SDK with `use weft_sdk::*;`, as the Weft docs do. A library other crates build on (`weftkit`, an API crate) names what it imports.
+- A file names what it imports, the SDK too (`use weft_sdk::{Dir, World};`): SonarQube flags a wildcard import. Older files still take `use weft_sdk::*;`; name its imports in a file you change. A test module's `use super::*;` stays.
 - `unsafe` stays in the engine's ABI glue, platform calls and backends, behind a safe function. The mods have none.
 
 ## Names

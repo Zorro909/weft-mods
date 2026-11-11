@@ -4,7 +4,7 @@
 //! tank's joined sides). Its boxes are built here rather than drawn in Blockbench: they are the
 //! liquid's surface, sized by those properties, and there is nothing else to them.
 
-use weft_sdk::*;
+use weft_sdk::{BlockBuilder, Dir, Registry, Tag, WithComponents, World, abi};
 
 use crate::lib::{BlockState, Pos};
 use crate::liquid::{self, LiquidKey};

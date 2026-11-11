@@ -4,7 +4,7 @@
 mod fields;
 
 use base_api::OVERWORLD;
-use weft_sdk::*;
+use weft_sdk::{Block, Item, Placed, Registry, WithComponents, tool_tier};
 
 pub static OIL: Block = Block::named("oil");
 static OIL_BUCKET: Item = Item::named("oil_bucket");

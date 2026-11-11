@@ -5,7 +5,7 @@
 //! model `assets/models/block/tube/hub_and_arm.json` (`arms`), which names a texture for each
 //! side.
 
-use weft_sdk::*;
+use weft_sdk::{BlockBuilder, Dir, Props, State, Use, WithComponents, World, tool_tier};
 
 use super::{DIRECTING_TUBE, TIMBER_TUBE, TUBES};
 use crate::lib::{BlockState, Pos, TypedWorld};

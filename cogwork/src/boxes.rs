@@ -3,7 +3,7 @@
 //! where the box lies in the block, as a model file's face does when Blockbench sets its UV, so a
 //! picture drawn over the whole block goes on across boxes.
 
-use weft_sdk::*;
+use weft_sdk::{Dir, State, abi};
 
 /// The two corners of a box, in texels: 16 to a block.
 pub type Corners = ([f32; 3], [f32; 3]);

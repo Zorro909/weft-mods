@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use serde_json::Value;
-use weft_sdk::*;
+use weft_sdk::{Dir, Facings};
 
 use crate::boxes::{Corners, Piece};
 

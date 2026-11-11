@@ -12,7 +12,7 @@ mod vessel;
 pub use bucket::use_bucket;
 pub use share::{Level, share};
 pub use vessel::{Holders, Vessel, is_vessel, reaches};
-use weft_sdk::*;
+use weft_sdk::{Component, Registry, World, component_flags, item_name, liquid_of, value};
 
 use crate::ghost::{self, ItemKey, NO_ITEM};
 use crate::lib::{BlockState, Pos, TypedWorld};

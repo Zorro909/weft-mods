@@ -3,7 +3,7 @@
 //! its cell, level through its hub and sideways arms. Its shape is the Blockbench model of its
 //! set of arms, `assets/models/block/liquid_tube/<arms>.json`, written by `arms::files`.
 
-use weft_sdk::*;
+use weft_sdk::{Block, Dir, Registry, World, tool_tier};
 
 use crate::fill::{self, TUBE_LEVELS};
 use crate::lib::{Pos, TypedWorld};

@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use weft_sdk::*;
+use weft_sdk::{ItemStack, LIQUID, REMAINDER, StackData, Vec3, World, abi, entry_count};
 
 use super::vessel::{Holders, Vessel};
 use super::{BUCKET, LiquidKey, key_named};

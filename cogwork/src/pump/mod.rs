@@ -7,7 +7,10 @@ mod drain;
 mod work;
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, Block, Component, Dir, ENERGY, Holds, Menu, Registry, S, Slots, Ui, World,
+    component_flags, tool_tier, value,
+};
 
 use crate::lib::{Pos, TypedWorld};
 use crate::liquid::{HELD, Held};

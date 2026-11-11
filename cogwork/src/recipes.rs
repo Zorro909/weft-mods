@@ -3,7 +3,7 @@
 //! mod is built.
 
 use base_api::CRAFTING;
-use weft_sdk::*;
+use weft_sdk::Registry;
 
 pub enum Recipe {
     Shaped {
