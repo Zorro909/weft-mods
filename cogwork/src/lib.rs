@@ -1,14 +1,22 @@
 //! Cogwork: item tubes that show what they carry, engines that drive them, machines for the big
-//! jobs (an excavator, an assembly bench and a leveler) and cuboid loaders that keep them running
-//! with nobody near. Everything goes through `weft_sdk` and `base_api`.
+//! jobs (an excavator, an assembly bench and a leveler), cuboid loaders that keep them running
+//! with nobody near, and oil: pumped up from fields underground, carried in liquid tubes and
+//! kept in tanks. Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
+#[cfg(test)]
+mod art;
 mod bench;
+#[cfg(test)]
+mod blockbench;
 mod cogs;
 mod engines;
 mod excavator;
+mod fill;
 #[cfg(feature = "showcase")]
 mod films;
+#[cfg(test)]
+mod generated;
 mod ghost;
 mod harvest;
 mod leveler;
@@ -19,14 +27,19 @@ mod lib {
 
     pub use weftkit::{Area, BlockState, Pos, TypedWorld};
 }
+mod liquid;
+mod liquid_tube;
 mod loading;
 mod machine;
 mod markers;
+mod oil;
 mod owned;
+mod pump;
 mod recipes;
 mod shaft;
 mod sounds;
 mod store;
+mod tank;
 mod tube;
 
 use weft_sdk::*;
@@ -52,6 +65,12 @@ fn init(r: &mut Registry) {
     leveler::register(r);
     loading::register(r);
     shaft::register(r);
+    oil::register(r);
+    liquid::register(r);
+    fill::register(r);
+    liquid_tube::register(r);
+    tank::register(r);
+    pump::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]
     films::register(r);

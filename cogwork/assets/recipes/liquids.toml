@@ -1,0 +1,17 @@
+# Liquid tubes, eight at a time from iron between glass, the tank and the pump.
+
+[[shaped]]
+result = "liquid_tube"
+count = 8
+pattern = ["gig"]
+key = { g = "base:glass", i = "#ingots/iron" }
+
+[[shaped]]
+result = "liquid_tank"
+pattern = ["igi", "g g", "ici"]
+key = { i = "#ingots/iron", g = "base:glass", c = "#cogs/iron" }
+
+[[shaped]]
+result = "pump"
+pattern = ["iPi", "tct", "iBi"]
+key = { i = "#ingots/iron", P = "base:piston", t = "liquid_tube", c = "#cogs/gold", B = "base:bucket" }

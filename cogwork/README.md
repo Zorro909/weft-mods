@@ -5,7 +5,8 @@
 A Weft mod about moving items, digging and making things by machine. Items travel through
 tubes you can see into, engines drive the machines, and three machines take over the big jobs:
 an excavator that mines out a whole area, an assembly bench that crafts on its own, and a
-leveler that makes land flat.
+leveler that makes land flat. A pump brings up oil from deep underground, and liquid tubes and
+tanks carry and store it.
 
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
@@ -24,6 +25,13 @@ send everything one way; void tubes destroy what reaches them. A line that jams 
 The spring engine runs on redstone, the ember engine burns fuel for four times as much energy
 and overheats when nothing takes it. Engines push energy into the block their trunk points at,
 and torque shafts carry it further, joining any mod's cables.
+
+### Oil and liquids
+
+Oil lies in fields deep under the overworld, and a seep of it on the surface shows where. A
+pump set on the seep bores down to the field with engine power and pumps it up. Liquid tubes
+carry any liquid, of any mod, between pumps and tanks, and tanks next to each other become one
+bigger tank, up to 3 by 3 and 6 high. You can see how full every tube and tank is.
 
 ### Machines
 
@@ -68,6 +76,8 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Leveler](docs/leveler.md)
 - [Survey markers](docs/survey-markers.md)
 - [Cuboid loaders and the lens](docs/loading.md)
+- [Oil and the pump](docs/oil.md)
+- [Liquid tubes and tanks](docs/liquids.md)
 - [Working with other mods](docs/other-mods.md)
 
 What changed in each version is in the [changelog](CHANGELOG.md).
@@ -102,6 +112,11 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `tube/` | The tubes: their shape, routing, moving items along, pulling, sorting, jams, the pictures of items |
 | `engines/` | Spring and ember engines: their block, tick, heat and piston |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
+| `oil/` | Oil, the oil-soaked ground of a seep, and where fields lie (`oil/fields.rs`) |
+| `pump/` | The pump: its block and screen, boring and pumping (`work.rs`), finding the next source (`drain.rs`) |
+| `liquid/` | What holds liquid (`Held`), passing it between holders each tick, buckets on them |
+| `liquid_tube.rs`, `tank/` | The liquid tube; the tank, how its blocks make one tank (`merge.rs`) |
+| `fill.rs` | The liquid shown standing in a liquid tube or tank, for every liquid of any mod |
 | `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar |
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |
 | `harvest.rs` | Breaking a block by machine into its output |
@@ -109,25 +124,31 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
 | `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
 | `sounds.rs` | The sound events, whose files are under `assets/sounds/` |
-| `arms/` | Which model a hub with arms draws (tubes and torque shafts), and the writer of those model files |
+| `arms/` | Which model a hub with arms draws (tubes, liquid tubes and torque shafts), and the writer of those model files |
 | `recipes.rs` | Registers the crafting recipes, which are written in `assets/recipes/*.toml` and checked by `build.rs` when the mod is built |
 | `films/` | The showcase film, only with `--features showcase` |
+| `art/`, `blockbench.rs`, `generated.rs` | Only in tests: the drawn textures, writing Blockbench models, and keeping generated files as they would be written |
 
 Unit tests sit at the end of the files whose logic they check; `tools/check-mods.sh cogwork`,
 run from the repository root, runs them.
 
 Every shape is a [Blockbench](https://www.blockbench.net) model under `assets/models/`; the code
-only picks one and its textures. Entities (the excavator's rig, the engines' pistons) are
+only picks one and its textures. The one exception is the liquid standing in a liquid tube or
+tank: it takes the colors of whatever liquid it is, of any mod, so `fill.rs` builds its boxes in
+code. Entities (the excavator's rig, the engines' pistons) are
 "Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
-are "Java Block/Item" models in `block/`: the survey marker, the engine, and for tubes and torque
-shafts one model for every set of arms on a hub, named after its arms (`tube/west_up_north.json`).
+are "Java Block/Item" models in `block/`: the survey marker, the engine, the pump, and for tubes,
+liquid tubes and torque shafts one model for every set of arms on a hub, named after its arms
+(`tube/west_up_north.json`), and for the tank one for every set of sides it joins.
 A tube's model names a texture for each side, shown in Blockbench with the sorting tube's
 colors.
 
-Those 128 models of tubes and shafts are written by `src/arms/files.rs`, as Blockbench saves
-them: change the hub or the arms there, then run `WRITE_ARM_MODELS=1 cargo test --release arms`
-in `cogwork/`. Without the variable the same test fails when a file differs from what it would
-write, so a model changed by hand in Blockbench has to be changed there too.
+Those models of tubes, shafts and tanks are written as Blockbench saves them, by
+`src/arms/files.rs` and `src/tank/files.rs`, and the textures of oil, liquid tubes, tanks and the
+pump are drawn pixel by pixel in `src/art/`. Change them there, then run
+`WRITE_ASSETS=1 cargo test --release` in `cogwork/`. Without the variable the same tests fail
+when a file differs from what they would write, so a file changed by hand has to be changed
+there too.
 
 ## Showcase film
 

@@ -33,6 +33,11 @@ pub fn key_of(item: u32) -> ItemKey {
     hash(item_name(item))
 }
 
+/// The key of the item named `name` (`cogwork:oil`), whether or not it is loaded.
+pub fn key_of_name(name: &str) -> ItemKey {
+    hash(name)
+}
+
 /// The item `key` stands for, 0 for none or for one no loaded mod has.
 pub fn item_of(key: ItemKey) -> u32 {
     items_by_key().get(&key).copied().unwrap_or(0)

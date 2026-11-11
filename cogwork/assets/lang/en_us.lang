@@ -49,6 +49,22 @@ block.cogwork.ultra_cuboid_loader.tooltip = Keeps the 7 by 7 cubes around it loa
 item.cogwork.cuboid_lens = Cuboid Lens
 item.cogwork.cuboid_lens.tooltip = Held, outlines every cube Cogwork keeps loaded: cyan where a loader keeps machines running, green where it keeps everything, orange around a working excavator or leveler.
 
+block.cogwork.oil = Oil
+item.cogwork.oil_bucket = Oil Bucket
+block.cogwork.oily_dirt = Oil-Soaked Dirt
+block.cogwork.oily_dirt.tooltip = Lies around a seep of oil, above a field of it deep below.
+block.cogwork.oil_sand = Oil Sand
+block.cogwork.oil_sand.tooltip = Lies around a seep of oil, above a field of it deep below.
+block.cogwork.pump = Pump
+block.cogwork.pump.tooltip = Bores straight down with engine power until it reaches a liquid, then pumps a bucket of it a second, the farthest from its hose first. Liquid tubes take the liquid away; what it bores through goes to the chests and tubes beside it.
+block.cogwork.pump_hose = Pump Hose
+block.cogwork.liquid_tube = Liquid Tube
+block.cogwork.liquid_tube.tooltip = Holds a bucket of one liquid and passes it on to the liquid tubes, tanks and pumps it touches, from the fuller to the emptier. You can see how full it is.
+block.cogwork.liquid_tank = Liquid Tank
+block.cogwork.liquid_tank.tooltip = Holds 16 buckets of one liquid. Tanks next to each other become one tank when together they make a box of up to 3 by 3 and 6 high. A bucket fills it or is filled from it.
+shape.liquid_in_tube = {0}
+shape.liquid_in_tank = {0}
+
 cogwork.ghost = {0}
 cogwork.energy = {color:dim}{0} / {1} energy{/}
 cogwork.engine.heat = Heat {0}%
@@ -110,3 +126,12 @@ cogwork.loader.machines = Machines only
 cogwork.loader.everything = Everything
 cogwork.loader.used = {color:dim}Cogwork keeps {0} of at most {1} cubes loaded{/}
 cogwork.loader.used_near = {#ffc828}Cogwork keeps {0} of at most {1} cubes loaded{/}
+
+cogwork.pump.boring = Boring down, its hose {0} blocks long
+cogwork.pump.pumping = Pumping, its hose {0} blocks down
+cogwork.pump.no_power = Needs energy from an engine
+cogwork.pump.full = Full: connect a liquid tube, or a tube or a chest for what it bores through
+cogwork.pump.blocked = Blocked: it can't bore any deeper here
+cogwork.pump.dry = Dry: no more of it within reach
+cogwork.liquid.held = {color:dim}{0} / {1} mB of {2}{/}
+cogwork.liquid.empty = {color:dim}Empty, holds {0} mB{/}

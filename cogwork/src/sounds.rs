@@ -19,11 +19,13 @@ pub static SCRAPE: Sound = Sound::named("leveler.scrape");
 pub static FILL: Sound = Sound::named("leveler.fill");
 pub static WRENCH: Sound = Sound::named("tool.wrench");
 pub static SURVEY: Sound = Sound::named("marker.survey");
+pub static PUMP_BORE: Sound = Sound::named("pump.bore");
+pub static PUMP_DRAW: Sound = Sound::named("pump.draw");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
 /// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
 /// carry (fading out on the way there): heavy machinery far, small parts close.
-static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 16] = [
+static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 18] = [
     (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
     (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
     (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
@@ -40,6 +42,8 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 16] = [
     (&FILL, "leveler/fill", 0.6, 0.85, 1.1, 32.0),
     (&WRENCH, "tool/wrench", 0.8, 0.95, 1.05, 12.0),
     (&SURVEY, "marker/survey", 0.8, 1.0, 1.0, 32.0),
+    (&PUMP_BORE, "pump/bore", 0.6, 0.85, 1.1, 32.0),
+    (&PUMP_DRAW, "pump/draw", 0.7, 0.9, 1.1, 32.0),
 ];
 
 pub fn register(r: &mut Registry) {

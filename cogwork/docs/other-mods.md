@@ -28,6 +28,16 @@ plain inventory, that holds a liquid is neither filled nor emptied. The SDK does
 groups are liquid ones, so an empty one looks like any other to them: a machine with liquid
 groups should give them names of their own and name its item groups as above.
 
+## Liquids
+
+Liquid tubes, tanks and the pump carry any mod's liquid: they know it by its name, and draw it
+in its own colors. A bucket of any mod that names its liquid (`LIQUID`) and its empty container
+(`REMAINDER`) pours into a tank and is filled from it.
+
+Liquid tubes join only Cogwork's tanks and pumps, not other mods' machines: the SDK doesn't
+say which slot groups of a machine hold liquid, how much, or let a mod list a machine's groups,
+so tubes couldn't tell a liquid tank from an item slot.
+
 ## Energy
 
 Engines push into any block entity that takes `core:energy` (up to 200 a tick), and the
