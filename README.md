@@ -39,7 +39,8 @@ build requirements installed:
 `start.sh` first runs `./init.sh`, which clones the engine into `Weft/` at the newest release
 any mod builds against, or moves it there. A mod loads only into an engine built from the same
 Weft release, so whenever that tag moves, rebuild the engine and the mods.
-[`docs/agents/mods.md`](docs/agents/mods.md) has the build, load and check steps one by one.
+`tools/install-mods.sh` does the same without starting the game, and confirms that the game loads
+each mod; [`docs/agents/mods.md`](docs/agents/mods.md) has the build, load and check commands.
 
 ## Repository layout
 
@@ -47,8 +48,10 @@ Weft release, so whenever that tag moves, rebuild the engine and the mods.
 |---|---|
 | `cogwork/`, `structgen/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
 | `Weft/` | The engine, checked out by `init.sh` and not tracked here |
-| `docs/agents/` | Guides for working on this repository: mods, code style, engine, testing |
-| `tools/` | The mods' tests and clippy (`check-mods.sh`), the headless test run, film recording (`showcase.sh`) and CI scripts |
+| `weftkit/` | A library the mods share: typed block positions, areas and block states |
+| `docs/agents/` | Guides for working on this repository: code style, mod design, mods, testing, engine, releasing |
+| `.claude/skills/` | Step lists for jobs that come up again: adding content, drawing a structgen building, filming, porting to a new Weft, starting a mod |
+| `tools/` | Build, install and load check (`install-mods.sh`), formatting, tests and clippy (`check-mods.sh`), the headless test run, film recording (`showcase.sh`), structure photos, sounds, Blockbench models and CI scripts |
 | `init.sh`, `start.sh` | Check out the engine; build, install and start everything |
 
 ## Contributing
@@ -57,8 +60,8 @@ Changes come as pull requests to `main`. Commits follow
 [Conventional Commits](https://www.conventionalcommits.org), and Rust is formatted by the root
 `rustfmt.toml` (`git ls-files -z '*.rs' | xargs -0 rustfmt +nightly`). Every mod takes Weft at a
 release tag, as the [Weft mod index](https://github.com/Weft-Rust/Weft-Mods-Index) builds it:
-pull requests that don't are refused. `tools/check-mods.sh` runs every mod's unit tests and
-clippy; CI runs it too, and builds every mod on Windows, Linux and macOS.
+pull requests that don't are refused. `tools/check-mods.sh` checks every mod's formatting, unit
+tests and clippy; CI runs it too, and builds every mod on Windows, Linux and macOS.
 
 ## Releases
 
@@ -74,7 +77,7 @@ Full releases can go to the [Weft mod index](https://github.com/Weft-Rust/Weft-M
 builds them itself and lists them in the Weft launcher.
 
 The section below is kept up to date by CI; see
-[`docs/agents/mods.md`](docs/agents/mods.md#releasing) for the details.
+[`docs/agents/releasing.md`](docs/agents/releasing.md) for the details.
 
 <!-- mod-releases:start -->
 ## Downloads
