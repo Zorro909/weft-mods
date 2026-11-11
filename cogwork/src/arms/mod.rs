@@ -7,7 +7,8 @@
 //! The model is built into the mod and put together when its block states are made (`boxes`),
 //! so there is no file for each set of arms. Where the hub and an arm meet neither has a face,
 //! and an open arm has none at its end either: through a see-through texture they would show as
-//! panes across the tube.
+//! panes across the tube. A hub wider than its arms opens toward each open arm, and that arm's
+//! own parts close it round (the timber liquid tube's flanges).
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -26,6 +27,10 @@ pub static LIQUID_TUBE: LazyLock<HubAndArms> = LazyLock::new(|| {
     let file = include_str!("../../assets/models/block/liquid_tube/hub_and_arm.json");
     HubAndArms::read("liquid_tube", file)
 });
+pub static TIMBER_LIQUID_TUBE: LazyLock<HubAndArms> = LazyLock::new(|| {
+    let file = include_str!("../../assets/models/block/timber_liquid_tube/hub_and_arm.json");
+    HubAndArms::read("timber_liquid_tube", file)
+});
 pub static TORQUE_SHAFT: LazyLock<HubAndArms> = LazyLock::new(|| {
     let file = include_str!("../../assets/models/block/torque_shaft/hub_and_arm.json");
     HubAndArms::read("torque_shaft", file)
@@ -39,7 +44,8 @@ const MODEL_ARM: Dir = Dir::North;
 pub enum Arm {
     /// Its end drawn: there may be nothing beside it, as beside a directing tube's output.
     Closed,
-    /// Its end left out: it lies against what it joins.
+    /// Its end left out, and the hub's face toward it: it lies against what it joins, and the
+    /// liquid in it goes through.
     Open,
 }
 
@@ -109,14 +115,20 @@ impl HubAndArms {
                 .map(|name| name.map(|name| texture(&name))),
         };
         let mut pieces: Vec<Piece> = self.hub.iter().map(shown).collect();
+        let face = |dir: Dir| dir.face() as usize;
         for side in Dir::ALL {
             let Some(kind) = arm(side) else {
                 continue;
             };
+            if kind == Arm::Open {
+                for hub in &mut pieces[..self.hub.len()] {
+                    hub.faces[face(side)] = None;
+                }
+            }
             for part in &self.arm {
                 let mut piece = shown(&turned(part, side));
-                if kind == Arm::Open {
-                    piece.faces[side.face() as usize] = None;
+                if kind == Arm::Open && reaches_the_edge(part) {
+                    piece.faces[face(side)] = None;
                 }
                 pieces.push(piece);
             }
@@ -141,6 +153,11 @@ fn part(file: &str, element: &Value) -> Part {
         corners: (corner("from"), corner("to")),
         faces,
     }
+}
+
+/// Whether `part` of an arm pointing north reaches the block's north edge, where the arm ends.
+fn reaches_the_edge(part: &Part) -> bool {
+    part.corners.0[2] == 0.0
 }
 
 /// `part`, an arm pointing north, turned to point toward `side`.
@@ -249,8 +266,38 @@ mod tests {
     }
 
     #[test]
+    fn a_hub_wider_than_its_arm_opens_into_it_and_a_flange_closes_it_round() {
+        let model = HubAndArms::read(
+            "test",
+            r##"{
+            "textures": {"wood": "block/wood"},
+            "elements": [
+                {"name": "hub", "from": [3, 3, 3], "to": [13, 13, 13],
+                 "faces": {"north": {"texture": "#wood"}, "up": {"texture": "#wood"}}},
+                {"name": "arm", "from": [4, 4, 0], "to": [12, 12, 3],
+                 "faces": {"north": {"texture": "#wood"}}},
+                {"name": "arm", "from": [3, 12, 2], "to": [13, 13, 3],
+                 "faces": {"north": {"texture": "#wood"}}}
+            ]
+        }"##,
+        );
+        let pieces = model.pieces(|dir| (dir == Dir::North).then_some(Arm::Open), named);
+        let [hub, arm, flange] = &pieces[..] else {
+            panic!("the hub, the arm and its flange");
+        };
+        let face = |piece: &Piece, dir: Dir| piece.faces[dir.face() as usize].is_some();
+        assert!(!face(hub, Dir::North), "the hub opens toward the arm");
+        assert!(face(hub, Dir::Up), "and nowhere else");
+        assert!(!face(arm, Dir::North), "the arm's end is open");
+        assert!(
+            face(flange, Dir::North),
+            "the flange short of the edge keeps its face"
+        );
+    }
+
+    #[test]
     fn the_mods_models_have_a_hub_and_an_arm() {
-        for model in [&TUBE, &LIQUID_TUBE, &TORQUE_SHAFT] {
+        for model in [&TUBE, &LIQUID_TUBE, &TIMBER_LIQUID_TUBE, &TORQUE_SHAFT] {
             assert!(!model.hub.is_empty() && !model.arm.is_empty(), "both");
             assert!(
                 !model.texture("particle").is_empty(),

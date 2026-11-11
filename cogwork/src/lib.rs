@@ -39,6 +39,7 @@ mod shaft;
 mod sounds;
 mod store;
 mod tank;
+mod timber_liquid_tube;
 mod tube;
 
 use weft_sdk::{CreativeTab, Item, Registry, declare_mod};
@@ -68,6 +69,7 @@ fn init(r: &mut Registry) {
     liquid::register(r);
     fill::register(r);
     liquid_tube::register(r);
+    timber_liquid_tube::register(r);
     tank::register(r);
     pump::register(r);
     recipes::register(r);

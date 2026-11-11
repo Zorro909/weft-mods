@@ -2,49 +2,63 @@
 //! tanks and pumps beside it. The liquid in it is drawn as it stands: a fill block (`fill`) in
 //! its cell, level through its hub and sideways arms. Its shape is the Blockbench model
 //! `assets/models/block/liquid_tube/hub_and_arm.json`, with an arm toward each side it joins
-//! (`arms`).
+//! (`arms`). The timber liquid tube (`timber_liquid_tube`) is built the same way.
 
-use weft_sdk::{Block, Dir, Registry, World, tool_tier};
+use std::sync::LazyLock;
 
-use crate::arms::Arm;
+use weft_sdk::{Block, BlockBuilder, Dir, Registry, World, tool_tier};
+
+use crate::arms::{Arm, HubAndArms};
 use crate::fill::{self, TUBE_LEVELS};
-use crate::lib::{Pos, TypedWorld};
+use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid::{HELD, Held, is_full, is_vessel, reaches};
+use crate::timber_liquid_tube::TIMBER_LIQUID_TUBE;
 
 pub static LIQUID_TUBE: Block = Block::named("liquid_tube");
 
-/// Millibuckets one tube holds.
+/// Millibuckets one tube holds, of either kind.
 pub const CAPACITY: u32 = 1000;
 
 pub fn register(r: &mut Registry) {
-    let mut builder = r
-        .block(&LIQUID_TUBE)
+    tube(r.block(&LIQUID_TUBE), &crate::arms::LIQUID_TUBE)
         .hardness(0.6)
         .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.glass")
-        .tab(&crate::TAB);
+        .tab(&crate::TAB)
+        .entity(|entity| entity.attach(&HELD));
+}
+
+/// Whether `block` is a liquid tube of either kind.
+pub fn is_liquid_tube(block: BlockState) -> bool {
+    block.is(&LIQUID_TUBE) || block.is(&TIMBER_LIQUID_TUBE)
+}
+
+/// A liquid tube drawn as `model`, with an arm toward every holder of liquid it joins, showing the
+/// liquid its block entity holds: the caller gives that entity `HELD`.
+pub fn tube<'a>(
+    mut builder: BlockBuilder<'a>,
+    model: &'static LazyLock<HubAndArms>,
+) -> BlockBuilder<'a> {
     for dir in Dir::ALL {
         builder = builder.prop(dir.name(), ["false", "true"]);
     }
     builder
-        .states(|props, state| {
+        .states(move |props, state| {
             // Every arm joins a holder of liquid, which the liquid goes on into.
             let arm = |dir: Dir| props.is(dir.name(), "true").then_some(Arm::Open);
-            let model = &crate::arms::LIQUID_TUBE;
             let pieces = model.pieces(arm, |name| model.texture(name).to_string());
             crate::boxes::draw(state.texture(model.texture("particle")), &pieces)
         })
         .on_place(|world, change| refresh(world, change.pos.into()))
         .on_neighbor(|event| refresh(&event.world(), event.pos().into()))
         .on_break(|world, change| fill::show_in_tube(world, change.pos.into(), None))
-        .entity(|entity| entity.attach(&crate::liquid::HELD));
 }
 
 /// Sets every arm of the tube at `pos` to what its neighbors are now, and wakes it: what it
 /// touches may have changed.
 fn refresh(world: &World, pos: Pos) {
     let tube = world.block_typed(pos);
-    if !tube.is(&LIQUID_TUBE) {
+    if !is_liquid_tube(tube) {
         return;
     }
     let next = Dir::ALL.into_iter().fold(tube, |next, dir| {
@@ -62,7 +76,7 @@ fn refresh(world: &World, pos: Pos) {
 fn joins(world: &World, pos: Pos, dir: Dir) -> bool {
     let at = pos.toward(dir);
     is_vessel(world, at)
-        && (world.block_typed(at).is(&LIQUID_TUBE) || reaches(world, at, dir.opposite()))
+        && (is_liquid_tube(world.block_typed(at)) || reaches(world, at, dir.opposite()))
 }
 
 /// Shows how full the tube at `pos` is, when that or its arms changed since `held.shown`.

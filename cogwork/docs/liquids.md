@@ -11,9 +11,10 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
 - **Pressure.** A full tube or tank passes on the push of what fills it. So liquid stands in a
   tube going up and rises further only once the tube below is full, and a line fed from a pump
   stays full while it delivers.
-- **Pumps push.** A pump holding liquid pushes it up to 16 blocks above itself. Each full tube or
-  tank on the way loses a sixteenth of a block of that push, so a long line lifts less. Liquid
-  never runs back into a pump. Without a pump, liquid rises no higher than where it stands.
+- **Pumps push.** A pump holding liquid pushes it up to 16 blocks above itself, and so does a
+  [timber liquid tube](#timber-liquid-tube) an engine drives. Each full tube or tank on the way
+  loses a sixteenth of a block of that push, so a long line lifts less. Liquid never runs back
+  into a pump. Without a pump, liquid rises no higher than where it stands.
 - **Two liquids** don't mix: one waits until the other has moved on. What is left of a liquid
   once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
 
@@ -33,6 +34,25 @@ whenever it holds any.
 
 ```
 gig       g = base:glass       i = #ingots/iron       (makes 8)
+```
+
+## Timber Liquid Tube
+
+A liquid tube with a small wooden pump in its middle, holding a bucket like a liquid tube and
+joining the same blocks. Through the windows of its pump body you see its paddle wheel.
+
+Driven by an engine against its body, it pulls liquid out of the tanks it touches, from any level
+of them, and pushes it up the liquid tubes beside it as a pump does, up to 16 blocks. It hands
+nothing back into a tank, and takes no liquid from the tubes it pushes into. Its wheel turns
+while liquid goes through, with a creak and a glug every stroke.
+
+- **Energy.** 1,000 a bucket, and no more than 100 mB a tick. A spring engine pulls a bucket in
+  5 seconds, an ember engine four fifths of one a second. It stores 2,000 and takes up to 200 a
+  tick.
+- **Undriven**, once its energy is used up, it is a liquid tube like any other.
+
+```
+gpg       g = base:glass       p = #planks          (makes 8)
 ```
 
 ## Liquid Tank

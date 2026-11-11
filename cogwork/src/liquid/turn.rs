@@ -15,10 +15,10 @@ use std::rc::Rc;
 use weft_sdk::{SystemBatch, World};
 
 use super::flow::LOSS;
-use super::vessel::{Holders, Vessel};
+use super::vessel::{Holders, Kind, Vessel};
 use super::{Held, Level, MOST_A_TURN, flow};
 use crate::lib::{Pos, TypedWorld};
-use crate::liquid_tube::LIQUID_TUBE;
+use crate::liquid_tube::is_liquid_tube;
 
 /// A holder as met at one of its blocks: `id`, that block's entity, keeps the head it told
 /// there. A tank tells all its blocks the same head, but blocks it joined since may keep another.
@@ -94,7 +94,7 @@ pub fn tick(batch: &mut SystemBatch<Held>) {
         };
         let pos = Pos::from(entity.block_pos());
         turn(&mut holders, &mut found, id, pos);
-        if world.block_typed(pos).is(&LIQUID_TUBE) {
+        if is_liquid_tube(world.block_typed(pos)) {
             let mut held = holders.get(id);
             crate::liquid_tube::show(&world, pos, &mut held);
             holders.set(id, held);
@@ -148,10 +148,12 @@ fn sleep(holders: &mut Holders, id: u64) {
 }
 
 /// Hands from `from`, pushed by `pushed`, to `to` what evens out their heads; whether any went.
-/// A pump never takes: liquid run back into it would only be pushed out again.
+/// A holder that pushes never takes: liquid run back into it would only be pushed out again. A
+/// driven timber liquid tube hands nothing to a tank: it pulls from there.
 fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
     let (to, told) = (&*to.vessel, holders.get(to.id).head);
-    if matches!(to, Vessel::One { pump: true, .. }) {
+    let into_source = from.kind() == Kind::Driven && matches!(to, Vessel::Tank(_));
+    if to.kind().pushes() || into_source {
         return false;
     }
     let (giving, taking) = (from.held(holders), to.held(holders));
@@ -199,8 +201,26 @@ mod tests {
             id,
             pos,
             capacity: 1000,
-            pump: false,
+            kind: Kind::Tube,
         }
+    }
+
+    #[test]
+    fn a_driven_timber_tube_pushes_as_the_pump_does() {
+        let pos = Pos { x: 0, y: 10, z: 0 };
+        let driven = Vessel::One {
+            id: 1,
+            pos,
+            capacity: 1000,
+            kind: Kind::Driven,
+        };
+        let lift = (10 + super::super::flow::LIFT) * super::super::flow::UNIT;
+        assert_eq!(driven.head(500, 0), lift, "half full, it pushes");
+        assert!(tube(1, pos).head(500, 0) < lift, "undriven, it doesn't");
+        assert!(
+            Kind::Driven.pushes() && !Kind::Tube.pushes(),
+            "nor takes when it does"
+        );
     }
 
     #[test]

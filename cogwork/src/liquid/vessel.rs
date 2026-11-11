@@ -1,5 +1,5 @@
-//! The blocks that hold liquid: a liquid tube or a pump, one block each, or a tank, one holder
-//! however many blocks it has. `turn` passes liquid between them.
+//! The blocks that hold liquid: a liquid tube, a timber liquid tube or a pump, one block each, or
+//! a tank, one holder however many blocks it has. `turn` passes liquid between them.
 //!
 //! A system works on copies of its values, written back when it returns, so a holder changed
 //! during the tick goes through `Holders`, which changes the copy when there is one.
@@ -11,9 +11,10 @@ use weft_sdk::{Dir, World};
 use super::flow::{LIFT, UNIT};
 use super::{DRIBBLE, Held, LiquidKey, flow, is_full};
 use crate::lib::{BlockState, Pos, TypedWorld};
-use crate::liquid_tube::LIQUID_TUBE;
+use crate::liquid_tube::is_liquid_tube;
 use crate::pump::PUMP;
 use crate::tank::{LIQUID_TANK, Tank};
+use crate::timber_liquid_tube::{self, TIMBER_LIQUID_TUBE};
 
 /// The `Held` of every holder, read and written through this tick's copies where they are.
 pub struct Holders<'a> {
@@ -69,36 +70,59 @@ impl<'a> Holders<'a> {
 
 /// A holder of liquid: one block, or a tank of several.
 pub enum Vessel {
-    /// A liquid tube or a pump: its block entity, where it is, how much it holds, and whether it
-    /// is a pump, which pushes and never takes.
+    /// A liquid tube or a pump: its block entity, where it is, how much it holds, and how it
+    /// passes liquid on.
     One {
         id: u64,
         pos: Pos,
         capacity: u32,
-        pump: bool,
+        kind: Kind,
     },
     Tank(Tank),
+}
+
+/// How a holder of one block passes liquid on.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Kind {
+    /// A liquid tube, or a timber liquid tube no engine drives: by height and pressure.
+    Tube,
+    /// The pump: it pushes what it holds `LIFT` blocks up and never takes liquid.
+    Pump,
+    /// A timber liquid tube an engine drives: it pushes as the pump does, and hands nothing to a
+    /// tank, the tanks it touches being where it pulls liquid from.
+    Driven,
+}
+
+impl Kind {
+    /// Whether it pushes what it holds up, and so never takes liquid.
+    pub fn pushes(self) -> bool {
+        matches!(self, Kind::Pump | Kind::Driven)
+    }
 }
 
 impl Vessel {
     /// The holder whose block is at `pos`, if one is.
     pub fn at(world: &World, pos: Pos) -> Option<Vessel> {
         let block = world.block_typed(pos);
-        let (capacity, pump) = if block.is(&LIQUID_TUBE) {
-            (crate::liquid_tube::CAPACITY, false)
+        let id = world.block_entity(pos);
+        let (capacity, kind) = if block.is(&TIMBER_LIQUID_TUBE) {
+            let driven = timber_liquid_tube::is_driven(world, id);
+            let kind = if driven { Kind::Driven } else { Kind::Tube };
+            (crate::liquid_tube::CAPACITY, kind)
+        } else if is_liquid_tube(block) {
+            (crate::liquid_tube::CAPACITY, Kind::Tube)
         } else if block.is(&PUMP) {
-            (crate::pump::CAPACITY, true)
+            (crate::pump::CAPACITY, Kind::Pump)
         } else if block.is(&LIQUID_TANK) {
             return Tank::at(world, pos).map(Vessel::Tank);
         } else {
             return None;
         };
-        let id = world.block_entity(pos);
         (id != 0).then_some(Vessel::One {
             id,
             pos,
             capacity,
-            pump,
+            kind,
         })
     }
 
@@ -138,14 +162,22 @@ impl Vessel {
         }
     }
 
-    /// The head of `amount` in it, with `pushed` the push coming into it from beside: a pump
-    /// holding liquid pushes `LIFT` blocks up; another holder takes on the push when it is full
-    /// (`is_full`); otherwise its liquid stands where its surface is.
+    /// How it passes liquid on: a tank as a tube does.
+    pub fn kind(&self) -> Kind {
+        match self {
+            Vessel::One { kind, .. } => *kind,
+            Vessel::Tank(_) => Kind::Tube,
+        }
+    }
+
+    /// The head of `amount` in it, with `pushed` the push coming into it from beside: a holder
+    /// that pushes (`Kind::pushes`) pushes what it holds `LIFT` blocks up; another holder takes
+    /// on the push when it is full (`is_full`); otherwise its liquid stands where its surface is.
     pub(super) fn head(&self, amount: u32, pushed: i64) -> i64 {
         let (floor, per_block) = match self {
-            Vessel::One {
-                pos, pump: true, ..
-            } if amount >= DRIBBLE => return (pos.y as i64 + LIFT) * UNIT,
+            Vessel::One { pos, kind, .. } if kind.pushes() && amount >= DRIBBLE => {
+                return (pos.y as i64 + LIFT) * UNIT;
+            }
             Vessel::One { pos, capacity, .. } => (pos.y, *capacity),
             Vessel::Tank(tank) => (tank.floor(), tank.per_block()),
         };
@@ -216,7 +248,7 @@ impl Vessel {
 /// Whether the block at `pos` holds liquid.
 pub fn is_vessel(world: &World, pos: Pos) -> bool {
     let block = world.block_typed(pos);
-    block.is(&LIQUID_TUBE) || block.is(&PUMP) || block.is(&LIQUID_TANK)
+    is_liquid_tube(block) || block.is(&PUMP) || block.is(&LIQUID_TANK)
 }
 
 /// Whether the holder at `pos` passes liquid toward `dir`.
@@ -229,7 +261,7 @@ pub fn reaches(world: &World, pos: Pos, dir: Dir) -> bool {
 fn passes(block: BlockState, dir: Dir) -> bool {
     if block.is(&PUMP) {
         dir != Dir::Down
-    } else if block.is(&LIQUID_TUBE) {
+    } else if is_liquid_tube(block) {
         block.prop(dir.name()) == Some("true")
     } else {
         block.is(&LIQUID_TANK) && block.prop(dir.name()) == Some("false")
