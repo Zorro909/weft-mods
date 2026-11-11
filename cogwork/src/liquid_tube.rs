@@ -1,10 +1,12 @@
 //! The liquid tube: a glass tube holding a bucket of one liquid, joined to the liquid tubes,
 //! tanks and pumps beside it. The liquid in it is drawn as it stands: a fill block (`fill`) in
-//! its cell, level through its hub and sideways arms. Its shape is the Blockbench model of its
-//! set of arms, `assets/models/block/liquid_tube/<arms>.json`, written by `arms::files`.
+//! its cell, level through its hub and sideways arms. Its shape is the Blockbench model
+//! `assets/models/block/liquid_tube/hub_and_arm.json`, with an arm toward each side it joins
+//! (`arms`).
 
 use weft_sdk::{Block, Dir, Registry, World, tool_tier};
 
+use crate::arms::Arm;
 use crate::fill::{self, TUBE_LEVELS};
 use crate::lib::{Pos, TypedWorld};
 use crate::liquid::{Held, is_vessel, reaches};
@@ -26,9 +28,10 @@ pub fn register(r: &mut Registry) {
     }
     builder
         .states(|props, state| {
-            let has_arm = |dir: Dir| props.is(dir.name(), "true");
+            // Every arm joins a holder of liquid, which the liquid goes on into.
+            let arm = |dir: Dir| props.is(dir.name(), "true").then_some(Arm::Open);
             let model = &crate::arms::LIQUID_TUBE;
-            let pieces = model.pieces(has_arm, |name| model.texture(name).to_string());
+            let pieces = model.pieces(arm, |name| model.texture(name).to_string());
             crate::boxes::draw(state.texture(model.texture("particle")), &pieces)
         })
         .on_place(|world, change| refresh(world, change.pos.into()))

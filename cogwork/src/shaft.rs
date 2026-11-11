@@ -7,6 +7,7 @@ use weft_sdk::{
     Block, CONDUCTOR, Dir, ENERGY, Props, Registry, State, WithComponents, World, tool_tier,
 };
 
+use crate::arms::Arm;
 use crate::lib::{Pos, TypedWorld};
 
 pub static TORQUE_SHAFT: Block = Block::named("torque_shaft");
@@ -29,9 +30,10 @@ pub fn register(r: &mut Registry) {
 
 /// The model with an arm toward every side it reaches. Its boxes are what it collides with, too.
 fn model<'s>(props: &Props, state: State<'s>) -> State<'s> {
-    let has_arm = |dir: Dir| props.is(dir.name(), "true");
+    // Its end stays: what it joins may be thinner, as another mod's cable.
+    let arm = |dir: Dir| props.is(dir.name(), "true").then_some(Arm::Closed);
     let model = &crate::arms::TORQUE_SHAFT;
-    let pieces = model.pieces(has_arm, |name| model.texture(name).to_string());
+    let pieces = model.pieces(arm, |name| model.texture(name).to_string());
     crate::boxes::draw(state.texture(model.texture("particle")), &pieces)
 }
 
