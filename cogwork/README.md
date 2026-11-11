@@ -114,8 +114,8 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
 | `oil/` | Oil, the oil-soaked ground of a seep, and where fields lie (`oil/fields.rs`) |
 | `pump/` | The pump: its block and screen, boring and pumping (`work.rs`), finding the next source (`drain.rs`) |
-| `liquid/` | What holds liquid (`Held`); how it flows by height and pressure (`flow.rs`) and the turns of holders, which sleep once settled (`vessel.rs`); buckets on them |
-| `liquid_tube.rs`, `tank/` | The liquid tube; the tank, how its blocks make one tank (`merge.rs`) and its shape for each set of joined sides (`shape.rs`) |
+| `liquid/` | What holds liquid (`Held`); how it flows by height and pressure (`flow.rs`), the holders (`vessel.rs`) and their turns, which sleep once settled (`turn.rs`); buckets on them |
+| `liquid_tube.rs`, `tank/` | The liquid tube; the tank, how its blocks make one tank (`merge.rs`), its liquid across them (`blocks.rs`) and its shape for each set of joined sides (`shape.rs`) |
 | `fill.rs` | The liquid shown standing in a liquid tube or tank, for every liquid of any mod |
 | `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar |
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |

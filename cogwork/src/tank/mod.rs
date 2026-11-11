@@ -6,20 +6,21 @@
 //!
 //! Each block keeps its own share in its `HELD`, so nothing is kept for the tank as a whole: the
 //! blocks of one tank are those its `true` side properties join, and a tank's liquid is theirs
-//! together. Its shape follows its joined sides (`shape`).
+//! together (`blocks`). Its shape follows its joined sides (`shape`).
 
+mod blocks;
 pub mod merge;
 mod shape;
 
-use std::collections::{HashMap, HashSet};
-
-use merge::{MOST, forms_box, grow, part, spread};
+pub use blocks::Tank;
+use blocks::joins;
+use merge::{MOST, forms_box, grow, part};
 pub use shape::{BASE, GLASS};
 use weft_sdk::{Block, BlockEvent, Dir, Registry, Use, Verdict, World, abi, actions, tool_tier};
 
-use crate::fill::{self, TANK_LEVELS};
+use crate::fill;
 use crate::lib::{Pos, TypedWorld};
-use crate::liquid::{DRIBBLE, HELD, Held, Holders, NO_LIQUID, Vessel, use_bucket};
+use crate::liquid::{HELD, Held, Holders, Vessel, use_bucket};
 
 pub static LIQUID_TANK: Block = Block::named("liquid_tank");
 
@@ -63,115 +64,10 @@ pub fn register(r: &mut Registry) {
         .entity(|entity| entity.attach(&HELD));
 }
 
-/// One tank: its blocks.
-pub struct Tank {
-    cells: Vec<Cell>,
-}
-
-#[derive(Clone, Copy)]
-struct Cell {
-    id: u64,
-    pos: Pos,
-}
-
-impl Tank {
-    /// The tank the block at `pos` is part of: it and every block its sides join, where the
-    /// other side joins back. None while a block of it has no block entity yet.
-    pub fn at(world: &World, pos: Pos) -> Option<Tank> {
-        let tank = Tank::of(world, &joined_cells(world, pos));
-        tank.cells.iter().all(|cell| cell.id != 0).then_some(tank)
-    }
-
-    /// The tank of the blocks at `cells`.
-    fn of(world: &World, cells: &[Pos]) -> Tank {
-        let cell = |&pos: &Pos| Cell {
-            id: world.block_entity(pos),
-            pos,
-        };
-        Tank {
-            cells: cells.iter().map(cell).collect(),
-        }
-    }
-
-    /// Its liquid, all its blocks' shares together.
-    pub fn held(&self, holders: &Holders) -> Held {
-        together(self.cells.iter().map(|cell| holders.get(cell.id)))
-    }
-
-    pub fn capacity(&self) -> u32 {
-        CELL_CAPACITY * self.cells.len() as u32
-    }
-
-    /// How high its bottom layer stands.
-    pub fn floor(&self) -> i32 {
-        self.blocks().map(|pos| pos.y).min().unwrap_or_default()
-    }
-
-    /// Millibuckets that raise its liquid a block: a layer's worth.
-    pub fn per_block(&self) -> u32 {
-        let floor = self.floor();
-        let bottom = self.blocks().filter(|pos| pos.y == floor).count();
-        CELL_CAPACITY * bottom as u32
-    }
-
-    /// Its blocks, and their block entities.
-    pub fn blocks(&self) -> impl Iterator<Item = Pos> + '_ {
-        self.cells.iter().map(|cell| cell.pos)
-    }
-
-    pub fn ids(&self) -> impl Iterator<Item = u64> + '_ {
-        self.cells.iter().map(|cell| cell.id)
-    }
-
-    /// Lays `held` in the tank from the bottom up and shows each block's fill.
-    pub fn settle(&self, holders: &mut Holders, held: Held) {
-        let mut cells = self.cells.clone();
-        cells.sort_by_key(|cell| (cell.pos.y, cell.pos.x, cell.pos.z));
-        let mut layers: Vec<usize> = Vec::new();
-        for layer in cells.chunk_by(|a, b| a.pos.y == b.pos.y) {
-            layers.push(layer.len());
-        }
-        let shares = spread(&layers, held.amount, CELL_CAPACITY);
-        let at: HashMap<Pos, u32> = cells
-            .iter()
-            .map(|cell| cell.pos)
-            .zip(shares.clone())
-            .collect();
-        let world = *holders.world();
-        for (cell, amount) in cells.into_iter().zip(shares) {
-            let mut share = holders.get(cell.id);
-            share.amount = amount;
-            share.liquid = if amount == 0 { NO_LIQUID } else { held.liquid };
-            // Its liquid is laid out anew: every block takes a turn again.
-            share.asleep = 0;
-            let above = at.get(&cell.pos.toward(Dir::Up));
-            let covered = above.is_some_and(|&above| above >= DRIBBLE);
-            show(&world, cell.pos, &mut share, covered);
-            holders.set(cell.id, share);
-        }
-    }
-}
-
-/// The liquid of a tank whose blocks hold `shares`: the liquid of its biggest share, all of that
-/// liquid there is. A block joined while it held a dribble of another liquid loses it.
-fn together(shares: impl IntoIterator<Item = Held>) -> Held {
-    let shares: Vec<Held> = shares.into_iter().collect();
-    let Some(biggest) = shares.iter().max_by_key(|share| share.amount) else {
-        return Held::default();
-    };
-    let liquid = biggest.liquid;
-    let of_it = shares.iter().filter(|share| share.liquid == liquid);
-    Held {
-        liquid,
-        amount: of_it.map(|share| share.amount).sum(),
-        ..Held::default()
-    }
-}
-
 /// The blocks of the tank the block at `pos` is part of: it and every block its sides join,
 /// where the other side joins back.
 fn joined_cells(world: &World, pos: Pos) -> Vec<Pos> {
-    let joined = |cell: Pos, dir: Dir| world.block_typed(cell).prop(dir.name()) == Some("true");
+    let joined = |cell: Pos, dir: Dir| joins(world.block_typed(cell), dir);
     let both = |cell: Pos, dir: Dir| joined(cell, dir) && joined(cell.toward(dir), dir.opposite());
     flood(pos, MOST, both)
 }
@@ -180,13 +76,12 @@ fn joined_cells(world: &World, pos: Pos) -> Vec<Pos> {
 /// `most` and one past.
 fn flood(start: Pos, most: usize, goes_on: impl Fn(Pos, Dir) -> bool) -> Vec<Pos> {
     let mut found = vec![start];
-    let mut seen = HashSet::from([start]);
     let mut next = 0;
     while next < found.len() && found.len() <= most {
         let cell = found[next];
         next += 1;
         for dir in Dir::ALL.into_iter().filter(|&dir| goes_on(cell, dir)) {
-            if seen.insert(cell.toward(dir)) {
+            if !found.contains(&cell.toward(dir)) {
                 found.push(cell.toward(dir));
             }
         }
@@ -306,12 +201,7 @@ fn before_break(world: &World, pos: Pos) {
     };
     let mut holders = Holders::outside(*world);
     let held = tank.held(&holders);
-    let rest: Vec<Pos> = tank
-        .cells
-        .iter()
-        .map(|cell| cell.pos)
-        .filter(|&cell| cell != pos)
-        .collect();
+    let rest: Vec<Pos> = tank.blocks().filter(|&cell| cell != pos).collect();
     let parts = part(&rest, forms_box);
     let sizes: Vec<usize> = parts.iter().map(Vec::len).collect();
     for (cells, amount) in parts.iter().zip(shared(held.amount, &sizes)) {
@@ -354,43 +244,6 @@ fn use_tank(click: &mut Use) -> bool {
     use_bucket(&mut holders, &Vessel::Tank(tank), click.player())
 }
 
-/// Shows how full the tank block at `pos` is, when that or its joined sides changed since
-/// `share.shown`. It is `covered` by liquid in the block above.
-fn show(world: &World, pos: Pos, share: &mut Held, covered: bool) {
-    let block = world.block_typed(pos);
-    let joined = |dir: Dir| block.prop(dir.name()) == Some("true");
-    let mut level = fill::level_of(share.amount, CELL_CAPACITY, TANK_LEVELS);
-    if level == TANK_LEVELS && joined(Dir::Up) && !covered {
-        // A full block joined above shows no top: liquid goes on up. With none above, a step
-        // short of full shows its surface.
-        level -= 1;
-    }
-    let shown = shown_as(level, joined);
-    if shown == share.shown {
-        return;
-    }
-    share.shown = shown;
-    let filled = (level > 0)
-        .then(|| fill::in_tank(share.liquid, level, joined))
-        .flatten();
-    fill::show_in_tank(world, pos, filled);
-}
-
-/// Bits a fill's level takes in `Held::shown`, below those of its joined sides.
-const LEVEL_BITS: u32 = TANK_LEVELS.ilog2() + 1;
-
-/// What a fill of `level` joined toward `joined` is kept as in `Held::shown`: 0 for none.
-fn shown_as(level: u32, joined: impl Fn(Dir) -> bool) -> u32 {
-    if level == 0 {
-        return 0;
-    }
-    let sides = Dir::ALL
-        .into_iter()
-        .filter(|&dir| joined(dir))
-        .fold(0, |sides, dir| sides | 1 << dir.face());
-    level | sides << LEVEL_BITS
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -407,45 +260,11 @@ mod tests {
         assert_eq!(alone.len(), 1, "a block on its own");
     }
 
-    const WATER: u64 = 7;
-    const OIL: u64 = 8;
-
-    fn held(liquid: u64, amount: u32) -> Held {
-        Held {
-            liquid,
-            amount,
-            ..Held::default()
-        }
-    }
-
-    #[test]
-    fn a_dribble_of_another_liquid_is_not_the_tanks_liquid() {
-        let shares = [held(WATER, 5), held(NO_LIQUID, 0), held(OIL, 8000)];
-        let all = together(shares);
-        assert_eq!(
-            (all.liquid, all.amount),
-            (OIL, 8000),
-            "oil, the water's dribble gone"
-        );
-    }
-
     #[test]
     fn a_broken_blocks_liquid_goes_to_the_tanks_left() {
         assert_eq!(shared(9000, &[2, 1]), [6000, 3000], "by their size");
         assert_eq!(shared(10, &[1, 1, 1]), [3, 3, 4], "none lost to rounding");
         let more_than_fits = shared(3 * CELL_CAPACITY, &[1, 1]);
         assert_eq!(more_than_fits, [CELL_CAPACITY; 2], "as much as they hold");
-    }
-
-    #[test]
-    fn a_fill_is_shown_anew_when_its_level_or_sides_change() {
-        let full = shown_as(TANK_LEVELS, |_| false);
-        assert_ne!(full, shown_as(TANK_LEVELS - 1, |_| false), "a level less");
-        assert_ne!(
-            full,
-            shown_as(TANK_LEVELS, |dir| dir == Dir::Up),
-            "joined above"
-        );
-        assert_eq!(shown_as(0, |_| true), 0, "nothing shown");
     }
 }
