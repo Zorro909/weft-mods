@@ -1,5 +1,5 @@
-//! Cogwork's pictures of oil, liquid tubes, tanks, the pump and its screen's liquid bar, drawn
-//! here pixel by pixel so they can be changed and drawn again: `WRITE_ASSETS=1 cargo test
+//! Cogwork's pictures of oil, liquid tubes, tanks, the pumps and the pump's screen's liquid bar,
+//! drawn here pixel by pixel so they can be changed and drawn again: `WRITE_ASSETS=1 cargo test
 //! --release art` writes them (`generated`). Each family is a file of its own; the colors they
 //! share are below.
 //!
@@ -10,6 +10,7 @@ mod gui;
 mod liquids;
 mod pump;
 mod tank;
+mod timber;
 
 /// A color, red, green, blue and alpha.
 pub type Rgba = [u8; 4];
@@ -201,6 +202,7 @@ fn the_pictures_are_what_is_drawn_here() {
         .into_iter()
         .chain(pump::all())
         .chain(tank::all())
+        .chain(timber::all())
         .chain(gui::all());
     for (path, picture) in all {
         let path = crate::generated::asset(&format!("textures/{path}.png"));

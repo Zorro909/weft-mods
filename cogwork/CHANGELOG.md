@@ -8,6 +8,8 @@
   on the surface above, and the Oil Bucket.
 - Pump: bores down with engine power to a liquid and pumps it up a bucket at a time.
 - Liquid Tube: carries any liquid of any mod between pumps and tanks, and shows how full it is.
+- Timber Liquid Tube: a liquid tube with a small pump in it. Driven by an engine, it pulls liquid
+  out of the tanks it touches and pushes it up to 16 blocks uphill, its paddle wheel turning.
 - Liquid Tank: holds 16 buckets; tanks next to each other make one tank of up to 3 × 3 × 6.
   Buckets pour into it and fill from it.
 

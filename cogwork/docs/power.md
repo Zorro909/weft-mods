@@ -1,7 +1,8 @@
 # Power
 
 Engines make energy and push it into the block their trunk points at: a
-[timber tube](tubes.md#timber-extraction-tube), a machine of this mod, or any mod's machine
+[timber tube](tubes.md#timber-extraction-tube), a
+[timber liquid tube](liquids.md#timber-liquid-tube), a machine of this mod, or any mod's machine
 that takes `core:energy`. They also offer it to energy networks, so [torque shafts](#torque-shaft)
 carry it further.
 

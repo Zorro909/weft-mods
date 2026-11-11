@@ -20,3 +20,4 @@ marker/survey	1	1.5	0.5	A surveying instrument measuring out an area: a soft ele
 ui/ghost	1	0.5	0.7	Very soft, short glassy tick, a subtle user interface click. Isolated, no music.
 pump/bore	3	1.5	0.6	A heavy steel auger boring straight down through rock beneath a machine: grinding and crunching stone, the low whir of a motor and gearbox turning the bit. Large heavy machinery, low and weighty. Isolated game sound effect, no music.
 pump/draw	3	1.2	0.6	One stroke of a big iron pump drawing thick oil up a long pipe from deep underground: a deep suction gulp, a heavy valve clunk and a slow gurgling glug of thick liquid. Large machinery, low and weighty. Isolated game sound effect, no music.
+timber_pump/stroke	3	0.9	0.6	One stroke of a small wooden hand pump with a paddle wheel: a soft wooden creak of the wheel turning and a short watery glug of liquid pushed through a pipe. Small, close up, dry, isolated game sound effect, no music.
