@@ -12,9 +12,9 @@ use crate::lib::Pos;
 /// Blocks along each side of a region, and the share of regions with a field, in 256ths.
 const REGION: i32 = 96;
 const CHANCE: u64 = 128;
-/// The radius of a field's ball, in blocks: 3 holds 179 buckets, 5 holds 739.
-const RADIUS_LOW: i32 = 3;
-const RADIUS_HIGH: i32 = 5;
+/// The radius of a field's ball, in blocks: 4 holds 389 buckets, 5 holds 739, 6 holds 1,189.
+const RADIUS_LOW: i32 = 4;
+const RADIUS_HIGH: i32 = 6;
 /// Heights a field's middle lies at: its ball stays above the overworld's floor at -32 and well
 /// under the ground.
 const MIDDLE_LOW: i32 = -24;

@@ -14,6 +14,7 @@ mod shape;
 use std::collections::{HashMap, HashSet};
 
 use merge::{MOST, forms_box, grow, part, spread};
+pub use shape::{BASE, GLASS};
 use weft_sdk::{Block, BlockEvent, Dir, Registry, Use, Verdict, World, abi, actions, tool_tier};
 
 use crate::fill::{self, TANK_LEVELS};

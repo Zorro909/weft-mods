@@ -19,7 +19,7 @@ const BORE_BASE: f32 = 100.0;
 const BORE_PER_HARDNESS: f32 = 100.0;
 const HOSE_COST: i64 = 20;
 /// Energy to take a bucket of liquid, and the ticks between two buckets at most.
-const BUCKET_COST: i64 = 1000;
+const BUCKET_COST: i64 = 2500;
 const PUMP_EVERY: u32 = 20;
 /// Sources it needs to reach to stop boring and pump: fewer are a puddle.
 const POOL: usize = 8;

@@ -2,24 +2,24 @@
 //!
 //! The outside of a tank is drawn, the inside where blocks join is not: glass on its outer
 //! sides, a slim frame along the edges where two outer sides meet, brass caps on its corners,
-//! and a riveted base around its bottom layer. Nothing reaches out of the block: the caps stand
-//! out of the frame and base because those lie a little in from its outer sides.
+//! and a riveted base around its bottom layer. The caps reach the block's sides; the frame and
+//! base lie a texel in from them and the glass inside the frame, so the caps stand out. Every
+//! face lies on a whole texel, as the engine draws them, and none lies in another's plane facing
+//! the same way, where the two would flicker.
 
 use weft_sdk::Dir;
 
 use crate::boxes::Piece;
 
-/// Texels in from an outer side its glass lies, and its lid.
-const GLASS: f32 = 1.0;
-const LID: f32 = 15.0;
-/// How thick the frame is, and how far its corner caps reach.
+/// Texels in from an outer side its glass lies: inside the frame.
+pub const GLASS: f32 = 2.0;
+/// How far in from an outer side the frame and base lie, and how thick the frame is.
+const INSET: f32 = 1.0;
 const FRAME: f32 = 2.0;
+/// How far a corner cap reaches along each edge.
 const CAP: f32 = 3.0;
-/// How far in from an outer side the frame and base lie, so that no face of theirs is in the
-/// plane of a cap's.
-const INSET: f32 = 0.25;
 /// How high the base of the bottom layer is.
-const BASE: f32 = 4.0;
+pub const BASE: f32 = 5.0;
 
 /// The pieces of a tank block joined toward the sides `joined` says. None for one joined all
 /// round, inside the tank.
@@ -41,14 +41,13 @@ fn glass(outer: &impl Fn(Dir) -> bool) -> Option<Piece> {
     if !sides.into_iter().any(outer) {
         return None;
     }
-    let low = |dir| if outer(dir) { GLASS } else { 0.0 };
-    let high = |dir| if outer(dir) { 16.0 - GLASS } else { 16.0 };
-    let floor = if outer(Dir::Down) { BASE } else { 0.0 };
-    let lid = if outer(Dir::Up) { LID } else { 16.0 };
-    let corners = (
-        [low(Dir::West), floor, low(Dir::North)],
-        [high(Dir::East), lid, high(Dir::South)],
+    let (x, z) = (
+        across(Dir::West, outer, GLASS),
+        across(Dir::North, outer, GLASS),
     );
+    let floor = if outer(Dir::Down) { BASE } else { 0.0 };
+    let lid = across(Dir::Down, outer, GLASS).1;
+    let corners = ([x.0, floor, z.0], [x.1, lid, z.1]);
     // Its bottom is the base's top, or the glass of the block below.
     let face = |dir: Dir| (dir != Dir::Down && outer(dir)).then_some("liquid_tank_glass");
     Some(Piece::new(corners, face))
@@ -62,59 +61,60 @@ fn base(outer: &impl Fn(Dir) -> bool) -> Piece {
         Dir::Down => Some("liquid_tank_base"),
         _ => outer(dir).then_some("liquid_tank_base"),
     };
-    let (x, z) = (along(Dir::West, outer), along(Dir::North, outer));
-    Piece::new(([x.0, INSET, z.0], [x.1, BASE, z.1]), face)
+    let (x, z) = (
+        across(Dir::West, outer, INSET),
+        across(Dir::North, outer, INSET),
+    );
+    Piece::new(([x.0, 0.0, z.0], [x.1, BASE, z.1]), face)
 }
 
-/// A bar along every edge where two outer sides meet: the four upright edges from the base up,
-/// and the four of the top. The base is the edge of the bottom.
+/// A bar along every edge where two outer sides meet, from cap to cap: the four upright edges
+/// from the base up, and the four of the top. The base is the edge of the bottom.
 fn frame(outer: &impl Fn(Dir) -> bool) -> Vec<Piece> {
-    let floor = if outer(Dir::Down) { BASE } else { 0.0 };
-    let (x, y, z) = (
-        along(Dir::West, outer),
-        along(Dir::Down, outer),
-        along(Dir::North, outer),
-    );
     let mut bars = Vec::new();
     for x_side in [Dir::West, Dir::East] {
         for z_side in [Dir::North, Dir::South] {
             if outer(x_side) && outer(z_side) {
-                let (x, z) = (span(x_side, -INSET, FRAME), span(z_side, -INSET, FRAME));
-                bars.push(([x.0, floor, z.0], [x.1, y.1, z.1]));
+                let floor = if outer(Dir::Down) { BASE } else { 0.0 };
+                let top = across(Dir::Down, outer, CAP).1;
+                let (x, z) = (edge(x_side), edge(z_side));
+                bars.push(([x.0, floor, z.0], [x.1, top, z.1]));
             }
         }
     }
     if outer(Dir::Up) {
-        let top = span(Dir::Up, -INSET, FRAME);
+        let y = edge(Dir::Up);
         for side in [Dir::West, Dir::East]
             .into_iter()
             .filter(|&side| outer(side))
         {
-            let x = span(side, -INSET, FRAME);
-            bars.push(([x.0, top.0, z.0], [x.1, top.1, z.1]));
+            let (x, z) = (edge(side), across(Dir::North, outer, CAP));
+            bars.push(([x.0, y.0, z.0], [x.1, y.1, z.1]));
         }
         for side in [Dir::North, Dir::South]
             .into_iter()
             .filter(|&side| outer(side))
         {
-            let z = span(side, -INSET, FRAME);
-            bars.push(([x.0, top.0, z.0], [x.1, top.1, z.1]));
+            let (x, z) = (across(Dir::West, outer, CAP), edge(side));
+            bars.push(([x.0, y.0, z.0], [x.1, y.1, z.1]));
         }
     }
     let bar = |corners| Piece::new(corners, |_| Some("liquid_tank_frame"));
     bars.into_iter().map(bar).collect()
 }
 
-/// A brass cap on each corner where three outer sides meet, out to the block's sides.
+/// A brass cap on each corner where three outer sides meet. A bottom one has no face below,
+/// where the base's is.
 fn caps(outer: &impl Fn(Dir) -> bool) -> Vec<Piece> {
     let mut caps = Vec::new();
     for x_side in [Dir::West, Dir::East] {
         for y_side in [Dir::Down, Dir::Up] {
             for z_side in [Dir::North, Dir::South] {
                 if [x_side, y_side, z_side].into_iter().all(outer) {
-                    let [x, y, z] = [x_side, y_side, z_side].map(|dir| span(dir, 0.0, CAP));
+                    let [x, y, z] = [x_side, y_side, z_side].map(|dir| at_side(dir, 0.0, CAP));
                     let corners = ([x.0, y.0, z.0], [x.1, y.1, z.1]);
-                    caps.push(Piece::new(corners, |_| Some("liquid_tank_cap")));
+                    let face = |dir: Dir| (dir != Dir::Down).then_some("liquid_tank_cap");
+                    caps.push(Piece::new(corners, face));
                 }
             }
         }
@@ -123,25 +123,29 @@ fn caps(outer: &impl Fn(Dir) -> bool) -> Vec<Piece> {
 }
 
 /// From and to, along the axis of `low`, the low side of it, of a piece reaching across the
-/// block: `INSET` short of each outer side, on to the edge where more of the tank goes on.
-fn along(low: Dir, outer: &impl Fn(Dir) -> bool) -> (f32, f32) {
-    let from = if outer(low) { INSET } else { 0.0 };
+/// block: `by` short of each outer side, on to the edge where more of the tank goes on.
+fn across(low: Dir, outer: &impl Fn(Dir) -> bool, by: f32) -> (f32, f32) {
+    let from = if outer(low) { by } else { 0.0 };
     let to = if outer(low.opposite()) {
-        16.0 - INSET
+        16.0 - by
     } else {
         16.0
     };
     (from, to)
 }
 
-/// From and to, along `dir`'s axis, of a box `thick` deep at the side `dir`, standing `out`
-/// beyond the block (in from it, for less than nothing).
-fn span(dir: Dir, out: f32, thick: f32) -> (f32, f32) {
+/// From and to, along `dir`'s axis, of a frame bar on the side `dir`.
+fn edge(dir: Dir) -> (f32, f32) {
+    at_side(dir, INSET, FRAME)
+}
+
+/// From and to, along `dir`'s axis, of a box `thick` deep, `inset` in from the side `dir`.
+fn at_side(dir: Dir, inset: f32, thick: f32) -> (f32, f32) {
     // Even faces are the low side of their axis.
     if dir.face().is_multiple_of(2) {
-        (-out, thick)
+        (inset, inset + thick)
     } else {
-        (16.0 - thick, 16.0 + out)
+        (16.0 - inset - thick, 16.0 - inset)
     }
 }
 
@@ -149,14 +153,9 @@ fn span(dir: Dir, out: f32, thick: f32) -> (f32, f32) {
 mod tests {
     use super::*;
 
-    /// How many of `pieces` show `texture` all round.
+    /// How many of `pieces` show `texture` on every face they have.
     fn count(pieces: &[Piece], texture: &str) -> usize {
-        let all = |piece: &&Piece| {
-            piece
-                .faces
-                .iter()
-                .all(|face| face.as_deref() == Some(texture))
-        };
+        let all = |piece: &&Piece| piece.faces.iter().flatten().all(|face| face == texture);
         pieces.iter().filter(all).count()
     }
 
@@ -175,6 +174,56 @@ mod tests {
             0,
             "no corner of the tank"
         );
+    }
+
+    /// Whether `a`'s and `b`'s faces toward `dir` lie in one plane, overlapping.
+    fn flicker(a: &Piece, b: &Piece, dir: Dir) -> bool {
+        let face = dir.face() as usize;
+        if a.faces[face].is_none() || b.faces[face].is_none() {
+            return false;
+        }
+        let axis = face / 2;
+        let plane = |piece: &Piece| {
+            if face.is_multiple_of(2) {
+                piece.corners.0[axis]
+            } else {
+                piece.corners.1[axis]
+            }
+        };
+        let overlap = (0..3).filter(|&other| other != axis).all(|other| {
+            a.corners.0[other] < b.corners.1[other] && b.corners.0[other] < a.corners.1[other]
+        });
+        plane(a) == plane(b) && overlap
+    }
+
+    #[test]
+    fn no_two_faces_flicker_in_one_plane() {
+        for sides in 0..64u32 {
+            let pieces = pieces(|dir: Dir| sides & 1 << dir.face() != 0);
+            for (i, a) in pieces.iter().enumerate() {
+                for b in &pieces[i + 1..] {
+                    for dir in Dir::ALL {
+                        assert!(
+                            !flicker(a, b, dir),
+                            "{:?} and {:?} toward {dir:?}, joined {sides:06b}",
+                            a.corners,
+                            b.corners
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn every_face_lies_on_a_whole_texel() {
+        for sides in 0..64u32 {
+            for piece in pieces(|dir: Dir| sides & 1 << dir.face() != 0) {
+                let (from, to) = piece.corners;
+                let whole = from.iter().chain(&to).all(|at| at.fract() == 0.0);
+                assert!(whole, "{:?}: the engine rounds it", piece.corners);
+            }
+        }
     }
 
     #[test]

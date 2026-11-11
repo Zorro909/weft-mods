@@ -18,14 +18,15 @@ static IN_TANK: Tag = Tag::named("cogwork:liquid_in_tank");
 pub const TUBE_LEVELS: u32 = 8;
 pub const TANK_LEVELS: u32 = 16;
 
-/// Inside a tube's hub, in texels: the hub is 4 to 12, the fill half a texel in from its glass.
-const TUBE_LOW: f32 = 4.5;
-const TUBE_HIGH: f32 = 11.5;
-/// Inside a tank block, in texels: half a texel in from its glass (`tank::shape`), above its
-/// base and below its lid on the outside of the tank, edge to edge where it goes on.
-const TANK_WALL: f32 = 1.5;
-const TANK_FLOOR: f32 = 4.0;
-const TANK_LID: f32 = 14.5;
+/// Inside a tube's hub, in texels: the hub is 4 to 12, the fill a texel in from its glass. The
+/// engine draws faces on whole texels only: closer, the fill would flicker with the glass.
+const TUBE_LOW: f32 = 5.0;
+const TUBE_HIGH: f32 = 11.0;
+/// Inside a tank block, in texels: a texel in from its glass (`tank::shape`), on its base and a
+/// texel below its lid on the outside of the tank, edge to edge where it goes on.
+const TANK_WALL: f32 = crate::tank::GLASS + 1.0;
+const TANK_FLOOR: f32 = crate::tank::BASE;
+const TANK_LID: f32 = 16.0 - crate::tank::GLASS - 1.0;
 
 pub fn register(r: &mut Registry) {
     let in_tube = r.shapes_of("liquid_in_tube", "#liquids", "_in_tube");
@@ -81,7 +82,7 @@ fn liquid(corners: Corners, face: impl Fn(Dir) -> bool) -> Piece {
 /// there is any, the arm up only when the tube is full. The liquid goes on into what each arm
 /// joins, so an arm's end has no face but up, where the liquid stops.
 fn tube_pieces(level: u32, arm: impl Fn(Dir) -> bool) -> Vec<Piece> {
-    let top = TUBE_LOW + (TUBE_HIGH - TUBE_LOW) * level as f32 / TUBE_LEVELS as f32;
+    let top = height(TUBE_LOW, TUBE_HIGH, level, TUBE_LEVELS);
     let hub = ([TUBE_LOW; 3], [TUBE_HIGH, top, TUBE_HIGH]);
     let mut pieces = vec![liquid(hub, |_| true)];
     for side in Dir::ALL.into_iter().filter(|&dir| arm(dir)) {
@@ -112,7 +113,7 @@ fn tank_piece(level: u32, joined: impl Fn(Dir) -> bool) -> Piece {
     let high = |dir| if joined(dir) { 16.0 } else { 16.0 - TANK_WALL };
     let floor = if joined(Dir::Down) { 0.0 } else { TANK_FLOOR };
     let lid = if joined(Dir::Up) { 16.0 } else { TANK_LID };
-    let top = floor + (lid - floor) * level as f32 / TANK_LEVELS as f32;
+    let top = height(floor, lid, level, TANK_LEVELS);
     let corners = (
         [low(Dir::West), floor, low(Dir::North)],
         [high(Dir::East), top, high(Dir::South)],
@@ -122,6 +123,11 @@ fn tank_piece(level: u32, joined: impl Fn(Dir) -> bool) -> Piece {
         Dir::Up => !(full && joined(Dir::Up)),
         _ => !joined(dir),
     })
+}
+
+/// The height of a surface `level` steps of `levels` from `low` up to `high`, on a whole texel.
+fn height(low: f32, high: f32, level: u32, levels: u32) -> f32 {
+    low + ((high - low) * level as f32 / levels as f32).round()
 }
 
 /// The fill of `liquid` for a tube at `level` (1 and up) with arms toward `arm`, if a loaded
@@ -200,6 +206,9 @@ mod tests {
         let [hub, west, down] = [&pieces[0], &pieces[1], &pieces[2]];
         assert_eq!(hub.corners.1[1], 8.0, "halfway up the hub");
         assert_eq!(west.corners.1[1], 8.0, "the arm as high");
+        let inside = |at: f32| 4.0 < at && at < 12.0;
+        let (low, high) = hub.corners;
+        assert!(inside(low[0]) && inside(high[0]), "off the glass, 4 to 12");
         assert_eq!(
             (down.corners.0[1], down.corners.1[1]),
             (0.0, TUBE_LOW),
@@ -246,9 +255,21 @@ mod tests {
         let (_, half) = tank_piece(TANK_LEVELS / 2, |dir| dir == Dir::Down).corners;
         assert_eq!(
             half[1],
-            (0.0 + TANK_LID) / 2.0,
+            (TANK_LID / 2.0).round(),
             "half of a block on more tank"
         );
+    }
+
+    #[test]
+    fn every_surface_lies_on_a_whole_texel() {
+        for level in 1..=TANK_LEVELS {
+            let (_, top) = tank_piece(level, |_| false).corners;
+            assert_eq!(top[1].fract(), 0.0, "level {level}: the engine rounds it");
+        }
+        for level in 1..=TUBE_LEVELS {
+            let top = tube_pieces(level, |_| false)[0].corners.1[1];
+            assert_eq!(top.fract(), 0.0, "level {level} in a tube");
+        }
     }
 
     #[test]

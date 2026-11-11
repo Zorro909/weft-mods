@@ -18,8 +18,8 @@ Every world with the same seed has its fields in the same places.
 
 | | |
 |---|---|
-| Shape | a ball of oil sources, radius 3 to 5 |
-| Holds | 179 buckets (radius 3) to 739 (radius 5) |
+| Shape | a ball of oil sources, radius 4 to 6 |
+| Holds | 389 buckets (radius 4) to 1,189 (radius 6), 739 at radius 5 |
 | Middle | between y −24 and y 20 |
 | Seep | right above the middle, on the surface |
 
@@ -48,7 +48,7 @@ iBi       B = base:bucket
 | Stores energy | 10,000; it takes at most 200 a tick |
 | Boring a block | 100, and 100 more per point of hardness: stone 250 |
 | Lowering its hose through air or liquid | 20 a block |
-| Pumping a bucket | 1,000, at most one a second |
+| Pumping a bucket | 2,500, at most one a second |
 | Holds | 8 buckets of one liquid |
 | Output | 9 slots for what it bores through |
 | Mined with | pickaxe |
