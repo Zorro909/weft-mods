@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Built for Weft 26.11.4.
 - The mod's description opens with a shorter summary, which the Weft mod index also shows.
 - Every shape is a Blockbench model under `assets/models/`: the excavator's rig, the engines
   and their pistons, survey markers, tubes and torque shafts.

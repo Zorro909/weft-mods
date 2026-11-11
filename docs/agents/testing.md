@@ -27,13 +27,13 @@ From inside `Weft/`, with your mods installed (they load for every test):
 
 ### Known failures
 
-At Weft v26.11.3, checked with and without the mods of this repository:
+At Weft v26.11.4, checked with and without the mods of this repository:
 
 | Test | What happens |
 |---|---|
-| `chat` | Fails alone too: "timed out waiting for the command list". The engine's, not a mod's |
-| `broken_shader_pack` | Fails alone too: "the texture table still reads as packs read it". The engine's, not a mod's |
-| `neutral_mobs` | Fails now and then in `--test all`, which runs several games at once; passes alone |
+| `ctm_any_model` | Fails alone too: "plant: green in the middle" and more. The engine's, not a mod's |
+| `edit_while_loading` | Fails alone too: "shown after 2456 ms". The engine's, not a mod's |
+| `worldgen` | Fails with structgen only: "mirrored, the stairs face the other way: core:air". Structgen's `/structure` replaces the engine's, so the engine's `save <name> <from> <to>` and `load <name> <pos> <transform>` the test calls are not there |
 
 A run with these three and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
 

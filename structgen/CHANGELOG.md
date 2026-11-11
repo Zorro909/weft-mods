@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Built for Weft 26.11.4.
+- The buildings' beds are base's new beds, one block over two cells.
+
 ## 0.3.0 - 2026-11-09
 
 ### Added

@@ -16,7 +16,7 @@ pub fn register(r: &mut Registry) {
             let Some((pos, _)) = wand.target_block() else {
                 return false;
             };
-            selection::set_corner(&wand.world(), wand.player(), 1, pos.into());
+            selection::set_corner(&wand.world(), wand.entity(), 1, pos.into());
             true
         });
     // Hitting a block with the wand marks it instead of breaking it.

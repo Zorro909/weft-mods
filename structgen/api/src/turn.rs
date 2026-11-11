@@ -3,8 +3,8 @@
 //!
 //! Block states are turned here and not by `weft_sdk::state_turned`: tested in the game at Weft
 //! v26.11.3, that turns `facing`, `attach` and `front` but leaves a log's `axis` and a ladder's
-//! sides as they were, though its doc says it turns axes and sides. Test it again on a newer
-//! Weft before swapping it in.
+//! sides as they were, though its doc says it turns axes and sides; its code is the same at
+//! v26.11.4. Test it again on a newer Weft before swapping it in.
 
 use weft_sdk::{state_prop, state_with};
 use weftkit::Pos;
@@ -65,10 +65,11 @@ impl Turn {
         }
     }
 
-    /// Property `name=value` once turned: directions and axes turn, and so do sides.
+    /// Property `name=value` once turned: directions and axes turn, and so do sides. `to` is
+    /// where a big block's other cell (`core:covered`) points: a bed's head to its foot.
     fn prop<'a>(self, name: &'a str, value: &'a str) -> (&'a str, &'a str) {
         match name {
-            "facing" | "front" | "attach" => (name, self.direction(value)),
+            "facing" | "front" | "attach" | "to" => (name, self.direction(value)),
             "axis" => (name, self.axis(value)),
             "north" | "east" | "south" | "west" => (self.direction(name), value),
             _ => (name, value),
@@ -77,8 +78,8 @@ impl Turn {
 }
 
 /// The properties `Turn::prop` turns; keep the two in step.
-const TURNING: [&str; 8] = [
-    "facing", "front", "attach", "axis", "north", "east", "south", "west",
+const TURNING: [&str; 9] = [
+    "facing", "front", "attach", "to", "axis", "north", "east", "south", "west",
 ];
 
 /// `state` turned. A property the block doesn't have is left alone, and so is a value it can't
@@ -158,6 +159,14 @@ mod tests {
         assert_eq!(lever, ("attach", "east"), "a lever on a wall");
         let button = Turn::Left.prop("attach", "down");
         assert_eq!(button, ("attach", "down"), "one on the floor stays");
+    }
+
+    #[test]
+    fn a_bed_head_points_at_its_foot_once_turned() {
+        // A bed facing north has its head south of its foot, pointing north at it; turned right,
+        // the bed faces east and its head west of the foot points east.
+        assert_eq!(Turn::Right.prop("facing", "north"), ("facing", "east"));
+        assert_eq!(Turn::Right.prop("to", "north"), ("to", "east"), "the head");
     }
 
     #[test]

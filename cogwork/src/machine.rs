@@ -20,8 +20,8 @@ pub fn block<'a>(builder: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<
                 ""
             };
             let front = format!("{name}_front{on}");
-            // Written facing north: `facing` turns it.
-            state.faces([&side, &side, &side, &top, &front, &side])
+            // The front faces north: `facing` turns it.
+            state.texture(&side).top(&top).front(&front)
         })
         .mined_by("axe", tool_tier::HAND)
         .sound_group("base:block.stone")
