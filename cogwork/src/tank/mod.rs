@@ -5,12 +5,10 @@
 //!
 //! Each block keeps its own share in its `HELD`, so nothing is kept for the tank as a whole: the
 //! blocks of one tank are those its `true` side properties join, and a tank's liquid is theirs
-//! together. Its shape is the Blockbench model of its joined sides,
-//! `assets/models/block/liquid_tank/<sides>.json`, written by `files`.
+//! together. Its shape follows its joined sides (`shape`).
 
-#[cfg(test)]
-mod files;
 pub mod merge;
+mod shape;
 
 use std::collections::HashSet;
 
@@ -39,12 +37,13 @@ pub fn register(r: &mut Registry) {
     builder
         .states(|props, state| {
             let joined = |dir: Dir| props.is(dir.name(), "true");
+            let state = state.texture("liquid_tank_frame");
             if Dir::ALL.into_iter().all(joined) {
                 // Inside the tank, never seen: a whole block to stand on, and nothing drawn.
                 let unseen = [("liquid_tank_frame", abi::UV_NO_FACE); 6];
                 return state.model_box_faces([0.0; 3], [16.0; 3], unseen);
             }
-            state.model_file(&crate::arms::model("liquid_tank", joined))
+            crate::boxes::draw(state, &shape::pieces(joined))
         })
         // Its block entity, which holds its share, is there from the next tick.
         .on_place(|world, change| world.schedule_tick(change.pos, 1))

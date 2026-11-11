@@ -115,7 +115,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `oil/` | Oil, the oil-soaked ground of a seep, and where fields lie (`oil/fields.rs`) |
 | `pump/` | The pump: its block and screen, boring and pumping (`work.rs`), finding the next source (`drain.rs`) |
 | `liquid/` | What holds liquid (`Held`), passing it between holders each tick, buckets on them |
-| `liquid_tube.rs`, `tank/` | The liquid tube; the tank, how its blocks make one tank (`merge.rs`) |
+| `liquid_tube.rs`, `tank/` | The liquid tube; the tank, how its blocks make one tank (`merge.rs`) and its shape for each set of joined sides (`shape.rs`) |
 | `fill.rs` | The liquid shown standing in a liquid tube or tank, for every liquid of any mod |
 | `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar |
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |
@@ -124,31 +124,33 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
 | `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
 | `sounds.rs` | The sound events, whose files are under `assets/sounds/` |
-| `arms/` | Which model a hub with arms draws (tubes, liquid tubes and torque shafts), and the writer of those model files |
+| `arms/`, `boxes.rs` | Hubs with arms (tubes, liquid tubes and torque shafts) put together from one Blockbench model each; drawing a block from boxes in code |
 | `recipes.rs` | Registers the crafting recipes, which are written in `assets/recipes/*.toml` and checked by `build.rs` when the mod is built |
 | `films/` | The showcase film, only with `--features showcase` |
-| `art/`, `blockbench.rs`, `generated.rs` | Only in tests: the drawn textures, writing Blockbench models, and keeping generated files as they would be written |
+| `art/`, `generated.rs` | Only in tests: the drawn textures, and keeping them as they would be drawn |
 
 Unit tests sit at the end of the files whose logic they check; `tools/check-mods.sh cogwork`,
 run from the repository root, runs them.
 
-Every shape is a [Blockbench](https://www.blockbench.net) model under `assets/models/`; the code
-only picks one and its textures. The one exception is the liquid standing in a liquid tube or
-tank: it takes the colors of whatever liquid it is, of any mod, so `fill.rs` builds its boxes in
-code. Entities (the excavator's rig, the engines' pistons) are
-"Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
-are "Java Block/Item" models in `block/`: the survey marker, the engine, the pump, and for tubes,
-liquid tubes and torque shafts one model for every set of arms on a hub, named after its arms
-(`tube/west_up_north.json`), and for the tank one for every set of sides it joins.
-A tube's model names a texture for each side, shown in Blockbench with the sorting tube's
-colors.
+Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. Entities (the
+excavator's rig, the engines' pistons) are "Bedrock Entity" models, `<name>.geo.json`, and move by
+the clips in `assets/animations/`. Blocks are "Java Block/Item" models in `block/`: the survey
+marker, the engine, the pump and its hose.
 
-Those models of tubes, shafts and tanks are written as Blockbench saves them, by
-`src/arms/files.rs` and `src/tank/files.rs`, and the textures of oil, liquid tubes, tanks and the
-pump are drawn pixel by pixel in `src/art/`. Change them there, then run
-`WRITE_ASSETS=1 cargo test --release` in `cogwork/`. Without the variable the same tests fail
-when a file differs from what they would write, so a file changed by hand has to be changed
-there too.
+Blocks with a shape for every set of neighbours are put together in code when the mod loads,
+since the mod index packs `assets/` as it is in the repository and runs nothing to make more
+files. Tubes, liquid tubes and torque shafts each have one Blockbench model,
+`block/<block>/hub_and_arm.json`: a hub and an arm pointing north, which `src/arms/` turns
+toward each side the block has an arm. Edit it in Blockbench like any other model; its faces
+show their texture where the box lies, as Blockbench's own UVs do. A tube's model names a texture
+for each side, shown in Blockbench with the sorting tube's colors. The tank's shape for each set
+of joined sides is built in `src/tank/shape.rs`, and the liquid standing in a liquid tube or tank
+in `fill.rs`, in the colors of whatever liquid it is.
+
+The textures of oil, liquid tubes, tanks and the pump are drawn pixel by pixel in `src/art/`.
+Change them there, then run `WRITE_ASSETS=1 cargo test --release art` in `cogwork/`. Without the
+variable the same test fails when a file differs from what it would draw, so a texture changed
+by hand has to be changed there too.
 
 ## Showcase film
 

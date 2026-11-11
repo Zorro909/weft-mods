@@ -27,7 +27,9 @@ pub fn register(r: &mut Registry) {
     builder
         .states(|props, state| {
             let has_arm = |dir: Dir| props.is(dir.name(), "true");
-            state.model_file(&crate::arms::model("liquid_tube", has_arm))
+            let model = &crate::arms::LIQUID_TUBE;
+            let pieces = model.pieces(has_arm, |name| model.texture(name).to_string());
+            crate::boxes::draw(state.texture(model.texture("particle")), &pieces)
         })
         .on_place(|world, change| refresh(world, change.pos.into()))
         .on_neighbor(|event| refresh(&event.world(), event.pos().into()))

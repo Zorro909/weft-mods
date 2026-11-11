@@ -7,8 +7,7 @@ mod arms;
 #[cfg(test)]
 mod art;
 mod bench;
-#[cfg(test)]
-mod blockbench;
+mod boxes;
 mod cogs;
 mod engines;
 mod excavator;

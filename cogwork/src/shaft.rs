@@ -1,6 +1,7 @@
 //! The torque shaft: a thin rod that carries energy between engines and machines. It is a
 //! `conductor`, so the engine's energy networks join it with any mod's cables and machines.
-//! Its middle and its arms are the Blockbench models in `assets/models/block/torque_shaft/`.
+//! Its middle and its arms are drawn from the Blockbench model
+//! `assets/models/block/torque_shaft/hub_and_arm.json` (`arms`).
 
 use weft_sdk::*;
 
@@ -27,9 +28,9 @@ pub fn register(r: &mut Registry) {
 /// The model with an arm toward every side it reaches. Its boxes are what it collides with, too.
 fn model<'s>(props: &Props, state: State<'s>) -> State<'s> {
     let has_arm = |dir: Dir| props.is(dir.name(), "true");
-    state
-        .texture("torque_shaft")
-        .model_file(&crate::arms::model("torque_shaft", has_arm))
+    let model = &crate::arms::TORQUE_SHAFT;
+    let pieces = model.pieces(has_arm, |name| model.texture(name).to_string());
+    crate::boxes::draw(state.texture(model.texture("particle")), &pieces)
 }
 
 /// Reaches toward every conductor and every block entity that holds energy. `CONDUCTOR` is the

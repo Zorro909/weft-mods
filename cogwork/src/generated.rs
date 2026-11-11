@@ -1,5 +1,4 @@
-//! Assets this mod's code writes: the models of families too big to draw one by one
-//! (`blockbench`) and the newer pictures (`art`). Their tests write the files with
+//! Assets this mod's code writes: the newer pictures (`art`). Their tests write the files with
 //! `WRITE_ASSETS=1 cargo test --release`, and otherwise fail on a file that differs from what
 //! they would write, so a file changed by hand has to be changed in the code too.
 

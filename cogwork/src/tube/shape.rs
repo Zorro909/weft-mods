@@ -1,8 +1,9 @@
 //! What a tube looks like and what it joins: a hub in the middle of the block and an arm toward
 //! every neighbor it connects to, one `true`/`false` property per direction. A directing tube
 //! always has its arm toward `out`, so it keeps properties only for the other five. A sorting
-//! tube draws each direction in its own texture. The hub and arms are the Blockbench models in
-//! `assets/models/block/tube/`, which name a texture for each side.
+//! tube draws each direction in its own texture. The hub and arms are drawn from the Blockbench
+//! model `assets/models/block/tube/hub_and_arm.json` (`arms`), which names a texture for each
+//! side.
 
 use weft_sdk::*;
 
@@ -57,12 +58,12 @@ fn model<'s>(props: &Props, state: State<'s>, texture: &'static str, arms: Arms)
     };
     // The output has no property: its arm is always there.
     let has_arm = |dir| arm_prop(out, dir).is_none_or(|name| props.is(name, "true"));
-    let state = state
-        .texture(texture)
-        .model_file(&crate::arms::model("tube", has_arm));
-    Dir::ALL.into_iter().fold(state, |state, dir| {
-        state.model_texture(dir.name(), side_texture(texture, arms, out, dir))
-    })
+    let side = |name: &str| {
+        let dir = Dir::from_name(name).expect("a tube's model names its textures after sides");
+        side_texture(texture, arms, out, dir).to_string()
+    };
+    let pieces = crate::arms::TUBE.pieces(has_arm, side);
+    crate::boxes::draw(state.texture(texture), &pieces)
 }
 
 /// The texture of the hub face and arm toward `dir` of a tube that sends its items `out`.

@@ -77,8 +77,6 @@ Code that makes a committed file is committed with it:
 
 | Files | Made by |
 |---|---|
-| `cogwork/assets/models/block/{tube,torque_shaft,liquid_tube}/` | `cogwork/src/arms/files.rs`: `WRITE_ASSETS=1 cargo test --release arms` |
-| `cogwork/assets/models/block/liquid_tank/` | `cogwork/src/tank/files.rs`: `WRITE_ASSETS=1 cargo test --release tank` |
 | cogwork's textures of oil, liquid tubes, tanks and the pump, and `gui/tank*.png` | `cogwork/src/art/`: `WRITE_ASSETS=1 cargo test --release art` |
 | `cogwork/assets/sounds/` | `tools/sfx.sh cogwork` from the prompts in `cogwork/sounds.tsv` |
 | `structgen/assets/structures/*.json` | `cargo run --release --example buildings` in `structgen/` |
@@ -86,3 +84,8 @@ Code that makes a committed file is committed with it:
 
 Without `WRITE_ASSETS`, the same cogwork tests fail when a file differs from what they would
 write. A model made by hand is a Blockbench save, which `tools/blockbench.sh check` confirms.
+
+The mod index packs a mod's `assets/` from a plain checkout and runs none of its code, so no
+file can be made at build time. A block with a shape for every set of neighbours is put together
+in code when the mod loads instead (`boxes`), from one Blockbench model where it can: cogwork's
+hubs with arms are each one `hub_and_arm.json` (`cogwork/src/arms/`).
