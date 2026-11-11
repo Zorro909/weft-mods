@@ -77,9 +77,12 @@ Code that makes a committed file is committed with it:
 
 | Files | Made by |
 |---|---|
-| `cogwork/assets/models/block/{tube,torque_shaft}/` | `cogwork/src/arms/files.rs`: `WRITE_ARM_MODELS=1 cargo test --release arms`; the same test fails when a file differs |
+| `cogwork/assets/models/block/{tube,torque_shaft,liquid_tube}/` | `cogwork/src/arms/files.rs`: `WRITE_ASSETS=1 cargo test --release arms` |
+| `cogwork/assets/models/block/liquid_tank/` | `cogwork/src/tank/files.rs`: `WRITE_ASSETS=1 cargo test --release tank` |
+| cogwork's textures of oil, liquid tubes, tanks and the pump, and `gui/tank*.png` | `cogwork/src/art/`: `WRITE_ASSETS=1 cargo test --release art` |
 | `cogwork/assets/sounds/` | `tools/sfx.sh cogwork` from the prompts in `cogwork/sounds.tsv` |
 | `structgen/assets/structures/*.json` | `cargo run --release --example buildings` in `structgen/` |
 | cogwork's recipes | written by hand in `cogwork/assets/recipes/*.toml`; `cogwork/build.rs` turns them into code |
 
-A model made by hand is a Blockbench save, which `tools/blockbench.sh check` confirms.
+Without `WRITE_ASSETS`, the same cogwork tests fail when a file differs from what they would
+write. A model made by hand is a Blockbench save, which `tools/blockbench.sh check` confirms.

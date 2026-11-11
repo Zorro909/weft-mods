@@ -1,0 +1,37 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"hub": "block/liquid_tube_hub",
+		"particle": "block/liquid_tube",
+		"arm": "block/liquid_tube"
+	},
+	"elements": [
+		{
+			"name": "hub",
+			"from": [4, 4, 4],
+			"to": [12, 12, 12],
+			"faces": {
+				"north": {"uv": [4, 4, 12, 12], "texture": "#hub"},
+				"east": {"uv": [4, 4, 12, 12], "texture": "#hub"},
+				"south": {"uv": [4, 4, 12, 12], "texture": "#hub"},
+				"west": {"uv": [4, 4, 12, 12], "texture": "#hub"},
+				"up": {"uv": [4, 4, 12, 12], "texture": "#hub"},
+				"down": {"uv": [4, 4, 12, 12], "texture": "#hub"}
+			}
+		},
+		{
+			"name": "down",
+			"from": [4, 0, 4],
+			"to": [12, 4, 12],
+			"faces": {
+				"north": {"uv": [4, 12, 12, 16], "texture": "#arm"},
+				"east": {"uv": [4, 12, 12, 16], "texture": "#arm"},
+				"south": {"uv": [4, 12, 12, 16], "texture": "#arm"},
+				"west": {"uv": [4, 12, 12, 16], "texture": "#arm"},
+				"up": {"uv": [4, 4, 12, 12], "texture": "#arm"},
+				"down": {"uv": [4, 4, 12, 12], "texture": "#arm"}
+			}
+		}
+	]
+}
