@@ -15,6 +15,8 @@
 
 - An engine's piston no longer flickers over the end of its trunk at the top of its stroke:
   the trunk's end stays in view, flush with the plate.
+- On Weft 26.11.4 the piston of an engine whose trunk points east or west stands square to its
+  trunk again, not turned 50 degrees short of it.
 
 ## 0.3.0 - 2026-11-08
 
