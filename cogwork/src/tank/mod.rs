@@ -16,7 +16,9 @@ pub use blocks::Tank;
 use blocks::joins;
 use merge::{MOST, forms_box, grow, part};
 pub use shape::{BASE, GLASS};
-use weft_sdk::{Block, BlockEvent, Dir, Registry, Use, Verdict, World, abi, actions, tool_tier};
+use weft_sdk::{
+    BLOCK_TICK, Block, BlockEvent, Dir, Registry, Use, Verdict, World, abi, actions, tool_tier,
+};
 
 use crate::fill;
 use crate::lib::{Pos, TypedWorld};
@@ -28,6 +30,9 @@ pub static LIQUID_TANK: Block = Block::named("liquid_tank");
 pub const CELL_CAPACITY: u32 = 16_000;
 
 pub fn register(r: &mut Registry) {
+    // Up to Weft 26.11.4 `schedule_tick` does nothing while no mod listens to a block's tick
+    // (`World::timer` gives up on an event without handlers), and a tank would never regroup.
+    r.on_event(&BLOCK_TICK, |_| {});
     r.before_event(&actions::BREAK_BLOCK, |ask| {
         before_break(&ask.world(), ask.pos().into());
         Verdict::Abstain
