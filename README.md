@@ -13,9 +13,10 @@ ships as its own mod.
 | <img src="cogwork/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
 | <img src="structgen/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structgen](structgen/README.md) | Hamlets, villages and towns across the overworld, each laid out afresh from the land, built of timber-framed buildings in the engine's structure files. |
 | | [Showcase](showcase/README.md) | A tool for mod makers: plays films that mods make of their content in code, and records them to video. |
+| | [Serverscript](serverscript/README.md) | A tool for servers: runs scripts from a folder that react to events, refuse actions and add commands, with nothing new for players to download. |
 
 Each mod's README gives an overview; Cogwork's and Structgen's `docs/` folders describe every
-feature, block and item in detail.
+feature, block and item in detail, and Serverscript's everything a script can do.
 
 ## Playing
 
@@ -24,7 +25,8 @@ feature, block and item in detail.
 3. Put the zip as it is into the game's `mods/` folder and start the game.
 
 Every mod here needs the base game, which every Weft has, and none needs another. Showcase is
-only needed to play a film.
+only needed to play a film, and Serverscript only on a server that runs scripts and by the
+players who join it.
 
 ## Building from source
 
@@ -46,7 +48,7 @@ each mod; [`docs/agents/mods.md`](docs/agents/mods.md) has the build, load and c
 
 | Path | What it holds |
 |---|---|
-| `cogwork/`, `structgen/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
+| `cogwork/`, `structgen/`, `showcase/`, `serverscript/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
 | `Weft/` | The engine, checked out by `init.sh` and not tracked here |
 | `weftkit/` | A library the mods share: typed block positions, areas and block states |
 | `docs/agents/` | Guides for working on this repository: code style, mod design, mods, testing, engine, releasing |

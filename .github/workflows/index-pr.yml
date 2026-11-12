@@ -30,5 +30,6 @@ jobs:
           dry-run: ${{ inputs.dry-run }}
           mods: |
             cogwork
+            serverscript
             showcase
             structgen

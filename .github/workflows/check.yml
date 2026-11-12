@@ -75,5 +75,6 @@ jobs:
           release-unchanged: true
           mods: |
             cogwork
+            serverscript
             showcase
             structgen

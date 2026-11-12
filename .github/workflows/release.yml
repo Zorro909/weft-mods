@@ -40,6 +40,7 @@ jobs:
         with:
           mods: |
             cogwork
+            serverscript
             showcase
             structgen
 
@@ -68,6 +69,7 @@ jobs:
           tags: ${{ needs.release.outputs.releases }}
           mods: |
             cogwork
+            serverscript
             showcase
             structgen
 

@@ -1,0 +1,23 @@
+[package]
+name = "serverscript"
+version = "0.1.0"
+edition = "2024"
+# As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
+rust-version = "1.95"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# The Weft release it builds against, from the game's repository as the mod index wants it;
+# `init.sh` checks out the newest one any mod names into `Weft/`.
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.4" }
+# The script language. `sync` lets the threads that tick regions share one engine and the
+# compiled scripts.
+rhai = { version = "1.27", features = ["sync"] }
+
+# Its own cargo root.
+[workspace]
+
+[profile.release]
+debug = "line-tables-only"
