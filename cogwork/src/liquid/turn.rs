@@ -16,9 +16,9 @@ use weft_sdk::{SystemBatch, World};
 
 use super::flow::LOSS;
 use super::vessel::{Holders, Kind, Vessel};
-use super::{Held, Level, MOST_A_TURN, flow};
+use super::{Held, Level, MOST_A_TURN, NO_LIQUID, flow};
 use crate::lib::{Pos, TypedWorld};
-use crate::liquid_tube::is_liquid_tube;
+use crate::liquid_tube::LIQUID_TUBE;
 
 /// A holder as met at one of its blocks: `id`, that block's entity, keeps the head it told
 /// there. A tank tells all its blocks the same head, but blocks it joined since may keep another.
@@ -94,9 +94,10 @@ pub fn tick(batch: &mut SystemBatch<Held>) {
         };
         let pos = Pos::from(entity.block_pos());
         turn(&mut holders, &mut found, id, pos);
-        if is_liquid_tube(world.block_typed(pos)) {
+        // A timber liquid tube shows its own, after its pump (`timber_liquid_tube`).
+        if world.block_typed(pos).is(&LIQUID_TUBE) {
             let mut held = holders.get(id);
-            crate::liquid_tube::show(&world, pos, &mut held);
+            crate::liquid_tube::show(&world, pos, &mut held, NO_LIQUID);
             holders.set(id, held);
         }
     }

@@ -1,7 +1,8 @@
 //! The timber liquid tube: a liquid tube with a small wooden pump in its middle. Driven by an
 //! engine, it pulls liquid out of the tanks it touches and pushes it up the liquid tubes beside
-//! it as the pump does, its paddle wheel turning while liquid goes through (`wheel`). Undriven it
-//! is a liquid tube like any other.
+//! it as the pump does, its paddle wheel turning while liquid goes through (`wheel`). While the
+//! wheel turns the tube shows itself full of what it pumps, however little stays in it, so the
+//! wheel turns in liquid. Undriven it is a liquid tube like any other.
 //!
 //! Its shape is the Blockbench model `assets/models/block/timber_liquid_tube/hub_and_arm.json`,
 //! drawn as the liquid tube's is (`liquid_tube::tube`): a wooden pump body a texel wider than the
@@ -25,12 +26,16 @@ const ENERGY_IN: i64 = 200;
 
 value! {
     /// A timber liquid tube's pump: its wheel (an entity), `driven`, 1 while it has energy to
-    /// pull with, and the millibuckets it pulled this stroke.
+    /// pull with, the millibuckets it pulled this stroke and their `liquid`, and the liquid it
+    /// is `pumping` while its wheel turns, through the stroke after one it pulled in
+    /// (`NO_LIQUID` for none).
     #[derive(Default)]
     pub struct Drive {
         pub wheel: u64,
         pub driven: u32,
         pub pulled: u32,
+        pub liquid: u64,
+        pub pumping: u64,
     }
 }
 static DRIVE: Component<Drive> = Component::named("cogwork:timber_drive");
@@ -63,8 +68,8 @@ pub fn is_driven(world: &World, id: u64) -> bool {
         .is_some_and(|drive| drive.driven != 0)
 }
 
-/// Every timber liquid tube: driven while it has energy, it pulls what that pays for, and its
-/// wheel turns through a stroke after one it pulled in.
+/// Every timber liquid tube: driven while it has energy, it pulls what that pays for, its wheel
+/// turns through a stroke after one it pulled in, and it shows its fill.
 fn tick(batch: &mut SystemBatch<Drive>) {
     let world = batch.world();
     let time = world.game_time();
@@ -83,9 +88,24 @@ fn tick(batch: &mut SystemBatch<Drive>) {
             wake(&world, id);
         }
         if driven != 0 {
-            drive.pulled += pull::from_tanks(&world, id, pos, energy);
+            pull(&world, id, pos, energy, drive);
         }
         wheel::show(&world, id, pos, drive, time);
+        if let Some(held) = world.component_mut(id, &HELD) {
+            crate::liquid_tube::show(&world, pos, held, drive.pumping);
+        }
+    }
+}
+
+/// Pulls into the tube `id` at `pos` what `energy` pays for, and keeps what `drive` pulled.
+fn pull(world: &World, id: u64, pos: Pos, energy: i64, drive: &mut Drive) {
+    let pulled = pull::from_tanks(world, id, pos, energy);
+    if pulled == 0 {
+        return;
+    }
+    drive.pulled += pulled;
+    if let Some(held) = world.component(id, &HELD) {
+        drive.liquid = held.liquid;
     }
 }
 
@@ -108,6 +128,12 @@ mod tests {
             std::mem::offset_of!(Drive, pulled),
             12,
             "pulled this stroke"
+        );
+        assert_eq!(std::mem::offset_of!(Drive, liquid), 16, "the liquid pulled");
+        assert_eq!(
+            std::mem::offset_of!(Drive, pumping),
+            24,
+            "the liquid pumped"
         );
     }
 }
