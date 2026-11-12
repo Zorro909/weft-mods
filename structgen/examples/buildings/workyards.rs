@@ -1,12 +1,11 @@
 //! Workyards: the trades that give a town its texture.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{
     Building, Ridge, gable_end, gable_roof, lights, log, plinth, side_windows, slot, stair,
     timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 /// A building's file name and how it is drawn.
 pub const BUILDINGS: &[Building] = &[("lumberyard", lumberyard), ("storehouse", storehouse)];

@@ -2,14 +2,13 @@
 
 mod town_hall;
 
-use structgen_api::Structure;
-
 use crate::chapels::stone_walls;
 use crate::draft::{AIR, Draft};
 use crate::kit::{
     Building, Ridge, chimney, gable_end, gable_roof, log, plinth, side_windows, slab, slot, stair,
     timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("guildhall", guildhall),

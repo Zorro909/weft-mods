@@ -2,12 +2,12 @@
 
 # Structgen
 
-A Weft mod that fills the overworld with buildings, and gives players and mod authors the tools
-to make their own. Structures are boxes of blocks saved as `.wst` files; the mod places them
-while the world generates, alone and gathered into hamlets, villages and towns.
+A Weft mod that fills the overworld with hamlets, villages and towns, each laid out afresh from
+the land it stands on. Its 29 buildings are the engine's structure files
+(`assets/structures/*.json`), so the engine's `/structure` command places, saves and finds
+them like any other.
 
-It needs the base game (`base`). Its placing lives in a crate of its own, `structgen_api`, that
-any mod can use without this mod being loaded.
+It needs the base game (`base`).
 
 ## Features
 
@@ -17,55 +17,54 @@ Hamlets, villages and towns grow on the overworld's open plains, each laid out a
 village green or a town's market square, roads winding out of it along the ground, buildings
 facing the roads, gardens, small fields and a mill. Villages have gravel lanes, a church, a
 tavern and a smithy; towns have cobbled streets, a town hall, a guildhall and a coaching inn.
-A few cottages, farms, chapels and mills also stand alone. All 29 buildings share one
-timber-framed style, and their roofs, frames and wall panels change from one settlement to the
-next.
+All 29 buildings share one timber-framed style, and their roofs, frames and wall panels change
+from one settlement to the next. One or two buildings of each settlement have something in
+their chests.
 
 ### Making structures in the game
 
-The Structure Wand selects a box of the world, and `/structure` saves it to a file, places a
-file in front of you to look at, takes it back again, and finds the nearest structure of a kind.
+The engine's `/structure` saves a box of the world to a file, places a file or one of this
+mod's buildings, takes it back again, and finds the nearest settlement. Structgen has no
+commands of its own.
 
-### For other mods: `structgen_api`
+### For other mods
 
-- **Static structures:** one template, placed now and then where the ground and biome suit it.
-- **Dynamic structures:** a planner of your own lays out villages, ruins or anything else from
-  any number of templates and blocks.
-- **Material slots:** a structure names roles such as `roof/stair`, and code fills them with
-  other blocks, so one drawing is built of spruce, oak or brick.
-- **Placing and finding:** put a structure into the world straight away, or find the nearest
-  one, generated yet or not.
+Everything structgen registers is the engine's, so another mod uses it with the SDK alone: the
+templates `structgen:<name>` and their turned copies, the palettes `structgen:styles/...`, and
+the features `structgen:hamlet`, `structgen:village` and `structgen:town` for
+`w.structure_near` or `r.remove`.
 
 Everything is worked out from the seed and the terrain, so the server and every client agree
-on where structures are without sending them.
+on where settlements are without sending them.
 
 ## Getting started
 
-1. Find a village: `/structure locate village`, then go there.
-2. Make a structure of your own: take the wand from creative's Tools tab, hit one corner of a
-   building and use the wand on the opposite corner, then `/structure save my_house`.
-3. Look at it again elsewhere with `/structure load my_house`; `/structure undo` takes it away.
+1. Find a village: `/structure locate structgen:village`, then go there. The position is the
+   settlement's start, at most 48 blocks off its middle along x and along z.
+2. Look at a building: `/structure load structgen:hof ~ ~ ~` puts it with its lowest corner
+   where you stand, `structgen:hof/right` turned. `/structure undo` takes it away.
+3. Save one of your own: `/structure save my_house <from> <to>` with two opposite corners
+   (`~ ~ ~` works) writes `structures/my_house.json` beside the game's saves, and
+   `/structure load my_house` places it again.
 
 ## Documentation
 
 The details are in [`docs/`](docs/README.md):
 
-- [In the world](docs/worldgen.md): which buildings appear, where, and how hamlets, villages and towns
+- [In the world](docs/worldgen.md): which buildings appear, and how hamlets, villages and towns
   are laid out
-- [Material slots](docs/materials.md): restyling a structure with other blocks
-- [Wand and commands](docs/commands.md)
+- [Commands](docs/commands.md): the engine's `/structure` with this mod's buildings
 - [Adding a structure to this mod](docs/adding-structures.md)
-- [Using `structgen_api`](docs/api.md) from another mod
+- [Material slots](docs/materials.md): restyling a building with other blocks
 - [How a place is chosen](docs/placement.md)
-- [The `.wst` file](docs/file-format.md)
+- [Structure files](docs/file-format.md): what structgen reads of the engine's files
 
 ## Layout
 
 | Folder | What it holds |
 |---|---|
-| `api/` | `structgen_api`: the file format and the placing, for any mod |
-| `src/` | the mod: world generation, hamlets, villages and towns, styles, the wand and `/structure` |
-| `assets/structures/` | the `.wst` files compiled into the mod |
+| `src/` | the mod: the buildings' turned and paved copies, styles, hamlets, villages and towns |
+| `assets/structures/` | the buildings, trees and tiles as the engine's structure files, also compiled into the mod |
 | `examples/buildings/` | draws the mod's buildings, paths and streets in code, with the Hearthwood kit |
 | `examples/shot_script/` | the game script `tools/structure-shots.sh` photographs them with |
 | `examples/layouts/` | tiles laid side by side, for `structure-shots.sh --layout` |
@@ -75,11 +74,14 @@ The details are in [`docs/`](docs/README.md):
 ## Showcase film
 
 With the `showcase` feature, structgen brings a film for the [showcase](../showcase) mod: a
-journey through seed 42's world as it generates, past two hamlets, two villages and a town and
-into some of their buildings. It takes about 5:25. Record it with
+journey north through seed 42's world as it generates, past a hamlet, a village, a town and,
+over the mountains, a last hamlet, and into some of their buildings. It takes about 4:15. Record it with
 `tools/showcase.sh structgen:showcase -- --view 32`, which makes a world of the showcase's own
 seed, 42; the film only fits that seed's world. Without the feature, none of this is compiled
 in, and showcase is not a dependency.
+
+Its flight follows the settlements of the old layout. In 0.4.0 they stand in other places, so
+the film has to be recorded again.
 
 ## Build and install
 
@@ -101,6 +103,6 @@ game, on any of the three.
 
 ## Status
 
-Chests and machines in a structure are placed empty, structures can overlap each other, and
-files are compiled in rather than read at runtime. The full list, with what each needs, is in
-[Not done yet](docs/README.md#not-done-yet). Text is in English only so far.
+Text is in English only so far. What is not done yet, and what structgen works around until
+the engine can do it, is in [Not done yet](docs/README.md#not-done-yet) and
+[Missing in the engine](docs/README.md#missing-in-the-engine).

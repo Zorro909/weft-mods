@@ -3,13 +3,12 @@
 
 mod town_church;
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{
     Building, Ridge, gable_end, gable_roof, log, plinth, side_windows, slab, slot, stair,
     timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("wayside_chapel", wayside_chapel),

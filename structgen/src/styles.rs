@@ -1,8 +1,14 @@
 //! Named sets of blocks for the material slots of this mod's buildings (see
-//! `docs/materials.md`): a brick roof, a spruce frame. Settlements pick them to vary their
-//! buildings, and `/structure load` takes them by name.
+//! `docs/materials.md`): a brick roof, a spruce frame. A settlement picks a roof for each
+//! building and a frame and infill for all of them. The engine fills a template's slots from
+//! one palette, so every mix of a roof, a frame and an infill is a palette of its own,
+//! `structgen:styles/brick_roof/spruce_frame`. A town's paving is the paved copies' own default
+//! (`buildings.rs`).
 
-use structgen_api::Materials;
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
+use weft_sdk::*;
 
 /// Roof styles: each name and the block the roof is of, its stairs and slabs too.
 const ROOFS: &[(&str, &str)] = &[
@@ -12,138 +18,88 @@ const ROOFS: &[(&str, &str)] = &[
     ("brick_roof", "base:bricks"),
     ("stone_roof", "base:cobblestone"),
 ];
-
-/// Street styles: each name and its blocks, in the order of `STREET_SLOTS`.
-const STREETS: &[(&str, [&str; 5])] = &[
-    (
-        "cobble_street",
-        [
-            "base:cobblestone",
-            "base:mossy_cobblestone",
-            "base:stone_bricks",
-            "base:stone_bricks_slab",
-            "base:stone_bricks_stairs",
-        ],
-    ),
-    (
-        "stone_street",
-        [
-            "base:stone_bricks",
-            "base:cobblestone",
-            "base:stone",
-            "base:stone_slab",
-            "base:stone_stairs",
-        ],
-    ),
-    (
-        "brick_street",
-        [
-            "base:bricks",
-            "base:stone_bricks",
-            "base:stone_bricks",
-            "base:stone_bricks_slab",
-            "base:bricks_stairs",
-        ],
-    ),
-    (
-        "sandstone_street",
-        [
-            "base:sandstone",
-            "base:sand",
-            "base:stone_bricks",
-            "base:sandstone_slab",
-            "base:sandstone_stairs",
-        ],
-    ),
+/// Frame styles: the logs of the timber frame.
+const FRAMES: &[(&str, &str)] = &[
+    ("oak_frame", "base:oak_log"),
+    ("spruce_frame", "base:spruce_log"),
+    ("birch_frame", "base:birch_log"),
 ];
-const STREET_SLOTS: [&str; 5] = [
-    "street/paving",
-    "street/patch",
-    "street/kerb",
-    "street/gutter",
-    "street/step",
+/// Infill styles: the panels between the frame's beams.
+const INFILLS: &[(&str, &str)] = &[
+    ("birch_infill", "base:birch_planks"),
+    ("oak_infill", "base:oak_planks"),
+    ("spruce_infill", "base:spruce_planks"),
+    ("white_infill", "base:wool"),
 ];
 
-/// The other styles: each name and the blocks it puts in which slots.
-const OTHERS: &[(&str, &[(&str, &str)])] = &[
-    ("oak_frame", &[("frame/log", "base:oak_log")]),
-    ("spruce_frame", &[("frame/log", "base:spruce_log")]),
-    ("birch_frame", &[("frame/log", "base:birch_log")]),
-    ("birch_infill", &[("wall/infill", "base:birch_planks")]),
-    ("oak_infill", &[("wall/infill", "base:oak_planks")]),
-    ("spruce_infill", &[("wall/infill", "base:spruce_planks")]),
-    ("white_infill", &[("wall/infill", "base:wool")]),
-    ("cobble_ground", &[("ground", "base:cobblestone")]),
-    (
-        "gravel_path",
-        &[("path/surface", "base:gravel"), ("path/worn", "base:dirt")],
-    ),
-    (
-        "dirt_path",
-        &[("path/surface", "base:dirt"), ("path/worn", "base:gravel")],
-    ),
-];
+/// By name, every palette `register` made.
+static PALETTES: OnceLock<HashMap<String, &'static Palette>> = OnceLock::new();
 
-/// Every style's name.
-pub fn names() -> impl Iterator<Item = &'static str> {
-    let roofs = ROOFS.iter().map(|(name, _)| *name);
-    let streets = STREETS.iter().map(|(name, _)| *name);
-    roofs
-        .chain(streets)
-        .chain(OTHERS.iter().map(|(name, _)| *name))
-}
-
-/// The styles named in `names`, each over the one before: `brick_roof,spruce_frame`. `None`
-/// for a name no style has.
-pub fn named(names: &str) -> Option<Materials> {
-    let mut names = names
-        .split(',')
-        .map(str::trim)
-        .filter(|name| !name.is_empty());
-    names.try_fold(Materials::new(), |materials, name| {
-        let known = self::names().any(|style| style == name);
-        known.then(|| add(materials, name))
-    })
-}
-
-/// `materials` with style `name`'s blocks put in their slots; unchanged for a name no style has
-/// (`""` for the defaults).
-pub fn add(materials: Materials, name: &str) -> Materials {
-    blocks(name)
-        .into_iter()
-        .fold(materials, |materials, (slot, block)| {
-            materials.with(slot, &block)
-        })
-}
-
-/// The blocks of style `name` and their slots, none for a name no style has.
-fn blocks(name: &str) -> Vec<(&'static str, String)> {
-    if let Some(block) = find(ROOFS, name) {
-        return vec![
-            ("roof/stair", format!("{block}_stairs")),
-            ("roof/slab", format!("{block}_slab")),
-            ("roof/block", block.to_string()),
-        ];
+/// A palette for every mix of a roof, a frame and an infill, each or none.
+pub fn register(r: &mut Registry) {
+    let none = [""];
+    let names =
+        |styles: &'static [(&str, &str)]| none.into_iter().chain(styles.iter().map(|s| s.0));
+    let mut palettes = HashMap::new();
+    for roof in names(ROOFS) {
+        for frame in names(FRAMES) {
+            for infill in names(INFILLS) {
+                let styles = [roof, frame, infill];
+                let Some(name) = palette_name(&styles) else {
+                    continue;
+                };
+                let palette = Palette::generated(name.clone());
+                let mut builder = r.palette(palette);
+                for (slot, block) in slots(&styles) {
+                    builder = builder.slot(slot, &block);
+                }
+                drop(builder);
+                palettes.insert(name, palette);
+            }
+        }
     }
-    if let Some(blocks) = find(STREETS, name) {
-        return STREET_SLOTS
-            .into_iter()
-            .zip(blocks.map(String::from))
-            .collect();
-    }
-    let others = find(OTHERS, name).copied().unwrap_or_default();
-    others
-        .iter()
-        .map(|&(slot, block)| (slot, block.to_string()))
-        .collect()
+    let _ = PALETTES.set(palettes);
 }
 
-/// What `styles` has under `name`.
-fn find<T>(styles: &'static [(&str, T)], name: &str) -> Option<&'static T> {
+/// The palette of `styles` (a roof, a frame, an infill, `""` for the defaults); `None` for the
+/// defaults alone.
+pub fn palette(styles: &[&str]) -> Option<&'static Palette> {
+    PALETTES.get()?.get(&palette_name(styles)?).copied()
+}
+
+/// `styles/brick_roof/spruce_frame`; `None` when it would say nothing.
+fn palette_name(styles: &[&str]) -> Option<String> {
+    let parts: Vec<&str> = (styles.iter().copied())
+        .filter(|part| !part.is_empty())
+        .collect();
+    (!parts.is_empty()).then(|| format!("styles/{}", parts.join("/")))
+}
+
+/// The slots `styles` fill and their blocks.
+fn slots(styles: &[&str]) -> Vec<(&'static str, String)> {
+    let mut slots = Vec::new();
+    for &style in styles {
+        if let Some(block) = find(ROOFS, style) {
+            slots.push(("roof/stair", format!("{block}_stairs")));
+            slots.push(("roof/slab", format!("{block}_slab")));
+            slots.push(("roof/block", block.to_string()));
+        }
+        if let Some(block) = find(FRAMES, style) {
+            slots.push(("frame/log", block.to_string()));
+        }
+        if let Some(block) = find(INFILLS, style) {
+            slots.push(("wall/infill", block.to_string()));
+        }
+    }
+    slots
+}
+
+/// The block of `style` among `styles`.
+fn find(styles: &[(&str, &'static str)], style: &str) -> Option<&'static str> {
     styles
         .iter()
-        .find(|(style, _)| *style == name)
-        .map(|(_, blocks)| blocks)
+        .find(|(name, _)| *name == style)
+        .map(|(_, block)| *block)
 }
 
 #[cfg(test)]
@@ -151,24 +107,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn styles_combine_in_order() {
-        let materials = named("brick_roof, spruce_frame").expect("both are styles");
-        assert_eq!(
-            materials.get("roof/stair"),
-            Some("base:bricks_stairs"),
-            "the roof"
-        );
-        assert_eq!(
-            materials.get("frame/log"),
-            Some("base:spruce_log"),
-            "the frame"
-        );
-        assert_eq!(
-            materials.get("roof/slab"),
-            Some("base:bricks_slab"),
-            "the roof's slabs"
-        );
-        assert_eq!(named(""), Some(Materials::new()), "none at all");
-        assert_eq!(named("gold_roof"), None, "an unknown style");
+    fn a_palette_is_named_by_its_styles() {
+        let name = palette_name(&["brick_roof", "", "white_infill"]);
+        assert_eq!(name.as_deref(), Some("styles/brick_roof/white_infill"));
+        assert_eq!(palette_name(&["", "", ""]), None, "the defaults alone");
+    }
+
+    #[test]
+    fn styles_fill_their_slots() {
+        let slots = slots(&["brick_roof", "spruce_frame", ""]);
+        let block = |slot: &str| {
+            slots
+                .iter()
+                .find(|(s, _)| *s == slot)
+                .map(|(_, b)| b.as_str())
+        };
+        assert_eq!(block("roof/stair"), Some("base:bricks_stairs"), "the roof");
+        assert_eq!(block("roof/slab"), Some("base:bricks_slab"), "its slabs");
+        assert_eq!(block("frame/log"), Some("base:spruce_log"), "the frame");
+        assert_eq!(block("wall/infill"), None, "the infill's default");
     }
 }

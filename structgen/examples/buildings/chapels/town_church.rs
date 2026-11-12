@@ -1,10 +1,9 @@
 //! The town church: a buttressed stone nave with a battlemented tower at the front.
 
-use structgen_api::Structure;
-
 use super::{Room, altar, nave_and_chancel, pew, stone_walls};
 use crate::draft::{AIR, Draft};
 use crate::kit::{ladder, log, plinth, slab, slot, stair, window};
+use crate::structure_file::Structure;
 
 /// An 11 x 13 nave of stone between buttresses, lit by tall pointed windows, a chancel behind
 /// it, and a square tower at the front, 25 tall with battlements, the doorway at its foot.

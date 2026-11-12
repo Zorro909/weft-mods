@@ -1,29 +1,40 @@
-# The `.wst` file
+# Structure files
 
-A `.wst` file stores a box of block states the way a world save stores a cube: a palette of
-state names like the save's `ids.txt`, palette indices packed into `u64` words with 4, 8 or 16
-bits, and LZ4 around it. Air in the box is stored as `core:air` and clears what was there.
+Structgen's buildings, trees and tiles are the engine's structure files,
+`assets/structures/<name>.json`: the same format `/structure save` writes. The engine makes each
+file a template, `structgen:<name>`, on its own; its reference is `read_json` and `write_json` in
+`Weft/crates/engine/src/template.rs`, and `Weft/docs/worldgen.md` ("Structures") says what
+templates do.
 
-## Layout
+## The file
 
-`WSTR`, a version byte (2; other versions are refused), then LZ4 with the size prepended (like
-each cube in a region file) around:
+A JSON object with:
 
-- the size along x, y and z, a `u16` each;
-- the palette: a `u16` count, then each state's name as a `u16` byte length and UTF-8, written
-  like the lines of a save's `ids.txt` (`base:furnace[facing=east,lit=false]`). An entry
-  `@<slot>[props]` is a [material slot](materials.md);
-- the slots: a `u16` count, then each slot's name and default block, written like palette
-  names. Every slot an entry names is there;
-- one byte with the bits per index: 0, 4, 8 or 16;
-- every block's palette index, x fastest, then z, then y, packed into `u64` words with that
-  many bits each: lowest bits first, and an index never straddles two words. A palette of one
-  state is written as 0 bits and needs no words at all.
+- `format`: `"weft:structure"`;
+- `size`: the box along x, y and z;
+- `palette`: the cells' names, each a block state (`base:oak_log[axis=x]`) or a slot;
+- `blocks`: each cell as `[x, y, z, palette index]`, from the box's lowest corner;
+- `slots`: each slot's default block, `{"roof/stair": "base:spruce_planks_stairs"}`;
+- `entities`, `block_entities`, `loot` and `joints`: mobs, what chests and machines hold, loot
+  tables and joints, as `/structure save` writes them or a builder adds them.
 
-Numbers are little-endian. `api/src/format.rs` and `api/src/packing.rs` are the reference.
+A cell is placed like this:
 
-A reader refuses a box of more than 16 777 216 blocks (256 x 256 x 256): with a palette of one
-state the file would be a few bytes, but the blocks wouldn't fit in memory.
+| Cell | Placed |
+|---|---|
+| a block state | that block; `core:air` clears what was there |
+| `@<slot>[props]` | the [material slot](materials.md)'s block, from the palette or the default, with those properties |
+| `@ground` | the column's own top block, grass on plains and sand on a beach; the `ground` slot's default where the column has none |
+| left out of `blocks` | nothing: what is there stays |
 
-Block entity contents (a chest's items, a machine's state) are not stored yet: those blocks are
-placed empty.
+## What structgen reads
+
+`src/structure_file.rs` reads a file's blocks and slot defaults, to register the turned and paved
+copies (`src/buildings.rs`) and to find each building's chests. It takes a box as big as its
+furthest block. It doesn't read `entities`, `block_entities`, `loot` or `joints`: the engine
+places them with `structgen:<name>` as the file has them, but the copies go without them.
+
+`build.rs` compiles every file of `assets/structures/` into the mod, since the SDK gives a mod no
+way to read its own files while the game runs. A file is named in lowercase letters, digits and
+underscores, or the build fails. `examples/buildings` writes the drawn buildings with the same
+`structure_file.rs`.

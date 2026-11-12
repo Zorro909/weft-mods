@@ -1,13 +1,15 @@
 //! What grows round a settlement: kitchen gardens behind the houses, a few small strip fields
 //! past the ends of the roads, and trees near the heart.
 
-use structgen_api::{Plan, Pos, Turn};
 use weft_sdk::Template;
+use weftkit::Pos;
 
 use super::frontage::{Rules, Site, stand};
 use super::grid::{Cell, Grid, column};
+use super::plan::Plan;
 use super::roads::Road;
 use super::shape::{Point, add, noise, scale};
+use crate::turn::Turn;
 
 /// Up to `count` small strip fields, each just past the end of a road, the branches' first.
 pub fn fields(grid: &mut Grid, roads: &[Road], count: usize) {

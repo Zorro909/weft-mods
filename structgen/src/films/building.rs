@@ -1,7 +1,9 @@
 //! A building the film goes into, where seed 42's settlement put it: points in the building as
 //! drawn are turned with it into the world.
 
-use structgen_api::{Pos, Turn};
+use weftkit::Pos;
+
+use crate::turn::Turn;
 
 pub struct Building {
     /// Its lowest corner in the world.

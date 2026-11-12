@@ -2,9 +2,8 @@
 //! the parts the style repeats (45° roofs, timber-framed walls, windows, chimneys). See
 //! `docs/materials.md` for what each slot is for.
 
-use structgen_api::Structure;
-
 use crate::draft::Draft;
+use crate::structure_file::Structure;
 
 /// One building of a family: its file name and how it is drawn.
 pub type Building = (&'static str, fn() -> Structure);
@@ -85,11 +84,13 @@ pub fn side_windows(d: &mut Draft, x: [usize; 2], y: usize, height: usize, zs: &
     }
 }
 
-/// A bed with its foot at `foot`, facing `facing`: the head lies the other way.
+/// A bed with its foot at `foot`, facing `facing`: the head lies the other way. A bed is one block
+/// in two cells; the head's cell points back to the foot's, so that writing it as air doesn't
+/// take the bed away again.
 pub fn bed(d: &mut Draft, foot: [usize; 3], facing: &str) {
-    d.set(foot, &format!("base:bed[facing={facing},part=foot]"));
+    d.set(foot, &format!("base:bed[facing={facing}]"));
     if let Some(head) = step(foot, opposite(facing)) {
-        d.set(head, &format!("base:bed[facing={facing},part=head]"));
+        d.set(head, &format!("core:covered[to={facing}]"));
     }
 }
 

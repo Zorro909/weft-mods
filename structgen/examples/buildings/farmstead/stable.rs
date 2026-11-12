@@ -1,9 +1,8 @@
 //! The stable: stalls under a lean-to roof, open to a paddock in front.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{light, log, plinth, slab, slot, stair, timber_wall, window};
+use crate::structure_file::Structure;
 
 /// 15 x 4 under a single roof sloping down to the front, its three stalls open to a paddock
 /// walled with low stone walls, a tack room with its own door at the east end. The paddock's

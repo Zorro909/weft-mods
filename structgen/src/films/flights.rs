@@ -1,78 +1,70 @@
 //! The flights from one place to the next, high enough to clear the hills and the mountains
 //! between, each going on from where the camera came out of the last building and looking down
-//! the way ahead.
+//! the way ahead, and turning into the orbit round the next place.
 
 use showcase_api::Film;
 
-use super::{glide, speeds};
+use super::hamlets::LAST;
+use super::town::SQUARE;
+use super::village::VILLAGE;
+use super::{glide, on_orbit, speeds};
 
-/// South from the first hamlet, over the ridge to the village in the hills.
-pub fn to_the_hills(film: Film) -> Film {
+/// North from the first hamlet over the fields, round into the orbit up the east of the village,
+/// under the hill there.
+pub fn to_the_village(film: Film) -> Film {
     let path = [
-        ([4183.0, 106.6, -176.7], [4180.0, 95.0, -120.0]),
-        ([4178.0, 135.0, -60.0], [4180.0, 120.0, 60.0]),
-        ([4180.0, 165.0, 60.0], [4185.0, 130.0, 200.0]),
-        ([4170.0, 160.0, 190.0], [4194.0, 110.0, 270.0]),
+        ([-2172.0, 110.0, 3223.0], [-2178.0, 85.0, 3150.0]),
+        ([-2170.0, 120.0, 3120.0], [-2166.0, 88.0, 3000.0]),
+        ([-2166.0, 128.0, 3010.0], [-2165.0, 92.0, 2880.0]),
+        ([-2164.0, 128.0, 2900.0], VILLAGE),
+        ([-2165.0, 127.0, 2830.0], VILLAGE),
         // Into the way the orbit then goes on.
-        ([4178.4, 142.4, 223.6], [4196.0, 108.0, 280.0]),
-        ([4192.16, 140.0, 225.13], [4196.0, 108.0, 280.0]),
+        (on_orbit(VILLAGE, 50.0, 55.0, 8.0), VILLAGE),
+        (on_orbit(VILLAGE, 50.0, 55.0, 0.0), VILLAGE),
     ];
-    film.shot(glide(&path, 12.0).ease(speeds(10.0, 12.0)))
+    film.shot(glide(&path, 10.0).ease(speeds(10.0, 12.0)))
 }
 
-/// North-west from the village over the hills, down past a lake and west to the town, the
-/// mountains off to the left.
+/// North-west from the village over the plain and its lakes, past a hill on the right, and round
+/// into the orbit up the east of the town.
 pub fn to_the_town(film: Film) -> Film {
     let path = [
-        ([4196.0, 128.0, 252.0], [4150.0, 130.0, 150.0]),
-        ([4194.15, 131.2, 247.4], [4150.0, 130.0, 150.0]),
-        ([4100.0, 170.0, 60.0], [4040.0, 140.0, -120.0]),
-        ([4000.0, 175.0, -250.0], [3950.0, 140.0, -420.0]),
-        ([3900.0, 192.0, -600.0], [3860.0, 150.0, -780.0]),
-        ([3840.0, 180.0, -850.0], [3700.0, 110.0, -1000.0]),
-        ([3700.0, 140.0, -1020.0], [3560.0, 80.0, -1100.0]),
-        // Round into the way the orbit then goes on.
-        ([3605.0, 126.0, -1076.0], [3500.0, 70.0, -1140.0]),
-        ([3569.67, 120.92, -1082.7], [3500.0, 70.0, -1140.0]),
-        ([3560.02, 120.0, -1075.64], [3500.0, 70.0, -1140.0]),
+        ([-2280.0, 116.0, 2716.0], [-2340.0, 95.0, 2650.0]),
+        ([-2400.0, 135.0, 2600.0], [-2560.0, 95.0, 2460.0]),
+        ([-2560.0, 150.0, 2460.0], [-2720.0, 95.0, 2320.0]),
+        ([-2720.0, 155.0, 2320.0], [-2880.0, 100.0, 2180.0]),
+        ([-2880.0, 160.0, 2180.0], [-3040.0, 110.0, 2040.0]),
+        ([-3040.0, 165.0, 2040.0], [-3200.0, 100.0, 1900.0]),
+        ([-3200.0, 160.0, 1900.0], [-3340.0, 90.0, 1760.0]),
+        ([-3340.0, 148.0, 1760.0], SQUARE),
+        ([-3430.0, 132.0, 1660.0], SQUARE),
+        ([-3462.0, 121.0, 1605.0], SQUARE),
+        // Into the way the orbit then goes on.
+        (on_orbit(SQUARE, 88.0, 50.0, 6.0), SQUARE),
+        (on_orbit(SQUARE, 88.0, 50.0, 0.0), SQUARE),
     ];
-    film.shot(glide(&path, 20.0).ease(speeds(12.0, 20.0)))
+    film.shot(glide(&path, 22.0).ease(speeds(12.0, 20.0)))
 }
 
-/// East out of the town, over a hill and down across the plain to the second village's mill.
-pub fn to_the_plain(film: Film) -> Film {
-    let mill = [4394.5, 82.0, -1115.5];
-    let path = [
-        ([3514.0, 90.0, -1128.0], [3600.0, 110.0, -1124.0]),
-        ([3620.0, 140.0, -1125.0], [3720.0, 120.0, -1125.0]),
-        ([3745.0, 165.0, -1125.0], [3900.0, 110.0, -1118.0]),
-        ([3950.0, 130.0, -1115.0], [4150.0, 90.0, -1112.0]),
-        ([4200.0, 110.0, -1110.0], mill),
-        ([4332.3, 99.25, -1116.75], mill),
-        ([4340.0, 98.0, -1115.0], mill),
-    ];
-    film.shot(glide(&path, 12.0).ease(speeds(10.0, 15.0)))
-}
-
-/// North-west from the village up a valley between the mountains, its peaks over 200 on either
-/// side, over the ridge at its head and down to the last hamlet at their foot.
+/// North from the town over the ridge of the mountains between, its peaks over 150, and down to
+/// the last hamlet at their foot, into the orbit up its east side.
 pub fn over_the_mountains(film: Film) -> Film {
-    let hamlet = [3772.0, 72.0, -2178.0];
     let path = [
-        // Where the orbit round the village ended, looking over it, already heading this way.
-        ([4492.43, 109.0, -1142.43], [4450.0, 85.0, -1100.0]),
-        ([4300.0, 120.0, -1330.0], [4160.0, 110.0, -1480.0]),
-        ([4160.0, 145.0, -1480.0], [4050.0, 150.0, -1580.0]),
-        ([4085.0, 180.0, -1545.0], [3995.0, 140.0, -1670.0]),
-        ([4010.0, 168.0, -1610.0], [3985.0, 145.0, -1760.0]),
-        ([3985.0, 170.0, -1730.0], [3995.0, 160.0, -1830.0]),
-        ([3995.0, 190.0, -1830.0], [3960.0, 170.0, -1950.0]),
-        ([3975.0, 205.0, -1910.0], [3900.0, 140.0, -2040.0]),
-        ([3920.0, 180.0, -2000.0], [3820.0, 100.0, -2120.0]),
-        ([3860.0, 140.0, -2070.0], hamlet),
-        ([3803.3, 112.75, -2133.3], hamlet),
-        ([3800.0, 110.0, -2140.0], hamlet),
+        ([-3597.0, 125.0, 1548.0], [-3600.0, 105.0, 1450.0]),
+        ([-3600.0, 140.0, 1420.0], [-3600.0, 120.0, 1250.0]),
+        ([-3600.0, 165.0, 1280.0], [-3598.0, 140.0, 1100.0]),
+        ([-3598.0, 185.0, 1140.0], [-3600.0, 145.0, 950.0]),
+        ([-3600.0, 190.0, 1000.0], [-3606.0, 115.0, 800.0]),
+        ([-3605.0, 175.0, 860.0], [-3612.0, 90.0, 640.0]),
+        ([-3612.0, 150.0, 720.0], LAST),
+        ([-3616.0, 125.0, 580.0], LAST),
+        ([-3610.0, 108.0, 440.0], LAST),
+        ([-3606.0, 96.0, 330.0], LAST),
+        ([-3606.0, 91.0, 262.0], LAST),
+        // Into the way the orbit then goes on.
+        (on_orbit(LAST, 32.0, 18.0, 15.0), LAST),
+        (on_orbit(LAST, 32.0, 18.0, 0.0), LAST),
     ];
     film.title("structgen.film.mountains", 5.0)
-        .shot(glide(&path, 17.0).ease(speeds(15.0, 15.0)))
+        .shot(glide(&path, 20.0).ease(speeds(10.0, 12.0)))
 }

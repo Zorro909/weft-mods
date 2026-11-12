@@ -1,11 +1,10 @@
 //! Mills: landmarks on the edge of a village, seen from far away.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{
     Building, Ridge, gable_end, gable_roof, ladder, light, log, slab, slot, timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[("post_mill", post_mill), ("tower_mill", tower_mill)];
 

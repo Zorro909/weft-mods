@@ -5,21 +5,21 @@
 //! ```text
 //! # name           turn   x   z   [styles]
 //! path_corner      right  0   0
-//! path_straight    right  5   0   dirt_path
+//! hall_house       left   5   0   brick_roof,cobble_ground
 //! # view name  eye x y z   target x y z    (y above the ground)
 //! view  green  30 2 50     40 0 30
 //! ```
 //!
 //! `x` and `z` are the north-west corner of the structure as placed (turned), on the
 //! flatlands; `#` starts a comment. A structure is a file of this mod's `assets/structures/`,
-//! or of the layout's own folder.
+//! or of the layout's own folder. Of the styles, only `cobble_ground` shows, as the paved copy
+//! of a building: the engine's `/structure load` takes no palette, so the rest show their
+//! defaults.
 
 use std::path::Path;
 
-use crate::{EYE, read, view_line};
+use crate::{EYE, Read, load, read, view_line};
 
-/// `/structure load` puts a structure this many blocks in front of the player.
-const GAP: i32 = 2;
 /// Where a player stands on the flatlands: on the grass, at y 3.
 const FEET_Y: i32 = 4;
 
@@ -30,12 +30,11 @@ pub struct Layout {
 
 /// One structure of a layout.
 struct Placed {
-    name: String,
-    turn: String,
+    /// `/structure load`'s words for it, the corner to go in.
+    load: String,
     corner: [i32; 2],
     /// As turned.
     size: [i32; 3],
-    styles: String,
 }
 
 /// The layout in `file`.
@@ -74,19 +73,17 @@ pub fn read_layout(file: &str) -> Layout {
             [name, turn, x, z, ref styles @ ..] => {
                 let file = folders
                     .iter()
-                    .map(|f| f.join(format!("{name}.wst")))
+                    .map(|f| f.join(format!("{name}.json")))
                     .find(|f| f.exists());
                 let file = file.unwrap_or_else(|| panic!("no structure file for {name}"));
-                let (_, [sx, sy, sz]) = read(&file.to_string_lossy());
+                let read: Read = read(&file.to_string_lossy());
+                let paved = styles
+                    .iter()
+                    .any(|s| s.split(',').any(|s| s == "cobble_ground"));
                 layout.placed.push(Placed {
-                    name: name.to_string(),
-                    turn: turn.to_string(),
+                    load: load(&read, turn, paved),
                     corner: [number(x) as i32, number(z) as i32],
-                    size: match turn {
-                        "right" | "left" => [sz, sy, sx],
-                        _ => [sx, sy, sz],
-                    },
-                    styles: styles.join(","),
+                    size: crate::turned(read.size, turn),
                 });
             }
             _ => panic!("{file}: {line:?} is not `name turn x z [styles]`, nor a view"),
@@ -95,13 +92,13 @@ pub fn read_layout(file: &str) -> Layout {
     layout
 }
 
-/// Places every structure of the layout in one look, then photographs all of it: from above,
-/// from each corner, along it at eye height, and from the layout's own views. Shots are
+/// Places every structure of the layout, then photographs all of it: from above, from each
+/// corner, along it at eye height, and from the layout's own views. Shots are
 /// `<label>-<view>.png`.
-pub fn shots(layout: &Layout, look: &str, label: &str) -> String {
+pub fn shots(layout: &Layout, label: &str) -> String {
     let mut lines = Vec::new();
     for placed in &layout.placed {
-        lines.extend(place(placed, look));
+        lines.extend(place(placed));
     }
     lines.push("wait 1".to_string());
     lines.push("idle".to_string());
@@ -114,34 +111,21 @@ pub fn shots(layout: &Layout, look: &str, label: &str) -> String {
     lines.join("\n")
 }
 
-/// Stands so that `/structure load` puts `placed` at its corner, and loads it in its own
-/// styles over `look`.
-fn place(placed: &Placed, look: &str) -> Vec<String> {
+/// Goes over `placed`, so its ground is loaded, and places it at its corner.
+fn place(placed: &Placed) -> Vec<String> {
     let [x, z] = placed.corner;
     let [sx, _, sz] = placed.size;
-    let feet = [x + sx / 2, FEET_Y, z + GAP + sz - 1];
-    let styles: Vec<&str> = [look, placed.styles.as_str()]
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .collect();
-    let load = format!(
-        "chat /structure load {} {} {}",
-        placed.name,
-        placed.turn,
-        styles.join(",")
-    );
     vec![
         format!(
             "via {}.5 {} {}.5 0 0",
-            feet[0],
-            feet[1] as f32 + EYE,
-            feet[2]
+            x + sx / 2,
+            FEET_Y as f32 + EYE,
+            z + sz / 2
         ),
         "travel 0.1".to_string(),
-        // `travel` only starts the move: a load before it ends lands somewhere on the way.
+        // `travel` only starts the move: a load before it ends may find the ground not loaded.
         "wait 0.4".to_string(),
-        "look 0 0".to_string(),
-        load.trim_end().to_string(),
+        crate::place(&placed.load, [x, FEET_Y - 1, z]),
         "wait 0.2".to_string(),
     ]
 }

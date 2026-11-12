@@ -1,5 +1,5 @@
 # Run from the Actions tab: proposes the newest full release of each mod, or the tags you name, to
-# the Weft mod index with `weft --submit-mod`, one pull request each. Needs a classic personal
+# the Weft mod index with `weft submit-mod`, one pull request each. Needs a classic personal
 # access token with the scope `public_repo` as the secret `WEFT_INDEX_TOKEN`; see
 # Zorro909/weft-mod-action's README. `release.yml` proposes each full release by itself once the
 # repository variable WEFT_INDEX_PR is `true`.

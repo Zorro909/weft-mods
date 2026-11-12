@@ -1,45 +1,39 @@
-# Wand and commands
+# Commands
 
-`/structure` and the Structure Wand have everything for making structures in the game:
-selecting a box of the world, saving it to a file, placing a file again, and finding structures.
-
-## The Structure Wand
-
-Hit a block with the wand for the first corner of the selection, use it on one for the second.
-Hitting a block with it marks the block instead of breaking it. Your selection is drawn as an
-outline: the one corner while only one is set, the whole box once both are.
-
-The wand is in creative's Tools tab, or `/give @s structgen:wand`.
-
-## Commands
+Structgen has no commands of its own: `/structure` is the engine's
+(`Weft/crates/engine/src/server/builtin.rs`), for game masters. With this mod it does:
 
 | Command | What it does |
 |---|---|
-| `/structure pos1 [at]`, `pos2 [at]` | Sets the same corners as the wand: `at`, else the block you look at (up to 64 blocks away), else where you stand. |
-| `/structure save <name> [from] [to]` | Writes the box between two corners, or your selection, to `structures/<name>.wst`. |
-| `/structure load <name> [turn] [styles]` | Places that file, or the one built into the mod if there is none, two blocks in front of you, its floor level with where you stand. `turn` is `none`, `right`, `back` or `left`. `styles` fill its [material slots](materials.md#styles): `brick_roof,spruce_frame`. |
-| `/structure undo` | Puts back what your last load replaced. |
-| `/structure locate <name> [radius]` | The nearest structure of this mod, 4096 blocks around you by default, at most 16384. |
+| `/structure locate <name> [radius]` | The nearest start of a feature, generated yet or not, 4096 blocks around you by default, at most 65536: `structgen:hamlet`, `structgen:village`, `structgen:town`. |
+| `/structure load <name> [pos] [transform]` | Places a template, or the file `structures/<name>.json` beside the saves, with its lowest corner at `pos`, else where you stand. `transform` is 0 to 7: quarter turns, plus 4 to mirror. |
+| `/structure save <name> <from> <to>` | Writes the box between two opposite corners to `structures/<name>.json` beside the saves: every block, what chests and machines hold, the mobs in it. |
+| `/structure undo` | Takes back the last load in this dimension. |
 
-Corners take `~ ~ ~` and the like, as any position does.
+Positions take `~ ~ ~` and the like.
 
-### Saving
+## Finding a settlement
 
-A name is lowercase letters, digits and underscores. A box is at most 128 blocks along each
-side, and every block of it must be loaded. The reply shows the full path of the file.
+`locate` gives a settlement's start, which is at most 48 blocks off its middle along x and
+along z: a settlement that found no room at its start stands at a spot near it.
 
-`structures/` is relative to the folder the game was started from (`Weft/` when you start it
-from the source tree): the SDK doesn't tell a mod where the game keeps its files.
+## Looking at a building
 
-### Loading
+`/structure load structgen:hof` places the hof as drawn, its front to the north. For it turned,
+load the copy structgen turned, `structgen:hof/right`, `/back` or `/left`, rather than giving a
+`transform`: the engine leaves logs and ladders unturned (see
+[Missing in the engine](README.md#missing-in-the-engine)). A building with ground round it has
+paved copies too, `structgen:hof/paved` and `structgen:hof/right/paved`, paved in cobblestone.
+`load` takes no palette, so every other slot shows its default: spruce roofs, oak frames, birch
+panels.
 
-`load` places every block of the file, or nothing when one of its blocks is unknown to this game
-or part of the place isn't loaded. Like `save`, it takes boxes of at most 128 blocks along each
-side. It sets one block at a time, so big boxes take a moment.
+## Saving
 
-### Finding structures
+A name has no `/`, `\`, `.` or `:`, a box at most 4 194 304 blocks (2²²), and all of it must be
+loaded. `structures/` is the folder next to the game's `saves/`; a file there loads by its name.
+To make one a building of this mod, see [Adding a structure](adding-structures.md).
 
-`locate` works the structures' places out from the world's seed, so it finds them whether their
-part of the world was generated yet or not. Its names are the buildings that stand alone,
-`hamlet`, `village` and `town`. The position it gives is the corner of the first thing the structure
-placed: for a hamlet or village, its well; for a town, its fountain. It knows the structures of this mod only.
+## Undoing
+
+The engine keeps the last 16 placings, loads and what mods place now, for all dimensions
+together, so one further back can't be undone.

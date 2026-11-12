@@ -1,13 +1,12 @@
 //! Smithies: the village workshop, with furnaces and a tall chimney.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::inns::{floor_line, open_side, stone_walls, table, timber_storey};
 use crate::kit::{
     Building, Ridge, bed, chimney, gable_end, gable_roof, ladder_up, light_at, lights, opposite,
     plinth, slab, slot, stair, step, window,
 };
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[("open_forge", open_forge), ("smithy_house", smithy_house)];
 

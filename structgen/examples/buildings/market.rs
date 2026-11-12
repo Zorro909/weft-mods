@@ -2,10 +2,9 @@
 
 mod hall;
 
-use structgen_api::Structure;
-
 use crate::draft::Draft;
 use crate::kit::{Building, Ridge, gable_end, gable_roof, log, slab, slot, stair};
+use crate::structure_file::Structure;
 
 /// A building's file name and how it is drawn.
 pub const BUILDINGS: &[Building] = &[

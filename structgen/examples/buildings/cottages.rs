@@ -1,12 +1,11 @@
 //! Crofter's cottages: the small dwellings most of a hamlet or village is made of.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{
     Building, Ridge, bed, chimney, gable_end, gable_roof, ladder_up, log, plinth, side_windows,
     slab, slot, stair, timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("crofter_cottage", crofter_cottage),

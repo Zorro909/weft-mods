@@ -1,6 +1,6 @@
 [package]
 name = "structgen"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 # As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
 rust-version = "1.95"
@@ -9,9 +9,14 @@ rust-version = "1.95"
 crate-type = ["cdylib"]
 
 [dependencies]
-weft_sdk.workspace = true
-base_api.workspace = true
-structgen_api = { path = "api" }
+# The Weft release it builds against, from the game's repository as the mod index wants it;
+# `init.sh` checks out the newest one any mod names into `Weft/`.
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.4" }
+base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.4" }
+# Block positions and states, the types the other mods here use.
+weftkit = { path = "../weftkit" }
+# The engine's structure files, read when the mod loads and written by `examples/buildings`.
+serde_json = "1"
 showcase_api = { path = "../showcase/api", optional = true }
 
 [features]
@@ -27,16 +32,8 @@ test = true
 name = "shot_script"
 test = true
 
-# Its own cargo root. `cargo build` and `cargo test` here cover `structgen_api` too.
+# Its own cargo root.
 [workspace]
-members = ["api"]
-default-members = [".", "api"]
-
-# The Weft release the mod and its API crate build against, from the game's repository as the
-# mod index wants it; `init.sh` checks out the newest one any mod names into `Weft/`.
-[workspace.dependencies]
-weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
-base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
 
 [profile.release]
 debug = "line-tables-only"

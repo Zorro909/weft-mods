@@ -4,10 +4,9 @@ mod barns;
 mod hof;
 mod stable;
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{Building, light, log};
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("great_barn", barns::great_barn),

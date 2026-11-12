@@ -5,7 +5,7 @@ How Rust is written here and in Weft. The examples are files of this repository;
 ## Size
 
 - A function fits on a screen, around 40 lines at most. A longer job becomes named steps called in order (`tick_engines` in `cogwork/src/engines/run.rs`); a dispatching `match` is fine when each arm is short and calls out.
-- A file covers one area in at most 300 lines, or 400 with its tests; the more complex the code, the shorter. Past that, new work goes into a child module. A big `impl` splits into a child file starting `use super::*;` then `impl Plan<'_> {` (`structgen/api/src/plan/add.rs`).
+- A file covers one area in at most 300 lines, or 400 with its tests; the more complex the code, the shorter. Past that, new work goes into a child module. A big `impl` splits into a child file starting `use super::*;` then `impl Grid {` (`structgen/src/settlement/grid/paving.rs`).
 - Films (`<mod>/src/films/`) and drawn buildings (`structgen/examples/buildings/`) are lists of shots and parts, exempt from both limits. Keep them reasonable: a scene, a storey or a roof per function.
 
 ## Typed values

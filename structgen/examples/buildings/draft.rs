@@ -6,9 +6,8 @@
 
 use std::collections::BTreeMap;
 
-use structgen_api::Structure;
-
 use crate::kit::SLOTS;
+use crate::structure_file::Structure;
 
 pub const AIR: &str = "core:air";
 
@@ -112,9 +111,9 @@ impl Draft {
                 )
             })
             .collect();
-        let size = self.size.map(|v| v as u16);
-        Structure::with_slots(size, self.names.iter().map(String::as_str), &slots)
-            .expect("a draft names one block per cell, and only the kit's slots")
+        let size = self.size.map(|v| v as i32);
+        Structure::from_names(size, self.names.iter().map(String::as_str), &slots)
+            .expect("a draft names one block per cell")
     }
 
     fn uses(&self, slot: &str) -> bool {

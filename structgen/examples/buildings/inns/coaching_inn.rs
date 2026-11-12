@@ -1,13 +1,12 @@
 //! The coaching inn: a town's great inn on the high street, with stabling round a yard behind.
 
-use structgen_api::Structure;
-
 use super::{cross_gable, floor_line, open_side, stone_walls, table, timber_storey};
 use crate::draft::{AIR, Draft};
 use crate::kit::{
     Ridge, bed, chimney, gable_end, gable_roof, ladder_up, light_at, lights, plinth, slab, slot,
     stair, timber_wall, window,
 };
+use crate::structure_file::Structure;
 
 /// 15 x 15 in an L: a range of three storeys on the street, jettied twice, with three dormers in
 /// its roof and a carriage arch at its west end into a walled yard, and a stable wing with a

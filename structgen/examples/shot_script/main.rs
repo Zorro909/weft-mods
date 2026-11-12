@@ -1,41 +1,42 @@
 //! Writes the game script `tools/structure-shots.sh` runs: each structure file given is placed
 //! in the flatlands and photographed from around it, above it and inside it.
 //!
-//! `cargo run --example shot_script -- [--styles "brick_roof;birch_roof,spruce_frame"]
-//! [--turn right] <file.wst>...`
+//! `cargo run --example shot_script -- [--turn right] <file.json>...`
 //!
-//! Each `;`-split entry of `--styles` is one look at every structure (`/structure load`'s
-//! styles); without, each is shot once with its defaults. `--turn` places them turned, so
-//! another side faces the front views. A shot is named `<structure>[-<look>]-<view>.png`.
+//! `--turn` places them turned, so another side faces the front views; a building of the mod
+//! as the mod registers it turned, any other file as the engine turns it. Its slots show their
+//! defaults: the engine's `/structure load` takes no palette. A shot is named
+//! `<structure>-<view>.png`.
 //!
 //! `--layout <file>` places several structures side by side instead and shoots them together
-//! (see `layout.rs`), as `<layout>[-<look>]-<view>.png`.
+//! (see `layout.rs`), as `<layout>-<view>.png`.
 
 mod layout;
+// The mod's own file reader and writer; each example uses part of it.
+#[allow(dead_code)]
+#[path = "../../src/structure_file.rs"]
+mod structure_file;
 
 use std::path::Path;
 
-use structgen_api::Structure;
+use crate::structure_file::Structure;
 
-/// Where the player stands for each placing: `/structure load` puts the structure two blocks
-/// north of them, its floor in place of the grass (y 3) they stand on.
+/// Where the camera stands for each placing: the structure goes two blocks north of it, its
+/// floor in place of the grass (y 3) under it.
 const FEET: [i32; 3] = [0, 4, 0];
+/// The mod's own buildings, which it registers turned and paved too.
+const BUILDINGS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/structures");
 /// How far above the feet `via` puts the eye. A little over the player's 1.62, so the feet
 /// don't round down into the block below and the structure land a block low.
 const EYE: f32 = 1.7;
 
 fn main() {
-    let mut looks = vec![String::new()];
     let mut turn = "none".to_string();
     let mut files = Vec::new();
     let mut layout = None;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--styles" => {
-                let list = args.next().expect("--styles needs a list of looks");
-                looks = list.split(';').map(str::to_string).collect();
-            }
             "--turn" => turn = args.next().expect("--turn needs none, right, back or left"),
             "--layout" => layout = Some(args.next().expect("--layout needs a layout file")),
             _ => files.push(arg),
@@ -51,19 +52,12 @@ fn main() {
         let name = Path::new(file)
             .file_stem()
             .map_or(String::new(), |s| s.to_string_lossy().into_owned());
-        for look in &looks {
-            println!("{}", layout::shots(&placed, look, &label(&name, look)));
-        }
+        println!("{}", layout::shots(&placed, &name));
     }
     for file in &files {
-        let (name, [sx, sy, sz]) = read(file);
-        let size = match turn.as_str() {
-            "right" | "left" => [sz, sy, sx],
-            _ => [sx, sy, sz],
-        };
-        for look in &looks {
-            println!("{}", shots(&name, size, &turn, look));
-        }
+        let read = read(file);
+        let size = turned(read.size, &turn);
+        println!("{}", shots(&read.name, &load(&read, &turn, false), size));
     }
     println!("quit");
 }
@@ -81,45 +75,94 @@ fn setup() -> String {
     .join("\n")
 }
 
-/// The structure's name (its file's stem) and size.
-fn read(file: &str) -> (String, [i32; 3]) {
-    let bytes = std::fs::read(file).unwrap_or_else(|e| panic!("could not read {file}: {e}"));
-    let structure =
-        Structure::decode(&bytes).unwrap_or_else(|| panic!("{file} is no structure file"));
-    let name = Path::new(file)
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned());
-    (name.unwrap_or_default(), structure.size())
+/// A structure file as the script needs it.
+pub struct Read {
+    /// Its file's stem.
+    pub name: String,
+    pub size: [i32; 3],
+    /// Whether it is one of the mod's buildings.
+    pub building: bool,
+    /// Whether it has ground in its box, which a paved copy paves.
+    pub ground: bool,
 }
 
-/// Places one structure in one look, takes every view of it, and takes it away again.
-fn shots(name: &str, size: [i32; 3], turn: &str, look: &str) -> String {
+fn read(file: &str) -> Read {
+    let text =
+        std::fs::read_to_string(file).unwrap_or_else(|e| panic!("could not read {file}: {e}"));
+    let structure = Structure::from_json(&text)
+        .unwrap_or_else(|why| panic!("{file} is no structure file: {why}"));
+    let path = Path::new(file);
+    let name = path.file_stem().map(|s| s.to_string_lossy().into_owned());
+    let own = Path::new(BUILDINGS).join(path.file_name().unwrap_or_default());
+    let building =
+        (own.canonicalize().ok()).is_some_and(|own| path.canonicalize().ok() == Some(own));
+    Read {
+        name: name.unwrap_or_default(),
+        size: structure.size(),
+        building,
+        ground: structure.blocks().any(|(_, cell)| cell == "@ground"),
+    }
+}
+
+/// A size of x, y and z once turned by `turn`.
+fn turned([sx, sy, sz]: [i32; 3], turn: &str) -> [i32; 3] {
+    match turn {
+        "right" | "left" => [sz, sy, sx],
+        _ => [sx, sy, sz],
+    }
+}
+
+/// What `/structure load` takes to place `read` turned by `turn` at a corner, as
+/// `<template> {}` with the corner to go in: one of the mod's buildings as it registers it
+/// turned (`structgen:hof/right`), paved if `paved` and it has ground; any other file by its
+/// name, turned by the engine.
+pub fn load(read: &Read, turn: &str, paved: bool) -> String {
+    if !read.building {
+        let quarters = ["none", "right", "back", "left"]
+            .iter()
+            .position(|t| *t == turn);
+        let quarters = quarters.unwrap_or_else(|| panic!("no turn {turn}"));
+        return format!("{} {{}} {quarters}", read.name);
+    }
+    let way = if turn == "none" {
+        String::new()
+    } else {
+        format!("/{turn}")
+    };
+    let paving = if paved && read.ground { "/paved" } else { "" };
+    format!("structgen:{}{way}{paving} {{}}", read.name)
+}
+
+/// The lowest corner of a structure of `size` placed in front of `FEET`.
+fn lowest([sx, _, sz]: [i32; 3]) -> [i32; 3] {
+    [FEET[0] - sx / 2, FEET[1] - 1, FEET[2] - 1 - sz]
+}
+
+/// Places one structure (`load`'s words), takes every view of it, and takes it away again.
+fn shots(name: &str, load: &str, size: [i32; 3]) -> String {
     let [x, y, z] = FEET;
     let mut lines = vec![
         format!("via {x}.5 {} {z}.5 0 0", y as f32 + EYE),
         "travel 0.2".to_string(),
         "look 0 0".to_string(),
-        format!("chat /structure load {name} {turn} {look}")
-            .trim_end()
-            .to_string(),
+        place(load, lowest(size)),
         "wait 1".to_string(),
         "idle".to_string(),
     ];
-    let label = label(name, look);
     for (view, eye, target) in views(size) {
-        lines.extend(view_line(&label, view, eye, target));
+        lines.extend(view_line(name, view, eye, target));
     }
     lines.push("chat /structure undo".to_string());
     lines.push("wait 0.5".to_string());
     lines.join("\n")
 }
 
-/// What shots of `name` in `look` are called.
-fn label(name: &str, look: &str) -> String {
-    match look {
-        "" => name.to_string(),
-        _ => format!("{name}-{}", look.replace(',', "+")),
-    }
+/// The script's line placing `load` (`load`'s words) with its lowest corner at `corner`.
+pub fn place(load: &str, [x, y, z]: [i32; 3]) -> String {
+    format!(
+        "chat /structure load {}",
+        load.replace("{}", &format!("{x} {y} {z}"))
+    )
 }
 
 /// Goes to `eye`, looks at `target` and takes shot `<label>-<view>.png`.
@@ -139,7 +182,7 @@ fn view_line(label: &str, view: &str, eye: [f32; 3], target: [f32; 3]) -> Vec<St
 /// Each view's name, eye and the point it looks at, for a structure of `size` (turned) placed
 /// from `FEET`. The front views look at its north side.
 fn views([sx, sy, sz]: [i32; 3]) -> Vec<(&'static str, [f32; 3], [f32; 3])> {
-    let lowest = [FEET[0] - sx / 2, FEET[1] - 1, FEET[2] - 1 - sz];
+    let lowest = lowest([sx, sy, sz]);
     let [sx, sy, sz] = [sx, sy, sz].map(|v| v as f32);
     let [x0, y0, z0] = lowest.map(|v| v as f32);
     let middle = [x0 + sx / 2.0, y0 + sy * 0.4, z0 + sz / 2.0];

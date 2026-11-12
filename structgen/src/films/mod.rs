@@ -1,15 +1,14 @@
 //! Structgen's film for the showcase mod, built only with the `showcase` feature:
 //! `tools/showcase.sh structgen:showcase`. A journey through seed 42's world as it generates,
-//! nothing built or levelled for it: a hamlet, a village up in the hills, a town, a village out
-//! on the plain and a last hamlet under the mountains, flying from one to the next and into some
-//! of their buildings. The places are where seed 42 puts them, written in world coordinates, so
+//! nothing built or levelled for it: a hamlet, a village, a town and, over the mountains, a last
+//! hamlet, flying north from one to the next and into some of their buildings. The places are where seed 42 puts them, written in world coordinates, so
 //! the film is for that seed and the settlements as they are now laid out.
 
 mod building;
 mod flights;
 mod hamlets;
 mod town;
-mod villages;
+mod village;
 
 use showcase_api::{Ease, Film, Look, Path, Pos, Shot, Step, film, flyby, hold};
 use weft_sdk::*;
@@ -25,12 +24,10 @@ pub fn register(r: &mut Registry) {
 
 fn journey() -> Film {
     let film = hamlets::first(Film::new().cue("morning"));
-    let film = flights::to_the_hills(film);
-    let film = villages::in_the_hills(film);
+    let film = flights::to_the_village(film);
+    let film = village::village(film);
     let film = flights::to_the_town(film);
     let film = town::town(film);
-    let film = flights::to_the_plain(film);
-    let film = villages::on_the_plain(film);
     let film = flights::over_the_mountains(film);
     hamlets::last(film)
 }
@@ -59,6 +56,17 @@ fn turn(eye: [f64; 3], points: &[[f64; 3]], secs: f32) -> Shot {
         .look(Look::Along(angles))
         .secs(secs)
         .ease(Ease::Linear)
+}
+
+/// Where an orbit round `center` is at `angle` (0 toward +x, 90 toward +z), `radius` out and
+/// `height` up: the shots before and after an orbit meet it there.
+fn on_orbit(center: [f64; 3], radius: f64, height: f64, angle: f64) -> [f64; 3] {
+    let a = angle.to_radians();
+    [
+        center[0] + a.cos() * radius,
+        center[1] + height,
+        center[2] + a.sin() * radius,
+    ]
 }
 
 /// The yaw and pitch that look from `eye` at `at`, as the game counts them: yaw 0 looks north

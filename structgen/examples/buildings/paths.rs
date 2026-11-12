@@ -10,10 +10,9 @@
 //!
 //! A cart track is two ruts of worn earth, on x 1 and 3, with grass between.
 
-use structgen_api::Structure;
-
 use crate::draft::{AIR, Draft};
 use crate::kit::{Building, stair};
+use crate::structure_file::Structure;
 
 pub const BUILDINGS: &[Building] = &[
     ("path_straight", straight),

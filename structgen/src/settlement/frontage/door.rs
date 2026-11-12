@@ -1,10 +1,9 @@
 //! Where a building's door is: which way it turns to face a road, where its corner goes for
 //! its front to land on a column, and the column in front of its door.
 
-use structgen_api::Turn;
-
 use crate::settlement::grid::{Grid, middle};
 use crate::settlement::shape::Point;
+use crate::turn::Turn;
 
 /// The turn that points a building's front, north as saved, back along `out` toward the road.
 pub fn facing(out: Point) -> Turn {
