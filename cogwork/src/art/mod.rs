@@ -1,13 +1,14 @@
-//! Cogwork's pictures of oil, liquid tubes, tanks, the pumps and the pump's screen's liquid bar,
-//! drawn here pixel by pixel so they can be changed and drawn again: `WRITE_ASSETS=1 cargo test
-//! --release art` writes them (`generated`). Each family is a file of its own; the colors they
-//! share are below.
+//! Cogwork's pictures of oil, liquid tubes, tanks, the pumps, the oil engine and the liquid bars
+//! on the screens, drawn here pixel by pixel so they can be changed and drawn again:
+//! `WRITE_ASSETS=1 cargo test --release art` writes them (`generated`). Each family is a file
+//! of its own; the colors they share are below.
 //!
 //! The pictures are small and few-colored like the rest of the mod's: a grid of letters with a
 //! key for anything drawn by hand, and `noise` for a surface of one material.
 
 mod gui;
 mod liquids;
+mod oil_engine;
 mod pump;
 mod tank;
 mod timber;
@@ -186,6 +187,65 @@ impl Picture {
     }
 }
 
+/// Where a box of an entity model lies in its texture: the top left corner of its unwrap, and the
+/// box's width, height and depth in texels. Blockbench's Bedrock layout of a box `w` wide, `h`
+/// high and `d` deep: a row of its top and bottom `d` high, then a row of its four sides `h` high.
+#[derive(Clone, Copy)]
+pub struct Unwrap {
+    pub at: (usize, usize),
+    pub size: (usize, usize, usize),
+}
+
+impl Unwrap {
+    /// Paints every face of the box with `color` of where a pixel is.
+    pub fn paint(self, picture: &mut Picture, color: impl Fn(usize, usize) -> Rgba) {
+        let ((u, v), (w, h, d)) = (self.at, self.size);
+        let top_row = [(u + d, v, w, d), (u + d + w, v, w, d)];
+        let side_row = [(u, v + d, 2 * (d + w), h)];
+        for (x0, y0, across, down) in top_row.into_iter().chain(side_row) {
+            for y in y0..y0 + down {
+                for x in x0..x0 + across {
+                    picture.set(x, y, color(x, y));
+                }
+            }
+        }
+    }
+
+    /// Paints the box's two ends along its depth, its front and back, with `color` of where a
+    /// pixel is and whether it is on the face's edge.
+    pub fn paint_ends(self, picture: &mut Picture, color: impl Fn(usize, usize, bool) -> Rgba) {
+        let ((u, v), (w, h, d)) = (self.at, self.size);
+        Unwrap::paint_faces(
+            picture,
+            [(u + d, v + d), (u + 2 * d + w, v + d)],
+            (w, h),
+            color,
+        );
+    }
+
+    /// Paints its top and bottom, as `paint_ends` does.
+    pub fn paint_caps(self, picture: &mut Picture, color: impl Fn(usize, usize, bool) -> Rgba) {
+        let ((u, v), (w, _, d)) = (self.at, self.size);
+        Unwrap::paint_faces(picture, [(u + d, v), (u + d + w, v)], (w, d), color);
+    }
+
+    fn paint_faces(
+        picture: &mut Picture,
+        corners: [(usize, usize); 2],
+        (across, down): (usize, usize),
+        color: impl Fn(usize, usize, bool) -> Rgba,
+    ) {
+        for (x0, y0) in corners {
+            for y in y0..y0 + down {
+                for x in x0..x0 + across {
+                    let edge = x == x0 || x == x0 + across - 1 || y == y0 || y == y0 + down - 1;
+                    picture.set(x, y, color(x, y, edge));
+                }
+            }
+        }
+    }
+}
+
 /// A number from where a pixel is and a `salt`, the same every time: what makes a surface
 /// rough without a random generator.
 pub fn noise(x: usize, y: usize, salt: u32) -> u32 {
@@ -203,6 +263,7 @@ fn the_pictures_are_what_is_drawn_here() {
         .chain(pump::all())
         .chain(tank::all())
         .chain(timber::all())
+        .chain(oil_engine::all())
         .chain(gui::all());
     for (path, picture) in all {
         let path = crate::generated::asset(&format!("textures/{path}.png"));

@@ -5,8 +5,8 @@
 A Weft mod about moving items, digging and making things by machine. Items travel through
 tubes you can see into, engines drive the machines, and three machines take over the big jobs:
 an excavator that mines out a whole area, an assembly bench that crafts on its own, and a
-leveler that makes land flat. A pump brings up oil from deep underground, and liquid tubes and
-tanks carry and store it.
+leveler that makes land flat. A pump brings up oil from deep underground, liquid tubes and
+tanks carry and store it, and an oil engine burns it for far more energy than the small engines.
 
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
@@ -24,7 +24,9 @@ send everything one way; void tubes destroy what reaches them. A line that jams 
 
 The spring engine runs on redstone, the ember engine burns fuel for four times as much energy
 and overheats when nothing takes it. Engines push energy into the block their trunk points at,
-and torque shafts carry it further, joining any mod's cables.
+and torque shafts carry it further, joining any mod's cables. The oil engine, a cube of 27
+blocks built around a combustion chamber, burns oil with water for 600 energy a tick, its two
+pistons and flywheel turning on top: about 4 hours on a medium oil field.
 
 ### Oil and liquids
 
@@ -80,6 +82,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Cuboid loaders and the lens](docs/loading.md)
 - [Oil and the pump](docs/oil.md)
 - [Liquid tubes and tanks](docs/liquids.md)
+- [Oil engine](docs/oil-engine.md)
 - [Working with other mods](docs/other-mods.md)
 
 What changed in each version is in the [changelog](CHANGELOG.md).
@@ -115,6 +118,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `engines/` | Spring and ember engines: their block, tick, heat and piston |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
 | `oil/` | Oil, the oil-soaked ground of a seep, and where fields lie (`oil/fields.rs`) |
+| `oil_engine/` | The oil engine: its parts (`parts.rs`), whether they make the engine (`pattern.rs`), what it burns and makes (`fuel.rs`), its tick (`run.rs`), its rig (`rig.rs`) and how the rig's crank moves its rods (`stroke.rs`, which writes the rig's clip) |
 | `pump/` | The pump: its block and screen, boring and pumping (`work.rs`), finding the next source (`drain.rs`) |
 | `liquid/` | What holds liquid (`Held`); how it flows by height and pressure (`flow.rs`), the holders (`vessel.rs`) and their turns, which sleep once settled (`turn.rs`); buckets on them |
 | `timber_liquid_tube/` | The timber liquid tube: its pull out of tanks (`pull.rs`) and its paddle wheel (`wheel.rs`) |
@@ -136,9 +140,13 @@ Unit tests sit at the end of the files whose logic they check; `tools/check-mods
 run from the repository root, runs them.
 
 Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. Entities (the
-excavator's rig, the engines' pistons, the timber liquid tube's wheel) are "Bedrock Entity" models, `<name>.geo.json`, and move by
-the clips in `assets/animations/`. Blocks are "Java Block/Item" models in `block/`: the survey
-marker, the engine, the pump and its hose.
+excavator's rig, the engines' pistons, the timber liquid tube's wheel, the oil engine's rig) are
+"Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
+are "Java Block/Item" models in `block/`: the survey marker, the engine, the pump and its hose,
+the oil engine's controller. A formed oil engine's casing joins into one panel a face by
+connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
+skirt at the bottom, and one for its top and bottom. Its intakes and drives show that panel with
+their port drawn on top as a layer, so the face stays one.
 
 Blocks with a shape for every set of neighbours are put together in code when the mod loads,
 since the mod index packs `assets/` as it is in the repository and runs nothing to make more
@@ -150,8 +158,8 @@ for each side, shown in Blockbench with the sorting tube's colors. The tank's sh
 of joined sides is built in `src/tank/shape.rs`, and the liquid standing in a liquid tube or tank
 in `fill.rs`, in the colors of whatever liquid it is.
 
-The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks and the pump are
-drawn pixel by pixel in `src/art/`.
+The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks, the pump and the
+oil engine are drawn pixel by pixel in `src/art/`.
 Change them there, then run `WRITE_ASSETS=1 cargo test --release art` in `cogwork/`. Without the
 variable the same test fails when a file differs from what it would draw, so a texture changed
 by hand has to be changed there too.

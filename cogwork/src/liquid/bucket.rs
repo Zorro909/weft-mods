@@ -28,7 +28,7 @@ pub fn use_bucket(holders: &mut Holders, vessel: &Vessel, player: u64) -> bool {
     let now = vessel.held(holders);
     let next = if let Some(&(liquid, empty)) = contents.get(&held.item) {
         let room = vessel.capacity() - now.amount.min(vessel.capacity());
-        if !now.takes(liquid, vessel.capacity()) || room < BUCKET {
+        if !vessel.admits(liquid) || !now.takes(liquid, vessel.capacity()) || room < BUCKET {
             return false;
         }
         vessel.put(holders, liquid, BUCKET);

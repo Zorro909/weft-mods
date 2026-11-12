@@ -1,5 +1,6 @@
-//! The blocks that hold liquid: a liquid tube, a timber liquid tube or a pump, one block each, or
-//! a tank, one holder however many blocks it has. `turn` passes liquid between them.
+//! The blocks that hold liquid: a liquid tube, a timber liquid tube, a pump or an oil engine's
+//! intake, one block each, or a tank, one holder however many blocks it has. `turn` passes liquid
+//! between them.
 //!
 //! A system works on copies of its values, written back when it returns, so a holder changed
 //! during the tick goes through `Holders`, which changes the copy when there is one.
@@ -12,6 +13,7 @@ use super::flow::{LIFT, UNIT};
 use super::{DRIBBLE, Held, LiquidKey, flow, is_full};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid_tube::is_liquid_tube;
+use crate::oil_engine::OIL_INTAKE;
 use crate::pump::PUMP;
 use crate::tank::{LIQUID_TANK, Tank};
 use crate::timber_liquid_tube::{self, TIMBER_LIQUID_TUBE};
@@ -70,8 +72,8 @@ impl<'a> Holders<'a> {
 
 /// A holder of liquid: one block, or a tank of several.
 pub enum Vessel {
-    /// A liquid tube or a pump: its block entity, where it is, how much it holds, and how it
-    /// passes liquid on.
+    /// A liquid tube, a pump or an intake: its block entity, where it is, how much it holds,
+    /// and how it passes liquid on.
     One {
         id: u64,
         pos: Pos,
@@ -91,6 +93,8 @@ pub enum Kind {
     /// A timber liquid tube an engine drives: it pushes as the pump does, and hands nothing to a
     /// tank, the tanks it touches being where it pulls liquid from.
     Driven,
+    /// An oil engine's intake: it takes oil and water for the engine and hands nothing on.
+    Intake,
 }
 
 impl Kind {
@@ -113,6 +117,8 @@ impl Vessel {
             (crate::liquid_tube::CAPACITY, Kind::Tube)
         } else if block.is(&PUMP) {
             (crate::pump::CAPACITY, Kind::Pump)
+        } else if block.is(&OIL_INTAKE) {
+            (crate::oil_engine::INTAKE_CAPACITY, Kind::Intake)
         } else if block.is(&LIQUID_TANK) {
             return Tank::at(world, pos).map(Vessel::Tank);
         } else {
@@ -160,6 +166,11 @@ impl Vessel {
             Vessel::One { id, .. } => holders.set(*id, held),
             Vessel::Tank(tank) => tank.settle(holders, held),
         }
+    }
+
+    /// Whether `liquid` may go into it at all: an intake takes only what an engine burns.
+    pub fn admits(&self, liquid: LiquidKey) -> bool {
+        self.kind() != Kind::Intake || crate::oil_engine::burns(liquid)
     }
 
     /// How it passes liquid on: a tank as a tube does.
@@ -248,7 +259,7 @@ impl Vessel {
 /// Whether the block at `pos` holds liquid.
 pub fn is_vessel(world: &World, pos: Pos) -> bool {
     let block = world.block_typed(pos);
-    is_liquid_tube(block) || block.is(&PUMP) || block.is(&LIQUID_TANK)
+    is_liquid_tube(block) || block.is(&PUMP) || block.is(&OIL_INTAKE) || block.is(&LIQUID_TANK)
 }
 
 /// Whether the holder at `pos` passes liquid toward `dir`.
@@ -257,9 +268,12 @@ pub fn reaches(world: &World, pos: Pos, dir: Dir) -> bool {
 }
 
 /// Whether a holder whose block is `block` passes liquid toward `dir`: a liquid tube along its
-/// arms, a pump on every side but its hose's, a tank on every side it has no more of itself.
+/// arms, a pump on every side but its hose's, an intake on every side, a tank on every side it
+/// has no more of itself.
 fn passes(block: BlockState, dir: Dir) -> bool {
-    if block.is(&PUMP) {
+    if block.is(&OIL_INTAKE) {
+        true
+    } else if block.is(&PUMP) {
         dir != Dir::Down
     } else if is_liquid_tube(block) {
         block.prop(dir.name()) == Some("true")

@@ -1,9 +1,9 @@
 //! What this mod's machines share: a block whose front lights up while it works, a store of
 //! energy put into a job a little every tick, and the energy bar on their screens.
 
-use weft_sdk::*;
+use weft_sdk::{Arg, BlockBuilder, Dir, ENERGY, Energy, Facings, S, Toward, Ui, World, tool_tier};
 
-use crate::lib::Pos;
+use crate::lib::{BlockState, Pos, TypedWorld};
 
 /// A machine's block, textured `<name>_front` (`<name>_front_on` while it works), `<name>_top`
 /// and `<name>_side`, also underneath. Its front faces the player who places it. Any tool breaks
@@ -30,8 +30,13 @@ pub fn block<'a>(builder: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<
 
 /// The way the front of the machine at `pos` faces.
 pub fn front(world: &World, pos: Pos) -> Dir {
-    world
-        .prop(pos, "facing")
+    front_of(world.block_typed(pos))
+}
+
+/// The way the front of a machine whose block is `block_state` faces.
+pub fn front_of(block_state: BlockState) -> Dir {
+    block_state
+        .prop("facing")
         .and_then(Dir::from_name)
         .unwrap_or(Dir::North)
 }

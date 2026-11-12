@@ -1,6 +1,7 @@
 # Liquid tubes and tanks
 
-Liquid tubes carry liquid from a [pump](oil.md#pump) to tanks and on. They work with any liquid
+Liquid tubes carry liquid from a [pump](oil.md#pump) to tanks, an
+[oil engine's intakes](oil-engine.md#liquid-in) and on. They work with any liquid
 of any mod: water, lava, [oil](oil.md#oil) or another mod's. A tube or tank holds one liquid at a
 time, and you can see how full it is: the liquid stands in it at its level, in its own colors.
 
@@ -17,6 +18,8 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
   into a pump. Without a pump, liquid rises no higher than where it stands.
 - **Two liquids** don't mix: one waits until the other has moved on. What is left of a liquid
   once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
+
+An oil engine's intake takes only oil or water, one at a time, and hands nothing on.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.

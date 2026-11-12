@@ -150,15 +150,17 @@ fn sleep(holders: &mut Holders, id: u64) {
 
 /// Hands from `from`, pushed by `pushed`, to `to` what evens out their heads; whether any went.
 /// A holder that pushes never takes: liquid run back into it would only be pushed out again. A
-/// driven timber liquid tube hands nothing to a tank: it pulls from there.
+/// driven timber liquid tube hands nothing to a tank: it pulls from there. An intake hands
+/// nothing on, and takes only what its engine burns.
 fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
     let (to, told) = (&*to.vessel, holders.get(to.id).head);
     let into_source = from.kind() == Kind::Driven && matches!(to, Vessel::Tank(_));
-    if to.kind().pushes() || into_source {
+    if to.kind().pushes() || into_source || from.kind() == Kind::Intake {
         return false;
     }
     let (giving, taking) = (from.held(holders), to.held(holders));
-    if giving.is_empty() || !taking.takes(giving.liquid, to.capacity()) {
+    let admitted = to.admits(giving.liquid) && taking.takes(giving.liquid, to.capacity());
+    if giving.is_empty() || !admitted {
         return false;
     }
     // A dribble of another liquid counts for nothing: it goes when this comes in.
@@ -221,6 +223,24 @@ mod tests {
         assert!(
             Kind::Driven.pushes() && !Kind::Tube.pushes(),
             "nor takes when it does"
+        );
+    }
+
+    #[test]
+    fn an_intake_takes_only_what_an_oil_engine_burns() {
+        let intake = Vessel::One {
+            id: 1,
+            pos: at(0),
+            capacity: 1000,
+            kind: Kind::Intake,
+        };
+        let named = super::super::key_named;
+        assert!(intake.admits(named("cogwork:oil")), "oil");
+        assert!(intake.admits(named("base:water")), "water for vapor");
+        assert!(!intake.admits(named("base:lava")), "nothing else");
+        assert!(
+            tube(1, at(0)).admits(named("base:lava")),
+            "a tube takes any liquid"
         );
     }
 
