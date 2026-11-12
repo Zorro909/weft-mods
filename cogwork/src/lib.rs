@@ -1,7 +1,7 @@
 //! Cogwork: item tubes that show what they carry, engines that drive them, machines for the big
 //! jobs (an excavator, an assembly bench and a leveler), cuboid loaders that keep them running
-//! with nobody near, and oil: pumped up from fields underground, carried in liquid tubes and
-//! kept in tanks. Everything goes through `weft_sdk` and `base_api`.
+//! with nobody near, and oil: pumped up from fields underground, carried in liquid tubes, kept
+//! in tanks and burnt in the oil engine. Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
 #[cfg(test)]
@@ -32,6 +32,7 @@ mod loading;
 mod machine;
 mod markers;
 mod oil;
+mod oil_engine;
 mod owned;
 mod pump;
 mod recipes;
@@ -72,6 +73,7 @@ fn init(r: &mut Registry) {
     timber_liquid_tube::register(r);
     tank::register(r);
     pump::register(r);
+    oil_engine::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]
     films::register(r);
