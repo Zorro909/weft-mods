@@ -1,60 +1,81 @@
-//! Leveling east of the benches: three survey markers in an L round a small hill and two holes.
-//! The camera uses the corner marker, a leveler goes down next to it, and the tuning wrench
-//! turns the ember engine beside it, which pointed away, into it: it clears the hill and fills
-//! the holes.
+//! Leveling on the knoll between the two excavators, on the land as it lies: three survey
+//! markers in an L, set on stone posts to one height since the ground under them is not, mark
+//! a square on the knoll's north shoulder. The camera uses the corner marker, a leveler goes
+//! down next to it on its own footing, and the tuning wrench turns the two ember engines
+//! beside it, which pointed away, into it: it cuts the crest down and fills the low side up.
 
 use showcase_api::Set;
-use weft_sdk::*;
+use weft_sdk::{Dir, Item, ItemStack, Output};
 
-use super::parts::{area, engine, fuel, in_world};
+use super::ground::ground_top;
+use super::parts::{COBBLESTONE, engine, fuel};
 use crate::leveler::LEVELER;
 use crate::lib::{BlockState, Pos};
 use crate::markers::SURVEY_MARKER;
 
-/// The marked rectangle, x 10 to 18 and z 14 to 22: its corner marker, and the two along it.
-pub const CORNER: Pos = Pos::new(10, 0, 22);
-const MARKERS: [Pos; 3] = [CORNER, Pos::new(18, 0, 22), Pos::new(10, 0, 14)];
-/// The leveler, south of the corner marker, and its engine to the east.
-pub const LEVELER_AT: Pos = Pos::new(10, 0, 23);
-pub const ENGINE: Pos = Pos::new(11, 0, 23);
-/// The middle of the rectangle, where the hill stands.
-pub const MIDDLE: [f64; 3] = [14.5, 0.5, 18.5];
-
-static DIRT: Block = Block::named("base:dirt");
-static GRASS: Block = Block::named("base:grass");
+/// The height the markers and the leveler stand at: the ground ends a block below it once the
+/// leveler is done.
+const HEIGHT: i32 = 4;
+/// The marked square, x 44 to 52 and z -6 to 2: its corner marker, and the two along it.
+const CORNER: Pos = Pos::new(52, HEIGHT, -6);
+const MARKERS: [Pos; 3] = [CORNER, Pos::new(44, HEIGHT, -6), Pos::new(52, HEIGHT, 2)];
+/// The leveler, east of the corner marker, and its engines to the east and south.
+const LEVELER_AT: Pos = Pos::new(53, HEIGHT, -6);
+const ENGINES: [(Pos, Dir); 2] = [
+    (Pos::new(54, HEIGHT, -6), Dir::West),
+    (Pos::new(53, HEIGHT, -5), Dir::North),
+];
+/// The middle of the square, at the height it is made flat at.
+pub const MIDDLE: [f64; 3] = [48.5, HEIGHT as f64, -1.5];
 
 pub fn build(set: &Set) {
     for marker in MARKERS {
-        set.place(marker, SURVEY_MARKER.id().into());
+        post(set, marker);
+        set.place(marker, BlockState::of(&SURVEY_MARKER));
     }
-    let hill = area(Pos::new(13, 0, 16), Pos::new(16, 0, 19));
-    set.fill(hill, BlockState::of(&DIRT));
-    let top = area(Pos::new(14, 1, 17), Pos::new(15, 1, 18));
-    set.fill(top, BlockState::of(&GRASS));
-    let air = BlockState::AIR;
-    set.fill(area(Pos::new(11, -2, 15), Pos::new(12, -1, 16)), air);
-    set.fill(area(Pos::new(16, -1, 20), Pos::new(17, -1, 21)), air);
-    // Pointing away from where the leveler goes, until the wrench turns it.
-    engine(set, ENGINE, Dir::East);
+    post(set, LEVELER_AT);
+    for (at, into_leveler) in ENGINES {
+        post(set, at);
+        // Pointing away from where the leveler goes, until the wrench turns it.
+        engine(set, at, into_leveler.opposite());
+    }
 }
 
-/// The camera uses the corner marker: the rectangle shows.
+/// Makes a place to stand at `at`: a stone post up from lower ground, a notch in higher.
+fn post(set: &Set, at: Pos) {
+    let ground = ground_top(set, at.x, at.z);
+    for y in ground + 1..at.y {
+        set.place(at.with_y(y), BlockState::of(&COBBLESTONE));
+    }
+    for y in at.y..=ground + 1 {
+        set.place(at.with_y(y), BlockState::AIR);
+    }
+}
+
+/// The camera uses the corner marker, so the square shows, and the engines are lit.
 pub fn survey(set: &Set) {
-    crate::markers::survey(&set.world(), in_world(set, CORNER));
+    crate::markers::survey(&set.world(), set.at(CORNER));
+    for (at, _) in ENGINES {
+        fuel(set, at);
+    }
 }
 
-/// The leveler goes down next to the corner marker and takes the markers' rectangle.
+/// The leveler goes down next to the corner marker and takes the markers' square.
 pub fn place_leveler(set: &Set) {
-    set.place(LEVELER_AT, LEVELER.with(&[("facing", "south")]).into());
+    set.place(LEVELER_AT, LEVELER.with(&[("facing", "east")]).into());
 }
 
-/// Fills the leveler's stock and lights the engine, which the wrench then turns into it.
-pub fn turn_engine(set: &Set) {
+/// Fills the leveler's stock, and the wrench turns both engines into it.
+pub fn turn_engines(set: &Set) {
     let world = set.world();
     if let Some(dirt) = Item::lookup("base:dirt") {
-        let stock = world.inventory(in_world(set, LEVELER_AT)).group("input");
+        let stock = world.inventory(set.at(LEVELER_AT)).group("input");
         stock.set(0, ItemStack::new(dirt, 64));
+        stock.set(1, ItemStack::new(dirt, 64));
     }
-    fuel(set, ENGINE);
-    crate::engines::turn(&world, in_world(set, ENGINE));
+    for (at, into_leveler) in ENGINES {
+        let at = set.at(at);
+        world.prop_set(at, "facing", into_leveler.opposite().name());
+        world.play_sound(&crate::sounds::WRENCH, at.center(), 1.0);
+    }
 }

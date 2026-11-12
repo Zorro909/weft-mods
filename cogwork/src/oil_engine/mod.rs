@@ -14,6 +14,8 @@ mod run;
 #[cfg(test)]
 mod stroke;
 
+#[cfg(feature = "showcase")]
+pub use parts::{COMBUSTION_CHAMBER, OIL_ENGINE_CASING, OIL_ENGINE_DRIVE};
 pub use parts::{INTAKE_CAPACITY, OIL_INTAKE};
 use pattern::{Fault, Problem};
 use strum::{FromRepr, IntoStaticStr, VariantArray};

@@ -116,17 +116,23 @@ cogwork.leveler.area = {color:dim}Area {0} x {1}, flat at height {2}{/}
 cogwork.leveler.stock = Stock
 
 # Film titles (the film itself is only built with the showcase feature)
-cogwork.film.frame = An excavator puts up its own frame
-cogwork.film.dig = and mines its area out, layer by layer
-cogwork.film.tubes = Tubes carry what it digs, in plain sight
+cogwork.film.water = A pump on the lake draws water for the works
+cogwork.film.seep = Where oil seeps from the ground, a pump bores down for the field
+cogwork.film.field = More than eighty blocks down it strikes oil, and pumps it up
+cogwork.film.liquid_tubes = Liquid tubes carry it, and show what flows in them
+cogwork.film.lift = A timber liquid tube pumps it on out of the tank
+cogwork.film.oil_engine = On oil and water, the oil engine makes 600 energy a tick
+cogwork.film.shaft = Torque shafts take its power to the assembly benches
+cogwork.film.bench = which craft from the patterns laid in them
 cogwork.film.sorting = A sorting tube sends each kind its own way
-cogwork.film.lever = One lever starts the whole line
-cogwork.film.bench = Assembly benches craft from the patterns laid in them
+cogwork.film.dig = The same power drives an excavator down, layer by layer
 cogwork.film.survey = Survey markers mark out the ground to work
-cogwork.film.wrench = A leveler goes down, and the tuning wrench turns its engine to it
-cogwork.film.level = It clears the hill and fills the holes, flat at its own height
-cogwork.film.finish = At the floor of the world, an excavator's job is done
-cogwork.film.end = Machines that dig, carry and craft
+cogwork.film.wrench = A leveler goes down, and the tuning wrench turns its engines to it
+cogwork.film.level = It cuts the high ground down and fills the low
+cogwork.film.frame = An excavator puts up its own frame before it digs
+cogwork.film.loader = A cuboid loader keeps the works running with nobody near
+cogwork.film.lens = and the cuboid lens shows every cube that stays loaded
+cogwork.film.end = Machines that dig, pump, carry and craft
 
 cogwork.loader.own = Keeps its own cube loaded
 cogwork.loader.area = Keeps {0} x {0} cubes loaded at its height

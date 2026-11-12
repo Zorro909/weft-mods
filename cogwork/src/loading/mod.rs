@@ -11,6 +11,10 @@ mod machines;
 mod tickets;
 
 pub use cubes::{CubePos, Cubes};
+#[cfg(feature = "showcase")]
+pub use lens::CUBOID_LENS;
+#[cfg(feature = "showcase")]
+pub use loader::ULTRA_CUBOID_LOADER;
 #[cfg(test)]
 pub use machines::kept_again;
 pub use machines::{keep_machine, release_machine};

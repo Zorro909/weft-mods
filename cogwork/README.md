@@ -166,12 +166,17 @@ by hand has to be changed there too.
 
 ## Showcase film
 
-With the `showcase` feature, cogwork brings a film for the [showcase](../showcase) mod: a
-builder excavator that puts up its frame, two others already digging, their output sorted by
-tubes, a two-bench assembly line started by a lever, a leveler that takes its area from survey
-markers and flattens a hill once the tuning wrench turns its engine to it, and a fourth
-excavator finishing its job. Record it with `tools/showcase.sh cogwork:showcase`, or play it in
-game with `/showcase play cogwork:showcase`.
+With the `showcase` feature, cogwork brings a film for the [showcase](../showcase) mod: a small
+oil works built into the meadow by the lake north of seed 42's spawn. A pump on a jetty draws
+water, another bores down from an oil seep to its field, and liquid tubes carry both into an
+open hall, where a timber liquid tube lifts the oil out of its tank into the oil engine. The
+engine's torque shafts drive a two-bench assembly line and an excavator, whose output a sorting
+tube parts. Beyond them a leveler takes its area from survey markers and cuts a knoll flat once
+the tuning wrench turns its engines to it, and a second excavator puts up its frame. A cuboid
+loader by the hall keeps it all running, shown through the cuboid lens. Record it with
+`tools/showcase.sh cogwork:showcase -- --view 32`, or play it in game with
+`/showcase play cogwork:showcase`. The set is written for that seed and a fresh world: the film
+builds it at fixed coordinates by that lake, so start it within view of spawn.
 Without the feature, none of this is compiled in, and showcase is not a dependency.
 
 ## Status
