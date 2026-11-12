@@ -1,263 +1,212 @@
-//! Where oil lies. The world is split into regions `REGION` blocks square, and each has at most
-//! one field, decided from the world's seed and the region alone: every cube and every client
-//! work out the same fields, whatever order they are made in. A field is a ball of oil sources
-//! deep underground, and above its middle a seep: a puddle of oil in oil-soaked ground.
+//! Where oil lies. A field is an engine feature on a grid: the overworld is split into squares
+//! `SPACING` blocks wide, and one in `SQUARES_TO_A_FIELD` of those whose place is dry dirt or
+//! sand holds a field. The engine lays each one out once, from the seed and the ground alone,
+//! and every cube it reaches takes its part. A field is a ball of oil sources deep underground,
+//! and above its middle a seep: a puddle of oil in oil-soaked ground.
 
-use twox_hash::XxHash3_64;
-use weft_sdk::{Gen, Tag};
+use base_api::OVERWORLD;
+use weft_sdk::{Feature, Placed, Plan, Registry, abi::stage};
 
 use super::{OIL, OIL_SAND, OILY_DIRT};
-use crate::lib::Pos;
+use crate::lib::{Area, Pos};
 
-/// Blocks along each side of a region, and the share of regions with a field, in 256ths.
-const REGION: i32 = 96;
-const CHANCE: u64 = 128;
+static OIL_FIELD: Feature = Feature::named("oil_field");
+/// Base's grass, flowers and canes: a field comes after them, to clear them off its seep.
+static BASE_PLANTS: Feature = Feature::named("base:decoration");
+
+/// Blocks along each side of a square of the grid, and the squares there are to one field.
+const SPACING: i32 = 96;
+const SQUARES_TO_A_FIELD: f32 = 32.0;
 /// The radius of a field's ball, in blocks: 4 holds 389 buckets, 5 holds 739, 6 holds 1,189.
-const RADIUS_LOW: i32 = 4;
-const RADIUS_HIGH: i32 = 6;
-/// Heights a field's middle lies at: its ball stays above the overworld's floor at -32 and well
-/// under the ground.
-const MIDDLE_LOW: i32 = -24;
-const MIDDLE_HIGH: i32 = 20;
-/// How far from its middle a seep soaks the ground, counted along x and z together.
+const RADIUS: [i32; 2] = [4, 6];
+/// How far under its puddle a field's middle lies. Under ground at sea level the deepest ball
+/// ends at -28, above the overworld's floor at -32.
+const DEPTH: [i32; 2] = [45, 85];
+/// How far from its puddle a seep soaks the ground, counted along x and z together.
 const SEEP_REACH: i32 = 2;
-/// Blocks along each side of a cube of the world, which a decoration draws one at a time.
-const CUBE: i32 = 16;
-/// Seeps under the sea are left out: base's sea level.
+/// How far above or below the puddle a seep still soaks the ground: a cliff beside it stays dry.
+const SEEP_STEP: i32 = 3;
+/// How high above soaked ground plants are taken away: a sugar cane's height.
+const PLANT_HEIGHT: i32 = 3;
+/// Ground under the sea stays as it is: base's sea level.
 const SEA: i32 = 63;
-/// Mixed into the seed, so fields don't line up with what other mods draw from it.
-const SALT: u64 = 0x6f69_6c5f_6669_656c;
+/// What a field's ball takes: everything but the air of a cave.
+const NOT_AIR: &str = "!core:air";
+const AIR: u32 = 0;
 
-/// One field: the middle of its ball, its radius, and the bits that shape its seep.
+pub fn register(r: &mut Registry) {
+    r.feature(&OIL_FIELD)
+        .dimension(&OVERWORLD)
+        .spacing(SPACING)
+        .chance(1.0 / SQUARES_TO_A_FIELD)
+        .ground("#dirt #sand")
+        .stage(stage::DECORATION)
+        .after(&BASE_PLANTS)
+        .reach(RADIUS[1])
+        .reach_y(SEEP_STEP + PLANT_HEIGHT, DEPTH[1] + RADIUS[1] + 1)
+        .plan(plan);
+}
+
+/// One field, as its start's random bits make it: the radius of its ball, how far under the
+/// puddle the ball's middle lies, and the bits that shape its seep.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Field {
-    pub middle: Pos,
-    pub radius: i32,
+struct Field {
+    radius: i32,
+    depth: i32,
     seep: u64,
 }
 
 impl Field {
-    /// The field of region (`region_x`, `region_z`) in the world of `seed`, if it has one.
-    pub fn in_region(seed: u64, region_x: i32, region_z: i32) -> Option<Field> {
-        let mut bytes = [0u8; 24];
-        bytes[..8].copy_from_slice(&(seed ^ SALT).to_le_bytes());
-        bytes[8..12].copy_from_slice(&region_x.to_le_bytes());
-        bytes[12..16].copy_from_slice(&region_z.to_le_bytes());
-        let bits = XxHash3_64::oneshot(&bytes);
-        if bits & 0xff >= CHANCE {
-            return None;
+    /// Each pick takes a byte of its own, the seep the upper half. Their places are part of the
+    /// world: moving one moves every field's oil.
+    fn of(bits: u64) -> Field {
+        let pick = |shift: u32, [low, high]: [i32; 2]| {
+            low + (bits >> shift & 0xff) as i32 % (high - low + 1)
+        };
+        Field {
+            radius: pick(0, RADIUS),
+            depth: pick(8, DEPTH),
+            seep: bits >> 32,
         }
-        // The lowest byte decided whether there is a field; each pick below takes bits of its own.
-        let pick = |shift: u32, low: i32, high: i32| {
-            low + ((bits >> shift) % (high - low + 1) as u64) as i32
-        };
-        let middle = Pos {
-            x: region_x * REGION + pick(8, 0, REGION - 1),
-            y: pick(24, MIDDLE_LOW, MIDDLE_HIGH),
-            z: region_z * REGION + pick(16, 0, REGION - 1),
-        };
-        let radius = pick(32, RADIUS_LOW, RADIUS_HIGH);
-        Some(Field {
-            middle,
-            radius,
-            seep: bits >> 40,
-        })
     }
 
-    /// Whether `pos` is in its ball of oil.
-    pub fn holds(&self, pos: Pos) -> bool {
-        let [dx, dy, dz] = [
-            pos.x - self.middle.x,
-            pos.y - self.middle.y,
-            pos.z - self.middle.z,
-        ];
+    /// Its ball round `middle`, as rows along x: one box each instead of a block at a time.
+    fn rows(&self, middle: Pos) -> impl Iterator<Item = Area> + use<> {
         // A radius and a bit, so the ball has no lone blocks sticking out of its sides.
-        dx * dx + dy * dy + dz * dz <= self.radius * self.radius + self.radius
+        let within = self.radius * self.radius + self.radius;
+        let reach = -self.radius..=self.radius;
+        reach
+            .clone()
+            .flat_map(move |dy| reach.clone().map(move |dz| (dy, dz)))
+            .filter_map(move |(dy, dz)| {
+                let half = (within - dy * dy - dz * dz).checked_isqrt()?;
+                let row = middle.add_y(dy).add_z(dz);
+                Some(Area::between(row.add_x(-half), row.add_x(half)))
+            })
     }
 
-    /// Whether the ground `dx`, `dz` from its middle is soaked: the middle, which is the puddle,
-    /// always, the rest of the seep by its bits.
-    pub fn soaks(&self, dx: i32, dz: i32) -> bool {
+    /// Whether the ground `dx`, `dz` from its puddle is soaked: the puddle and the blocks next
+    /// to it always, the rest of the seep by its bits.
+    fn soaks(&self, dx: i32, dz: i32) -> bool {
         let reach = dx.abs() + dz.abs();
-        if reach == 0 {
-            return true;
-        }
         if reach > SEEP_REACH {
             return false;
         }
         // One bit for each block within reach.
         let bit = ((dx + SEEP_REACH) * (2 * SEEP_REACH + 1) + dz + SEEP_REACH) as u64;
-        reach == 1 || self.seep >> bit & 1 == 1
+        reach <= 1 || self.seep >> bit & 1 == 1
+    }
+
+    /// Where its seep soaks the ground, as how far from the puddle along x and z.
+    fn seep(&self) -> impl Iterator<Item = (i32, i32)> + '_ {
+        let reach = -SEEP_REACH..=SEEP_REACH;
+        reach
+            .clone()
+            .flat_map(move |dx| reach.clone().map(move |dz| (dx, dz)))
+            .filter(|&(dx, dz)| self.soaks(dx, dz))
     }
 }
 
-/// The fields whose ball or seep may reach into the cube at `origin`.
-pub fn near(seed: u64, origin: Pos) -> Vec<Field> {
-    let reach = RADIUS_HIGH.max(SEEP_REACH);
-    let regions =
-        |low: i32| (low - reach).div_euclid(REGION)..=(low + CUBE - 1 + reach).div_euclid(REGION);
-    let mut fields = Vec::new();
-    for region_x in regions(origin.x) {
-        for region_z in regions(origin.z) {
-            fields.extend(Field::in_region(seed, region_x, region_z));
-        }
+/// Lays out the field that starts at the plan's place, the block above its puddle.
+fn plan(p: &mut Plan) {
+    let field = Field::of(p.random());
+    let puddle = Pos::from(p.pos()).add_y(-1);
+    for row in field.rows(puddle.add_y(-field.depth)) {
+        p.replace(row.lo, row.hi, NOT_AIR, OIL.id());
     }
-    fields
-}
-
-/// The decoration: the oil and the seeps of every field that reaches into this cube.
-pub fn decorate(cube: &mut Gen) {
-    let origin = Pos::from(cube.origin());
-    for field in near(cube.seed(), origin) {
-        fill_ball(cube, origin, &field);
-        soak(cube, origin, &field);
+    for (dx, dz) in field.seep() {
+        soak(p, puddle, dx, dz);
     }
 }
 
-/// Fills what the field's ball takes of the cube with oil, except where caves left air.
-fn fill_ball(cube: &mut Gen, origin: Pos, field: &Field) {
-    let misses = |low: i32, middle: i32| {
-        low > middle + field.radius || low + CUBE - 1 < middle - field.radius
-    };
-    let middle = field.middle;
-    if misses(origin.x, middle.x) || misses(origin.y, middle.y) || misses(origin.z, middle.z) {
+/// Soaks the ground `dx`, `dz` from the puddle, the puddle itself into oil, and takes away the
+/// plants on it, which the soaked ground no longer holds.
+fn soak(p: &mut Plan, puddle: Pos, dx: i32, dz: i32) {
+    let (x, z) = (puddle.x + dx, puddle.z + dz);
+    let ground = Pos::new(x, p.ground(x, z).height, z);
+    if ground.y < SEA || (ground.y - puddle.y).abs() > SEEP_STEP {
         return;
     }
-    let oil = OIL.id();
-    let side = CUBE as usize;
-    for y in 0..side {
-        for z in 0..side {
-            for x in 0..side {
-                let pos = Pos {
-                    x: origin.x + x as i32,
-                    y: origin.y + y as i32,
-                    z: origin.z + z as i32,
-                };
-                if field.holds(pos) && cube.get(x, y, z) != 0 {
-                    cube.set(x, y, z, oil);
-                }
-            }
-        }
-    }
-}
-
-/// Soaks the ground of the field's seep where it lies in the cube, and puts the puddle in.
-fn soak(cube: &mut Gen, origin: Pos, field: &Field) {
-    for dx in -SEEP_REACH..=SEEP_REACH {
-        for dz in -SEEP_REACH..=SEEP_REACH {
-            if !field.soaks(dx, dz) {
-                continue;
-            }
-            let (x, z) = (field.middle.x + dx, field.middle.z + dz);
-            let height = cube.column(x, z).height;
-            let local = [x - origin.x, height - origin.y, z - origin.z];
-            if height < SEA || local.iter().any(|&at| !(0..CUBE).contains(&at)) {
-                continue;
-            }
-            let [lx, ly, lz] = local.map(|at| at as usize);
-            let soaked = soaked(cube.get(lx, ly, lz), dx == 0 && dz == 0);
-            if let Some(soaked) = soaked {
-                cube.set(lx, ly, lz, soaked);
-                clear_plant(cube, lx, ly + 1, lz);
-            }
-        }
-    }
-}
-
-/// What the ground `ground` becomes in a seep: the puddle in its middle, oil-soaked dirt or
-/// sand around it; nothing where it is neither.
-fn soaked(ground: u32, middle: bool) -> Option<u32> {
-    static DIRT: Tag = Tag::named("dirt");
-    static SAND: Tag = Tag::named("sand");
-    if DIRT.on_block(ground) {
-        Some(if middle { OIL.id() } else { OILY_DIRT.id() })
-    } else if SAND.on_block(ground) {
-        Some(if middle { OIL.id() } else { OIL_SAND.id() })
-    } else {
-        None
-    }
-}
-
-/// Takes away a plant standing at (`x`, `y`, `z`) of the cube, which the soaked ground below
-/// no longer holds.
-fn clear_plant(cube: &mut Gen, x: usize, y: usize, z: usize) {
-    static PLANTABLE: Tag = Tag::named("plantable");
-    if y < CUBE as usize && PLANTABLE.on_block(cube.get(x, y, z)) {
-        cube.set(x, y, z, 0);
-    }
+    let is_puddle = dx == 0 && dz == 0;
+    let soaked = |soaked_ground: u32| if is_puddle { OIL.id() } else { soaked_ground };
+    p.replace(ground, ground, "#dirt", soaked(OILY_DIRT.id()));
+    p.replace(ground, ground, "#sand", soaked(OIL_SAND.id()));
+    let plants = Area::between(ground.add_y(1), ground.add_y(PLANT_HEIGHT));
+    p.replace(plants.lo, plants.hi, "#plantable", AIR);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_field_is_the_same_every_time() {
-        let fields: Vec<_> = (0..20).filter_map(|x| Field::in_region(42, x, 3)).collect();
-        let again: Vec<_> = (0..20).filter_map(|x| Field::in_region(42, x, 3)).collect();
-        assert_eq!(fields, again, "from the seed alone");
-        let other: Vec<_> = (0..20).filter_map(|x| Field::in_region(43, x, 3)).collect();
-        assert_ne!(fields, other, "another world, other fields");
-    }
+    const MIDDLE: Pos = Pos::new(100, -10, 200);
 
-    #[test]
-    fn about_half_the_regions_have_a_field_inside_them() {
-        let regions = (-20..20).flat_map(|x| (-20..20).map(move |z| (x, z)));
-        let fields: Vec<_> = regions
-            .filter_map(|(x, z)| Some(((x, z), Field::in_region(7, x, z)?)))
-            .collect();
-        assert!(
-            (600..1000).contains(&fields.len()),
-            "{} of 1600",
-            fields.len()
-        );
-        for ((x, z), field) in fields {
-            let region_x = field.middle.x.div_euclid(REGION);
-            let region_z = field.middle.z.div_euclid(REGION);
-            assert_eq!((region_x, region_z), (x, z), "its middle in its region");
-            assert!(
-                (RADIUS_LOW..=RADIUS_HIGH).contains(&field.radius),
-                "its radius"
-            );
-            let lowest = field.middle.y - field.radius;
-            assert!(lowest > -32, "above the floor of the world: {lowest}");
+    fn field(radius: i32, seep: u64) -> Field {
+        Field {
+            radius,
+            depth: DEPTH[0],
+            seep,
         }
     }
 
     #[test]
-    fn every_cube_a_field_reaches_finds_it() {
-        let field = (0..)
-            .find_map(|x| Field::in_region(5, x, 0))
-            .expect("a field somewhere along the row");
-        let edge = Pos {
-            x: field.middle.x + field.radius,
-            ..field.middle
+    fn a_field_comes_from_its_bits_alone() {
+        let made = Field::of(0x0123_4567_89ab_5a17);
+        let expected = Field {
+            radius: 6,
+            depth: 53,
+            seep: 0x0123_4567,
         };
-        let origin = Pos {
-            x: edge.x.div_euclid(CUBE) * CUBE,
-            y: edge.y.div_euclid(CUBE) * CUBE,
-            z: edge.z.div_euclid(CUBE) * CUBE,
+        assert_eq!(made, expected, "the picks keep their places");
+    }
+
+    #[test]
+    fn every_field_is_within_what_the_feature_may_reach() {
+        for bits in (0..4000u64).map(|n| n.wrapping_mul(0x9e37_79b9_7f4a_7c15)) {
+            let made = Field::of(bits);
+            assert!((RADIUS[0]..=RADIUS[1]).contains(&made.radius), "radius");
+            assert!((DEPTH[0]..=DEPTH[1]).contains(&made.depth), "depth");
+        }
+        let lowest = SEA - DEPTH[1] - RADIUS[1];
+        assert!(lowest > -32, "above the floor of the world: {lowest}");
+    }
+
+    #[test]
+    fn a_ball_holds_the_buckets_the_docs_name() {
+        let buckets = |radius: i32| -> i32 {
+            let rows = field(radius, 0).rows(MIDDLE);
+            rows.map(|row| row.size().iter().product::<i32>()).sum()
         };
-        assert!(field.holds(edge), "the ball reaches its radius");
+        assert_eq!(
+            [4, 5, 6].map(buckets),
+            [389, 739, 1189],
+            "radius 4, 5 and 6"
+        );
+    }
+
+    #[test]
+    fn a_ball_is_rows_along_x_round_its_middle() {
+        let rows: Vec<Area> = field(4, 0).rows(MIDDLE).collect();
+        for row in &rows {
+            assert_eq!(row.size()[1..], [1, 1], "one block high and wide");
+            assert_eq!(row.lo.x + row.hi.x, 2 * MIDDLE.x, "as far to either side");
+        }
+        let through_the_middle = Area::between(MIDDLE.add_x(-4), MIDDLE.add_x(4));
+        assert!(rows.contains(&through_the_middle), "its widest row");
         assert!(
-            near(5, origin).contains(&field),
-            "the cube of its edge asks for it"
+            rows.iter().all(|row| row.lo.y >= MIDDLE.y - 4),
+            "no lower than its radius"
         );
     }
 
     #[test]
     fn a_seep_is_its_puddle_and_the_ground_around() {
-        let field = Field {
-            middle: Pos { x: 0, y: 0, z: 0 },
-            radius: 3,
-            seep: 0,
-        };
-        assert!(field.soaks(0, 0), "the puddle");
-        assert!(
-            field.soaks(1, 0) && field.soaks(0, -1),
-            "next to it, always"
-        );
-        assert!(!field.soaks(2, 0), "further out, by its bits");
-        assert!(!field.soaks(3, 0), "beyond its reach");
+        let dry = field(4, 0);
+        assert!(dry.soaks(0, 0), "the puddle");
+        assert!(dry.soaks(1, 0) && dry.soaks(0, -1), "next to it, always");
+        assert!(!dry.soaks(2, 0), "further out, by its bits");
+        assert!(!dry.soaks(3, 0), "beyond its reach");
+        assert_eq!(dry.seep().count(), 5, "the least a seep soaks");
+        assert_eq!(field(4, u64::MAX).seep().count(), 13, "and the most");
     }
 }

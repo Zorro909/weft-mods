@@ -13,14 +13,16 @@ source of it as an Oil Bucket, which pours it out again.
 
 ## Oil fields
 
-The overworld is divided into regions of 96 by 96 blocks, and about half of them hold a field.
-Every world with the same seed has its fields in the same places.
+Fields are rare. The overworld is divided into squares of 96 by 96 blocks, and one in 32 holds
+a field, if the place the seed picks in it is dry dirt, grass or sand: about one field to every
+540 by 540 blocks of such land. Every world with the same seed has its fields in the same
+places, and `/structure locate cogwork:oil_field` says where the nearest is.
 
 | | |
 |---|---|
 | Shape | a ball of oil sources, radius 4 to 6 |
 | Holds | 389 buckets (radius 4) to 1,189 (radius 6), 739 at radius 5 |
-| Middle | between y −24 and y 20 |
+| Middle | 45 to 85 blocks under the seep |
 | Seep | right above the middle, on the surface |
 
 Where the ball runs into a cave, the cave stays air.
@@ -28,8 +30,8 @@ Where the ball runs into a cave, the cave stays air.
 ### Seeps
 
 A seep is a puddle of oil, one source, in the middle of a patch of Oil-Soaked Dirt (on dirt or
-grass) or Oil Sand (on sand) up to two blocks across from it. There is none where the ground
-above the field is below sea level or is neither dirt nor sand, so not every field has one.
+grass) or Oil Sand (on sand) up to two blocks across from it. Every field has one. Ground
+more than three blocks above or below the puddle stays dry, and no plant stands on a seep.
 Oil-Soaked Dirt and Oil Sand are dug with a shovel and drop themselves.
 
 ## Pump

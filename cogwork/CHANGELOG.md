@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Oil fields are rare: one in 32 squares of 96 × 96 blocks holds one, not every other, and each
+  has its seep. `/structure locate cogwork:oil_field` says where the nearest is.
+- A field lies 45 to 85 blocks under its seep, and all fields lie elsewhere than in 0.4.0. In a
+  world made with 0.4.0 the old fields and seeps are gone, except in cubes somebody changed.
+
+### Fixed
+
+- New terrain generates as fast with Cogwork as without: oil took a seventh on top of every
+  cube's generation.
+- No grass stands on a seep's soaked ground any more.
+
 ## 0.4.0 - 2026-11-12
 
 ### Added
