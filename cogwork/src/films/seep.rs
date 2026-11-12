@@ -49,13 +49,14 @@ const CLEARING: i32 = 9;
 const MOWN: i32 = 4;
 
 pub fn build(set: &Set) {
+    fell_near(set, PUMP_AT.x, PUMP_AT.z, CLEARING);
+    mow(set, PUMP_AT.x, PUMP_AT.z, MOWN);
+    // Before the pump and its engines stand there: it soaks the top of the ground.
+    field(set);
     set.place(PUMP_AT, BlockState::of(&PUMP));
     for side in ENGINE_SIDES {
         engine(set, PUMP_AT.toward(side), side.opposite());
     }
-    fell_near(set, PUMP_AT.x, PUMP_AT.z, CLEARING);
-    mow(set, PUMP_AT.x, PUMP_AT.z, MOWN);
-    field(set);
     let path = (PATH_X[0]..=PATH_X[1]).flat_map(|x| PATH_Z.map(|z| (x, z)));
     pave(set, path, &GRAVEL);
     liquid_tubes(set, &over_ground(set, &route(&LINE)));
