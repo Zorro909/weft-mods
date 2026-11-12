@@ -50,10 +50,10 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 20] = [
     (
         &OIL_ENGINE_STROKE,
         "oil_engine/stroke",
-        0.8,
+        1.0,
         0.9,
         1.05,
-        48.0,
+        56.0,
     ),
 ];
 

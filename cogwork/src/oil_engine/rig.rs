@@ -3,7 +3,8 @@
 //! lets off vapor while the engine runs. It is an owned entity shaped by
 //! `assets/models/oil_engine_rig.geo.json`, there while the engine is built; each stroke is a
 //! clip of `assets/animations/oil_engine_rig.animation.json`, a turn of the crank, which the
-//! server starts with a deep knock, so every engine keeps time with the world's ticks.
+//! server starts, with a boom at each of its two beats, so every engine keeps time with the
+//! world's ticks.
 
 use weft_sdk::{Dir, EntityKind, Output, Particle, Registry, Vec3, World};
 
@@ -82,7 +83,8 @@ impl OilEngine {
 }
 
 /// Keeps the rig of the engine `id`, built as `cube`, on its top facing its front, starts its
-/// stroke when one begins at `time`, and lets off vapor while it runs.
+/// stroke when one begins at `time`, and while it runs lets off vapor, with a boom and a puff
+/// at each beat.
 pub fn show(world: &World, id: u64, cube: Cube, engine: &mut OilEngine, time: u64) {
     let top = cube.middle.center().offset(0.0, TOP_ABOVE_MIDDLE, 0.0);
     engine.rig = crate::owned::place(world, id, engine.rig, &RIG, top, yaw(cube.front));
@@ -91,10 +93,10 @@ pub fn show(world: &World, id: u64, cube: Cube, engine: &mut OilEngine, time: u6
     }
     if begins(time) {
         world.action_play(engine.rig, TURN, false);
-        world.play_sound(&crate::sounds::OIL_ENGINE_STROKE, top, 1.0);
     }
     let chimney = turned(top, cube.front, CHIMNEY_TOP);
     if time.is_multiple_of(BEAT_EVERY) {
+        world.play_sound(&crate::sounds::OIL_ENGINE_STROKE, top, 1.0);
         vapor(world, chimney, 3, 1.4);
     } else if time.is_multiple_of(WISP_EVERY) {
         vapor(world, chimney, 1, 0.6);

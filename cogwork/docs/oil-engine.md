@@ -24,7 +24,8 @@ which block while it is not built. Two engines may share a wall of casing.
 
 It runs while it is built and has oil, water and room for the energy it makes. Without one of
 them it waits, so no oil burns for nothing. It never overheats. While it runs, its lamp is lit,
-its pistons turn the crankshaft with a deep knock each turn, and vapor puffs from its chimney.
+its pistons turn the crankshaft, each one's stroke a heavy boom, and vapor puffs from its
+chimney.
 One whose energy is hardly used runs only now and then, but its rig keeps turning.
 
 | | |
