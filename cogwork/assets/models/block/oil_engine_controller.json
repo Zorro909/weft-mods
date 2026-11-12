@@ -1,0 +1,63 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"particle": "block/oil_engine_casing",
+		"side": "block/oil_engine_casing",
+		"front": "block/oil_engine_controller_front",
+		"oil": "block/oil_engine_gauge_oil_0",
+		"water": "block/oil_engine_gauge_water_0",
+		"lamp": "block/oil_engine_lamp"
+	},
+	"elements": [
+		{
+			"name": "body",
+			"from": [0, 0, 0],
+			"to": [16, 16, 16],
+			"faces": {
+				"north": {"uv": [0, 0, 16, 16], "texture": "#front"},
+				"east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+				"south": {"uv": [0, 0, 16, 16], "texture": "#side"},
+				"west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#side"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#side"}
+			}
+		},
+		{
+			"name": "oil gauge",
+			"from": [9, 2, -1],
+			"to": [13, 11, 0],
+			"faces": {
+				"north": {"uv": [3, 5, 7, 14], "texture": "#oil"},
+				"east": {"uv": [3, 5, 4, 14], "texture": "#oil"},
+				"west": {"uv": [6, 5, 7, 14], "texture": "#oil"},
+				"up": {"uv": [3, 5, 7, 6], "texture": "#oil"},
+				"down": {"uv": [3, 13, 7, 14], "texture": "#oil"}
+			}
+		},
+		{
+			"name": "water gauge",
+			"from": [3, 2, -1],
+			"to": [7, 11, 0],
+			"faces": {
+				"north": {"uv": [9, 5, 13, 14], "texture": "#water"},
+				"east": {"uv": [9, 5, 10, 14], "texture": "#water"},
+				"west": {"uv": [12, 5, 13, 14], "texture": "#water"},
+				"up": {"uv": [9, 5, 13, 6], "texture": "#water"},
+				"down": {"uv": [9, 13, 13, 14], "texture": "#water"}
+			}
+		},
+		{
+			"name": "lamp",
+			"from": [7, 12, -1],
+			"to": [9, 14, 0],
+			"faces": {
+				"north": {"uv": [7, 2, 9, 4], "texture": "#lamp"},
+				"east": {"uv": [7, 2, 8, 4], "texture": "#lamp"},
+				"west": {"uv": [8, 2, 9, 4], "texture": "#lamp"},
+				"up": {"uv": [7, 2, 9, 3], "texture": "#lamp"},
+				"down": {"uv": [7, 3, 9, 4], "texture": "#lamp"}
+			}
+		}
+	]
+}

@@ -2,7 +2,7 @@
 
 Oil lies in fields deep under the overworld, and a seep on the surface shows where. A pump set
 on the seep bores down to the field and pumps it up, a bucket at a time, into
-[liquid tubes and tanks](liquids.md).
+[liquid tubes and tanks](liquids.md). The [oil engine](oil-engine.md) burns it for energy.
 
 ## Oil
 

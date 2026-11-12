@@ -77,7 +77,7 @@ Code that makes a committed file is committed with it:
 
 | Files | Made by |
 |---|---|
-| cogwork's textures of oil, liquid tubes, tanks and the pumps, the timber pump's wheel, and `gui/tank*.png` | `cogwork/src/art/`: `WRITE_ASSETS=1 cargo test --release art` |
+| cogwork's textures of oil, liquid tubes, tanks and the pumps, the timber pump's wheel, the oil engine and its rig, and `gui/tank*.png` and `gui/oil_engine_*.png` | `cogwork/src/art/`: `WRITE_ASSETS=1 cargo test --release art` |
 | `cogwork/assets/sounds/` | `tools/sfx.sh cogwork` from the prompts in `cogwork/sounds.tsv` |
 | `structgen/assets/structures/*.json` | `cargo run --release --example buildings` in `structgen/` |
 | cogwork's recipes | written by hand in `cogwork/assets/recipes/*.toml`; `cogwork/build.rs` turns them into code |

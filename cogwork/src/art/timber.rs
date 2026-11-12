@@ -2,7 +2,7 @@
 //! window on each side, and the paddle wheel turning in it. The wood is the timber extraction
 //! tube's (`tube_timber.png`).
 
-use super::{BRASS, CLEAR, GLASS_METAL, GLINT, Picture, Rgba, noise};
+use super::{BRASS, CLEAR, GLASS_METAL, GLINT, Picture, Rgba, Unwrap, noise};
 
 /// The timber tube's wood, dark to light.
 const WOOD: [Rgba; 6] = [
@@ -126,45 +126,6 @@ fn wheel() -> Picture {
         |_, _, edge| if edge { BRASS[2] } else { BRASS[4] },
     );
     picture
-}
-
-/// Where a box of the wheel model lies in its texture: the top left corner of its unwrap, and the
-/// box's width, height and depth in texels.
-#[derive(Clone, Copy)]
-struct Unwrap {
-    at: (usize, usize),
-    size: (usize, usize, usize),
-}
-
-impl Unwrap {
-    /// Paints every face of the box with `color` of where a pixel is.
-    fn paint(self, picture: &mut Picture, color: impl Fn(usize, usize) -> Rgba) {
-        let ((u, v), (w, h, d)) = (self.at, self.size);
-        let top_row = [(u + d, v, w, d), (u + d + w, v, w, d)];
-        let side_row = [(u, v + d, 2 * (d + w), h)];
-        for (x0, y0, across, down) in top_row.into_iter().chain(side_row) {
-            for y in y0..y0 + down {
-                for x in x0..x0 + across {
-                    picture.set(x, y, color(x, y));
-                }
-            }
-        }
-    }
-
-    /// Paints the box's two ends along its depth, the faces the windows show, with `color` of
-    /// where a pixel is and whether it is on the face's edge.
-    fn paint_ends(self, picture: &mut Picture, color: impl Fn(usize, usize, bool) -> Rgba) {
-        let ((u, v), (w, h, d)) = (self.at, self.size);
-        for x0 in [u + d, u + 2 * d + w] {
-            let y0 = v + d;
-            for y in y0..y0 + h {
-                for x in x0..x0 + w {
-                    let edge = x == x0 || x == x0 + w - 1 || y == y0 || y == y0 + h - 1;
-                    picture.set(x, y, color(x, y, edge));
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]
