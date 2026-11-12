@@ -11,7 +11,7 @@ use weft_sdk::{Block, BlockBuilder, Dir, Registry, World, tool_tier};
 use crate::arms::{Arm, HubAndArms};
 use crate::fill::{self, TUBE_LEVELS};
 use crate::lib::{BlockState, Pos, TypedWorld};
-use crate::liquid::{HELD, Held, is_full, is_vessel, reaches};
+use crate::liquid::{HELD, Held, LiquidKey, NO_LIQUID, is_full, is_vessel, reaches};
 use crate::timber_liquid_tube::TIMBER_LIQUID_TUBE;
 
 pub static LIQUID_TUBE: Block = Block::named("liquid_tube");
@@ -79,30 +79,39 @@ fn joins(world: &World, pos: Pos, dir: Dir) -> bool {
         && (is_liquid_tube(world.block_typed(at)) || reaches(world, at, dir.opposite()))
 }
 
-/// Shows how full the tube at `pos` is, when that or its arms changed since `held.shown`.
-pub fn show(world: &World, pos: Pos, held: &mut Held) {
+/// Shows how full the tube at `pos` is, when that or its arms changed since `held.shown`. One
+/// `pumping` a liquid, not `NO_LIQUID`, shows itself full of it.
+pub fn show(world: &World, pos: Pos, held: &mut Held, pumping: LiquidKey) {
     let tube = world.block_typed(pos);
     let has_arm = |dir: Dir| tube.prop(dir.name()) == Some("true");
-    let level = if is_full(held.amount, CAPACITY) {
-        TUBE_LEVELS
-    } else {
-        fill::level_of(held.amount, CAPACITY, TUBE_LEVELS)
-    };
+    let pumps = pumping != NO_LIQUID;
+    let level = level(held.amount, pumps);
     let shown = shown_as(level, has_arm);
     if shown == held.shown {
         return;
     }
     held.shown = shown;
+    let liquid = if pumps { pumping } else { held.liquid };
     let filled = (level > 0)
-        .then(|| fill::in_tube(held.liquid, level, has_arm))
+        .then(|| fill::in_tube(liquid, level, has_arm))
         .flatten();
     fill::show_in_tube(world, pos, filled);
 }
 
-/// What a fill of `level` with `has_arm` is kept as in `Held::shown`: 0 for none.
+/// The level a tube holding `amount` shows: all of them when full, or when it `pumps`, so a
+/// timber liquid tube's paddle wheel turns in liquid however little stays in it.
+fn level(amount: u32, pumps: bool) -> u32 {
+    if pumps || is_full(amount, CAPACITY) {
+        TUBE_LEVELS
+    } else {
+        fill::level_of(amount, CAPACITY, TUBE_LEVELS)
+    }
+}
+
 /// Bits a fill's level takes in `Held::shown`, below those of its arms.
 const LEVEL_BITS: u32 = TUBE_LEVELS.ilog2() + 1;
 
+/// What a fill of `level` with `has_arm` is kept as in `Held::shown`: 0 for none.
 fn shown_as(level: u32, has_arm: impl Fn(Dir) -> bool) -> u32 {
     if level == 0 {
         return 0;
@@ -117,6 +126,18 @@ fn shown_as(level: u32, has_arm: impl Fn(Dir) -> bool) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_tube_that_pumps_shows_itself_full() {
+        assert_eq!(level(200, false), 2, "a fifth full");
+        assert_eq!(level(200, true), TUBE_LEVELS, "full while it pumps");
+        assert_eq!(
+            level(0, true),
+            TUBE_LEVELS,
+            "though it passed all it pulled on"
+        );
+        assert_eq!(level(CAPACITY, false), TUBE_LEVELS, "full");
+    }
 
     #[test]
     fn a_fill_is_shown_anew_when_its_level_or_arms_change() {

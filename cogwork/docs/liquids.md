@@ -44,7 +44,8 @@ joining the same blocks. Through the windows of its pump body you see its paddle
 Driven by an engine against its body, it pulls liquid out of the tanks it touches, from any level
 of them, and pushes it up the liquid tubes beside it as a pump does, up to 16 blocks. It hands
 nothing back into a tank, and takes no liquid from the tubes it pushes into. Its wheel turns
-while liquid goes through, with a creak and a glug every stroke.
+while liquid goes through, with a creak and a glug every stroke, and while it turns the tube
+shows itself full of what it pumps, however little stays in it.
 
 - **Energy.** 1,000 a bucket, and no more than 100 mB a tick. A spring engine pulls a bucket in
   5 seconds, an ember engine four fifths of one a second. It stores 2,000 and takes up to 200 a

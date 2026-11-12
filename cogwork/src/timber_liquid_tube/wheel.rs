@@ -10,6 +10,7 @@ use weft_sdk::{Dir, EntityKind, Output, Registry, World};
 
 use super::{DRIVE, Drive};
 use crate::lib::Pos;
+use crate::liquid::{LiquidKey, NO_LIQUID};
 
 static WHEEL: EntityKind = EntityKind::named("timber_pump_wheel");
 
@@ -56,11 +57,18 @@ pub fn show(world: &World, id: u64, pos: Pos, drive: &mut Drive, time: u64) {
     if !begins(time) {
         return;
     }
-    if drive.pulled > 0 {
+    drive.pumping = pumping(drive.pulled, drive.liquid);
+    if drive.pumping != NO_LIQUID {
         world.action_play(drive.wheel, TURN, false);
         world.play_sound(&crate::sounds::TIMBER_PUMP, pos.center(), 1.0);
     }
     drive.pulled = 0;
+}
+
+/// The liquid a wheel turns in through a stroke after one that `pulled` millibuckets of
+/// `liquid`: none when it pulled none.
+fn pumping(pulled: u32, liquid: LiquidKey) -> LiquidKey {
+    if pulled > 0 { liquid } else { NO_LIQUID }
 }
 
 /// Whether the axle of a tube with arms toward `has_arm` runs east and west: when the tube goes
@@ -93,6 +101,12 @@ mod tests {
             !axle_along_x(arms(&[Dir::Up, Dir::Down])),
             "upright: along z"
         );
+    }
+
+    #[test]
+    fn a_wheel_turns_in_what_it_pulled_the_stroke_before() {
+        assert_eq!(pumping(10, 7), 7, "after a stroke it pulled in");
+        assert_eq!(pumping(0, 7), NO_LIQUID, "after one it pulled nothing in");
     }
 
     #[test]
