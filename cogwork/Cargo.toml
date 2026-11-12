@@ -1,6 +1,6 @@
 [package]
 name = "cogwork"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 
 [lib]
@@ -14,6 +14,8 @@ base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.4" }
 # Block positions and states, shared with the other mods here.
 weftkit = { path = "../weftkit" }
 strum = { version = "0.28", features = ["derive"] }
+# Reads the Blockbench models hubs with arms are drawn from (`src/arms/`).
+serde_json = "1"
 # XXH3 alone, for ghost keys.
 twox-hash = { version = "2.1", default-features = false, features = ["xxhash3_64"] }
 # Only for the films, which releases leave out.

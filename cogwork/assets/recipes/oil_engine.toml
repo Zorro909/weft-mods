@@ -1,0 +1,28 @@
+# The oil engine's parts: casing from iron, the chamber from ember engines and obsidian, and the
+# controller, intakes and drives from casing.
+
+[[shaped]]
+result = "oil_engine_casing"
+count = 8
+pattern = ["iii", "ici", "iii"]
+key = { i = "#ingots/iron", c = "#cogs/iron" }
+
+[[shaped]]
+result = "combustion_chamber"
+pattern = ["oeo", "gBg", "oeo"]
+key = { o = "base:obsidian", e = "ember_engine", g = "#cogs/gold", B = "base:bucket" }
+
+[[shaped]]
+result = "oil_engine_controller"
+pattern = ["cgc", "rgr", "ccc"]
+key = { c = "oil_engine_casing", g = "base:glass", r = "base:redstone" }
+
+[[shaped]]
+result = "oil_intake"
+pattern = [" t ", "tct", " t "]
+key = { t = "liquid_tube", c = "oil_engine_casing" }
+
+[[shaped]]
+result = "oil_engine_drive"
+pattern = [" P ", "gcg", " P "]
+key = { P = "base:piston", g = "#cogs/gold", c = "oil_engine_casing" }

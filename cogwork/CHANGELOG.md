@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 - 2026-11-12
+
+### Added
+
+- Oil: fields of it deep under the overworld, each with a seep of oil in oil-soaked dirt or sand
+  on the surface above, and the Oil Bucket.
+- Pump: bores down with engine power to a liquid and pumps it up a bucket at a time.
+- Liquid Tube: carries any liquid of any mod between pumps and tanks, and shows how full it is.
+  Liquid runs by itself from where it stands higher to where it stands lower; uphill it needs a
+  pump.
+- Timber Liquid Tube: a liquid tube with a small pump in it. Driven by an engine, it pulls liquid
+  out of the tanks it touches and pushes it up to 16 blocks uphill, its paddle wheel turning in
+  liquid: while it pumps it shows itself full.
+- Oil Engine: a 3 × 3 × 3 cube of casing round a combustion chamber, with a controller at its
+  front and intakes and drives anywhere on its shell but the front and the top. Built, it burns
+  oil with water for 600 energy a tick, about 4 hours on a medium oil field; its casing joins
+  into one worn, riveted panel a face with its intakes and drives on it, and two pistons turn a
+  crankshaft and flywheel on top, each stroke a heavy boom, letting off vapor.
+- Liquid Tank: holds 16 buckets; tanks next to each other make one tank of up to 3 × 3 × 6.
+  Buckets pour into it and fill from it.
 
 ### Changed
 

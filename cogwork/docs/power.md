@@ -1,9 +1,11 @@
 # Power
 
 Engines make energy and push it into the block their trunk points at: a
-[timber tube](tubes.md#timber-extraction-tube), a machine of this mod, or any mod's machine
+[timber tube](tubes.md#timber-extraction-tube), a
+[timber liquid tube](liquids.md#timber-liquid-tube), a machine of this mod, or any mod's machine
 that takes `core:energy`. They also offer it to energy networks, so [torque shafts](#torque-shaft)
-carry it further.
+carry it further. The [oil engine](oil-engine.md), a cube of 27 blocks, burns oil for fifteen
+times an ember engine's energy.
 
 ## Engines
 
@@ -62,7 +64,8 @@ its standby, so an ember engine on either of those stops and starts with its hea
 
 A thin rod that carries energy between engines and machines. It reaches toward every block
 tagged `conductor` (other shafts, other mods' cables) and every block that holds energy. It is
-tagged `conductor`, so the engine's energy networks join it with any mod's cables and machines.
+tagged `conductor`, so the engine's energy networks join it with any mod's cables and machines,
+and with an [oil engine's drives](oil-engine.md#energy-out).
 
 ```
 grg       g = #ingots/gold     r = base:redstone      (makes 8)

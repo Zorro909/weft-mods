@@ -4,6 +4,38 @@ Problems found while working on these mods that need a change outside this repos
 engine, the Weft mod index or the tools around them. Each entry says what breaks, the evidence and
 the smallest fix, so it can be turned into an upstream issue. Newest first.
 
+## `schedule_tick` does nothing unless some mod listens to `BLOCK_TICK`
+
+Found 2026-11-12, while building cogwork's film. Where: Weft v26.11.4, `crates/sdk/src/extend.rs`
+and `crates/engine/src/host.rs`. Status: not yet reported.
+
+**What breaks.** `World::schedule_tick(pos, ticks)` asks for the block's own tick, which the
+engine answers by calling the block's `on_scheduled`. With no mod listening to the `BLOCK_TICK`
+event, the call returns without setting anything, and `on_scheduled` never runs. Base, testkit
+and testmod register no handler for it, so a mod that only uses `on_scheduled` loses every tick
+it schedules. In cogwork that was the liquid tank: tank blocks put side by side never joined
+into one tank.
+
+**Evidence.**
+
+- `crates/sdk/src/extend.rs:1113` `schedule_tick` calls `timer(.., &BLOCK_TICK, ..)`, and
+  `timer` (`:1103`) returns early when `event.id()` is `u32::MAX`.
+- `Event::id` (`:259`) asks the host's `find_event`, and `crates/engine/src/host.rs:1984` answers
+  `u32::MAX` when the event has no handlers: right for `emit`, wrong for a timer whose event
+  the engine itself acts on.
+- The engine does not need a handler: `crates/engine/src/server/dim.rs:1847-1867` calls the
+  block's `on_scheduled` for every due `block_tick` timer, whoever listens.
+- In the game, cogwork alone with base: `/setblock` of two `cogwork:liquid_tank` side by side,
+  then `/tk prop <pos> east` said `false`, and a log line in the tank's `on_scheduled` never
+  printed, for tanks set by command and for tanks placed by hand. With one line added to cogwork,
+  `r.on_event(&BLOCK_TICK, |_| {})`, the same script said `true`.
+
+**Smallest fix.** `schedule_tick` sets the timer without asking whether anyone listens: the SDK
+resolves `BLOCK_TICK` by name alone for timers, or `find_event` answers the id of an engine event
+that the engine acts on itself.
+
+**Here meanwhile.** `cogwork/src/tank/mod.rs` registers an empty `BLOCK_TICK` handler.
+
 ## The mod index moves only the mod's own `weft_sdk` line to a new Weft release
 
 Found 2026-11-08, while adding `weftkit/`. Where: [Weft-Rust/Weft-Mods-Index](https://github.com/Weft-Rust/Weft-Mods-Index), `scripts/patch_sdk.py`. Status: not yet reported.

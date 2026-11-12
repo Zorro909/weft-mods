@@ -10,7 +10,10 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use twox_hash::XxHash3_64;
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, Channel, ClientView, Output, Packet, Registry, S, Ui, Vec3, abi, entry_count, error,
+    item_name, value,
+};
 
 use crate::lib::point;
 
@@ -31,6 +34,11 @@ pub fn key_of(item: u32) -> ItemKey {
         return NO_ITEM;
     }
     hash(item_name(item))
+}
+
+/// The key of the item named `name` (`cogwork:oil`), whether or not it is loaded.
+pub fn key_of_name(name: &str) -> ItemKey {
+    hash(name)
 }
 
 /// The item `key` stands for, 0 for none or for one no loaded mod has.
