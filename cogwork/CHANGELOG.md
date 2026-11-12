@@ -14,7 +14,8 @@
 - Oil Engine: a 3 × 3 × 3 cube of casing round a combustion chamber, with a controller at its
   front and intakes and drives anywhere on its shell but the front and the top. Built, it burns
   oil with water for 600 energy a tick, about 4 hours on a medium oil field; its casing joins
-  into a framed panel a face, and two pistons and a flywheel turn on top.
+  into one worn, riveted panel a face with its intakes and drives on it, and two pistons turn a
+  crankshaft and flywheel on top, letting off vapor.
 - Liquid Tank: holds 16 buckets; tanks next to each other make one tank of up to 3 × 3 × 6.
   Buckets pour into it and fill from it.
 

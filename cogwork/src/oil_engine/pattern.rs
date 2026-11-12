@@ -77,6 +77,14 @@ pub struct Layout {
     pub drives: Vec<Pos>,
 }
 
+impl Layout {
+    /// Every block of its shell that shows the engine formed: casing, intakes and drives.
+    pub fn shell(&self) -> Vec<Pos> {
+        let parts = [&self.casings, &self.intakes, &self.drives];
+        parts.into_iter().flatten().copied().collect()
+    }
+}
+
 /// What keeps an engine from being built; its screen says `cogwork.oil_engine.<name>`. Kept in
 /// `OilEngine::fault` as its number, so the order is part of the save format: new ones go last.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr, IntoStaticStr, VariantArray)]

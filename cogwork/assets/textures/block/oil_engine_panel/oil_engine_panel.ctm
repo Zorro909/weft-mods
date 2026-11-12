@@ -1,2 +1,8 @@
+[the sides: a skirt at the bottom]
 method = compact
 tiles = 0-4
+faces = sides
+
+[the top and bottom: the beam all round]
+method = compact
+tiles = 5-9

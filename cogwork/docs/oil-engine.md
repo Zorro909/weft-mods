@@ -15,7 +15,8 @@ it fed is the hard part, since an oil field runs dry.
 | Oil Engine Casing | Every other block |
 
 The controller checks the cube behind it every tick. Built, the casing joins into one framed
-panel on each face, and a rig of two cylinders, a crankshaft and a flywheel stands on top. Take
+panel of riveted plates on each face, the intakes and drives set into it, and a rig of two
+cylinders, a crankshaft and a flywheel stands on top. Take
 away a block and it stops at once, its casing plain again. Its screen says what is wrong and at
 which block while it is not built. Two engines may share a wall of casing.
 
@@ -23,7 +24,8 @@ which block while it is not built. Two engines may share a wall of casing.
 
 It runs while it is built and has oil, water and room for the energy it makes. Without one of
 them it waits, so no oil burns for nothing. It never overheats. While it runs, its lamp is lit,
-its pistons go up and down with a deep knock each turn, and vapor rises from its chimney.
+its pistons turn the crankshaft with a deep knock each turn, and vapor puffs from its chimney.
+One whose energy is hardly used runs only now and then, but its rig keeps turning.
 
 | | |
 |---|---|

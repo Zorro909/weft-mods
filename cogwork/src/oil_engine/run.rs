@@ -1,8 +1,8 @@
 //! Every oil engine's tick, at its controller: check the cube behind it, take in what its
 //! intakes hold, run, hand the energy to its drives and push it out of them, then show it: the
-//! casing formed or not, the gauges and lamp, the rig.
+//! shell formed or not, the gauges and lamp, the rig.
 //!
-//! A built engine shows its casing formed every tick, so where two engines share a wall and one
+//! A built engine shows its shell formed every tick, so where two engines share a wall and one
 //! is taken apart, the other shows it formed again. One not built shows its whole cube plain once:
 //! when it stops being built, and on the first tick of a new controller, in case the one before
 //! went without being broken (an explosion, a command) and left its casing formed.
@@ -10,7 +10,7 @@
 use weft_sdk::{ENERGY, SystemBatch, World};
 
 use super::fuel::{Lack, oil, water};
-use super::parts::{DRIVE_HOLDS, part_at, show_casing, show_controller};
+use super::parts::{DRIVE_HOLDS, part_at, show_controller, show_formed};
 use super::pattern::{self, Cube, Layout};
 use super::{OIL_ENGINE_CONTROLLER, OilEngine, Status, rig};
 use crate::lib::{BlockState, Pos, TypedWorld};
@@ -36,7 +36,7 @@ pub fn tick(batch: &mut SystemBatch<OilEngine>) {
                 take_in(&world, engine, &layout);
                 let running = run(engine, ticks);
                 give_out(&world, engine, cube, &layout);
-                form(&world, &layout.casings, true);
+                form(&world, &layout.shell(), true);
                 running
             }
             Err(problem) => {
@@ -130,17 +130,17 @@ fn show(
     }
 }
 
-/// Shows each of `casings` formed, or not.
-fn form(world: &World, casings: &[Pos], formed: bool) {
-    for &casing in casings {
-        show_casing(world, casing, formed);
+/// Shows each part at `shell` formed, or not.
+fn form(world: &World, shell: &[Pos], formed: bool) {
+    for &part in shell {
+        show_formed(world, part, formed);
     }
 }
 
-/// Shows every casing of `cube` as it is when the engine is not built.
+/// Shows every part of `cube` as it is when the engine is not built.
 fn unform(world: &World, cube: Cube) {
-    let casings: Vec<Pos> = cube.area().blocks().collect();
-    form(world, &casings, false);
+    let parts: Vec<Pos> = cube.area().blocks().collect();
+    form(world, &parts, false);
 }
 
 /// The controller at `pos` was broken, its block `state` before: its engine's casing shows it

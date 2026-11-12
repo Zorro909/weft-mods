@@ -1,6 +1,7 @@
 //! The blocks an oil engine is built of besides its controller: casing, the combustion chamber,
 //! intakes and drives. Casing shows one framed panel a face once the engine is built: its
-//! `formed` texture connects across the face (`oil_engine_panel/oil_engine_panel.ctm`). An
+//! `formed` texture connects across the face (`oil_engine_panel/oil_engine_panel.ctm`), and a
+//! formed intake or drive is that panel with its port drawn on top, so the face stays one. An
 //! intake is a holder of liquid that takes only oil and water (`liquid::Kind::Intake`); a drive
 //! holds a little energy the controller fills, for the block it faces and torque shafts.
 
@@ -25,33 +26,26 @@ pub const INTAKE_CAPACITY: u32 = 1000;
 pub const DRIVE_HOLDS: i64 = 1000;
 
 pub fn register(r: &mut Registry) {
-    part(r.block(&OIL_ENGINE_CASING))
-        .prop("formed", ["false", "true"])
-        .states(|props, state| {
-            let texture = if props.is("formed", "true") {
-                "oil_engine_panel"
-            } else {
-                "oil_engine_casing"
-            };
-            state.texture(texture)
-        });
+    formable(r.block(&OIL_ENGINE_CASING), "oil_engine_casing", None);
     part(r.block(&COMBUSTION_CHAMBER)).texture("combustion_chamber");
-    part(r.block(&OIL_INTAKE))
-        .texture("oil_intake")
+    formable(r.block(&OIL_INTAKE), "oil_intake", Some("oil_intake_port"))
         .on_use(use_intake)
         .entity(|entity| entity.attach(&HELD));
-    part(r.block(&OIL_ENGINE_DRIVE))
-        .texture("oil_engine_drive")
-        .entity(|entity| {
-            entity.attach_with(
-                &ENERGY,
-                Energy {
-                    capacity: DRIVE_HOLDS,
-                    max_out: DRIVE_HOLDS,
-                    ..Energy::default()
-                },
-            )
-        });
+    formable(
+        r.block(&OIL_ENGINE_DRIVE),
+        "oil_engine_drive",
+        Some("oil_engine_drive_port"),
+    )
+    .entity(|entity| {
+        entity.attach_with(
+            &ENERGY,
+            Energy {
+                capacity: DRIVE_HOLDS,
+                max_out: DRIVE_HOLDS,
+                ..Energy::default()
+            },
+        )
+    });
 }
 
 /// What every part shares: as hard as iron, mined with a pickaxe.
@@ -61,6 +55,26 @@ fn part(builder: BlockBuilder<'_>) -> BlockBuilder<'_> {
         .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.stone")
         .tab(&crate::TAB)
+}
+
+/// A part on the engine's shell: `plain` until the engine is built, then `formed`, the panel
+/// with its `port` on top if it has one.
+fn formable<'r>(
+    builder: BlockBuilder<'r>,
+    plain: &'static str,
+    port: Option<&'static str>,
+) -> BlockBuilder<'r> {
+    let builder = part(builder).prop("formed", ["false", "true"]);
+    builder.states(move |props, state| {
+        if !props.is("formed", "true") {
+            return state.texture(plain);
+        }
+        let panel = state.texture("oil_engine_panel");
+        match port {
+            Some(port) => panel.layer(port),
+            None => panel,
+        }
+    })
 }
 
 /// The controller's look: its gauges at their steps and its lamp lit while it runs. Its front
@@ -111,11 +125,14 @@ pub fn show_controller(world: &World, pos: Pos, oil: u32, water: u32, working: b
     }
 }
 
-/// Shows the casing at `pos` formed or not, when it is casing.
-pub fn show_casing(world: &World, pos: Pos, formed: bool) {
+/// Shows the part at `pos` formed or not, when it is casing, an intake or a drive.
+pub fn show_formed(world: &World, pos: Pos, formed: bool) {
     let value = formed.to_string();
-    let casing = world.block_typed(pos).is(&OIL_ENGINE_CASING);
-    if casing && world.prop(pos, "formed").is_some_and(|now| now != value) {
+    let formable = matches!(
+        part_at(world, pos),
+        Some(Part::Casing | Part::Intake | Part::Drive)
+    );
+    if formable && world.prop(pos, "formed").is_some_and(|now| now != value) {
         world.prop_set(pos, "formed", &value);
     }
 }
@@ -138,7 +155,9 @@ mod tests {
             "oil_engine_casing",
             "combustion_chamber",
             "oil_intake",
+            "oil_intake_port",
             "oil_engine_drive",
+            "oil_engine_drive_port",
             "oil_engine_lamp",
             "oil_engine_lamp_on",
             "oil_engine_controller_front",

@@ -1,8 +1,8 @@
-//! Pictures of the oil engine: its parts in pale riveted iron, copper and dark steel, the tiles
-//! its formed casing joins into one framed panel a face with (`compact` connected textures:
-//! alone, joined all round, joined above and below, joined left and right, an inner corner),
-//! the gauges and lamp on its controller, and its rig (`rig`).
+//! Pictures of the oil engine: its parts in pale riveted iron, copper and dark steel, the ports
+//! drawn on its formed panel, the gauges and lamp on its controller, the panel itself (`panel`)
+//! and its rig (`rig`).
 
+mod panel;
 mod rig;
 
 use super::{BRASS, CLEAR, COPPER, IRON, OIL, Picture, Rgba, STEEL};
@@ -35,25 +35,20 @@ const GAUGE_FILL: [usize; 5] = [0, 2, 4, 5, 7];
 /// The lamp's top left texel on the controller's front.
 const LAMP_AT: (usize, usize) = (7, 2);
 
-/// Texels wide a formed panel's frame is: a dark line and two of copper.
-const FRAME: usize = 3;
-
 pub fn all() -> Vec<(&'static str, Picture)> {
     let mut all = vec![
         ("block/oil_engine_casing", casing()),
         ("block/combustion_chamber", chamber()),
-        ("block/oil_intake", intake()),
-        ("block/oil_engine_drive", drive()),
+        ("block/oil_intake", on_casing(intake_port())),
+        ("block/oil_intake_port", intake_port()),
+        ("block/oil_engine_drive", on_casing(drive_port())),
+        ("block/oil_engine_drive_port", drive_port()),
         ("block/oil_engine_controller_front", controller_front()),
         ("block/oil_engine_lamp", lamp(LAMP_OUT)),
         ("block/oil_engine_lamp_on", lamp(LAMP_LIT)),
-        ("block/oil_engine_panel/0", panel(Edges::ALL, false)),
-        ("block/oil_engine_panel/1", panel(Edges::NONE, false)),
-        ("block/oil_engine_panel/2", panel(Edges::SIDES, false)),
-        ("block/oil_engine_panel/3", panel(Edges::ENDS, false)),
-        ("block/oil_engine_panel/4", panel(Edges::NONE, true)),
         ("entity/oil_engine_rig", rig::picture()),
     ];
+    all.extend(panel::tiles());
     let gauges = [
         "block/oil_engine_gauge_oil_0",
         "block/oil_engine_gauge_oil_1",
@@ -75,11 +70,6 @@ pub fn all() -> Vec<(&'static str, Picture)> {
         all.push((name, gauge(at, GAUGE_FILL[index % 5], liquid)));
     }
     all
-}
-
-/// The pale iron surface every plate of the engine starts from.
-fn plate(salt: u32) -> Picture {
-    Picture::surface(&PLATE, salt)
 }
 
 /// A plate's edge: lit on its top and left, shaded on its bottom and right.
@@ -107,9 +97,13 @@ fn corner_rivets(picture: &mut Picture, inset: usize, head: Rgba, shadow: Rgba) 
 
 /// Casing, not yet part of a built engine: a riveted plate.
 fn casing() -> Picture {
-    let mut picture = plate(83);
-    bevel(&mut picture, IRON[3], IRON[1]);
-    corner_rivets(&mut picture, 2, IRON[3], IRON[0]);
+    panel::plate()
+}
+
+/// A port drawn on casing: an intake or drive before its engine is built.
+fn on_casing(port: Picture) -> Picture {
+    let mut picture = casing();
+    picture.overlay(&port, (0, 0));
     picture
 }
 
@@ -125,9 +119,10 @@ fn chamber() -> Picture {
     picture
 }
 
-/// An intake: a copper flange round a dark mouth that liquid tubes join.
-fn intake() -> Picture {
-    let mut picture = casing();
+/// An intake: a copper flange round a dark mouth that liquid tubes join. Clear round it, to go
+/// on casing or on the formed panel.
+fn intake_port() -> Picture {
+    let mut picture = Picture::filled(CLEAR);
     picture.each(|x, y, color| {
         let (dx, dy) = (x as f32 - 7.5, y as f32 - 7.5);
         let distance = (dx * dx + dy * dy).sqrt();
@@ -147,10 +142,10 @@ fn intake() -> Picture {
     picture
 }
 
-/// A drive: a brass coupling bolted to the plate, round the dark socket a torque shaft goes
-/// into, as the shaft's own brass.
-fn drive() -> Picture {
-    let mut picture = casing();
+/// A drive: a brass coupling, the shaft's own brass, round the dark socket a torque shaft goes
+/// into. Clear round it, as an intake.
+fn drive_port() -> Picture {
+    let mut picture = Picture::filled(CLEAR);
     picture.each(|x, y, color| {
         let (dx, dy) = (x as f32 - 7.5, y as f32 - 7.5);
         let distance = dx.abs().max(dy.abs());
@@ -216,68 +211,6 @@ fn lamp([face, glint]: [Rgba; 2]) -> Picture {
     picture
 }
 
-/// Which edges of a panel tile carry the frame.
-#[derive(Clone, Copy)]
-struct Edges {
-    left_right: bool,
-    top_bottom: bool,
-}
-
-impl Edges {
-    const ALL: Edges = Edges {
-        left_right: true,
-        top_bottom: true,
-    };
-    const NONE: Edges = Edges {
-        left_right: false,
-        top_bottom: false,
-    };
-    /// Joined above and below: the frame on its left and right.
-    const SIDES: Edges = Edges {
-        left_right: true,
-        top_bottom: false,
-    };
-    /// Joined left and right: the frame on its top and bottom.
-    const ENDS: Edges = Edges {
-        left_right: false,
-        top_bottom: true,
-    };
-}
-
-/// A tile of a formed panel: the plate, with the frame along `edges`, and with `corners` the
-/// frame's corner only, where two joined sides meet round an unjoined one.
-fn panel(edges: Edges, corners: bool) -> Picture {
-    let mut picture = plate(101);
-    picture.each(|x, y, color| {
-        let across = |at: usize| at.min(15 - at);
-        let (from_side, from_end) = (across(x), across(y));
-        let on_side = edges.left_right && from_side < FRAME;
-        let on_end = edges.top_bottom && from_end < FRAME;
-        let in_corner = corners && from_side < FRAME && from_end < FRAME;
-        if !(on_side || on_end || in_corner) {
-            return color;
-        }
-        // An inner corner is the corner of a frame round a block beside: its line touches that
-        // block at one point only.
-        let depth = match (on_side, on_end) {
-            (true, true) => from_side.min(from_end),
-            (true, false) => from_side,
-            (false, true) => from_end,
-            (false, false) => from_side.max(from_end),
-        };
-        let lit = x + y < 15;
-        match depth {
-            0 => STEEL[1],
-            _ if lit => COPPER[3],
-            _ => COPPER[2],
-        }
-    });
-    if edges.left_right && edges.top_bottom {
-        corner_rivets(&mut picture, 1, BRASS[3], BRASS[0]);
-    }
-    picture
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -293,22 +226,5 @@ mod tests {
         let (x, y) = LAMP_AT;
         let lamp = format!("\"uv\": [{x}, {y}, {}, {}]", x + 2, y + 2);
         assert!(model.contains(&lamp), "the lamp's face {lamp}");
-    }
-
-    #[test]
-    fn a_panel_tile_alone_is_framed_all_round() {
-        let alone = panel(Edges::ALL, false);
-        let joined = panel(Edges::NONE, false);
-        assert_eq!(alone.get(7, 0), STEEL[1], "its frame's line at the top");
-        assert_eq!(alone.get(0, 7), STEEL[1], "and at the left");
-        assert_ne!(joined.get(7, 0), STEEL[1], "joined all round, no frame");
-        let corner = panel(Edges::NONE, true);
-        assert_eq!(
-            corner.get(0, 0),
-            STEEL[1],
-            "an inner corner's line touches its corner"
-        );
-        assert_eq!(corner.get(2, 0), COPPER[3], "and goes no further");
-        assert_ne!(corner.get(7, 0), STEEL[1], "no edge");
     }
 }

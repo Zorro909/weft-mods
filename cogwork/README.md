@@ -118,7 +118,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `engines/` | Spring and ember engines: their block, tick, heat and piston |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
 | `oil/` | Oil, the oil-soaked ground of a seep, and where fields lie (`oil/fields.rs`) |
-| `oil_engine/` | The oil engine: its parts (`parts.rs`), whether they make the engine (`pattern.rs`), what it burns and makes (`fuel.rs`), its tick (`run.rs`) and its rig (`rig.rs`) |
+| `oil_engine/` | The oil engine: its parts (`parts.rs`), whether they make the engine (`pattern.rs`), what it burns and makes (`fuel.rs`), its tick (`run.rs`), its rig (`rig.rs`) and how the rig's crank moves its rods (`stroke.rs`, which writes the rig's clip) |
 | `pump/` | The pump: its block and screen, boring and pumping (`work.rs`), finding the next source (`drain.rs`) |
 | `liquid/` | What holds liquid (`Held`); how it flows by height and pressure (`flow.rs`), the holders (`vessel.rs`) and their turns, which sleep once settled (`turn.rs`); buckets on them |
 | `timber_liquid_tube/` | The timber liquid tube: its pull out of tanks (`pull.rs`) and its paddle wheel (`wheel.rs`) |
@@ -144,7 +144,9 @@ excavator's rig, the engines' pistons, the timber liquid tube's wheel, the oil e
 "Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
 are "Java Block/Item" models in `block/`: the survey marker, the engine, the pump and its hose,
 the oil engine's controller. A formed oil engine's casing joins into one panel a face by
-connected textures, `textures/block/oil_engine_panel/`.
+connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
+skirt at the bottom, and one for its top and bottom. Its intakes and drives show that panel with
+their port drawn on top as a layer, so the face stays one.
 
 Blocks with a shape for every set of neighbours are put together in code when the mod loads,
 since the mod index packs `assets/` as it is in the repository and runs nothing to make more
