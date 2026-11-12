@@ -11,6 +11,8 @@ mod parts;
 pub mod pattern;
 mod rig;
 mod run;
+#[cfg(test)]
+mod stroke;
 
 pub use parts::{INTAKE_CAPACITY, OIL_INTAKE};
 use pattern::{Fault, Problem};
@@ -30,8 +32,9 @@ value! {
     /// An oil engine, kept by its controller: its rig (an entity), the energy it holds, its oil
     /// and water in millibuckets, `carry` (half millibuckets of oil taken in and not yet burnt),
     /// its status, `stroke` (anything but 0 while its rig makes a stroke), while it is not
-    /// built its fault and the block where (`fault_x`, `fault_y`, `fault_z`), and `checked`, 1
-    /// once its first tick has shown its casing as it is (`run`).
+    /// built its fault and the block where (`fault_x`, `fault_y`, `fault_z`), `checked`, 1
+    /// once its first tick has shown its casing as it is (`run`), and `ran`, 1 once it has run
+    /// since its rig's last stroke began.
     #[derive(Default)]
     pub struct OilEngine {
         pub rig: u64,
@@ -46,6 +49,7 @@ value! {
         pub fault_y: i32,
         pub fault_z: i32,
         pub checked: u32,
+        pub ran: u32,
     }
 }
 static OIL_ENGINE: Component<OilEngine> = Component::named("cogwork:oil_engine");
@@ -243,6 +247,11 @@ mod tests {
         assert_eq!(offset_of!(OilEngine, oil), 16, "then its liquids");
         assert_eq!(offset_of!(OilEngine, status), 28, "after the carry");
         assert_eq!(offset_of!(OilEngine, fault_x), 40, "the fault's place");
-        assert_eq!(offset_of!(OilEngine, checked), 52, "whether checked last");
+        assert_eq!(offset_of!(OilEngine, checked), 52, "whether checked");
+        assert_eq!(
+            offset_of!(OilEngine, ran),
+            56,
+            "whether it ran this stroke, last"
+        );
     }
 }

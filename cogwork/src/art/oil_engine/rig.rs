@@ -1,5 +1,6 @@
-//! The oil engine's rig's picture: dark steel frame and chimney, iron cylinders banded with
-//! copper, bright rods, a copper crank, and a flywheel whose spokes show it turning.
+//! The oil engine's rig's picture: dark steel frame, chimney and crankshaft, iron cylinders banded
+//! with copper, bright piston rods, brass connecting rods on copper crank webs, and a flywheel
+//! whose spokes show it turning.
 
 use super::PLATE;
 use crate::art::{BRASS, CLEAR, COPPER, IRON, Picture, Rgba, STEEL, Unwrap, noise};
@@ -11,11 +12,17 @@ const CYLINDER: Unwrap = box_at(0, 13, (8, 7, 8));
 const POST: Unwrap = box_at(32, 13, (3, 18, 4));
 const CHIMNEY: Unwrap = box_at(46, 13, (4, 16, 4));
 const CHIMNEY_CAP: Unwrap = box_at(62, 13, (6, 2, 6));
-const PISTON_ROD: Unwrap = box_at(86, 13, (2, 8, 2));
+const PISTON_ROD: Unwrap = box_at(86, 13, (2, 6, 2));
 const CROSSHEAD: Unwrap = box_at(94, 13, (4, 2, 4));
 const CONNECTING_ROD: Unwrap = box_at(110, 13, (2, 5, 2));
-const CRANKSHAFT: Unwrap = box_at(0, 37, (32, 2, 2));
-const CRANK_WEB: Unwrap = box_at(68, 37, (4, 4, 2));
+/// A rod's big end, round its crank pin.
+const BIG_END: Unwrap = box_at(86, 23, (4, 2, 2));
+/// The crankshaft: its end through the left post, and the lengths between the webs and to
+/// the flywheel.
+const SHAFT_END: Unwrap = box_at(0, 37, (6, 2, 2));
+const SHAFT: Unwrap = box_at(16, 37, (8, 2, 2));
+/// A crank web, one either side of each pin.
+const CRANK_WEB: Unwrap = box_at(68, 37, (1, 4, 2));
 const FLYWHEEL_HUB: Unwrap = box_at(52, 45, (4, 2, 2));
 /// The flywheel: side by side, the boxes that make its stepped round, each with the height and
 /// across-place of its bottom corner in the model's texels (the axle at 18 and 0).
@@ -32,7 +39,7 @@ const FLYWHEEL: [(Unwrap, i32, i32); 7] = [
 const AXLE: (f32, f32) = (18.0, 0.0);
 const RIM: f32 = 4.6;
 /// Every box of the rig but the flywheel's, to check against its model.
-const RIG_BOXES: [Unwrap; 11] = [
+const RIG_BOXES: [Unwrap; 13] = [
     PLINTH,
     CYLINDER,
     POST,
@@ -41,7 +48,9 @@ const RIG_BOXES: [Unwrap; 11] = [
     PISTON_ROD,
     CROSSHEAD,
     CONNECTING_ROD,
-    CRANKSHAFT,
+    BIG_END,
+    SHAFT_END,
+    SHAFT,
     CRANK_WEB,
     FLYWHEEL_HUB,
 ];
@@ -80,11 +89,18 @@ pub fn picture() -> Picture {
     PISTON_ROD.paint(&mut picture, |_, _| IRON[3]);
     CROSSHEAD.paint(&mut picture, |_, _| COPPER[3]);
     CROSSHEAD.paint_caps(&mut picture, edged(COPPER[4], COPPER[2]));
-    CONNECTING_ROD.paint(&mut picture, |_, _| IRON[2]);
-    CRANKSHAFT.paint(
-        &mut picture,
-        |x, _| if x % 4 == 0 { IRON[1] } else { IRON[2] },
-    );
+    CONNECTING_ROD.paint(&mut picture, |_, _| BRASS[2]);
+    let shaft = |x: usize, _| {
+        if x.is_multiple_of(4) {
+            STEEL[2]
+        } else {
+            STEEL[4]
+        }
+    };
+    SHAFT_END.paint(&mut picture, shaft);
+    SHAFT.paint(&mut picture, shaft);
+    BIG_END.paint(&mut picture, |_, _| BRASS[1]);
+    BIG_END.paint_ends(&mut picture, edged(BRASS[3], BRASS[0]));
     CRANK_WEB.paint(&mut picture, |_, _| COPPER[2]);
     CRANK_WEB.paint_ends(&mut picture, edged(COPPER[3], COPPER[1]));
     flywheel(&mut picture);

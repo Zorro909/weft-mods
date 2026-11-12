@@ -21,8 +21,10 @@ const TURN: &str = "turn";
 pub const STROKE_TICKS: u32 = 36;
 /// Blocks from the middle of the engine's cube up to its top, where the rig stands.
 const TOP_ABOVE_MIDDLE: f64 = 1.5;
-/// Ticks between puffs of vapor while it runs.
-const PUFF_EVERY: u64 = 4;
+/// Ticks between the wisps of vapor it lets off while it runs, and between the puffs it gives
+/// at each beat, as a piston comes up: two a stroke.
+const WISP_EVERY: u64 = 4;
+const BEAT_EVERY: u64 = STROKE_TICKS as u64 / 2;
 /// The top of the chimney in the model, in texels from the middle of its feet: to its right (left
 /// for less than none), up, and toward its front.
 const CHIMNEY_TOP: (f64, f64, f64) = (-18.0, 17.0, 8.0);
@@ -35,21 +37,19 @@ pub fn register(r: &mut Registry) {
         .size(0.25, 0.25);
     r.set_model(&RIG, MODEL);
     r.particle(&VAPOR)
+        // Small to big: it billows as it rises and thins out.
         .textures(&[
-            "core:generic_7",
-            "core:generic_6",
-            "core:generic_5",
-            "core:generic_4",
             "core:generic_3",
-            "core:generic_2",
-            "core:generic_1",
-            "core:generic_0",
+            "core:generic_4",
+            "core:generic_5",
+            "core:generic_6",
+            "core:generic_7",
         ])
-        .life(1.5, 2.5)
-        .size(0.25, 0.45)
-        .gravity(-1.0)
-        .drag(0.92)
-        .color(0xF4F4F4E0, 0xFFFFFF00)
+        .life(2.0, 3.0)
+        .size(0.4, 0.6)
+        .gravity(-0.4)
+        .drag(0.9)
+        .color(0xE8E8E8C0, 0xFFFFFF00)
         .translucent();
 }
 
@@ -65,9 +65,20 @@ fn begins(time: u64) -> bool {
 }
 
 /// Whether the rig makes a stroke at `time`, having made one the tick before or not (`was`): a
-/// stroke begins with every shared one while the engine runs, and one begun goes on to its end.
-pub fn stroking(was: bool, running: bool, time: u64) -> bool {
-    if begins(time) { running } else { was }
+/// stroke begins with every shared one when the engine has run since the last began (`ran`),
+/// so one that runs only now and then, its energy hardly used, keeps turning; and one begun goes
+/// on to its end.
+pub fn stroking(was: bool, ran: bool, time: u64) -> bool {
+    if begins(time) { ran } else { was }
+}
+
+impl OilEngine {
+    /// Keeps its rig's stroke at `time`, the engine running this tick or not.
+    pub fn keep_stroke(&mut self, running: bool, time: u64) {
+        let ran = self.ran != 0 || running;
+        self.stroke = stroking(self.is_stroking(), ran, time) as u32;
+        self.ran = (ran && !begins(time)) as u32;
+    }
 }
 
 /// Keeps the rig of the engine `id`, built as `cube`, on its top facing its front, starts its
@@ -82,10 +93,23 @@ pub fn show(world: &World, id: u64, cube: Cube, engine: &mut OilEngine, time: u6
         world.action_play(engine.rig, TURN, false);
         world.play_sound(&crate::sounds::OIL_ENGINE_STROKE, top, 1.0);
     }
-    if time.is_multiple_of(PUFF_EVERY) {
-        let chimney = turned(top, cube.front, CHIMNEY_TOP);
-        drop(world.spawn_particles(&VAPOR, chimney).count(2).spread(0.08));
+    let chimney = turned(top, cube.front, CHIMNEY_TOP);
+    if time.is_multiple_of(BEAT_EVERY) {
+        vapor(world, chimney, 3, 1.4);
+    } else if time.is_multiple_of(WISP_EVERY) {
+        vapor(world, chimney, 1, 0.6);
     }
+}
+
+/// `count` puffs of vapor out of the chimney's top at `chimney`, rising `speed` blocks a second.
+fn vapor(world: &World, chimney: Vec3, count: u32, speed: f64) {
+    let burst = world.spawn_particles(&VAPOR, chimney).count(count);
+    drop(
+        burst
+            .spread(0.08)
+            .velocity(Vec3::new(0.0, speed, 0.0))
+            .speed(0.3),
+    );
 }
 
 /// Takes the rig of the engine `id` away: it is no longer built.
@@ -140,12 +164,26 @@ mod tests {
 
     #[test]
     fn a_stroke_goes_on_to_its_end() {
-        assert!(stroking(false, true, 0), "begins while running");
+        assert!(stroking(false, true, 0), "begins when it ran");
+        assert!(!stroking(false, false, 0), "not when it did not");
         assert!(stroking(true, false, 5), "goes on when it stops");
         assert!(
             !stroking(true, false, STROKE_TICKS as u64),
             "and rests at the next"
         );
+    }
+
+    #[test]
+    fn an_engine_running_now_and_then_keeps_turning() {
+        let mut engine = OilEngine::default();
+        let stroke = STROKE_TICKS as u64;
+        for time in 1..3 * stroke {
+            // Its energy hardly used: it runs one tick in nine, never as a stroke begins.
+            engine.keep_stroke(time % 9 == 4, time);
+            if time >= stroke {
+                assert!(engine.is_stroking(), "turning at {time}");
+            }
+        }
     }
 
     #[test]

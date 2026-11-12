@@ -13,12 +13,6 @@ const PLATE: [Rgba; 3] = [
     [0x86, 0x88, 0x8c, 255],
     [0x98, 0x9a, 0x9e, 255],
 ];
-/// A drive's blue, as a cool engine trunk's, dark to light.
-const BLUE: [Rgba; 3] = [
-    [0x24, 0x4c, 0x8c, 255],
-    [0x34, 0x6c, 0xc0, 255],
-    [0x5c, 0x98, 0xe4, 255],
-];
 /// Water in a gauge, dark to its surface.
 const WATER: [Rgba; 3] = [
     [0x2c, 0x5c, 0xb4, 255],
@@ -153,18 +147,27 @@ fn intake() -> Picture {
     picture
 }
 
-/// A drive: dark steel with a blue-rimmed socket for a shaft.
+/// A drive: a brass coupling bolted to the plate, round the dark socket a torque shaft goes
+/// into, as the shaft's own brass.
 fn drive() -> Picture {
-    let mut picture = Picture::surface(&STEEL[2..4], 97);
-    bevel(&mut picture, STEEL[4], STEEL[0]);
-    picture.rect((3, 3), (13, 13), BLUE[1]);
-    picture.rect((3, 3), (13, 4), BLUE[2]);
-    picture.rect((3, 3), (4, 13), BLUE[2]);
-    picture.rect((5, 5), (11, 11), STEEL[3]);
-    picture.rect((6, 6), (10, 10), STEEL[0]);
-    picture.rect((12, 4), (13, 13), BLUE[0]);
-    picture.rect((4, 12), (13, 13), BLUE[0]);
-    corner_rivets(&mut picture, 1, BRASS[3], BRASS[0]);
+    let mut picture = casing();
+    picture.each(|x, y, color| {
+        let (dx, dy) = (x as f32 - 7.5, y as f32 - 7.5);
+        let distance = dx.abs().max(dy.abs());
+        let lit = dx + dy < 0.0;
+        match distance {
+            d if d < 1.0 => STEEL[0],
+            d if d < 2.0 => STEEL[1],
+            d if d < 3.0 => STEEL[3],
+            d if d < 5.0 && lit => BRASS[3],
+            d if d < 5.0 => BRASS[1],
+            d if d < 6.0 => BRASS[0],
+            _ => color,
+        }
+    });
+    for at in [(3, 3), (11, 3), (3, 11), (11, 11)] {
+        rivet(&mut picture, at, BRASS[4], BRASS[0]);
+    }
     picture
 }
 

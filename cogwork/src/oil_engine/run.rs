@@ -121,7 +121,7 @@ fn show(
     time: u64,
 ) {
     show_controller(world, pos, engine.oil, engine.water, running);
-    engine.stroke = rig::stroking(engine.is_stroking(), running, time) as u32;
+    engine.keep_stroke(running, time);
     if engine.status().is_built() {
         rig::show(world, id, cube, engine, time);
     } else {
