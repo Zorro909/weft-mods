@@ -6,7 +6,7 @@
 //!
 //! Its axle runs across the tube, so the windows facing the axle show the wheel's face.
 
-use weft_sdk::{Dir, EntityKind, Registry, World};
+use weft_sdk::{Dir, EntityKind, Output, Registry, World};
 
 use super::{DRIVE, Drive};
 use crate::lib::Pos;

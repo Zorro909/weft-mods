@@ -11,8 +11,8 @@ use std::sync::OnceLock;
 
 use twox_hash::XxHash3_64;
 use weft_sdk::{
-    Arg, Channel, ClientView, Packet, Registry, S, Ui, Vec3, abi, entry_count, error, item_name,
-    value,
+    Arg, Channel, ClientView, Output, Packet, Registry, S, Ui, Vec3, abi, entry_count, error,
+    item_name, value,
 };
 
 use crate::lib::point;

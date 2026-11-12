@@ -3,7 +3,7 @@
 //! pumping, it lowers its hose after the liquid as the pool sinks, but bores no more: a pool
 //! pumped dry leaves it dry.
 
-use weft_sdk::{Dir, SystemBatch, World};
+use weft_sdk::{Dir, Output, SystemBatch, World};
 
 use super::drain::survey;
 use super::{CAPACITY, PUMP, PUMP_HOSE, Pump, Stage, Status};
