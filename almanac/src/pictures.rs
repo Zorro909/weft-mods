@@ -32,6 +32,9 @@ const TILES: [(&str, [u32; 4]); 4] = [
     ),
 ];
 
+/// What fills a tile under the cursor, in place of its last ring.
+const LIT: u32 = 0x3d3d3d;
+
 /// The mod's icon, a book: `.` clear, `d` its dark edge, `b` and `l` its cover, `g` and `o` the
 /// gold plate on it, `p` and `s` its pages, `r` its ribbon.
 const ICON: [&str; 16] = [
@@ -134,11 +137,16 @@ impl Picture {
 /// Every picture with the file it is kept in.
 fn pictures() -> Vec<(PathBuf, Picture)> {
     let folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/textures/gui");
-    let tiles = TILES
-        .iter()
-        .map(|(name, rings)| (*name, Picture::tile(*rings)));
+    let tiles = TILES.iter().flat_map(|(name, rings)| {
+        let lit = [rings[0], rings[1], rings[2], LIT];
+        [
+            (name.to_string(), Picture::tile(*rings)),
+            (format!("{name}_hover"), Picture::tile(lit)),
+        ]
+    });
+    let rest = [("almanac_mark", Picture::mark()), ("icon", Picture::icon())];
     tiles
-        .chain([("almanac_mark", Picture::mark()), ("icon", Picture::icon())])
+        .chain(rest.map(|(name, picture)| (name.to_string(), picture)))
         .map(|(name, picture)| (folder.join(format!("{name}.png")), picture))
         .collect()
 }

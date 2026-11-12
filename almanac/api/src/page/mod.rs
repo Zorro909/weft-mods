@@ -118,8 +118,8 @@ impl Page {
     }
 
     /// The tile of quest `quest`, of the chapter's mod unless it names one: its icon in a frame
-    /// that says how far the player is, the quest's name and state in its tooltip. Nothing for a
-    /// quest that isn't in the book.
+    /// that says how far the player is, the quest's name and state in its tooltip. A click shows
+    /// the quest. Nothing for a quest that isn't in the book.
     pub fn tile(&self, ui: &mut Ui, quest: &str) {
         let namespace = self.chapter().name.split(':').next().unwrap_or("");
         if let Some(quest) = self.book.quest_named(&qualified(namespace, quest)) {
@@ -171,29 +171,49 @@ impl Page {
     }
 
     fn tile_of(&self, ui: &mut Ui, quest: usize) {
-        let held = &self.book.quests[quest];
-        let state = self.state(quest);
-        let class = format!("{}{}", self.chapter().tile, tile_suffix(state));
-        let title = quest_text(&held.name);
-        let (about, status) = (
-            format!("{title}.desc"),
-            format!("almanac.state.{}", <&str>::from(state)),
-        );
-        let tip = [Arg::Key(&title), Arg::Key(&about), Arg::Key(&status)];
         // The mark's height is kept free above the tile too, so lines meet its middle.
         ui.column(S::column().gap(1.0).pad(0.0), |ui| {
             ui.column(S::column().size(TILE, MARK), |_| {});
-            let tile = S::row()
-                .size(TILE, TILE)
-                .center()
-                .tooltip_args("almanac.tile.tip", &tip);
-            ui.panel(&class, tile, |ui| ui.item(held.icon, 1, S::default()));
+            self.tile_button(ui, quest);
             if self.shown == Some(quest) {
                 ui.image("almanac:gui/almanac_mark", TILE, MARK);
             } else {
                 ui.column(S::column().size(TILE, MARK), |_| {});
             }
         });
+    }
+
+    /// The frame of quest `quest` as a button that shows the quest, with its icon on it.
+    fn tile_button(&self, ui: &mut Ui, quest: usize) {
+        let held = &self.book.quests[quest];
+        let state = self.state(quest);
+        let title = quest_text(&held.name);
+        let (about, status) = (
+            format!("{title}.desc"),
+            format!("almanac.state.{}", <&str>::from(state)),
+        );
+        let tip = [Arg::Key(&title), Arg::Key(&about), Arg::Key(&status)];
+        let frame = S::column()
+            .size(TILE, TILE)
+            .class(self.chapter().tile(state))
+            .tooltip_args("almanac.tile.tip", &tip);
+        let shown = self.turned_to(quest);
+        // A button holds text or a picture, no item: the icon is the next part of a row whose
+        // gap takes it back over the button, and the button under it still gets the click.
+        ui.row(S::row().gap(-TILE), |ui| {
+            ui.button("", frame, move |view| view.client().send(&SHOW, &shown));
+            ui.row(S::row().size(TILE, TILE).center(), |ui| {
+                ui.item(held.icon, 1, S::default())
+            });
+        });
+    }
+
+    /// The book open at this chapter and quest `quest`.
+    fn turned_to(&self, quest: usize) -> Shown {
+        Shown {
+            chapter: self.chapter().id,
+            quest: self.book.quests[quest].id,
+        }
     }
 
     /// A button that shows the quest `by` tiles on, in the order the chains are read, round the
@@ -207,23 +227,10 @@ impl Page {
             return ui.button(label, S::column().disabled(true), |_| {});
         };
         let next = (place as isize + by).rem_euclid(quests.len() as isize) as usize;
-        let shown = Shown {
-            chapter: self.chapter().id,
-            quest: self.book.quests[quests[next]].id,
-        };
+        let shown = self.turned_to(quests[next]);
         ui.button(label, S::column(), move |view| {
             view.client().send(&SHOW, &shown)
         });
-    }
-}
-
-/// What a state adds to a chapter's tile class.
-fn tile_suffix(state: State) -> &'static str {
-    match state {
-        State::Locked => "_locked",
-        State::Open => "",
-        State::Ready => "_ready",
-        State::Claimed => "_done",
     }
 }
 
@@ -274,8 +281,9 @@ mod tests {
     #[test]
     fn the_stock_tile_has_a_picture_for_every_state() {
         for &state in State::VARIANTS {
-            let class = format!("{STOCK_TILE}{}", tile_suffix(state));
+            let class = format!("{STOCK_TILE}{}", state.tile_suffix());
             assert!(has_picture(&class), "{class}.png");
+            assert!(has_picture(&format!("{class}_hover")), "{class}_hover.png");
             let stretched = Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join(format!("../assets/textures/gui/{class}.gui"));
             assert!(stretched.is_file(), "{class}.gui says how it stretches");

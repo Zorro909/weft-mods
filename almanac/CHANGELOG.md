@@ -5,7 +5,7 @@
 ### Added
 
 - The Almanac, a quest book opened with J or from the pause menu: a tab for every chapter, its
-  quests in chains, and for the shown quest what it asks, how far you are and what it gives.
+  quests in chains, and for the quest you click what it asks, how far you are and what it gives.
 - Quests count what you do: items you hold, blocks you place and break, mobs you defeat, items
   you use, and whatever a quest's own mod reports.
 - A note slides in when a quest is finished, and its rewards are claimed from the book.

@@ -122,7 +122,10 @@ fn with_quests(chapter: ChapterRecord, place: usize, quests: &[Quest]) -> Chapte
         id: chapter.id,
         name: chapter.name,
         icon: chapter.icon,
-        tile: chapter.tile,
+        tiles: State::VARIANTS
+            .iter()
+            .map(|state| format!("{}{}", chapter.tile, state.tile_suffix()))
+            .collect(),
         own_page: chapter.own_page,
         quests: (0..quests.len())
             .filter(|&quest| quests[quest].chapter == place)

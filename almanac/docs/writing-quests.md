@@ -105,7 +105,8 @@ almanac_api::remove(r, "cogwork:first_teeth");
 
 `.tile_class("cogwork_tile")` on the chapter draws its tiles from your pictures:
 `gui/cogwork_tile.png` for an open quest, and `_locked`, `_ready` and `_done` after the name,
-26 pixels square (`almanac/assets/textures/gui/` has the book's own).
+26 pixels square (`almanac/assets/textures/gui/` has the book's own). Each may have a picture
+with `_hover` after it for the tile under the cursor (`cogwork_tile_ready_hover.png`).
 
 `.page(..)` lays the whole page out yourself. The closure gets the SDK's `Ui`, so anything a
 screen can show goes on it, and a `Page` with the book's parts:
@@ -126,7 +127,7 @@ almanac_api::chapter(r, "cogwork").page(|ui, page| {
 
 | Part | What it draws |
 |---|---|
-| `page.tile(ui, quest)` | one quest's tile, its name and state in the tooltip |
+| `page.tile(ui, quest)` | one quest's tile: click it to show the quest, hover for its state |
 | `page.chains(ui)` | every tile, as the book lines them up |
 | `page.details(ui, width)` | the shown quest: name, description, tasks, rewards |
 | `page.tasks(ui, width)`, `page.rewards(ui)` | those two apart |
@@ -138,8 +139,6 @@ would an engine screen (`Weft/docs/ui.md`, "Screens").
 
 ## Limits
 
-- A tile can't be clicked: the SDK's button holds text or a picture, not an item. The buttons
-  under the details step from quest to quest instead.
 - A recipe can't be locked behind a quest: crafting asks nobody who crafts.
 - A player's save holds 256 finished quests, and 32 quests are counted at once; one past that
   is named in the log and left out.

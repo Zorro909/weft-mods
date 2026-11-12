@@ -62,7 +62,8 @@ impl Chapter<'_> {
     }
 
     /// Its tiles are drawn as class `class`: `gui/<class>.png` for an open quest, and the same
-    /// with `_done`, `_ready` (rewards waiting) and `_locked` after it.
+    /// with `_done`, `_ready` (rewards waiting) and `_locked` after it. Any of them may have a
+    /// picture with `_hover` after that, for the tile under the cursor.
     pub fn tile_class(mut self, class: &str) -> Self {
         self.tile = Some(class.to_string());
         self

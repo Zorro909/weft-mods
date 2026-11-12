@@ -43,8 +43,8 @@ pub struct Chapter {
     pub name: String,
     /// The item on its tab, 0 for none.
     pub icon: u32,
-    /// The class of its tiles.
-    pub tile: String,
+    /// The class of its tiles in each `State`, in the order of `State::VARIANTS`.
+    pub tiles: Vec<String>,
     /// Whether its mod draws the page.
     pub own_page: bool,
     /// Its quests in page order, as places in `Book::quests`.
@@ -92,6 +92,25 @@ pub struct Book {
     pub chapters: Vec<Chapter>,
     /// Chapter by chapter, each chapter's in page order.
     pub quests: Vec<Quest>,
+}
+
+impl Chapter {
+    /// The class of the tile of a quest in `state`.
+    pub fn tile(&self, state: State) -> &str {
+        &self.tiles[state as usize]
+    }
+}
+
+impl State {
+    /// What it adds to a chapter's tile class.
+    pub(crate) fn tile_suffix(self) -> &'static str {
+        match self {
+            State::Locked => "_locked",
+            State::Open => "",
+            State::Ready => "_ready",
+            State::Claimed => "_done",
+        }
+    }
 }
 
 impl Book {

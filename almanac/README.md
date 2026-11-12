@@ -13,7 +13,8 @@ crate `almanac_api`, and loads with or without the almanac.
 ### For players
 
 - **The book** opens with J (rebind it in Controls) or from the pause menu. Every chapter is a
-  tab; its quests stand in chains, each behind the one that opens it.
+  tab; its quests stand in chains, each behind the one that opens it. Click a quest to see
+  what it asks and gives.
 - **A tile** is plain while its quest is locked, framed in steel once it is open, in green when
   its rewards wait, and in gold when they are claimed.
 - **Progress is your own** and kept with the world, through death too.
