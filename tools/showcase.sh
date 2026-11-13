@@ -6,8 +6,16 @@
 # instead, which needs no films.
 #
 #   tools/showcase.sh [--gpu 0000:0f:00.0] [--fps 60] [--with <mod folder>]... [--no-build]
-#                     <mod:film | gallery:mod> [-- <more game options>]
+#                     [--rehearse] <mod:film | gallery:mod> [-- <more game options>]
 #
+#   --rehearse  Goes through the film without recording it, in a fraction of its length: run it
+#               before every take. Pictures from the start and end of every shot, and from at
+#               most every five seconds between, go into `showcase/out/<mod>-<film>-rehearsal/`
+#               as `<shot>_<number>_<seconds>s.png`, joined twelve to a sheet in its
+#               `sheets/`, and `report.txt` there, printed at the end, lists where the
+#               camera is inside a block or turns too fast and which titles stay too short or
+#               too long. Ends with 3 when there are such faults. The film's cues fire, but
+#               machines run only for as long as the rehearsal takes. Needs only weston.
 #   --gpu       PCI address of the card to draw on (see /dev/dri/by-path); default: any card.
 #               The other cards are hidden from the game (bubblewrap), as in run-headless.sh.
 #   --fps       Frames per second of the video (default 60).
@@ -24,13 +32,14 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-gpu="" fps=60 build=1 with=()
+gpu="" fps=60 build=1 rehearse=0 with=()
 while [[ $# -gt 0 ]]; do
     case $1 in
         --gpu) gpu=$2; shift 2 ;;
         --fps) fps=$2; shift 2 ;;
         --with) with+=("$2"); shift 2 ;;
         --no-build) build=0; shift ;;
+        --rehearse) rehearse=1; shift ;;
         -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1' "$0"; exit 0 ;;
         *) break ;;
     esac
@@ -38,12 +47,15 @@ done
 [[ $# -gt 0 && $1 == *:* ]] || { echo "showcase.sh: name a film as <mod:film> or gallery:<mod> (see --help)" >&2; exit 2; }
 film=$1; shift
 [[ ${1:-} == -- ]] && shift
-for tool in weston pipewire wireplumber pw-cli pw-dump gst-launch-1.0 ffmpeg jq; do
+tools=(weston pipewire wireplumber pw-cli pw-dump gst-launch-1.0 ffmpeg jq)
+[[ $rehearse == 0 ]] || tools=(weston ffmpeg)
+for tool in "${tools[@]}"; do
     command -v "$tool" >/dev/null || { echo "showcase.sh: $tool is not installed" >&2; exit 2; }
 done
 
-# Re-run inside a sandbox that sees only the chosen card's render node.
-if [[ -n $gpu && -z ${SHOWCASE_SANDBOXED:-} ]]; then
+# Re-run inside a sandbox that sees only the chosen card's render node. A rehearsal leaves
+# that to run-headless.sh.
+if [[ -n $gpu && $rehearse == 0 && -z ${SHOWCASE_SANDBOXED:-} ]]; then
     node=$(readlink -f "/dev/dri/by-path/pci-${gpu}-render" 2>/dev/null || true)
     [[ -c $node ]] || { echo "showcase.sh: no render node for GPU $gpu" >&2; exit 2; }
     command -v bwrap >/dev/null || { echo "showcase.sh: --gpu needs bubblewrap" >&2; exit 2; }
@@ -94,6 +106,26 @@ fi
 install showcase
 for extra in "${with[@]}"; do install "$extra"; done
 [[ $folder == showcase ]] || install "$folder" "${features[@]}"
+
+# Goes through the film without recording, and shows what that found.
+rehearse() {
+    local folder="$out/${film/:/-}-rehearsal" headless=("$root/tools/run-headless.sh") status=0 from
+    [[ -z $gpu ]] || headless+=(--gpu "$gpu")
+    rm -rf "$folder"
+    mkdir -p "$folder"
+    (cd "$root/Weft" && "${headless[@]}" -- target/release/weft --run-dir "$run" --hide-hud \
+        --size 1280x720 --showcase "$film" --showcase-rehearse "$folder" "$@" >/dev/null 2>&1) || status=$?
+    [[ -f $folder/report.txt ]] ||
+        { echo "showcase.sh: the game stopped with $status before the rehearsal was over; see $run/logs/latest.log" >&2; exit 1; }
+    mapfile -t stills < <(printf '%s\n' "$folder"/*.png | sort)
+    for ((from = 0; from < ${#stills[@]}; from += 12)); do
+        "$root/tools/sheet.sh" --columns 3 \
+            "$(printf '%s/sheets/%03d.png' "$folder" $((from / 12 + 1)))" "${stills[@]:from:12}"
+    done
+    cat "$folder/report.txt"
+    exit "$status"
+}
+[[ $rehearse == 0 ]] || rehearse "$@"
 
 # Waits up to ten seconds for the command `$@` to succeed.
 wait_for() {

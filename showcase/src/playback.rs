@@ -76,6 +76,11 @@ impl Playback {
         self.elapsed
     }
 
+    /// The step of the film that plays now, counted from 0.
+    pub fn step(&self) -> usize {
+        self.index
+    }
+
     pub fn done(&self) -> bool {
         self.index >= self.steps.len()
     }

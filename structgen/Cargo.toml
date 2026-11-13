@@ -25,6 +25,10 @@ showcase = ["dep:showcase_api"]
 
 # The example programs that have unit tests: `cargo test` leaves an example's tests out unless told.
 [[example]]
+name = "buildings"
+test = true
+
+[[example]]
 name = "sketch"
 test = true
 

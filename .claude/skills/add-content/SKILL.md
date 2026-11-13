@@ -30,7 +30,8 @@ By `docs/agents/code-style.md`, with the parts below that the content has:
 | Registration | A `mod` line and the `register(r)` call in `lib.rs`; `.tab(..)` so it shows in the mod's creative tab |
 | Names and text | `block.<mod>.<name>` or `item.<mod>.<name>`, its `.tooltip`, a key per status and screen label: in every file under `assets/lang/` |
 | Textures | `assets/textures/<block, item, entity or gui>/`, named as the builder that reads them expects |
-| Model | A Blockbench save under `assets/models/`; `tools/blockbench.sh check <file>` passes |
+| Textures drawn in code | `cogwork/src/art/`, written by `WRITE_ASSETS=1 cargo test --release art`; read them on a sheet (`tools/sheet.sh --pixels 8`, `--tiled` for a surface) before going on |
+| Model | A Blockbench save under `assets/models/`; `python3 tools/assets/lint.py <mod>` and `tools/blockbench.sh check <file>` pass, and `tools/blockbench.sh views` shows it from all round |
 | Recipe | An entry in `assets/recipes/*.toml` (cogwork: a test fails while a named block has none) |
 | Sound | "Sounds" below |
 | Tests | The logic, and what `mod-design.md` pins: saved layout, enum fallbacks, status names, assets |
@@ -39,7 +40,7 @@ By `docs/agents/code-style.md`, with the parts below that the content has:
 
 ## 4. Check and look
 
-`tools/check-mods.sh <mod>`, `tools/install-mods.sh <mod>`, the in-game tests, then pictures of it in the game (`docs/agents/testing.md`). In the pictures, look for what players have sent back before:
+Climb the ladder of `docs/agents/testing.md` ("Cheapest check first"): `tools/check-mods.sh <mod>`, which lints the assets first, then `tools/block-shots.sh <mod> <block>...` for each new block in each state that looks different, `tools/install-mods.sh <mod>` and the in-game tests. In the pictures, look for what players have sent back before:
 
 - every face has its texture: no see-through lines, no missing sides;
 - parts meet: no gap between neighbours, and no two faces in one plane, which flicker;

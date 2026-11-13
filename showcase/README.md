@@ -102,6 +102,14 @@ picks another seed and `--showcase-dim` another dimension.
 screen and writes the video, with the game's sound, to `showcase/out/`; `--help` lists its
 options and the packages it needs (weston, PipeWire, GStreamer).
 
+`weft --showcase <mod:film> --showcase-rehearse <folder>` rehearses the film instead of
+playing it: the camera goes through it as fast as the world loads, the film's cues fire, and
+the folder gets a picture from along every shot, at most five seconds of film apart, and a
+`report.txt` of the film's faults: where the camera is inside a block, where it turns faster
+than 75 degrees a second, and which titles stay under 3 or over 7 seconds. The game ends with
+3 when there are faults. `tools/showcase.sh --rehearse <mod:film>` runs that and joins the
+pictures into sheets: a storyboard in a minute or two, before a take is spent.
+
 ## Camera paths by hand
 
 `/camera` makes a path in the game and plays it on your client alone, for animators:

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `--showcase-rehearse <folder>` goes through a film without recording it: pictures along
+  every shot, and a report of where the camera is inside a block or turns too fast and which
+  titles stay too short or too long.
+
 ## 0.3.1 - 2026-11-12
 
 ### Added

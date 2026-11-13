@@ -4,7 +4,8 @@
 //! `/showcase play <mod:film>` plays one in a running game, `/showcase gallery <mod>` shows
 //! every block of a mod, and `/camera` makes camera paths by hand. The server half prepares the
 //! player and builds or asks for the set (`server`, `gallery`); the client half receives the
-//! shots and flies the camera (`director`, `playback`, `rig`, `view`).
+//! shots and flies the camera (`director`, `playback`, `rig`, `view`), or goes through them
+//! without recording to find a film's faults first (`rehearsal`).
 
 mod camera;
 mod director;
@@ -12,6 +13,7 @@ mod gallery;
 mod launch;
 mod menus;
 mod playback;
+mod rehearsal;
 mod rig;
 mod server;
 mod view;

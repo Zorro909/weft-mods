@@ -41,10 +41,18 @@ settlement's `houses`, `farms`, `landmarks` or another list.
 
 ## Looking at it
 
+`cargo run --release --example buildings -- --plan <name>...` prints each structure as text,
+layer by layer from above, and writes no file: the quickest way to see a wall with a gap or a
+room without a doorway. Drawing a structure also checks it: air in the bottom layer, blocks
+hanging in the air, a chest, furnace, bed or table that nobody can walk to from outside, and a
+property value the game doesn't know are named, and a structure with such a fault is not
+written.
+
 `tools/structure-shots.sh <name>...` places each structure in the flatlands at noon and
 photographs it from the front, the back, a side, above and inside, into
 `structgen/out/shots/`; a path to a `.json` file works too. Slots show their defaults, since
-`/structure load` takes no palette. `--turn right` shoots it turned, a building of this mod as
+`/structure load` takes no palette. `sheets/<name>.png` there joins a structure's views into
+one picture. `--turn right` shoots it turned, a building of this mod as
 its turned copy. `--layout structgen/examples/layouts/town_streets.txt` lays several side by
 side, turned as the file says, and shoots them together, to see tiles join up; of a layout's
 styles only `cobble_ground` shows, as the building's paved copy. Run `--help` for the rest.

@@ -1,5 +1,5 @@
 # Checks a pull request: its Rust is formatted, every mod takes Weft at a release as the mod index
-# needs, every mod's unit tests and clippy pass, the tests of the CI scripts in `tools/ci` pass, and
+# needs, every mod's unit tests and clippy pass, the tests of the scripts in `tools/ci` and `tools/assets` pass, and
 # every mod builds for Windows, Linux and macOS, as `release.yml` builds it.
 name: Check
 
@@ -59,6 +59,8 @@ jobs:
 
       - name: Tests of tools/ci
         run: python3 -m unittest discover -s tools/ci
+      - name: Tests of tools/assets
+        run: python3 -m unittest discover -s tools/assets
 
   # With `release-unchanged`, so that every mod builds, also one that didn't change.
   build:

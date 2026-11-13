@@ -2,6 +2,8 @@
 //! `--showcase gallery:<mod>` plays the gallery of a mod's blocks instead.
 //! The world is a normal one from `SEED`, the film played where it spawns the player;
 //! `--showcase-seed` picks another seed, `--showcase-dim` another dimension (`base:flatlands`).
+//! With `--showcase-rehearse <folder>` the film is rehearsed instead (`rehearsal`), and the
+//! game ends with 3 when that found faults.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -16,6 +18,9 @@ const ANSWER_TIME: Duration = Duration::from_secs(30);
 /// A seed whose spawn is a gentle meadow by a lake with a forest behind: room for a set, and
 /// something to see around it.
 const SEED: u64 = 42;
+/// What the game ends with after a rehearsal that found faults, apart from a film that never
+/// came (1).
+const FAULTY: i32 = 3;
 /// Frames to stand in the new world before the film is asked for.
 const SETTLE_FRAMES: u32 = 60;
 /// Frames after which the film starts even if far terrain is still generating.
@@ -135,7 +140,8 @@ fn setup() -> Vec<String> {
 fn watch(c: &Client, film: &str, since: Instant) -> Stage {
     if director::finished() > 0 {
         info!("showcase: {film} is over");
-        c.quit(0);
+        // A rehearsal that found faults ends the game with `FAULTY`.
+        c.quit(if director::faults() > 0 { FAULTY } else { 0 });
         return Stage::Done;
     }
     // The server says so when no mod answers; the time is for a request that never got there.
