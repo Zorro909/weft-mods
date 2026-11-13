@@ -1,12 +1,12 @@
 //! What scripts call that reaches into the game: text for players (`text`), blocks and the
-//! time of day (`world`), entities (`entities`), what they carry (`inventory`), and the data
-//! kept on players (`data`).
+//! time of day (`world`), entities (`entities`), what they carry (`inventory`), and the
+//! components scripts keep (`components`).
 //!
 //! A script's call has no world of its own to act on, so the world of the callback that runs the
 //! script is noted for its thread while it runs (`within`). A world is the region the callback
 //! ticks in: a block or an entity in another region is not there to read or change.
 
-mod data;
+mod components;
 mod entities;
 mod inventory;
 mod text;
@@ -19,6 +19,7 @@ use weft_sdk::{BlockPos, Holder, Vec3, World, info};
 
 pub use self::text::TEXT;
 use crate::script::engine::{ScriptResult, fail};
+use crate::store::turn;
 
 thread_local! {
     /// The world of the callback this thread runs a script for.
@@ -47,10 +48,13 @@ pub fn register(engine: &mut Engine) {
     world::register(engine);
     entities::register(engine);
     inventory::register(engine);
-    data::register(engine);
+    components::register(engine);
 }
 
+/// The world a script's call acts on. A script that reaches into it is done with what names
+/// hold: its turn at that ends here (`turn`).
 fn current() -> ScriptResult<World> {
+    turn::end();
     WORLD
         .get()
         .map_or_else(|| fail("this needs the game: call it from a function"), Ok)

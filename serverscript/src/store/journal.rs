@@ -3,9 +3,10 @@
 //! | Part | Bytes |
 //! |---|---|
 //! | head | `MAGIC`, then `VERSION` as a `u32` |
-//! | change | what it does as a `u8`, its owner as a `u64`, its data key, its key, and a value unless it removes |
+//! | change | what it does as a `u8`, its holder, its component's name as text, and a value if it sets one |
+//! | holder | which kind as a `u8`, then a player's number as a `u64` or a name as text |
 //!
-//! Numbers are little-endian; a data key, a key and a value lie as `pack` says. A change costs its own few
+//! Numbers are little-endian; text and a value lie as `pack` says. A change costs its own few
 //! bytes however much the store holds, and is with the system once made, so stopping the game
 //! loses none. The file is written anew from what the store holds at each start (`start`), or
 //! it would grow with every change ever made.
@@ -14,37 +15,32 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, ErrorKind, Write};
 use std::path::Path;
 
-use super::Place;
-use super::pack::{read_key, read_value, take, write_key, write_value};
+use super::Holder;
+use super::pack::{read_text, read_value, take, write_text, write_value};
 use crate::value::Value;
 
 /// What a store file starts with.
 const MAGIC: [u8; 4] = *b"WSSD";
 /// The layout of the changes. A file of another version is not read.
-const VERSION: u32 = 1;
+const VERSION: u32 = 2;
 
-/// Puts a value under a key, replacing what was there.
+/// Puts a value on a holder, replacing the component's last.
 const SET: u8 = 0;
-/// Puts a value at the end of the list under a key, starting one.
-const APPEND: u8 = 1;
-/// Takes a key away.
-const REMOVE: u8 = 2;
+/// Takes a component off a holder.
+const REMOVE: u8 = 1;
 
-/// What a change does to its key.
-#[derive(Clone, Debug, PartialEq)]
-pub enum Change {
-    Set(Value),
-    Append(Value),
-    Remove,
-}
+/// A holder that is a player: their number follows.
+const PLAYER: u8 = 0;
+/// A holder that is a name: the name follows.
+const NAMED: u8 = 1;
 
-/// One change read back from the file.
+/// One change read back from the file: the value `component` has on `holder` from then on,
+/// `None` when it was taken off.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Record {
-    pub owner: u64,
+    pub holder: Holder,
     pub component: String,
-    pub key: String,
-    pub change: Change,
+    pub value: Option<Value>,
 }
 
 /// A file's changes in the order made. `whole` is false when it holds more than could be
@@ -55,31 +51,25 @@ pub struct Read {
     pub whole: bool,
 }
 
-/// The bytes of the change that sets `place` to `value`; `None` when a name or the value is
-/// too long to write.
-pub fn set(place: Place, value: &Value) -> Option<Vec<u8>> {
-    written(SET, place, Some(value))
-}
-
-/// The bytes of the change that appends `item` to the list at `place`.
-pub fn append(place: Place, item: &Value) -> Option<Vec<u8>> {
-    written(APPEND, place, Some(item))
-}
-
-/// The bytes of the change that removes the key at `place`.
-pub fn remove(place: Place) -> Option<Vec<u8>> {
-    written(REMOVE, place, None)
-}
-
-fn written(what: u8, place: Place, value: Option<&Value>) -> Option<Vec<u8>> {
-    let mut bytes = vec![what];
-    bytes.extend_from_slice(&place.owner.to_le_bytes());
-    write_key(place.component, &mut bytes)?;
-    write_key(place.key, &mut bytes)?;
-    if let Some(value) = value {
-        write_value(value, &mut bytes)?;
+/// The bytes of the change that gives `component` on `holder` the `value`, or with `None`
+/// takes it off.
+pub fn change(holder: &Holder, component: &str, value: Option<&Value>) -> Vec<u8> {
+    let mut bytes = vec![if value.is_some() { SET } else { REMOVE }];
+    match holder {
+        Holder::Player(number) => {
+            bytes.push(PLAYER);
+            bytes.extend_from_slice(&number.to_le_bytes());
+        }
+        Holder::Named(name) => {
+            bytes.push(NAMED);
+            write_text(name, &mut bytes);
+        }
     }
-    Some(bytes)
+    write_text(component, &mut bytes);
+    if let Some(value) = value {
+        write_value(value, &mut bytes);
+    }
+    bytes
 }
 
 fn head() -> Vec<u8> {
@@ -120,20 +110,21 @@ fn parse(bytes: &[u8]) -> Read {
 
 fn record(bytes: &mut &[u8]) -> Option<Record> {
     let what = take(bytes, 1)?[0];
-    let owner = u64::from_le_bytes(take(bytes, 8)?.try_into().ok()?);
-    let component = read_key(bytes)?;
-    let key = read_key(bytes)?;
-    let change = match what {
-        SET => Change::Set(read_value(bytes)?),
-        APPEND => Change::Append(read_value(bytes)?),
-        REMOVE => Change::Remove,
+    let holder = match take(bytes, 1)?[0] {
+        PLAYER => Holder::Player(u64::from_le_bytes(take(bytes, 8)?.try_into().ok()?)),
+        NAMED => Holder::Named(read_text(bytes)?),
+        _ => return None,
+    };
+    let component = read_text(bytes)?;
+    let value = match what {
+        SET => Some(read_value(bytes)?),
+        REMOVE => None,
         _ => return None,
     };
     Some(Record {
-        owner,
+        holder,
         component,
-        key,
-        change,
+        value,
     })
 }
 
@@ -158,46 +149,28 @@ pub fn write(file: &mut File, change: &[u8]) -> io::Result<()> {
 mod tests {
     use super::*;
 
-    fn place<'a>(owner: u64, component: &'a str, key: &'a str) -> Place<'a> {
-        Place {
-            owner,
-            component,
-            key,
-        }
+    fn records() -> Vec<Record> {
+        let record = |holder, component: &str, value| Record {
+            holder,
+            component: component.to_string(),
+            value,
+        };
+        let camp = Value::List(vec![Value::Int(1)]);
+        vec![
+            record(
+                Holder::Named("server".into()),
+                "welcome:stats",
+                Some(Value::Int(3)),
+            ),
+            record(Holder::Player(7), "camps:camp", Some(camp)),
+            record(Holder::Player(7), "camps:camp", None),
+        ]
     }
 
     fn changes() -> Vec<u8> {
-        let list = Value::List(vec![Value::Int(1)]);
-        [
-            set(place(0, "welcome:stats", "visits"), &Value::Int(3)),
-            append(place(0, "welcome:log", "lines"), &Value::Text("hi".into())),
-            set(place(7, "camps:camp", "at"), &list),
-            remove(place(7, "camps:camp", "at")),
-        ]
-        .into_iter()
-        .flat_map(|change| change.expect("the change is short enough"))
-        .collect()
-    }
-
-    fn records() -> Vec<Record> {
-        let record = |owner, component: &str, key: &str, change| Record {
-            owner,
-            component: component.to_string(),
-            key: key.to_string(),
-            change,
-        };
-        let list = Value::List(vec![Value::Int(1)]);
-        vec![
-            record(0, "welcome:stats", "visits", Change::Set(Value::Int(3))),
-            record(
-                0,
-                "welcome:log",
-                "lines",
-                Change::Append(Value::Text("hi".into())),
-            ),
-            record(7, "camps:camp", "at", Change::Set(list)),
-            record(7, "camps:camp", "at", Change::Remove),
-        ]
+        let bytes =
+            |record: Record| change(&record.holder, &record.component, record.value.as_ref());
+        records().into_iter().flat_map(bytes).collect()
     }
 
     fn file(changes: &[u8]) -> Vec<u8> {
@@ -218,21 +191,26 @@ mod tests {
 
     #[test]
     fn the_layout_is_the_one_files_hold() {
-        assert_eq!(head(), [b'W', b'S', b'S', b'D', 1, 0, 0, 0]);
-        let change =
-            set(place(2, "a:b", "c"), &Value::Bool(true)).expect("the change is short enough");
+        assert_eq!(head(), [b'W', b'S', b'S', b'D', 2, 0, 0, 0]);
+        let set = change(&Holder::Player(2), "a:b", Some(&Value::Bool(true)));
         assert_eq!(
-            change,
+            set,
             [
-                SET, 2, 0, 0, 0, 0, 0, 0, 0, 3, b'a', b':', b'b', 1, b'c', 2, 1
+                SET, PLAYER, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, b'a', b':', b'b', 2, 1
             ],
-            "what, owner, data key, key, value"
+            "what, holder, component, value"
         );
+        let removed = change(&Holder::Named("x".into()), "a:b", None);
         assert_eq!(
-            [SET, APPEND, REMOVE],
-            [0, 1, 2],
-            "changes keep their numbers"
+            removed,
+            [
+                REMOVE, NAMED, 1, 0, 0, 0, 0, 0, 0, 0, b'x', 3, 0, 0, 0, 0, 0, 0, 0, b'a', b':',
+                b'b'
+            ],
+            "a name as text, and no value"
         );
+        assert_eq!([SET, REMOVE], [0, 1], "changes keep their numbers");
+        assert_eq!([PLAYER, NAMED], [0, 1], "and so do holders");
     }
 
     #[test]
@@ -246,32 +224,27 @@ mod tests {
         let bytes = file(&changes());
         let read = parse(&bytes[..bytes.len() - 1]);
         assert!(!read.whole, "the last change is not all there");
-        assert_eq!(read.records, records()[..3], "the three before it are");
+        assert_eq!(read.records, records()[..2], "the two before it are");
     }
 
     #[test]
     fn another_version_is_not_read() {
         let mut bytes = file(&changes());
-        bytes[4] = 2;
+        bytes[4] = 1;
         let read = parse(&bytes);
         assert!(!read.whole && read.records.is_empty());
         assert!(!parse(b"").whole, "an empty file has no head");
     }
 
     #[test]
-    fn an_unknown_change_ends_the_reading() {
-        let mut bytes = file(&changes());
-        bytes.extend_from_slice(&[9, 0, 0, 0, 0, 0, 0, 0, 0, 1, b'a', 1, b'b']);
-        let read = parse(&bytes);
-        assert!(!read.whole);
-        assert_eq!(read.records, records(), "what came before is kept");
-    }
-
-    #[test]
-    fn a_name_too_long_makes_no_change() {
-        let long = "k".repeat(256);
-        assert_eq!(set(place(0, "a:b", &long), &Value::Int(1)), None);
-        assert_eq!(set(place(0, &long, "c"), &Value::Int(1)), None);
-        assert_eq!(remove(place(0, "a:b", &long)), None);
+    fn an_unknown_change_or_holder_ends_the_reading() {
+        for unknown in [[9, PLAYER], [SET, 9]] {
+            let mut bytes = file(&changes());
+            bytes.extend_from_slice(&unknown);
+            bytes.extend_from_slice(&[0; 8]);
+            let read = parse(&bytes);
+            assert!(!read.whole);
+            assert_eq!(read.records, records(), "what came before is kept");
+        }
     }
 }

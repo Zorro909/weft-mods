@@ -1,9 +1,9 @@
 //! Who a player is from one visit to the next: a number of the mod's own on the player, which
-//! the store keeps their data under.
+//! the store keeps their components under.
 //!
 //! The game gives a player a new entity id at every join and hands mods no name or key, so the
 //! number is a component saved with the player. It is the only thing the mod keeps in the
-//! world's own files: the data itself is the store's.
+//! world's own files: scripts' components are the store's.
 
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hasher};

@@ -3,6 +3,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use rhai::module_resolvers::DummyModuleResolver;
 use rhai::{Engine, EvalAltResult};
 
 use crate::lock;
@@ -33,6 +34,8 @@ pub fn fail<T>(message: &str) -> ScriptResult<T> {
 pub fn build(declarations: &Declarations) -> Engine {
     let mut engine = Engine::new();
     engine.set_max_operations(MAX_OPERATIONS);
+    // Rhai's own resolver reads any `.rhai` file an `import` names: scripts read no files.
+    engine.set_module_resolver(DummyModuleResolver::new());
     let declarations = declarations.clone();
     engine.register_fn(
         "command",

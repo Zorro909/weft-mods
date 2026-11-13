@@ -15,10 +15,10 @@ Weft mod does.
 - **Commands.** A script adds chat commands with typed arguments and a permission level.
 - **The world.** A script reads and sets blocks, moves, summons, hurts and heals entities, and
   reads and changes what players and chests carry.
-- **Data.** A script keeps values under data keys named after it, `camps:camp`, as the game
-  keeps components: once for everyone, or on each player. Other scripts read them by that
-  name.
-- **Saved.** All data goes into one file beside the scripts, as large as it needs.
+- **Components.** A script keeps values in components named after it, `camps:camp`, read
+  and set as the game's are: on a player, or on a name of its own choosing. Other scripts read
+  them by that name.
+- **Saved.** All components go into one file beside the scripts, as large as it needs.
 - **No new content.** Scripts can't add blocks, items or anything else a client would need.
 
 ## Getting started
@@ -29,12 +29,15 @@ Weft mod does.
    command("visits", "", 0);
 
    fn on_player_joined(e) {
-       let visits = data_add("stats", "visits", 1);
-       hint(e.player, `Welcome! You are visitor ${visits}.`);
+       let stats = component("server", "stats") ?? #{ visits: 0 };
+       stats.visits += 1;
+       set_component("server", "stats", stats);
+       hint(e.player, `Welcome! You are visitor ${stats.visits}.`);
    }
 
    fn cmd_visits(cmd) {
-       `${data_get("stats", "visits")} visits so far`
+       let stats = component("server", "stats") ?? #{ visits: 0 };
+       `${stats.visits} visits so far`
    }
    ```
 
@@ -58,9 +61,11 @@ The game takes commands only while it starts, so a script's commands are registe
 a script changed later is not read again. The setting **Development Mode** (Mod Settings, off
 by default, the server's own) lifts both limits for whoever is working on scripts:
 
-- `/scripts reload` reads the folder again. Commands that were there at the start run their
-  new code under their own name.
-- `/s <name> [arguments]` runs any script command, one added since the start too. It reads
+- `/scripts reload` reads the folder again, for admins. Commands that were there at the start
+  run their new code under their own name; one whose level was lowered since is open to the
+  new level through `/s` only, until a restart.
+- `/s <name> [arguments]` runs any script command, one added since the start too, for
+  whoever has the level the command asks for now. It reads
   numbers, words, text and player names; a selector, a `~` position or an item's name is only
   read for a command under its own name, after a restart.
 
@@ -80,8 +85,8 @@ tools/check-mods.sh serverscript     # formatting, unit tests, clippy
 | `src/events.rs` | The game's events and questions handed to scripts |
 | `src/commands.rs` | Script commands, `/s` and `/scripts reload`, the setting |
 | `src/usage.rs` | Usage strings, and reading typed arguments for `/s` |
-| `src/bindings/` | What scripts call in the game: text, blocks, entities, inventories, data |
-| `src/store/` | Scripts' data, and the file it is saved in |
-| `src/name.rs` | How data keys are named after their script |
-| `src/player.rs` | The number on a player that their data is kept under |
+| `src/bindings/` | What scripts call in the game: text, blocks, entities, inventories, components |
+| `src/store/` | Scripts' components, the file they are saved in, and the turn at what names hold |
+| `src/name.rs` | How components are named after their script |
+| `src/player.rs` | The number on a player that their components are kept under |
 | `src/value.rs` | The values scripts can keep |

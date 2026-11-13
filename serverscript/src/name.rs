@@ -1,21 +1,21 @@
-//! Names as scripts write them: a script's own, and the data keys under it.
+//! Names as scripts write them: a script's own, and its components'.
 //!
-//! A data key is named as the game names content, `<script>:<name>`, so two scripts never
+//! A component is named as the game names its own, `<script>:<name>`, so two scripts never
 //! write into each other's by accident. A script says the short `name` for its own and the
 //! full one for another script's.
 
-/// What parts a script's name from a data key's.
+/// What parts a script's name from a component's.
 const SEPARATOR: char = ':';
 
 /// Whether `name` is only lowercase letters, digits and `_`, and not empty: what a script, a
-/// command and a data key may be called.
+/// command and a component may be called.
 pub fn is_plain(name: &str) -> bool {
     let plain =
         |letter: char| letter.is_ascii_lowercase() || letter.is_ascii_digit() || letter == '_';
     !name.is_empty() && name.chars().all(plain)
 }
 
-/// The full name of the data key `name` as `script` wrote it: its own when short, another
+/// The full name of the component `name` as `script` wrote it: its own when short, another
 /// script's when it says whose. `None` for a name that is neither.
 pub fn qualified(script: &str, name: &str) -> Option<String> {
     let (owner, short) = name.split_once(SEPARATOR).unwrap_or((script, name));
@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn a_name_with_anything_else_is_none() {
         for name in ["", "Camp", "my camp", "a:b:c", ":camp", "camps:", "käse"] {
-            assert_eq!(qualified("camps", name), None, "{name:?} is no data key");
+            assert_eq!(qualified("camps", name), None, "{name:?} is no component");
         }
     }
 

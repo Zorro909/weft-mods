@@ -4,8 +4,8 @@
 //!
 //! `--scripts <folder>` on the command line names the folder; without it the mod runs none.
 //! `script` loads and calls them, `events` and `commands` hand them the game, `bindings` is what
-//! they call back, and `store` is where they keep things, under data keys named as `name`
-//! says, a player's under the number `player` gives them.
+//! they call back, and `store` is where they keep things: components named as `name` says, on
+//! names of their own and on players, whom `player` gives a number for that.
 
 mod bindings;
 mod commands;

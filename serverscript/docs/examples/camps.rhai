@@ -1,4 +1,4 @@
-// /setcamp remembers where a player stands, in the data key camps:camp on that player.
+// /setcamp remembers where a player stands, in the component camps:camp on that player.
 // /camp brings them back and counts the returns there too, and /spawn takes anyone to a
 // fixed place.
 
@@ -12,18 +12,20 @@ fn cmd_spawn(cmd) {
 }
 
 fn cmd_setcamp(cmd) {
-    if !data_set(cmd.sender, "camp", "at", position(cmd.sender)) {
+    let camp = #{ at: position(cmd.sender), returns: 0 };
+    if !set_component(cmd.sender, "camp", camp) {
         return "Your camp could not be saved";
     }
     "Camp set"
 }
 
 fn cmd_camp(cmd) {
-    let at = data_get(cmd.sender, "camp", "at");
-    if at == () {
+    let camp = component(cmd.sender, "camp");
+    if camp == () {
         return "Set a camp first with /setcamp";
     }
-    teleport(cmd.sender, at[0], at[1], at[2]);
-    let returns = data_add(cmd.sender, "camp", "returns", 1);
-    `Back at your camp, return number ${returns}`
+    teleport(cmd.sender, camp.at[0], camp.at[1], camp.at[2]);
+    camp.returns += 1;
+    set_component(cmd.sender, "camp", camp);
+    `Back at your camp, return number ${camp.returns}`
 }

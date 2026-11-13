@@ -5,8 +5,8 @@
 //! holds no state between calls: regions tick in parallel and any thread may run it. What lasts
 //! lives in `crate::store`.
 //!
-//! A script is known by its file's name without the ending, which is what its data keys are
-//! named after (`crate::name`): each call is tagged with it, for `crate::bindings::data`.
+//! A script is known by its file's name without the ending, which is what its components are
+//! named after (`crate::name`): each call is tagged with it, for `crate::bindings::components`.
 
 pub mod engine;
 
@@ -19,6 +19,7 @@ use rhai::{AST, CallFnOptions, Dynamic, Engine, Map, Scope};
 use self::engine::{Declarations, Declared};
 use crate::lock;
 use crate::name::is_plain;
+use crate::store::turn;
 use crate::usage::Usage;
 
 /// What a script file's name ends in.
@@ -244,6 +245,7 @@ impl Scripts {
             .eval_ast(false)
             .with_tag(script.name.clone());
         let mut scope = Scope::new();
+        let _ending = turn::Ending;
         self.engine
             .call_fn_with_options(options, &mut scope, &script.ast, function, (argument,))
             .map_err(|error| format!("{}: {function}: {error}", script.name))

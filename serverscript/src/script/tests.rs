@@ -1,5 +1,5 @@
 use super::*;
-use crate::store::{Place, SHARED, STORE};
+use crate::store::{Holder, STORE};
 use crate::value::Value;
 
 fn compile(sources: &[(&str, &str)]) -> (Scripts, Vec<String>) {
@@ -142,6 +142,19 @@ fn a_function_sees_nothing_outside_itself() {
 }
 
 #[test]
+fn a_script_cannot_import_a_file() {
+    let folder = std::env::temp_dir().join(format!("serverscript-import-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).expect("the folder can be made");
+    std::fs::write(folder.join("other.rhai"), "fn one() { 1 }").expect("the file can be written");
+    let source = format!("import \"{}\" as other;", folder.join("other").display());
+    let (scripts, problems) = compile(&[("importer", &source)]);
+    std::fs::remove_dir_all(&folder).expect("the folder can be removed");
+    assert_eq!(scripts.len(), 0, "it is left out");
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(problems[0].contains("Module not found"), "{problems:?}");
+}
+
+#[test]
 fn a_loop_without_end_is_stopped() {
     let scripts = loaded("fn on_chat(e) { loop {} }");
     let result = scripts
@@ -155,7 +168,7 @@ fn a_loop_without_end_is_stopped() {
     );
 }
 
-/// Scripts with the calls of `crate::bindings`, which the data calls are among.
+/// Scripts with the calls of `crate::bindings`, which the component calls are among.
 fn with_calls(sources: &[(&str, &str)]) -> Scripts {
     let owned: Vec<(String, String)> = sources
         .iter()
@@ -172,23 +185,25 @@ fn called(scripts: &Scripts, hook: &str) -> Result<Dynamic, String> {
 }
 
 #[test]
-fn a_script_keeps_data_under_its_own_name() {
+fn a_script_keeps_a_component_under_its_own_name() {
     let scripts = with_calls(&[(
         "keeper",
-        "fn on_chat(e) { data_add(\"stats\", \"chats\", 2); data_append(\"stats\", \"log\", \"hi\") }
-         fn on_death(e) { data_all(\"stats\") }",
+        "fn on_chat(e) { set_component(\"server\", \"stats\", #{ chats: 2, log: [\"hi\"] }) }
+         fn on_death(e) { component(\"server\", \"stats\").chats }",
     )]);
-    let length = called(&scripts, "on_chat").expect("it runs");
-    assert_eq!(length.as_int(), Ok(1), "the list has one entry");
-    let chats = Place {
-        owner: SHARED,
-        component: "keeper:stats",
-        key: "chats",
-    };
-    assert_eq!(STORE.get(chats), Some(Value::Int(2)), "under keeper:stats");
-    let all = called(&scripts, "on_death").expect("it runs").cast::<Map>();
-    assert_eq!(all.len(), 2, "both keys of the data key");
-    assert_eq!(all["chats"].as_int(), Ok(2));
+    let set = called(&scripts, "on_chat").expect("it runs");
+    assert_eq!(set.as_bool(), Ok(true), "it is kept");
+    let stats = [
+        ("chats".to_string(), Value::Int(2)),
+        (
+            "log".to_string(),
+            Value::List(vec![Value::Text("hi".into())]),
+        ),
+    ];
+    let kept = STORE.get(&Holder::Named("server".into()), "keeper:stats");
+    assert_eq!(kept, Some(Value::Map(stats.into())), "under keeper:stats");
+    let chats = called(&scripts, "on_death").expect("it runs");
+    assert_eq!(chats.as_int(), Ok(2), "the script reads it back whole");
 }
 
 #[test]
@@ -196,57 +211,81 @@ fn another_script_reads_it_by_its_full_name() {
     let scripts = with_calls(&[
         (
             "writer",
-            "fn on_chat(e) { data_set_if_absent(\"claims\", \"first\", 7) }",
+            "fn on_chat(e) { set_component(\"market\", \"claim\", 7) }",
         ),
         (
             "reader",
-            "fn on_death(e) { data_get(\"writer:claims\", \"first\") }
-             fn on_spawn(e) { data_get(\"claims\", \"first\") }",
+            "fn on_death(e) { component(\"market\", \"writer:claim\") }
+             fn on_spawn(e) { component(\"market\", \"claim\") }",
         ),
     ]);
-    let claim = |scripts| called(scripts, "on_chat").expect("it runs").as_bool();
-    assert_eq!(claim(&scripts), Ok(true), "the first claim wins");
-    assert_eq!(claim(&scripts), Ok(false), "the second does not");
+    let _ = called(&scripts, "on_chat").expect("it runs");
     let full = called(&scripts, "on_death").expect("it runs");
     assert_eq!(full.as_int(), Ok(7), "the full name reaches it");
     let short = called(&scripts, "on_spawn").expect("it runs");
-    assert!(short.is_unit(), "the short name is the reader's own, empty");
+    assert!(
+        short.is_unit(),
+        "the short name is the reader's own, not there"
+    );
 }
 
 #[test]
-fn data_refuses_what_it_cannot_keep() {
+fn setting_nothing_takes_a_component_off() {
+    let scripts = with_calls(&[(
+        "taker",
+        "fn on_chat(e) { set_component(\"door\", \"lock\", true) }
+         fn on_death(e) { set_component(\"door\", \"lock\", ()) }
+         fn on_spawn(e) { component(\"door\", \"lock\") }",
+    )]);
+    let _ = called(&scripts, "on_chat").expect("it runs");
+    let lock = called(&scripts, "on_spawn").expect("it runs");
+    assert_eq!(lock.as_bool(), Ok(true), "it is there");
+    let _ = called(&scripts, "on_death").expect("it runs");
+    let lock = called(&scripts, "on_spawn").expect("it runs");
+    assert!(lock.is_unit(), "and gone");
+}
+
+#[test]
+fn a_component_refuses_what_it_cannot_be() {
     let scripts = with_calls(&[(
         "refused",
-        "fn on_chat(e) { data_add(\"stats\", \"text\", \"one\") }
-         fn on_death(e) { data_get(\"My Stats\", \"x\") }
-         fn on_spawn(e) { data_append(\"stats\", \"map\", #{}) }",
+        "fn on_chat(e) { component(\"server\", \"My Stats\") }
+         fn on_death(e) { component([1, 2, 3], \"stats\") }
+         fn on_spawn(e) { set_component(\"server\", \"stats\", #{ gone: () }) }",
     )]);
     let error = |hook| called(&scripts, hook).expect_err("it is refused");
-    assert!(error("on_chat").contains("data_add needs a number"));
-    assert!(error("on_death").contains("a data key is a-z, 0-9 and _"));
-    assert!(error("on_spawn").contains("data takes numbers"));
+    assert!(error("on_chat").contains("a component's name is a-z, 0-9 and _"));
+    assert!(error("on_death").contains("a component is on a player, or on a name"));
+    assert!(error("on_spawn").contains("a component holds numbers"));
 }
 
 #[test]
-fn what_all_share_cannot_be_replaced_or_removed() {
-    let sources = [(
-        "replacer".to_string(),
-        "fn on_chat(e) { data_set(\"stats\", \"x\", 1); }".to_string(),
-    )];
-    let (scripts, _) = Scripts::compile(&sources, crate::bindings::register);
-    let error = called(&scripts, "on_chat").expect_err("there is no such call");
-    assert!(error.contains("Function not found"), "{error}");
-}
-
-#[test]
-fn data_at_the_top_of_a_script_is_a_problem() {
+fn a_component_at_the_top_of_a_script_is_a_problem() {
     let sources = [(
         "early".to_string(),
-        "data_add(\"stats\", \"loads\", 1);".to_string(),
+        "set_component(\"server\", \"loads\", 1);".to_string(),
     )];
     let (_, problems) = Scripts::compile(&sources, crate::bindings::register);
     assert_eq!(problems.len(), 1, "{problems:?}");
-    assert!(problems[0].contains("data is reached from a function"));
+    assert!(problems[0].contains("components are reached from a function"));
+}
+
+#[test]
+fn counts_from_many_threads_at_once_all_count() {
+    let scripts = with_calls(&[(
+        "counter",
+        "fn on_chat(e) {
+             let count = component(\"server\", \"count\") ?? 0;
+             set_component(\"server\", \"count\", count + 1);
+         }",
+    )]);
+    std::thread::scope(|scope| {
+        for _ in 0..8 {
+            scope.spawn(|| (0..200).for_each(|_| drop(called(&scripts, "on_chat"))));
+        }
+    });
+    let count = STORE.get(&Holder::Named("server".into()), "counter:count");
+    assert_eq!(count, Some(Value::Int(1600)), "no count was lost");
 }
 
 #[test]
@@ -319,11 +358,8 @@ fn every_call_can_be_written_in_a_script() {
         players(); position(1); teleport(1, 0, 0, 0); permission(1); kind(1); health(1);
         damage(1, 1); heal(1, 1); summon(\"\", 0, 0, 0); remove(1);
         inventory(1); held(1); give(1, \"\", 1); take(1, \"\", 1);
-        data_get(\"a\", \"\"); data_all(\"a\"); data_add(\"a\", \"\", 1); data_append(\"a\", \"\", 1);
-        data_set_if_absent(\"a\", \"\", 1);
-        data_get(1, \"a\", \"\"); data_all(1, \"a\"); data_add(1, \"a\", \"\", 1);
-        data_append(1, \"a\", \"\", 1); data_set_if_absent(1, \"a\", \"\", 1);
-        data_set(1, \"a\", \"\", 1); data_remove(1, \"a\", \"\");
+        component(\"a\", \"b\"); set_component(\"a\", \"b\", 1);
+        component(1, \"b\"); set_component(1, \"b\", 1);
     }";
     let sources = [("calls".to_string(), calls.to_string())];
     let (_, problems) = Scripts::compile(&sources, crate::bindings::register);

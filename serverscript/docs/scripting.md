@@ -15,7 +15,8 @@ Each call of a function starts fresh: a function sees its argument and what it d
 nothing else, not even a variable at the top of its own file. The game runs distant parts of
 the world on different threads at the same time, and any of them may call the script.
 
-What has to last goes into [data](#data), which is saved: once for everyone, or on a player.
+What has to last goes into [components](#components), which are saved: on a player, or on a
+name of the script's choosing.
 
 ## Events
 
@@ -167,93 +168,87 @@ players it is about. A player, an entity or a block far away, in a part that run
 can't be read or changed from there: `players()` leaves the player out, and a read gives
 nothing. Text and `broadcast` reach anyone.
 
-## Data
+## Components
 
-A script keeps values under **data keys**, as the game keeps an entity's values under
-components. A data key has a name and holds any number of values, each under a key of its
-own:
+A script keeps what has to last in **components**, as the game keeps an entity's values. A
+component has a name, sits on a holder, and holds one value:
 
 ```rust
-// in camps.rhai: the data key "camp" on a player, with the keys "at" and "returns"
-data_set(player, "camp", "at", position(player));
-data_add(player, "camp", "returns", 1);
+// in camps.rhai: the component "camp" on a player
+set_component(player, "camp", #{ at: position(player), returns: 0 });
+let camp = component(player, "camp");   // #{ at: [12.5, 64.0, -3.5], returns: 0 }
 ```
 
-- **Its name** is the script's file name, a colon, and the name the script gave it:
+| Call | Does | Gives back |
+|---|---|---|
+| `component(holder, name)` | Reads a component | Its value, or nothing if the holder has none |
+| `set_component(holder, name, value)` | Sets it, in place of what was. Setting nothing, `()`, takes it off | `false` for a player who is not near |
+
+- **A holder** is a player, or a name: any text a script chooses for a thing of its own,
+  `"server"`, `"market"`, a warp's name a player typed. Scripts share a name as they share a
+  player: each has its own components on it.
+- **A component's name** is the script's file name, a colon, and the name the script gave it:
   `camps:camp`. A script writes the short name, `"camp"`, for its own, and the full one,
-  `"camps:camp"`, for another script's. So two scripts never share a data key by accident.
+  `"camps:camp"`, for another script's. So two scripts never share a component by accident.
   A name is lowercase letters, digits and `_`, and so is a script's file name.
-- **Where it is:** once for everyone, or once on each player when the call names a player
-  first.
-- **A key** in it is any text of at most 255 bytes: a word, a player's choice, a number as
-  text.
-- **A value** is a whole number, a number with a fraction, `true` or `false`, text, or a list
-  of these.
+- **A value** is a whole number, a number with a fraction, `true` or `false`, text, a list,
+  or a map `#{ .. }` of names and values, which is what a struct is to the game's components.
+  Lists and maps hold any of these, each other too, up to 32 deep.
 
-| Call | Does | Gives back |
-|---|---|---|
-| `data_get(name, key)` | Reads one value | The value, or nothing |
-| `data_all(name)` | Reads the whole data key | A map of its keys and values, empty if there are none |
-| `data_add(name, key, number)` | Adds to a number, counting from 0 | The new total |
-| `data_append(name, key, value)` | Puts a value at the end of a list, starting one | The list's new length |
-| `data_set_if_absent(name, key, value)` | Sets the key if nothing is there | `true` if it did |
-
-Each call is one step: two scripts adding at the same moment both count, and of several
-setting an absent key exactly one hears `true`.
-
-```rust
-fn on_block_broken(e) {
-    if e.block.starts_with("base:diamond_ore") && data_set_if_absent("firsts", "diamond", e.player) {
-        broadcast("The first diamond of this world was found!");
-    }
-}
-```
-
-### On a player
-
-With a player in front, the same calls reach that player's own data key, and two more
-replace and remove:
-
-| Call | Does | Gives back |
-|---|---|---|
-| `data_get(player, name, key)` | Reads one value | The value, or nothing |
-| `data_all(player, name)` | Reads the whole data key | A map, empty if there is nothing |
-| `data_add(player, name, key, number)` | Adds to a number | The new total |
-| `data_append(player, name, key, value)` | Appends to a list | The list's new length |
-| `data_set_if_absent(player, name, key, value)` | Sets the key if nothing is there | `true` if it did |
-| `data_set(player, name, key, value)` | Sets the key, in place of what was | `true` if it did |
-| `data_remove(player, name, key)` | Takes the key off | `true` if it was there |
-
-The data stays with the player from one visit to the next. A player who is not
-[near](#near) can't be reached: a read gives nothing, a write gives `false` or nothing.
+A component is read and set whole. To change one entry of a map, read the component, change
+the entry and set it:
 
 ```rust
 fn cmd_camp(cmd) {
-    let at = data_get(cmd.sender, "camp", "at");
-    if at == () {
+    let camp = component(cmd.sender, "camp");
+    if camp == () {
         return "Set a camp first with /setcamp";
     }
-    teleport(cmd.sender, at[0], at[1], at[2]);
+    teleport(cmd.sender, camp.at[0], camp.at[1], camp.at[2]);
+    camp.returns += 1;
+    set_component(cmd.sender, "camp", camp);
 }
 ```
 
-### Why only a player's is replaced
+These components are the mod's own. The game and other mods don't see them, and a script
+can't read the game's (`base:hunger`) with these calls.
 
-What is there once is reached by every part of the world at the same moment. A script
-replacing a value there could undo what another wrote in the same tick, so those data keys
-only grow: numbers are added to, lists appended to, keys set once. A player is in one part of
-the world at a time, the only one that reaches their data, so it can be set and removed
-freely.
+### On a player
+
+A player's components stay with the player from one visit to the next. A player who is not
+[near](#near) can't be reached: `component` gives nothing and `set_component` gives `false`.
+
+### On a name
+
+What a name holds is there for every part of the world at once. A function that reads a
+name's component has all of them to itself until it calls into the world or ends, so two
+functions counting at the same moment both count:
+
+```rust
+fn on_player_joined(e) {
+    let stats = component("server", "stats") ?? #{ visits: 0 };
+    stats.visits += 1;
+    set_component("server", "stats", stats);
+    hint(e.player, `Welcome! You are visitor ${stats.visits}.`);
+}
+```
+
+`??` gives what is on its right when the component is not there yet.
+
+Read, change and set first, and call the rest afterwards. Any other call of the game ends it,
+`hint` and `position` as much as a player's component: a function that makes one between
+reading and setting may undo what another part of the world wrote meanwhile. `log` and
+`print` are the exception.
 
 ## Where it is saved
 
-All data is one file, `data.bin` in the scripts folder. It has no
-size of its own to outgrow: a change is added to its end when it is made, so nothing is lost
-when the server stops, and the file is written anew, as small as its values, at each start.
+All components are one file, `data.bin` in the scripts folder. It has no size of its own to
+outgrow: a change is added to its end when it is made, so nothing is lost when the server
+stops, and the file is written anew, as small as its values, at each start.
 
 - The file belongs to the scripts folder, not to a world. A second world run with the same
-  folder shares what is there once; its players have data of their own.
-- Deleting the file while the server is off empties all data.
+  folder shares what names hold; its players have components of their own.
+- Deleting the file while the server is off takes every component off.
 - One running server per scripts folder: two at once would write into each other's file.
 - A file the mod can't read to its end is kept beside it as `data.bak`, and the server's log
   says so.
@@ -264,4 +259,4 @@ when the server stops, and the file is written anew, as small as its values, at 
 - A mistake in one function (a wrong type, a missing value) stops that call only. The log names
   the script and the function.
 - A script can't add kinds of blocks, items or entities, sounds or settings, read files, or
-  reach the network.
+  reach the network. `import` finds nothing: each script is one file.

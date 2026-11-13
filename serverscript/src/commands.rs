@@ -33,7 +33,8 @@ pub fn register(r: &mut Registry, scripts: &Scripts, folder: PathBuf) {
         })
         .permission(command.permission);
     }
-    r.command("s", "<name:word> [args:text]", run_any);
+    r.command("s", "<name:word> [args:text]", run_any)
+        .permission(permission::EVERYONE);
     r.command("scripts", "reload", move |cmd| reload(cmd, &folder))
         .permission(permission::ADMIN);
 }
@@ -99,10 +100,6 @@ fn run_any(cmd: &mut ServerCommand) {
         cmd.reply("serverscript.unknown_command", &[Arg::Text(&name)]);
         return;
     };
-    if cmd.world().permission(cmd.player()) < command.permission {
-        cmd.reply("serverscript.no_permission", &[Arg::Text(&name)]);
-        return;
-    }
     match command.usage.read(&line) {
         Ok(values) => {
             let named = |(name, value): (String, Value)| (name.into(), value.into_dynamic());
@@ -119,7 +116,8 @@ fn run_any(cmd: &mut ServerCommand) {
 }
 
 /// Runs the script command `name` with `arguments` for whoever typed `cmd`, who reads the text
-/// it gives back.
+/// it gives back. The permission asked for is the script's as it is now: under its own name
+/// the engine only knows the one it started with.
 fn run(cmd: &mut ServerCommand, name: &str, mut arguments: Map) {
     let Some(scripts) = script::current() else {
         return;
@@ -128,6 +126,10 @@ fn run(cmd: &mut ServerCommand, name: &str, mut arguments: Map) {
         cmd.reply("serverscript.unknown_command", &[Arg::Text(name)]);
         return;
     };
+    if cmd.world().permission(cmd.player()) < command.permission {
+        cmd.reply("serverscript.no_permission", &[Arg::Text(name)]);
+        return;
+    }
     arguments.insert("sender".into(), Dynamic::from(cmd.player() as i64));
     let result = bindings::within(cmd.world(), || scripts.run(command, arguments));
     match result.map(Dynamic::into_string) {
