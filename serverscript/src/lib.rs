@@ -41,6 +41,11 @@ fn init(r: &mut Registry) {
     };
     let (scripts, mut problems) = Scripts::load(&folder, bindings::register);
     problems.extend(STORE.open(&folder.join(DATA_FILE)));
+    if let Err(error) = store::save_in_background() {
+        problems.push(format!(
+            "no thread to save with: {error}; scripts' components are not saved"
+        ));
+    }
     for problem in problems {
         warn!("{problem}");
     }

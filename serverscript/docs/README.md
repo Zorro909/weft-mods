@@ -48,6 +48,9 @@ What the mod works around, as of Weft v26.11.4.
 7. **A player has no lasting name for a mod.** The game gives a player a new entity id at
    every join and keeps their key to itself, so the mod puts a number of its own on each
    player (`serverscript:player_id`) to find their components again.
-8. **Settings load after mods register.** A setting reads as its default while commands are
+8. **A mod is not told when the world is saved or the game stops.** So scripts' components
+   can't be written with the world: they go to their file within a second of a change, and
+   the last second before a stop can be missing from it.
+9. **Settings load after mods register.** A setting reads as its default while commands are
    registered, so Development Mode can't decide whether `/s` exists: it is always there and
    answers that it needs the setting.

@@ -1,5 +1,5 @@
-//! The store with its file: what is kept is there after a restart, and a file that can't be
-//! read is set aside.
+//! The store with its file: what was saved is there after a restart, however often it was
+//! set, and a file that can't be read is set aside.
 
 use std::fs;
 use std::path::PathBuf;
@@ -48,7 +48,9 @@ fn assert_filled(store: &Store) {
 #[test]
 fn what_was_kept_is_there_after_a_restart() {
     let file = TestFile::named("restart");
-    filled(&file.opened());
+    let store = file.opened();
+    filled(&store);
+    store.save();
     assert_filled(&file.opened());
     assert_filled(&file.opened());
 }
@@ -61,20 +63,65 @@ fn a_store_without_a_file_keeps_things_in_memory() {
 }
 
 #[test]
-fn the_file_is_written_anew_at_each_start() {
+fn a_change_waits_for_the_next_save() {
+    let file = TestFile::named("waiting");
+    let size = || fs::metadata(&file.0).expect("the file is there").len();
+    let store = file.opened();
+    let empty = size();
+    store.set(server(), "test:visits", Some(Value::Int(1)));
+    assert_eq!(size(), empty, "a set alone does not reach the file");
+    store.save();
+    assert!(size() > empty, "the save does");
+    let saved = file.opened().get(&server(), "test:visits");
+    assert_eq!(saved, Some(Value::Int(1)));
+}
+
+#[test]
+fn a_value_set_often_costs_one_change_in_the_file() {
+    let file = TestFile::named("often");
+    let size = || fs::metadata(&file.0).expect("the file is there").len();
+    let store = file.opened();
+    let empty = size();
+    store.set(server(), "test:ticks", Some(Value::Int(0)));
+    store.save();
+    let one = size() - empty;
+    for ticks in 1..=1000 {
+        store.set(server(), "test:ticks", Some(Value::Int(ticks)));
+    }
+    store.save();
+    assert_eq!(size(), empty + 2 * one, "a thousand sets, one change more");
+    store.save();
+    assert_eq!(size(), empty + 2 * one, "and none when nothing was set");
+    let ticks = file.opened().get(&server(), "test:ticks");
+    assert_eq!(
+        ticks,
+        Some(Value::Int(1000)),
+        "the last value is the one saved"
+    );
+}
+
+#[test]
+fn the_file_is_written_anew_once_it_has_doubled() {
     let file = TestFile::named("anew");
     let store = file.opened();
-    for visits in 1..=100 {
-        store.set(server(), "test:visits", Some(Value::Int(visits)));
+    let long = |round: usize| Value::Text(round.to_string().repeat(100_000));
+    for round in 1..=9 {
+        store.set(server(), "test:long", Some(long(round)));
+        store.save();
     }
     let grown = fs::metadata(&file.0).expect("the file is there").len();
-    let reopened = file.opened();
+    assert!(grown > 900_000, "nine changes of 100,000 bytes: {grown}");
+    for round in 1..=9 {
+        store.set(server(), "test:long", Some(long(round)));
+        store.save();
+    }
     let anew = fs::metadata(&file.0).expect("the file is there").len();
-    assert!(anew * 50 < grown, "{anew} bytes hold what {grown} did");
-    assert_eq!(
-        reopened.get(&server(), "test:visits"),
-        Some(Value::Int(100))
+    assert!(
+        anew < grown,
+        "{anew} bytes after {grown}: it was written anew"
     );
+    let kept = file.opened().get(&server(), "test:long");
+    assert_eq!(kept, Some(long(9)), "with what the store held");
 }
 
 #[test]
@@ -82,8 +129,9 @@ fn a_file_cut_off_keeps_what_came_before_and_a_copy() {
     let file = TestFile::named("cut");
     let store = file.opened();
     store.set(server(), "test:visits", Some(Value::Int(5)));
+    store.save();
     store.set(Holder::Player(7), "test:camp", Some(camp()));
-    drop(store);
+    store.save();
     let bytes = fs::read(&file.0).expect("the file is there");
     fs::write(&file.0, &bytes[..bytes.len() - 1]).expect("the file can be cut");
     let store = Store::new();
@@ -116,6 +164,7 @@ fn another_file_in_its_place_is_set_aside() {
         b"something else"
     );
     store.set(server(), "test:visits", Some(Value::Int(1)));
+    store.save();
     let reopened = file.opened();
     assert_eq!(reopened.get(&server(), "test:visits"), Some(Value::Int(1)));
 }
@@ -130,6 +179,7 @@ fn a_file_that_cannot_be_copied_stays_as_it_is() {
     assert_eq!(problems.len(), 1, "{problems:?}");
     assert!(problems[0].contains("no copy could be kept"));
     store.set(server(), "test:visits", Some(Value::Int(1)));
+    store.save();
     let untouched = fs::read(&file.0).expect("the file is there");
     assert_eq!(untouched, b"something else", "nothing was written into it");
     let visits = store.get(&server(), "test:visits");

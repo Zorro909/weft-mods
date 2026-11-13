@@ -242,10 +242,18 @@ reading and setting may undo what another part of the world wrote meanwhile. `lo
 
 ## Where it is saved
 
-All components are one file, `data.bin` in the scripts folder. It has no size of its own to
-outgrow: a change is added to its end when it is made, so nothing is lost when the server
-stops, and the file is written anew, as small as its values, at each start.
+All components are one file, `data.bin` in the scripts folder, as large as it needs.
 
+Setting a component changes it in memory only, so it costs the same however often a script
+does it. The file follows on its own: a change is written at once when nothing was written
+in the last second, and a second after the last write otherwise. What is written is the
+component as it is then: a counter raised every tick costs one small write a second, not
+twenty.
+
+- A server that stops or crashes can lose a change made within a second of another. The game
+  does not tell a mod when it stops.
+- The file is written anew, as small as its values, at each start and whenever it has doubled
+  since (a small one, once it has grown by a megabyte), so it stays near what it holds.
 - The file belongs to the scripts folder, not to a world. A second world run with the same
   folder shares what names hold; its players have components of their own.
 - Deleting the file while the server is off takes every component off.

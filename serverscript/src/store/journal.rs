@@ -7,13 +7,13 @@
 //! | holder | which kind as a `u8`, then a player's number as a `u64` or a name as text |
 //!
 //! Numbers are little-endian; text and a value lie as `pack` says. A change costs its own few
-//! bytes however much the store holds, and is with the system once made, so stopping the game
-//! loses none. The file is written anew from what the store holds at each start (`start`), or
-//! it would grow with every change ever made.
+//! bytes however much the store holds. The file is written anew from what the store holds at
+//! each start and whenever it has grown to twice that (`Journal`), or it would grow with every
+//! change ever made.
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, ErrorKind, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::Holder;
 use super::pack::{read_text, read_value, take, write_text, write_value};
@@ -23,6 +23,9 @@ use crate::value::Value;
 const MAGIC: [u8; 4] = *b"WSSD";
 /// The layout of the changes. A file of another version is not read.
 const VERSION: u32 = 2;
+
+/// What a file may grow by before it is written anew, however little it holds: a megabyte.
+const SMALL_GROWTH: u64 = 1 << 20;
 
 /// Puts a value on a holder, replacing the component's last.
 const SET: u8 = 0;
@@ -128,21 +131,54 @@ fn record(bytes: &mut &[u8]) -> Option<Record> {
     })
 }
 
-/// Writes the file at `path` anew, holding `changes`, and opens it for the changes to come.
-/// Whole or not at all: the new file takes the old one's place only once it is written.
-pub fn start(path: &Path, changes: &[u8]) -> io::Result<File> {
-    if let Some(folder) = path.parent() {
-        fs::create_dir_all(folder)?;
-    }
-    let new = path.with_extension("new");
-    fs::write(&new, [head().as_slice(), changes].concat())?;
-    fs::rename(&new, path)?;
-    OpenOptions::new().append(true).open(path)
+/// The file, open for the changes to come.
+pub struct Journal {
+    file: File,
+    path: PathBuf,
+    /// How many bytes it had when last written anew.
+    anew: u64,
+    /// How many were put at its end since.
+    grown: u64,
 }
 
-/// Puts `change` at the file's end.
-pub fn write(file: &mut File, change: &[u8]) -> io::Result<()> {
-    file.write_all(change)
+impl Journal {
+    /// Writes the file at `path` anew, holding `changes`, and opens it for the changes to come.
+    /// Whole or not at all: the new file takes the old one's place only once it is on the disk.
+    pub fn start(path: &Path, changes: &[u8]) -> io::Result<Journal> {
+        if let Some(folder) = path.parent() {
+            fs::create_dir_all(folder)?;
+        }
+        let bytes = [head().as_slice(), changes].concat();
+        let new = path.with_extension("new");
+        let mut file = File::create(&new)?;
+        file.write_all(&bytes)?;
+        file.sync_all()?;
+        fs::rename(&new, path)?;
+        Ok(Journal {
+            file: OpenOptions::new().append(true).open(path)?,
+            path: path.to_path_buf(),
+            anew: bytes.len() as u64,
+            grown: 0,
+        })
+    }
+
+    /// Puts `changes` at the file's end.
+    pub fn append(&mut self, changes: &[u8]) -> io::Result<()> {
+        self.file.write_all(changes)?;
+        self.grown += changes.len() as u64;
+        Ok(())
+    }
+
+    /// Whether the file has doubled since it was written anew, and by more than a little.
+    pub fn outgrown(&self) -> bool {
+        self.grown > self.anew.max(SMALL_GROWTH)
+    }
+
+    /// Writes the file anew, holding `changes` in place of all it held.
+    pub fn rewrite(&mut self, changes: &[u8]) -> io::Result<()> {
+        *self = Journal::start(&self.path, changes)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
