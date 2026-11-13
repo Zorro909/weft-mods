@@ -1,6 +1,6 @@
 //! How deep excavators dig, and what depth costs. Two world settings say where they stop: by
 //! default nowhere, until a layer never loads. Down to 64 blocks below the excavator a block
-//! costs its plain price; past that the price climbs with the square of the depth.
+//! costs its plain price; past that the price doubles every 160 blocks.
 
 use weft_sdk::{Config, Registry};
 
@@ -12,10 +12,9 @@ static LOWEST_Y: Config<i32> = Config::named("excavator_lowest_y");
 const DEFAULT_LOWEST_Y: i32 = -64;
 /// Blocks below the excavator it mines at the plain price.
 const PLAIN_DEPTH: i64 = 64;
-/// Blocks past `PLAIN_DEPTH` at which a block costs `DEEP_EXTRA` times its plain price more:
-/// 384 blocks below the excavator, it costs 4 times as much.
-const DEEP_SPAN: f64 = 320.0;
-const DEEP_EXTRA: f64 = 3.0;
+/// Blocks deeper over which a block's price doubles: 384 blocks below the excavator, it costs 4
+/// times as much.
+const DOUBLING_DEPTH: f64 = 160.0;
 
 pub fn register(r: &mut Registry) {
     r.config(&UNLIMITED).bool(true).world();
@@ -50,9 +49,9 @@ impl Floor {
 
 /// What a block of plain price `cost` costs `below` blocks under the excavator.
 pub fn deep_cost(cost: i64, below: i64) -> i64 {
-    let past = (below - PLAIN_DEPTH).max(0) as f64 / DEEP_SPAN;
+    let doublings = (below - PLAIN_DEPTH).max(0) as f64 / DOUBLING_DEPTH;
     // A cast from `f64` saturates: absurd depths cost the most there is, not a wrapped number.
-    (cost as f64 * (1.0 + DEEP_EXTRA * past * past)) as i64
+    (cost as f64 * doublings.exp2()) as i64
 }
 
 #[cfg(test)]
@@ -79,15 +78,17 @@ mod tests {
     }
 
     #[test]
-    fn depth_costs_more_with_its_square_past_64_blocks() {
+    fn depth_doubles_the_cost_every_160_blocks_past_64() {
         assert_eq!(deep_cost(1000, -5), 1000, "above the excavator");
         assert_eq!(deep_cost(1000, 64), 1000, "64 below at the plain price");
         assert_eq!(
-            deep_cost(1000, 224),
-            1750,
-            "half way to 384: a quarter of the extra"
+            deep_cost(1000, 144),
+            1414,
+            "half a doubling: by the root of 2"
         );
+        assert_eq!(deep_cost(1000, 224), 2000, "twice at 224 below");
         assert_eq!(deep_cost(1000, 384), 4000, "4 times at 384 below");
+        assert_eq!(deep_cost(1000, 1024), 64_000, "64 times at 1024 below");
         assert_eq!(deep_cost(1000, i64::MAX), i64::MAX, "the most there is");
     }
 }
