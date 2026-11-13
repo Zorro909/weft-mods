@@ -76,6 +76,7 @@ jobs:
         with:
           release-unchanged: true
           mods: |
+            almanac
             cogwork
             showcase
             structgen

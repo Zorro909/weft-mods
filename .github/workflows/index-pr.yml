@@ -29,6 +29,7 @@ jobs:
           tags: ${{ inputs.tags }}
           dry-run: ${{ inputs.dry-run }}
           mods: |
+            almanac
             cogwork
             showcase
             structgen

@@ -28,6 +28,8 @@ Look a call up in this order. The engine's own source (`Weft/crates/engine`, `We
 | Channel between client and server | `modding.md` "Client side" | `cogwork/src/ghost.rs`, `cogwork/src/loading/lens.rs` |
 | Client drawing | `modding.md` "Client side", `shaders.md` | `cogwork/src/loading/lens.rs`, `showcase/src/view.rs` |
 | Text | `localization.md` | any mod's `assets/lang/en_us.lang` |
+| Quest in the almanac | `almanac/docs/writing-quests.md` here | `almanac/src/demo.rs` |
+| Data other mods add to and change | `registration.md` "Record" | `almanac/api/src/record.rs`, `almanac/api/src/read.rs` |
 
 ## Building against a Weft release
 

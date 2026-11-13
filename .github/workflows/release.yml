@@ -39,6 +39,7 @@ jobs:
       - uses: Zorro909/weft-mod-action/build@main
         with:
           mods: |
+            almanac
             cogwork
             showcase
             structgen
@@ -67,6 +68,7 @@ jobs:
           token: ${{ secrets.WEFT_INDEX_TOKEN }}
           tags: ${{ needs.release.outputs.releases }}
           mods: |
+            almanac
             cogwork
             showcase
             structgen
