@@ -61,16 +61,19 @@ layer it mines all the way across the frame, so it digs on with nobody near; see
 stay near until it stands.
 
 A block costs 400 energy and 400 more per point of hardness: stone (1.5) takes 1,000. Down to 64
-blocks below the excavator that is all; past that, a block costs more with the square of how far
-past it lies:
+blocks below the excavator that is all; past that, the cost doubles every 160 blocks deeper:
 
-| Below the excavator | Cost |
-|---|---|
-| 64 | 1 times |
-| 128 | 1.12 times |
-| 256 | 2.08 times |
-| 384 | 4 times |
-| 512 | 6.88 times |
+| Below the excavator | Cost | Ticks for stone |
+|---|---|---|
+| 64 | 1 times | 8 |
+| 224 | 2 times | 17 |
+| 384 | 4 times | 33 |
+| 704 | 16 times | 133 |
+| 1,024 | 64 times | 533 |
+| 1,344 | 256 times | 2,133 |
+
+The work on one block takes at most 120 energy a tick, so deep down more engines don't help: a
+block simply takes longer. Far below, that sets a floor of its own.
 
 The drill also pays 80 energy per block it travels, at any depth. What a block drops is what a diamond pickaxe would
 get, and goes into the excavator's 3 by 3 output. Each tick the excavator hands a stack from its
