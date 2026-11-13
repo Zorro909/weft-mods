@@ -12,6 +12,8 @@ mod area;
 mod block_state;
 #[cfg(feature = "config")]
 mod config;
+#[cfg(any(feature = "config", feature = "store"))]
+mod folder;
 mod pos;
 #[cfg(feature = "store")]
 mod store;

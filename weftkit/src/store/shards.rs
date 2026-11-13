@@ -2,12 +2,16 @@
 //! regions read at once and a write waits for them. Write-optimized: sixteen files, each behind
 //! a `Mutex` and chosen by the key's hash, so regions changing different keys seldom wait for
 //! each other; a read locks its shard as a write does.
+//!
+//! The table's folder holds a lock file besides, taken before any file is opened and let go
+//! after all are closed, so no other server or mod uses the table meanwhile.
 
 use std::io;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard, PoisonError, RwLock};
 
 use super::log::{Damage, Log};
+use super::mapped::FolderLock;
 
 /// The files of a write-optimized table. Part of the file layout: a key's file follows from it.
 const SHARDS: usize = 16;
@@ -19,8 +23,14 @@ pub(super) enum Locking {
     WriteOptimized,
 }
 
-/// A table's open files, behind their locks.
-pub(super) enum Shards {
+/// A table's open files, behind their locks, and its folder's lock.
+pub(super) struct Shards {
+    /// Before the lock, so the files are closed before it is let go.
+    files: Files,
+    _lock: FolderLock,
+}
+
+enum Files {
     One(RwLock<Log>),
     Many(Box<[Mutex<Log>]>),
 }
@@ -34,52 +44,54 @@ impl Shards {
         readable: &dyn Fn(&[u8], &[u8]) -> bool,
     ) -> io::Result<(Shards, Vec<Damage>)> {
         std::fs::create_dir_all(folder)?;
+        let lock = FolderLock::take(folder)?;
         let mut damages = Vec::new();
         let mut open = |file: String| -> io::Result<Log> {
-            let (log, damage) = Log::open(&folder.join(file), readable)?;
+            let (log, damage) = Log::open(&folder.join(file), readable, &lock)?;
             damages.extend(damage);
             Ok(log)
         };
-        let shards = match locking {
-            Locking::ReadOptimized => Shards::One(RwLock::new(open("table.log".into())?)),
-            Locking::WriteOptimized => Shards::Many(
+        let files = match locking {
+            Locking::ReadOptimized => Files::One(RwLock::new(open("table.log".into())?)),
+            Locking::WriteOptimized => Files::Many(
                 (0..SHARDS)
                     .map(|shard| open(format!("shard-{shard:02}.log")).map(Mutex::new))
                     .collect::<io::Result<_>>()?,
             ),
         };
+        let shards = Shards { files, _lock: lock };
         Ok((shards, damages))
     }
 
     /// `look` run on the file of `key`, which nobody changes meanwhile.
     pub(super) fn read<R>(&self, key: &[u8], look: impl FnOnce(&Log) -> R) -> R {
-        match self {
-            Shards::One(lock) => look(&lock.read().unwrap_or_else(PoisonError::into_inner)),
-            Shards::Many(shards) => look(&locked(&shards[shard_of(key)])),
+        match &self.files {
+            Files::One(lock) => look(&lock.read().unwrap_or_else(PoisonError::into_inner)),
+            Files::Many(shards) => look(&locked(&shards[shard_of(key)])),
         }
     }
 
     /// `change` run on the file of `key`, which nobody else uses meanwhile.
     pub(super) fn write<R>(&self, key: &[u8], change: impl FnOnce(&mut Log) -> R) -> R {
-        match self {
-            Shards::One(lock) => change(&mut lock.write().unwrap_or_else(PoisonError::into_inner)),
-            Shards::Many(shards) => change(&mut locked(&shards[shard_of(key)])),
+        match &self.files {
+            Files::One(lock) => change(&mut lock.write().unwrap_or_else(PoisonError::into_inner)),
+            Files::Many(shards) => change(&mut locked(&shards[shard_of(key)])),
         }
     }
 
     /// `look` run on each file in turn.
     pub(super) fn read_each(&self, mut look: impl FnMut(&Log)) {
-        match self {
-            Shards::One(lock) => look(&lock.read().unwrap_or_else(PoisonError::into_inner)),
-            Shards::Many(shards) => shards.iter().for_each(|shard| look(&locked(shard))),
+        match &self.files {
+            Files::One(lock) => look(&lock.read().unwrap_or_else(PoisonError::into_inner)),
+            Files::Many(shards) => shards.iter().for_each(|shard| look(&locked(shard))),
         }
     }
 
     /// `change` run on each file in turn.
     pub(super) fn write_each(&self, mut change: impl FnMut(&mut Log)) {
-        match self {
-            Shards::One(lock) => change(&mut lock.write().unwrap_or_else(PoisonError::into_inner)),
-            Shards::Many(shards) => shards.iter().for_each(|shard| change(&mut locked(shard))),
+        match &self.files {
+            Files::One(lock) => change(&mut lock.write().unwrap_or_else(PoisonError::into_inner)),
+            Files::Many(shards) => shards.iter().for_each(|shard| change(&mut locked(shard))),
         }
     }
 }
@@ -120,8 +132,8 @@ mod tests {
         );
         assert_eq!(
             std::fs::read_dir(&folder).expect("listed").count(),
-            SHARDS,
-            "one file each"
+            SHARDS + 1,
+            "one file each, and the lock"
         );
     }
 
@@ -168,5 +180,18 @@ mod tests {
             &|_, _| true,
         );
         assert!(opened.is_err(), "a file is in the way");
+    }
+
+    #[test]
+    fn a_table_in_use_is_refused_without_touching_its_files() {
+        let folder = test_folder("shards-in-use");
+        let _first = Shards::open(&folder, Locking::ReadOptimized, &|_, _| true).expect("it opens");
+        std::fs::write(folder.join("table.new"), b"a rewrite in progress").expect("written");
+        let second = Shards::open(&folder, Locking::ReadOptimized, &|_, _| true);
+        assert!(second.is_err(), "a second server is refused");
+        assert!(
+            folder.join("table.new").exists(),
+            "before it touched the rewrite"
+        );
     }
 }

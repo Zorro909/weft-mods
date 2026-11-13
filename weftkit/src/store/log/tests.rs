@@ -2,7 +2,16 @@ use super::*;
 use crate::store::test_folder;
 
 fn open(path: &Path) -> (Log, Option<Damage>) {
-    Log::open(path, |_, _| true).expect("the log opens")
+    open_keeping(path, |_, _| true).expect("the log opens")
+}
+
+/// The log at `path`, keeping what passes `readable`, opened under its folder's lock.
+fn open_keeping(
+    path: &Path,
+    readable: impl Fn(&[u8], &[u8]) -> bool,
+) -> io::Result<(Log, Option<Damage>)> {
+    let lock = FolderLock::take(path.parent().expect("in a folder")).expect("the lock is free");
+    Log::open(path, readable, &lock)
 }
 
 fn value(log: &Log, key: &[u8]) -> Option<Vec<u8>> {
@@ -87,14 +96,10 @@ fn dead_records_are_rewritten_away() {
     }
     log.set(b"other", b"1").expect("saved");
     log.remove(b"other").expect("removed");
-    assert!(
-        log.dead <= DEAD_ALLOWED,
-        "the dead records were rewritten away"
-    );
-    assert!(
-        log.file.bytes().len() < 4 * 1024 * 1024,
-        "so the file stays small"
-    );
+    log.finish_compaction()
+        .expect("the compaction under way finishes");
+    let written = 40 * record::encoded_len(b"counter", Some(&value_of(0)));
+    assert!(log.end < written, "dead records were rewritten away");
     assert!(
         !path.with_extension("new").exists(),
         "the new file took the old one's place"
@@ -168,7 +173,7 @@ fn a_second_backup_takes_the_next_name() {
 fn records_the_table_cannot_read_are_refused() {
     let path = test_folder("log-refused").join("table.log");
     three_keys(&path);
-    let (log, damage) = Log::open(&path, |key, _| key != b"b").expect("it opens");
+    let (log, damage) = open_keeping(&path, |key, _| key != b"b").expect("it opens");
     let damage = damage.expect("a refused record is damage");
     assert_eq!(
         (damage.damaged, damage.refused),
@@ -194,31 +199,6 @@ fn a_rewrite_cut_off_leaves_the_old_file() {
 }
 
 #[test]
-fn a_file_in_use_is_an_error() {
-    let path = test_folder("log-busy").join("table.log");
-    let _first = open(&path);
-    assert!(
-        Log::open(&path, |_, _| true).is_err(),
-        "a second server is refused"
-    );
-}
-
-#[test]
-fn a_second_opening_leaves_the_first_ones_rewrite_alone() {
-    let path = test_folder("log-rewrite-alone").join("table.log");
-    let _first = open(&path);
-    std::fs::write(path.with_extension("new"), b"a rewrite in progress").expect("written");
-    assert!(
-        Log::open(&path, |_, _| true).is_err(),
-        "the second server is refused"
-    );
-    assert!(
-        path.with_extension("new").exists(),
-        "before it touched the rewrite"
-    );
-}
-
-#[test]
 fn the_backup_is_the_file_exactly_as_it_was() {
     let path = test_folder("log-backup-exact").join("table.log");
     std::fs::write(&path, b"garbage").expect("written");
@@ -234,7 +214,7 @@ fn a_newer_value_the_table_cannot_read_does_not_bring_back_an_older_one() {
     log.set(b"coins", b"old").expect("saved");
     log.set(b"coins", b"NEW").expect("saved");
     drop(log);
-    let (log, damage) = Log::open(&path, |_, value| value != b"NEW").expect("it opens");
+    let (log, damage) = open_keeping(&path, |_, value| value != b"NEW").expect("it opens");
     assert_eq!(
         damage.expect("the refusal is damage").refused,
         1,
@@ -263,4 +243,160 @@ fn a_clearing_that_cannot_be_saved_keeps_the_keys() {
     assert!(cleared.is_err(), "no new file, no clearing");
     assert_eq!(log.entries().count(), 3, "the keys are all still there");
     log.set(b"d", b"value").expect("and the log still works");
+}
+
+#[test]
+fn changes_made_while_compacting_are_kept() {
+    let path = test_folder("log-compact-meanwhile").join("table.log");
+    let (mut log, _) = open(&path);
+    let first: [(&[u8], &[u8]); 3] = [(b"kept", b"1"), (b"chan", b"old"), (b"gone", b"1")];
+    for (key, value) in first {
+        log.set(key, value).expect("saved");
+    }
+    log.start_compaction();
+    log.put(b"chan", b"new").expect("saved");
+    log.take_out(b"gone").expect("removed");
+    log.put(b"made", b"1").expect("saved");
+    log.finish_compaction().expect("finished");
+    let check = |log: &Log| {
+        assert_eq!(
+            value(log, b"kept"),
+            Some(b"1".to_vec()),
+            "a listed key stays"
+        );
+        assert_eq!(
+            value(log, b"chan"),
+            Some(b"new".to_vec()),
+            "a change meanwhile counts"
+        );
+        assert_eq!(value(log, b"gone"), None, "so does a removal");
+        assert_eq!(
+            value(log, b"made"),
+            Some(b"1".to_vec()),
+            "and a key made meanwhile"
+        );
+    };
+    check(&log);
+    drop(log);
+    let (log, damage) = open(&path);
+    assert!(damage.is_none(), "the compacted file is whole");
+    check(&log);
+}
+
+#[test]
+fn a_file_of_a_newer_format_is_refused_untouched() {
+    let path = test_folder("log-newer").join("table.log");
+    let mut bytes = record::header().to_vec();
+    bytes[8] = 9;
+    bytes.extend(b"what a newer version keeps");
+    std::fs::write(&path, &bytes).expect("written");
+    let error = open_keeping(&path, |_, _| true)
+        .err()
+        .expect("a newer format is refused");
+    assert_eq!(
+        error.kind(),
+        io::ErrorKind::InvalidData,
+        "as data this can't read"
+    );
+    assert_eq!(
+        std::fs::read(&path).expect("read"),
+        bytes,
+        "the file is untouched"
+    );
+}
+
+#[test]
+fn a_compaction_under_way_is_dropped_with_its_log() {
+    let path = test_folder("log-compact-dropped").join("table.log");
+    let (mut log, _) = open(&path);
+    log.set(b"a", b"1").expect("saved");
+    log.start_compaction();
+    drop(log);
+    assert!(
+        !path.with_extension("new").exists(),
+        "its file goes with it"
+    );
+    let (log, _) = open(&path);
+    assert_eq!(
+        value(&log, b"a"),
+        Some(b"1".to_vec()),
+        "the log is as it was"
+    );
+}
+
+#[test]
+fn clearing_throws_away_a_compaction_under_way() {
+    let path = test_folder("log-compact-cleared").join("table.log");
+    let (mut log, _) = open(&path);
+    log.set(b"a", b"1").expect("saved");
+    log.start_compaction();
+    log.clear().expect("cleared");
+    assert_eq!(
+        log.entries().count(),
+        0,
+        "the compaction brings nothing back"
+    );
+}
+
+/// Unix only: there a folder without write permission refuses a rename.
+#[cfg(unix)]
+#[test]
+fn a_compaction_that_cannot_take_the_files_place_leaves_the_log_as_it_was() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = test_folder("log-compact-no-rename");
+    let path = folder.join("table.log");
+    let (mut log, _) = open(&path);
+    log.set(b"a", b"1").expect("saved");
+    log.start_compaction();
+    while !log.compaction.as_ref().is_some_and(Compaction::is_finished) {
+        std::thread::yield_now();
+    }
+    log.put(b"b", b"2").expect("saved meanwhile");
+    let mode = |mode| std::fs::set_permissions(&folder, std::fs::Permissions::from_mode(mode));
+    mode(0o555).expect("made read-only");
+    let finished = log.finish_compaction();
+    mode(0o755).expect("made writable");
+    assert!(finished.is_err(), "the rename was refused");
+    assert_eq!(
+        value(&log, b"a"),
+        Some(b"1".to_vec()),
+        "the old file is read again"
+    );
+    assert_eq!(
+        value(&log, b"b"),
+        Some(b"2".to_vec()),
+        "with what was saved meanwhile"
+    );
+    log.set(b"c", b"3").expect("and the log still works");
+}
+
+/// Unix only: there a file without write permission can be renamed but not opened to be mapped.
+#[cfg(unix)]
+#[test]
+fn a_clearing_whose_file_cannot_be_mapped_stays_cleared() {
+    use std::os::unix::fs::PermissionsExt;
+    let path = test_folder("log-clear-unmapped").join("table.log");
+    let (mut log, _) = open(&path);
+    log.set(b"a", b"old").expect("saved");
+    log.start_compaction_of(Vec::new());
+    while !log.compaction.as_ref().is_some_and(Compaction::is_finished) {
+        std::thread::yield_now();
+    }
+    let new = path.with_extension("new");
+    let mode =
+        |path: &Path, mode| std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode));
+    mode(&new, 0o444).expect("made read-only");
+    let cleared = log.finish_compaction();
+    assert!(
+        cleared.is_err(),
+        "the cleared file took the old one's place but isn't mapped"
+    );
+    mode(&path, 0o644).expect("made writable");
+    log.set(b"b", b"new").expect("the next write maps it again");
+    assert_eq!(value(&log, b"a"), None, "the cleared key stays gone");
+    assert_eq!(
+        value(&log, b"b"),
+        Some(b"new".to_vec()),
+        "beside what came after"
+    );
 }

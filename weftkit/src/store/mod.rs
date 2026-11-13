@@ -1,5 +1,5 @@
-//! A mod's persistent data: tables of keys and values in files mapped into memory, under
-//! `data/<mod>/<table>/` in the folder the game runs in, one set for the whole server. A change
+//! A mod's persistent data: tables of keys and values in files mapped into memory, in
+//! `data/<mod>/<table>/` under the game folder (`folder.rs`), one set for the whole server. A change
 //! is in the file once the call returns, and the kernel writes it to disk even if the game
 //! crashes right after. Values stay in the file; memory holds the keys and where values lie.
 //!
@@ -14,11 +14,12 @@
 //! changed type takes a new table name, as a changed `SAVE` component does. So does switching a
 //! table to the other lock design, which lays out its files differently.
 //!
-//! A table opens at its first use. A damaged file is repaired then: an error is logged, the
-//! file as it was is kept as a `.bak` beside it, and every record that can still be read stays.
-//! A file that can't be opened at all (another server uses it, no permission) panics with the
-//! reason, and so does a change that can't be saved. A full disk may instead end the server:
-//! the kernel stops a process whose mapped file it can't find room for.
+//! A table opens at its first use, taking its folder's `lock` file. A damaged file is repaired
+//! then: an error is logged, the file as it was is kept as a `.bak` beside it, and every record
+//! that can still be read stays. A file of a newer format is left alone. A table that can't be
+//! opened (another server uses it, no permission, a newer format) panics with the reason, and so
+//! does a change that can't be saved (a full disk; on btrfs or ZFS the kernel may stop the
+//! server instead). Dead records are rewritten away on a thread of their own.
 
 mod log;
 mod mapped;
@@ -128,7 +129,7 @@ impl<K: Serialize + DeserializeOwned, V: Serialize + DeserializeOwned> Table<K, 
 
     fn shards(&self) -> &Shards {
         self.shards.get_or_init(|| {
-            let folder = Path::new("data").join(weft_sdk::mod_id()).join(self.name);
+            let folder = crate::folder::mod_folder("data").join(self.name);
             let (shards, damages) = self.open_in(&folder);
             for damage in damages {
                 weft_sdk::error!("table {}: {damage}", self.name);

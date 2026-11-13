@@ -26,6 +26,8 @@ const MARKER: &[u8; 4] = b"WREC";
 const PREFIX_LEN: usize = 12;
 /// The kind and the key's length, after the prefix.
 const HEAD_LEN: usize = 5;
+/// Where a record's key starts, from the record's start.
+pub(super) const KEY_START: usize = PREFIX_LEN + HEAD_LEN;
 /// The kind of a record giving its key a value.
 const SET: u8 = 1;
 /// The kind of a record taking its key out.
@@ -37,6 +39,15 @@ pub(super) fn header() -> [u8; HEADER_LEN] {
     header[..8].copy_from_slice(MAGIC);
     header[8..12].copy_from_slice(&FORMAT.to_le_bytes());
     header
+}
+
+/// The format `bytes`, a whole file, says it has, if that is one this code doesn't know: a newer
+/// version of the store wrote it, and rewriting it here would lose what that version keeps.
+pub(super) fn unknown_format(bytes: &[u8]) -> Option<u32> {
+    if !bytes.starts_with(MAGIC) || bytes.len() < HEADER_LEN {
+        return None;
+    }
+    Some(u32_at(bytes, MAGIC.len())).filter(|format| *format != FORMAT)
 }
 
 /// The bytes a record of `key` and `value` takes; a removal has no value.
@@ -323,5 +334,19 @@ mod tests {
         assert!(fits(16, 1024), "a small record fits");
         assert!(!fits(0, u32::MAX as usize), "four gibibytes don't");
         assert!(!fits(usize::MAX, 1), "nor does a length that overflows");
+    }
+
+    #[test]
+    fn only_a_format_this_code_does_not_know_is_unknown() {
+        assert_eq!(unknown_format(&header()), None, "this format is known");
+        let mut newer = header();
+        newer[8] = 2;
+        assert_eq!(unknown_format(&newer), Some(2), "a newer one isn't");
+        assert_eq!(
+            unknown_format(b"garbage that is long enough"),
+            None,
+            "garbage is damage"
+        );
+        assert_eq!(unknown_format(MAGIC), None, "and so is a header cut off");
     }
 }
