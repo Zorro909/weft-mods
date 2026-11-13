@@ -40,7 +40,8 @@ turning.
 ### Machines
 
 - **Excavator.** Builds a gantry frame around an area and lowers a drill that mines everything
-  inside, layer by layer, down to the floor of the world. More engines make it dig faster.
+  inside, layer by layer, as deep as the world's settings allow, from areas up to 256 by 256.
+  More engines make it dig faster.
 - **Assembly bench.** Lay out a crafting recipe with ghost items; tubes bring the ingredients
   and it crafts again and again with engine power.
 - **Leveler.** Clears the ground above its height and fills the holes below it, leaving the

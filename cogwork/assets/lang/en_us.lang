@@ -34,7 +34,7 @@ block.cogwork.ember_engine = Ember Engine
 block.cogwork.ember_engine.tooltip = Burns fuel for four times the energy of a spring engine. Stops to cool down when its energy has nowhere to go.
 
 block.cogwork.excavator = Excavator
-block.cogwork.excavator.tooltip = Digs out the area marked out by survey markers next to it, else the area of a frame it is placed against, else the area behind it, down to the floor of the world. It runs only on more energy per tick than its standby, which grows with its area; what comes in beyond that sets how fast it digs.
+block.cogwork.excavator.tooltip = Digs out the area marked out by survey markers next to it, else the area of a frame it is placed against, else the area behind it, down as deep as the world allows; blocks more than 64 below it cost more energy. It runs only on more energy per tick than its standby, which grows with its area; what comes in beyond that sets how fast it digs.
 block.cogwork.gantry_frame = Gantry Frame
 block.cogwork.assembly_bench = Assembly Bench
 block.cogwork.assembly_bench.tooltip = Click its pattern cells with items to lay out a crafting recipe; the items stay with you. Tubes then fill the cells with stacks of their ghosts, and with engine power it makes the recipe again and again, one item of each cell a craft. A timber tube takes the results out.
@@ -97,6 +97,17 @@ cogwork.excavator.done = Finished
 cogwork.excavator.blocked = Waiting for the area to load
 cogwork.excavator.jammed = Jammed: something in the frame's way may not be broken
 cogwork.excavator.area = {color:dim}Area {0} x {1}, standby {2} energy per tick{/}
+
+config.cogwork.marker_max_area = Survey marker reach
+config.cogwork.marker_max_area.tooltip = How far apart survey markers may stand, and so the largest area an excavator or leveler takes from them. Machines already placed keep their area.
+config.cogwork.marker_max_area.32 = 32 blocks
+config.cogwork.marker_max_area.64 = 64 blocks
+config.cogwork.marker_max_area.128 = 128 blocks
+config.cogwork.marker_max_area.256 = 256 blocks
+config.cogwork.excavator_unlimited_depth = Excavators dig without limit
+config.cogwork.excavator_unlimited_depth.tooltip = Excavators dig on until a layer never loads. Off, they stop at the lowest layer below.
+config.cogwork.excavator_lowest_y = Excavators' lowest layer
+config.cogwork.excavator_lowest_y.tooltip = The height of the last layer excavators mine while their depth is limited.
 
 cogwork.bench.no_recipe = Click cells to set a recipe
 cogwork.bench.missing = Waiting for ingredients
