@@ -2,7 +2,18 @@
 
 ## Unreleased
 
+### Added
+
+- World settings for how deep excavators dig, `excavator_unlimited_depth` (on) and
+  `excavator_lowest_y` (-64), and how far apart survey markers may stand, `marker_max_area`: 32,
+  64 (the default), 128 or 256 blocks.
+
 ### Changed
+
+- Excavators dig on below y = -64 until a layer never loads, unless the world limits their
+  depth. Blocks more than 64 below the excavator cost more energy with the square of the depth:
+  4 times as much at 384 below.
+- An excavator on a large area stores 20 ticks of its standby, not 20,000 energy.
 
 - Oil fields are rare: one in 32 squares of 96 × 96 blocks holds one, not every other, and each
   has its seep. `/structure locate cogwork:oil_field` says where the nearest is.

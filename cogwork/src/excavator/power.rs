@@ -2,7 +2,7 @@
 //! by the size of the area; short of that, nothing moves. Energy beyond it pays for the work,
 //! so the more engines drive an excavator, the faster it digs.
 
-use weft_sdk::*;
+use weft_sdk::{ENERGY, Energy, World};
 
 use super::{Dig, Frame, Status};
 use crate::machine::{self, Payment};
@@ -14,6 +14,10 @@ const CELLS_PER_STANDBY: i64 = 4;
 const DRAW_RATE: i64 = 120;
 /// Energy per block the drill travels.
 const TRAVEL_COST: i64 = 80;
+/// The store of an excavator with a small area: what it holds, and the most it takes in a tick.
+const SMALLEST_STORE: i64 = 20_000;
+/// Ticks of standby the store holds on a large area, so it outlasts a gap in the supply.
+const STORE_TICKS: i64 = 20;
 
 impl Frame {
     /// Standby energy per tick to hold up this frame's gantry.
@@ -21,6 +25,29 @@ impl Frame {
         let [x, z] = self.inside();
         STANDBY_BASE + x as i64 * z as i64 / CELLS_PER_STANDBY
     }
+
+    /// The energy an excavator working this frame stores, and takes in at most in a tick.
+    pub fn store(&self) -> i64 {
+        SMALLEST_STORE.max(STORE_TICKS * self.standby())
+    }
+}
+
+/// An excavator's store before it has planned its area: in from any number of engines, as
+/// standby alone can pass 1000 on a large area.
+pub fn smallest_store() -> Energy {
+    machine::energy(SMALLEST_STORE, SMALLEST_STORE)
+}
+
+/// Sizes the store of the excavator `id` to `frame`. What it held stays, up to the new size.
+pub fn fit_store(world: &World, id: u64, frame: &Frame) {
+    let Some(energy) = world.component_mut(id, &ENERGY) else {
+        return;
+    };
+    let size = frame.store();
+    *energy = Energy {
+        stored: energy.stored.min(size),
+        ..machine::energy(size, size)
+    };
 }
 
 /// Draws this tick's standby; false when there isn't enough. What there was is used up all the
@@ -70,5 +97,22 @@ mod tests {
         let large = frame([34, 4, 34]).standby();
         assert_eq!(small, 30, "9 by 9 needs one ember engine");
         assert_eq!(large, 10 + 33 * 33 / 4, "33 by 33 needs many more");
+    }
+
+    #[test]
+    fn the_store_grows_with_a_large_area() {
+        let frame = |hi| Frame::from(([0, 0, 0], hi));
+        assert_eq!(frame([10, 4, 10]).store(), 20_000, "9 by 9 as before");
+        let largest = frame([256, 4, 256]);
+        assert_eq!(
+            largest.store(),
+            20 * largest.standby(),
+            "20 ticks of standby"
+        );
+        assert!(
+            largest.store() > 300_000,
+            "{} for 255 by 255",
+            largest.store()
+        );
     }
 }

@@ -3,19 +3,19 @@
 
 use std::collections::HashSet;
 
-use weft_sdk::*;
+use weft_sdk::{Dir, World, value};
 
 use super::GANTRY_FRAME;
 use crate::lib::{Area, Pos, TypedWorld};
-use crate::markers::{square_behind, take_area};
+use crate::markers::{LARGEST_REACH, square_behind, take_area};
 
 /// The frame's height above the excavator's block.
 const FRAME_RISE: i32 = 4;
 /// Inside of the frame when no markers say otherwise: 9 by 9.
 const DEFAULT_INSIDE: i32 = 9;
 /// The most frame blocks followed looking for a standing frame: a ring round the largest area
-/// survey markers mark out.
-const MAX_RING: usize = 4 * 66;
+/// survey markers mark out in any world.
+const MAX_RING: usize = 4 * (LARGEST_REACH as usize + 2);
 const SIDES: [Dir; 4] = [Dir::West, Dir::East, Dir::North, Dir::South];
 
 value! {

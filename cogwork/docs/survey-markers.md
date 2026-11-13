@@ -13,8 +13,9 @@ s         s = #stick
 
 Three markers in an L, all at the same height, are enough: a corner, one along the x axis and
 one along the z axis. A fourth at the opposite corner is allowed but not needed. A marker looks
-for the next one from 2 up to 64 blocks along each line: two markers side by side don't make a
-rectangle.
+for the next one from 2 blocks along each line, so two markers side by side don't make a
+rectangle, up to 64 blocks: the world's `marker_max_area` setting makes that 32, 128 or 256
+instead. A machine placed before the setting changes keeps its area.
 
 Use the corner marker to check: its rectangle is drawn in the air with glowing points for a few
 seconds. A marker that isn't the corner of a rectangle puffs instead.

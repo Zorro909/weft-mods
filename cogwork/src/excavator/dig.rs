@@ -1,11 +1,12 @@
 //! An excavator's tick: plan the area, build the frame (`framing`), then mine, and pass on what
 //! it mined.
 
-use weft_sdk::*;
+use weft_sdk::{Output, SystemBatch, World};
 
+use super::depth::Floor;
 use super::framing::build_frame;
 use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
-use super::power::hold;
+use super::power::{fit_store, hold};
 use super::{Dig, EXCAVATOR, Frame, Stage, Status, rig};
 use crate::lib::{Pos, TypedWorld};
 use crate::sounds;
@@ -14,8 +15,6 @@ use crate::sounds;
 const SCAN: u32 = 512;
 /// Ticks a layer may stay unloaded before the excavator takes it for the floor of the world.
 const FLOOR_WAIT: u32 = 200;
-/// The deepest layer it mines, like the floor of vanilla's worlds.
-pub const FLOOR_Y: i32 = -64;
 
 pub fn tick(batch: &mut SystemBatch<Dig>) {
     let world = batch.world();
@@ -28,7 +27,7 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
             continue;
         }
         work(&world, id, pos, dig);
-        super::keep_loaded(&world, pos, dig);
+        super::keep_loaded(&world, pos, dig, Floor::now());
         rig::update(&world, id, dig);
         crate::machine::show_working(&world, pos, dig.status().is_working());
     }
@@ -37,7 +36,7 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
 /// Passes on what the excavator `id` at `pos` mined, then works on its stage.
 fn work(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
     if dig.stage() == Stage::New {
-        start(world, pos, dig);
+        start(world, id, pos, dig);
     }
     crate::store::eject(world, pos);
     match dig.stage() {
@@ -48,8 +47,10 @@ fn work(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
     }
 }
 
-fn start(world: &World, pos: Pos, dig: &mut Dig) {
+/// Plans the area of the excavator `id` at `pos` and sizes its store to it.
+fn start(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
     dig.frame = Frame::plan(world, pos, crate::machine::front(world, pos));
+    fit_store(world, id, &dig.frame);
     dig.set_stage(Stage::Frame);
     dig.step = 0;
 }
@@ -63,7 +64,7 @@ fn mine_next(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
         return;
     };
     let block_state = world.block_typed(target);
-    let cost = block_cost(block_state);
+    let cost = block_cost(&dig.frame, target, block_state);
     // Where the energy paid so far has the drill: into a block it has begun, it carries on from
     // there instead of going back to its edge.
     let reached = progress_point(&dig.frame, target, dig.spent, cost);
@@ -87,9 +88,10 @@ fn mine_next(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
 /// The next block worth mining from the cursor on, skipping air, liquids and what can't be
 /// broken; `None` while waiting or once finished.
 fn find_target(world: &World, dig: &mut Dig) -> Option<Pos> {
+    let floor = Floor::now();
     for _ in 0..SCAN {
         let cell = dig.cursor;
-        if cell.y < FLOOR_Y {
+        if floor.is_above(cell.y) {
             finish(dig);
             return None;
         }
