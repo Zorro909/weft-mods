@@ -1,13 +1,11 @@
-//! The script engine without the game: its limits, and what scripts call that needs no world.
-//! `crate::bindings` adds the calls that do.
+//! The script engine without the game: its limits, and the `command(..)` line of a script.
+//! `crate::bindings` adds what scripts call.
 
 use std::sync::{Arc, Mutex};
 
-use rhai::{Dynamic, Engine, EvalAltResult};
+use rhai::{Engine, EvalAltResult};
 
 use crate::lock;
-use crate::store::STORE;
-use crate::value::Value;
 
 /// Operations one handler may run before it is stopped, so a loop that never ends costs a few
 /// milliseconds of one tick and not the server.
@@ -51,38 +49,5 @@ pub fn build(declarations: &Declarations) -> Engine {
             Ok(())
         },
     );
-    register_store(&mut engine);
     engine
-}
-
-fn register_store(engine: &mut Engine) {
-    engine.register_fn("store_get", |key: &str| {
-        STORE.get(key).map_or(Dynamic::UNIT, Value::into_dynamic)
-    });
-    engine.register_fn("store_add", |key: &str, amount: Dynamic| {
-        let Some(amount) = Value::from_dynamic(&amount) else {
-            return fail("store_add needs a number");
-        };
-        let total = STORE
-            .add(key, &amount)
-            .or_else(|error| fail(error.message()))?;
-        Ok(total.into_dynamic())
-    });
-    engine.register_fn("store_append", |key: &str, value: Dynamic| {
-        let Some(value) = Value::from_dynamic(&value) else {
-            return fail("store_append takes numbers, text, yes or no, and lists of them");
-        };
-        let length = STORE
-            .append(key, value)
-            .or_else(|error| fail(error.message()))?;
-        Ok(length as i64)
-    });
-    engine.register_fn("store_set_if_absent", |key: &str, value: Dynamic| {
-        let Some(value) = Value::from_dynamic(&value) else {
-            return fail("store_set_if_absent takes numbers, text, yes or no, and lists of them");
-        };
-        STORE
-            .set_if_absent(key, value)
-            .or_else(|error| fail(error.message()))
-    });
 }

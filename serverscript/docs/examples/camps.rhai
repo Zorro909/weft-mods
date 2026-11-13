@@ -1,5 +1,6 @@
-// /setcamp remembers where a player stands, as that player's own data, which is saved.
-// /camp brings them back, and /spawn takes anyone to a fixed place.
+// /setcamp remembers where a player stands, in the data key camps:camp on that player.
+// /camp brings them back and counts the returns there too, and /spawn takes anyone to a
+// fixed place.
 
 command("spawn", "", 0);
 command("setcamp", "", 0);
@@ -11,18 +12,18 @@ fn cmd_spawn(cmd) {
 }
 
 fn cmd_setcamp(cmd) {
-    let here = position(cmd.sender);
-    if !data_set(cmd.sender, "camp", here) {
+    if !data_set(cmd.sender, "camp", "at", position(cmd.sender)) {
         return "Your camp could not be saved";
     }
     "Camp set"
 }
 
 fn cmd_camp(cmd) {
-    let camp = data_get(cmd.sender, "camp");
-    if camp == () {
+    let at = data_get(cmd.sender, "camp", "at");
+    if at == () {
         return "Set a camp first with /setcamp";
     }
-    teleport(cmd.sender, camp[0], camp[1], camp[2]);
-    "Back at your camp"
+    teleport(cmd.sender, at[0], at[1], at[2]);
+    let returns = data_add(cmd.sender, "camp", "returns", 1);
+    `Back at your camp, return number ${returns}`
 }

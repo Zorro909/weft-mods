@@ -3,9 +3,9 @@
 //! | Part | Bytes |
 //! |---|---|
 //! | head | `MAGIC`, then `VERSION` as a `u32` |
-//! | change | what it does as a `u8`, its owner as a `u64`, its key, and a value unless it removes |
+//! | change | what it does as a `u8`, its owner as a `u64`, its data key, its key, and a value unless it removes |
 //!
-//! Numbers are little-endian; keys and values lie as `pack` says. A change costs its own few
+//! Numbers are little-endian; a data key, a key and a value lie as `pack` says. A change costs its own few
 //! bytes however much the store holds, and is with the system once made, so stopping the game
 //! loses none. The file is written anew from what the store holds at each start (`start`), or
 //! it would grow with every change ever made.
@@ -14,6 +14,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, ErrorKind, Write};
 use std::path::Path;
 
+use super::Place;
 use super::pack::{read_key, read_value, take, write_key, write_value};
 use crate::value::Value;
 
@@ -41,6 +42,7 @@ pub enum Change {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Record {
     pub owner: u64,
+    pub component: String,
     pub key: String,
     pub change: Change,
 }
@@ -53,26 +55,27 @@ pub struct Read {
     pub whole: bool,
 }
 
-/// The bytes of the change that sets `key` of `owner` to `value`; `None` when the key or the
-/// value is too long to write.
-pub fn set(owner: u64, key: &str, value: &Value) -> Option<Vec<u8>> {
-    written(SET, owner, key, Some(value))
+/// The bytes of the change that sets `place` to `value`; `None` when a name or the value is
+/// too long to write.
+pub fn set(place: Place, value: &Value) -> Option<Vec<u8>> {
+    written(SET, place, Some(value))
 }
 
-/// The bytes of the change that appends `item` to the list under `key` of `owner`.
-pub fn append(owner: u64, key: &str, item: &Value) -> Option<Vec<u8>> {
-    written(APPEND, owner, key, Some(item))
+/// The bytes of the change that appends `item` to the list at `place`.
+pub fn append(place: Place, item: &Value) -> Option<Vec<u8>> {
+    written(APPEND, place, Some(item))
 }
 
-/// The bytes of the change that removes `key` of `owner`.
-pub fn remove(owner: u64, key: &str) -> Option<Vec<u8>> {
-    written(REMOVE, owner, key, None)
+/// The bytes of the change that removes the key at `place`.
+pub fn remove(place: Place) -> Option<Vec<u8>> {
+    written(REMOVE, place, None)
 }
 
-fn written(what: u8, owner: u64, key: &str, value: Option<&Value>) -> Option<Vec<u8>> {
+fn written(what: u8, place: Place, value: Option<&Value>) -> Option<Vec<u8>> {
     let mut bytes = vec![what];
-    bytes.extend_from_slice(&owner.to_le_bytes());
-    write_key(key, &mut bytes)?;
+    bytes.extend_from_slice(&place.owner.to_le_bytes());
+    write_key(place.component, &mut bytes)?;
+    write_key(place.key, &mut bytes)?;
     if let Some(value) = value {
         write_value(value, &mut bytes)?;
     }
@@ -118,6 +121,7 @@ fn parse(bytes: &[u8]) -> Read {
 fn record(bytes: &mut &[u8]) -> Option<Record> {
     let what = take(bytes, 1)?[0];
     let owner = u64::from_le_bytes(take(bytes, 8)?.try_into().ok()?);
+    let component = read_key(bytes)?;
     let key = read_key(bytes)?;
     let change = match what {
         SET => Change::Set(read_value(bytes)?),
@@ -125,7 +129,12 @@ fn record(bytes: &mut &[u8]) -> Option<Record> {
         REMOVE => Change::Remove,
         _ => return None,
     };
-    Some(Record { owner, key, change })
+    Some(Record {
+        owner,
+        component,
+        key,
+        change,
+    })
 }
 
 /// Writes the file at `path` anew, holding `changes`, and opens it for the changes to come.
@@ -149,13 +158,21 @@ pub fn write(file: &mut File, change: &[u8]) -> io::Result<()> {
 mod tests {
     use super::*;
 
+    fn place<'a>(owner: u64, component: &'a str, key: &'a str) -> Place<'a> {
+        Place {
+            owner,
+            component,
+            key,
+        }
+    }
+
     fn changes() -> Vec<u8> {
         let list = Value::List(vec![Value::Int(1)]);
         [
-            set(0, "visits", &Value::Int(3)),
-            append(0, "log", &Value::Text("hi".into())),
-            set(7, "camp", &list),
-            remove(7, "camp"),
+            set(place(0, "welcome:stats", "visits"), &Value::Int(3)),
+            append(place(0, "welcome:log", "lines"), &Value::Text("hi".into())),
+            set(place(7, "camps:camp", "at"), &list),
+            remove(place(7, "camps:camp", "at")),
         ]
         .into_iter()
         .flat_map(|change| change.expect("the change is short enough"))
@@ -163,16 +180,23 @@ mod tests {
     }
 
     fn records() -> Vec<Record> {
-        let record = |owner, key: &str, change| Record {
+        let record = |owner, component: &str, key: &str, change| Record {
             owner,
+            component: component.to_string(),
             key: key.to_string(),
             change,
         };
+        let list = Value::List(vec![Value::Int(1)]);
         vec![
-            record(0, "visits", Change::Set(Value::Int(3))),
-            record(0, "log", Change::Append(Value::Text("hi".into()))),
-            record(7, "camp", Change::Set(Value::List(vec![Value::Int(1)]))),
-            record(7, "camp", Change::Remove),
+            record(0, "welcome:stats", "visits", Change::Set(Value::Int(3))),
+            record(
+                0,
+                "welcome:log",
+                "lines",
+                Change::Append(Value::Text("hi".into())),
+            ),
+            record(7, "camps:camp", "at", Change::Set(list)),
+            record(7, "camps:camp", "at", Change::Remove),
         ]
     }
 
@@ -195,11 +219,14 @@ mod tests {
     #[test]
     fn the_layout_is_the_one_files_hold() {
         assert_eq!(head(), [b'W', b'S', b'S', b'D', 1, 0, 0, 0]);
-        let change = set(2, "a", &Value::Bool(true)).expect("the change is short enough");
+        let change =
+            set(place(2, "a:b", "c"), &Value::Bool(true)).expect("the change is short enough");
         assert_eq!(
             change,
-            [SET, 2, 0, 0, 0, 0, 0, 0, 0, 1, b'a', 2, 1],
-            "what, owner, key, value"
+            [
+                SET, 2, 0, 0, 0, 0, 0, 0, 0, 3, b'a', b':', b'b', 1, b'c', 2, 1
+            ],
+            "what, owner, data key, key, value"
         );
         assert_eq!(
             [SET, APPEND, REMOVE],
@@ -234,16 +261,17 @@ mod tests {
     #[test]
     fn an_unknown_change_ends_the_reading() {
         let mut bytes = file(&changes());
-        bytes.extend_from_slice(&[9, 0, 0, 0, 0, 0, 0, 0, 0, 1, b'a']);
+        bytes.extend_from_slice(&[9, 0, 0, 0, 0, 0, 0, 0, 0, 1, b'a', 1, b'b']);
         let read = parse(&bytes);
         assert!(!read.whole);
         assert_eq!(read.records, records(), "what came before is kept");
     }
 
     #[test]
-    fn a_key_too_long_makes_no_change() {
+    fn a_name_too_long_makes_no_change() {
         let long = "k".repeat(256);
-        assert_eq!(set(0, &long, &Value::Int(1)), None);
-        assert_eq!(remove(0, &long), None);
+        assert_eq!(set(place(0, "a:b", &long), &Value::Int(1)), None);
+        assert_eq!(set(place(0, &long, "c"), &Value::Int(1)), None);
+        assert_eq!(remove(place(0, "a:b", &long)), None);
     }
 }

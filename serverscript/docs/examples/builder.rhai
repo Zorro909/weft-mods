@@ -6,10 +6,9 @@ command("carried", "<item:item>", 0);
 command("pillar", "<height:int>", 2);
 
 fn cmd_kit(cmd) {
-    if data_get(cmd.sender, "kit") == true {
+    if !data_set_if_absent(cmd.sender, "kit", "given", true) {
         return "You had your kit already";
     }
-    data_set(cmd.sender, "kit", true);
     let left = give(cmd.sender, "base:torch", 16) + give(cmd.sender, "base:bread", 4);
     if left > 0 {
         return `Your pockets are full: ${left} things did not fit`;

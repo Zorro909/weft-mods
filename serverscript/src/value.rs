@@ -1,4 +1,4 @@
-//! A value scripts keep, in the shared store or in an entity's data.
+//! A value scripts keep under a key of a data key.
 
 use rhai::{Array, Dynamic};
 

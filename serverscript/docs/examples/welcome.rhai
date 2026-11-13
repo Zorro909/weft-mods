@@ -1,9 +1,10 @@
-// Greets players, counts visits, and keeps the chat free of one word.
+// Greets players, counts visits in its data key welcome:stats, and keeps the chat free of
+// one word.
 
 command("visits", "", 0);
 
 fn on_player_joined(e) {
-    let visits = store_add("visits", 1);
+    let visits = data_add("stats", "visits", 1);
     hint(e.player, `Welcome! You are visitor ${visits}.`);
 }
 
@@ -15,6 +16,6 @@ fn before_chat(q) {
 }
 
 fn cmd_visits(cmd) {
-    let visits = store_get("visits");
+    let visits = data_get("stats", "visits");
     `${visits} visits so far`
 }

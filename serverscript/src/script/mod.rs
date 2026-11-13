@@ -3,7 +3,10 @@
 //!
 //! A script's function is called with a fresh scope and sees nothing outside itself, so a script
 //! holds no state between calls: regions tick in parallel and any thread may run it. What lasts
-//! lives in `crate::store` or on an entity (`crate::data`).
+//! lives in `crate::store`.
+//!
+//! A script is known by its file's name without the ending, which is what its data keys are
+//! named after (`crate::name`): each call is tagged with it, for `crate::bindings::data`.
 
 pub mod engine;
 
@@ -15,6 +18,7 @@ use rhai::{AST, CallFnOptions, Dynamic, Engine, Map, Scope};
 
 use self::engine::{Declarations, Declared};
 use crate::lock;
+use crate::name::is_plain;
 use crate::usage::Usage;
 
 /// What a script file's name ends in.
@@ -40,7 +44,7 @@ pub fn replace(scripts: Scripts) {
 
 /// One script file.
 struct Script {
-    /// Its file name without the ending.
+    /// Its file name without the ending: lowercase letters, digits and `_`.
     name: String,
     ast: AST,
     functions: BTreeSet<String>,
@@ -123,6 +127,9 @@ impl Scripts {
         source: &str,
         sink: &Declarations,
     ) -> Result<Vec<Declared>, String> {
+        if !is_plain(name) {
+            return Err("a script's file name may only have a-z, 0-9 and _".into());
+        }
         let ast = self
             .engine
             .compile(source)
@@ -160,9 +167,7 @@ impl Scripts {
     }
 
     fn checked(&self, line: &Declared, script: usize) -> Result<Command, String> {
-        let plain =
-            |letter: char| letter.is_ascii_lowercase() || letter.is_ascii_digit() || letter == '_';
-        if line.name.is_empty() || !line.name.chars().all(plain) {
+        if !is_plain(&line.name) {
             return Err("its name may only have a-z, 0-9 and _".into());
         }
         if RESERVED.contains(&line.name.as_str()) {
@@ -235,7 +240,9 @@ impl Scripts {
 
     fn call(&self, script: &Script, function: &str, argument: Map) -> Result<Dynamic, String> {
         // The top level ran when the script loaded: only the function runs now.
-        let options = CallFnOptions::new().eval_ast(false);
+        let options = CallFnOptions::new()
+            .eval_ast(false)
+            .with_tag(script.name.clone());
         let mut scope = Scope::new();
         self.engine
             .call_fn_with_options(options, &mut scope, &script.ast, function, (argument,))

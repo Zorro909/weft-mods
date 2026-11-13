@@ -15,8 +15,7 @@ Each call of a function starts fresh: a function sees its argument and what it d
 nothing else, not even a variable at the top of its own file. The game runs distant parts of
 the world on different threads at the same time, and any of them may call the script.
 
-What has to last goes into the [store](#the-store), which every script sees, or onto a
-[player](#data-on-a-player). Both are saved.
+What has to last goes into [data](#data), which is saved: once for everyone, or on a player.
 
 ## Events
 
@@ -168,61 +167,93 @@ players it is about. A player, an entity or a block far away, in a part that run
 can't be read or changed from there: `players()` leaves the player out, and a read gives
 nothing. Text and `broadcast` reach anyone.
 
-## The store
+## Data
 
-Values by a key, shared by all scripts, and saved:
+A script keeps values under **data keys**, as the game keeps an entity's values under
+components. A data key has a name and holds any number of values, each under a key of its
+own:
+
+```rust
+// in camps.rhai: the data key "camp" on a player, with the keys "at" and "returns"
+data_set(player, "camp", "at", position(player));
+data_add(player, "camp", "returns", 1);
+```
+
+- **Its name** is the script's file name, a colon, and the name the script gave it:
+  `camps:camp`. A script writes the short name, `"camp"`, for its own, and the full one,
+  `"camps:camp"`, for another script's. So two scripts never share a data key by accident.
+  A name is lowercase letters, digits and `_`, and so is a script's file name.
+- **Where it is:** once for everyone, or once on each player when the call names a player
+  first.
+- **A key** in it is any text of at most 255 bytes: a word, a player's choice, a number as
+  text.
+- **A value** is a whole number, a number with a fraction, `true` or `false`, text, or a list
+  of these.
 
 | Call | Does | Gives back |
 |---|---|---|
-| `store_get(key)` | Reads | The value, or nothing |
-| `store_add(key, number)` | Adds to a number, counting from 0 | The new total |
-| `store_append(key, value)` | Puts a value at the end of a list, starting one | The list's new length |
-| `store_set_if_absent(key, value)` | Sets the key if nothing is there | `true` if it did |
+| `data_get(name, key)` | Reads one value | The value, or nothing |
+| `data_all(name)` | Reads the whole data key | A map of its keys and values, empty if there are none |
+| `data_add(name, key, number)` | Adds to a number, counting from 0 | The new total |
+| `data_append(name, key, value)` | Puts a value at the end of a list, starting one | The list's new length |
+| `data_set_if_absent(name, key, value)` | Sets the key if nothing is there | `true` if it did |
 
 Each call is one step: two scripts adding at the same moment both count, and of several
-setting an absent key exactly one hears `true`. That is why nothing here replaces a value: a
-script reading a value and writing it back could undo what another wrote in between.
+setting an absent key exactly one hears `true`.
 
 ```rust
 fn on_block_broken(e) {
-    if e.block.starts_with("base:diamond_ore") && store_set_if_absent("first_diamond", e.player) {
+    if e.block.starts_with("base:diamond_ore") && data_set_if_absent("firsts", "diamond", e.player) {
         broadcast("The first diamond of this world was found!");
     }
 }
 ```
 
-A value is a whole number, a number with a fraction, `true` or `false`, text, or a list of
-these. A key is text of at most 255 bytes.
+### On a player
 
-## Data on a player
-
-Values by a key that are one player's own, saved, and there again when the player comes back:
+With a player in front, the same calls reach that player's own data key, and two more
+replace and remove:
 
 | Call | Does | Gives back |
 |---|---|---|
-| `data_get(player, key)` | Reads | The value, or nothing |
-| `data_set(player, key, value)` | Sets, in place of what was | `false` if the player is not near |
-| `data_remove(player, key)` | Takes the key off | `false` if nothing was there or the player is not near |
+| `data_get(player, name, key)` | Reads one value | The value, or nothing |
+| `data_all(player, name)` | Reads the whole data key | A map, empty if there is nothing |
+| `data_add(player, name, key, number)` | Adds to a number | The new total |
+| `data_append(player, name, key, value)` | Appends to a list | The list's new length |
+| `data_set_if_absent(player, name, key, value)` | Sets the key if nothing is there | `true` if it did |
+| `data_set(player, name, key, value)` | Sets the key, in place of what was | `true` if it did |
+| `data_remove(player, name, key)` | Takes the key off | `true` if it was there |
 
-The values and keys are the same kinds as the store's. Here a value can be replaced and
-removed: only the part of the world the player is in reaches their data.
+The data stays with the player from one visit to the next. A player who is not
+[near](#near) can't be reached: a read gives nothing, a write gives `false` or nothing.
 
 ```rust
-fn cmd_setcamp(cmd) {
-    data_set(cmd.sender, "camp", position(cmd.sender));
-    "Camp set"
+fn cmd_camp(cmd) {
+    let at = data_get(cmd.sender, "camp", "at");
+    if at == () {
+        return "Set a camp first with /setcamp";
+    }
+    teleport(cmd.sender, at[0], at[1], at[2]);
 }
 ```
 
+### Why only a player's is replaced
+
+What is there once is reached by every part of the world at the same moment. A script
+replacing a value there could undo what another wrote in the same tick, so those data keys
+only grow: numbers are added to, lists appended to, keys set once. A player is in one part of
+the world at a time, the only one that reaches their data, so it can be set and removed
+freely.
+
 ## Where it is saved
 
-The store and the players' data are one file, `data.bin` in the scripts folder. It has no
+All data is one file, `data.bin` in the scripts folder. It has no
 size of its own to outgrow: a change is added to its end when it is made, so nothing is lost
 when the server stops, and the file is written anew, as small as its values, at each start.
 
 - The file belongs to the scripts folder, not to a world. A second world run with the same
-  folder shares the store's values; its players have data of their own.
-- Deleting the file while the server is off empties the store and every player's data.
+  folder shares what is there once; its players have data of their own.
+- Deleting the file while the server is off empties all data.
 - One running server per scripts folder: two at once would write into each other's file.
 - A file the mod can't read to its end is kept beside it as `data.bak`, and the server's log
   says so.

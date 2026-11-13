@@ -1,5 +1,5 @@
 use super::*;
-use crate::store::STORE;
+use crate::store::{Place, SHARED, STORE};
 use crate::value::Value;
 
 fn compile(sources: &[(&str, &str)]) -> (Scripts, Vec<String>) {
@@ -155,56 +155,106 @@ fn a_loop_without_end_is_stopped() {
     );
 }
 
-#[test]
-fn scripts_share_the_store() {
-    let (scripts, problems) = compile(&[
-        (
-            "writer",
-            "fn on_chat(e) { store_add(\"script_test_chats\", 2); store_append(\"script_test_log\", \"hi\") }",
-        ),
-        (
-            "reader",
-            "fn on_death(e) { store_get(\"script_test_chats\") }",
-        ),
-        (
-            "claimer",
-            "fn on_spawn(e) { store_set_if_absent(\"script_test_claim\", true) }",
-        ),
-    ]);
-    assert_eq!(problems, Vec::<String>::new());
-    let call = |hook| {
-        scripts
-            .notify(hook, &Map::new())
-            .pop()
-            .expect("a script has it")
-            .expect("it runs")
-    };
-    assert_eq!(call("on_chat").as_int(), Ok(1), "the list has one entry");
-    assert_eq!(
-        call("on_death").as_int(),
-        Ok(2),
-        "another script reads the total"
-    );
-    assert_eq!(call("on_spawn").as_bool(), Ok(true), "the first claim wins");
-    assert_eq!(call("on_spawn").as_bool(), Ok(false), "the second does not");
-    assert_eq!(
-        STORE.get("script_test_log"),
-        Some(Value::List(vec![Value::Text("hi".into())]))
-    );
+/// Scripts with the calls of `crate::bindings`, which the data calls are among.
+fn with_calls(sources: &[(&str, &str)]) -> Scripts {
+    let owned: Vec<(String, String)> = sources
+        .iter()
+        .map(|(name, source)| (name.to_string(), source.to_string()))
+        .collect();
+    let (scripts, problems) = Scripts::compile(&owned, crate::bindings::register);
+    assert_eq!(problems, Vec::<String>::new(), "the scripts load clean");
+    scripts
+}
+
+fn called(scripts: &Scripts, hook: &str) -> Result<Dynamic, String> {
+    let mut results = scripts.notify(hook, &Map::new());
+    results.pop().expect("a script has the hook")
 }
 
 #[test]
-fn the_store_refuses_what_it_cannot_add() {
-    let scripts = loaded("fn on_chat(e) { store_add(\"script_test_text\", \"one\") }");
-    let result = scripts
-        .notify("on_chat", &Map::new())
-        .pop()
-        .expect("the script has the hook");
-    assert!(
-        result
-            .expect_err("text is no number")
-            .contains("store_add needs a number")
-    );
+fn a_script_keeps_data_under_its_own_name() {
+    let scripts = with_calls(&[(
+        "keeper",
+        "fn on_chat(e) { data_add(\"stats\", \"chats\", 2); data_append(\"stats\", \"log\", \"hi\") }
+         fn on_death(e) { data_all(\"stats\") }",
+    )]);
+    let length = called(&scripts, "on_chat").expect("it runs");
+    assert_eq!(length.as_int(), Ok(1), "the list has one entry");
+    let chats = Place {
+        owner: SHARED,
+        component: "keeper:stats",
+        key: "chats",
+    };
+    assert_eq!(STORE.get(chats), Some(Value::Int(2)), "under keeper:stats");
+    let all = called(&scripts, "on_death").expect("it runs").cast::<Map>();
+    assert_eq!(all.len(), 2, "both keys of the data key");
+    assert_eq!(all["chats"].as_int(), Ok(2));
+}
+
+#[test]
+fn another_script_reads_it_by_its_full_name() {
+    let scripts = with_calls(&[
+        (
+            "writer",
+            "fn on_chat(e) { data_set_if_absent(\"claims\", \"first\", 7) }",
+        ),
+        (
+            "reader",
+            "fn on_death(e) { data_get(\"writer:claims\", \"first\") }
+             fn on_spawn(e) { data_get(\"claims\", \"first\") }",
+        ),
+    ]);
+    let claim = |scripts| called(scripts, "on_chat").expect("it runs").as_bool();
+    assert_eq!(claim(&scripts), Ok(true), "the first claim wins");
+    assert_eq!(claim(&scripts), Ok(false), "the second does not");
+    let full = called(&scripts, "on_death").expect("it runs");
+    assert_eq!(full.as_int(), Ok(7), "the full name reaches it");
+    let short = called(&scripts, "on_spawn").expect("it runs");
+    assert!(short.is_unit(), "the short name is the reader's own, empty");
+}
+
+#[test]
+fn data_refuses_what_it_cannot_keep() {
+    let scripts = with_calls(&[(
+        "refused",
+        "fn on_chat(e) { data_add(\"stats\", \"text\", \"one\") }
+         fn on_death(e) { data_get(\"My Stats\", \"x\") }
+         fn on_spawn(e) { data_append(\"stats\", \"map\", #{}) }",
+    )]);
+    let error = |hook| called(&scripts, hook).expect_err("it is refused");
+    assert!(error("on_chat").contains("data_add needs a number"));
+    assert!(error("on_death").contains("a data key is a-z, 0-9 and _"));
+    assert!(error("on_spawn").contains("data takes numbers"));
+}
+
+#[test]
+fn what_all_share_cannot_be_replaced_or_removed() {
+    let sources = [(
+        "replacer".to_string(),
+        "fn on_chat(e) { data_set(\"stats\", \"x\", 1); }".to_string(),
+    )];
+    let (scripts, _) = Scripts::compile(&sources, crate::bindings::register);
+    let error = called(&scripts, "on_chat").expect_err("there is no such call");
+    assert!(error.contains("Function not found"), "{error}");
+}
+
+#[test]
+fn data_at_the_top_of_a_script_is_a_problem() {
+    let sources = [(
+        "early".to_string(),
+        "data_add(\"stats\", \"loads\", 1);".to_string(),
+    )];
+    let (_, problems) = Scripts::compile(&sources, crate::bindings::register);
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(problems[0].contains("data is reached from a function"));
+}
+
+#[test]
+fn a_script_with_another_kind_of_name_is_left_out() {
+    let (scripts, problems) = compile(&[("My Script", "fn on_chat(e) {}")]);
+    assert_eq!(scripts.len(), 0);
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(problems[0].contains("a-z, 0-9 and _"));
 }
 
 #[test]
@@ -269,8 +319,11 @@ fn every_call_can_be_written_in_a_script() {
         players(); position(1); teleport(1, 0, 0, 0); permission(1); kind(1); health(1);
         damage(1, 1); heal(1, 1); summon(\"\", 0, 0, 0); remove(1);
         inventory(1); held(1); give(1, \"\", 1); take(1, \"\", 1);
-        data_get(1, \"\"); data_set(1, \"\", 1); data_remove(1, \"\");
-        store_get(\"\"); store_add(\"\", 1); store_append(\"\", 1); store_set_if_absent(\"\", 1);
+        data_get(\"a\", \"\"); data_all(\"a\"); data_add(\"a\", \"\", 1); data_append(\"a\", \"\", 1);
+        data_set_if_absent(\"a\", \"\", 1);
+        data_get(1, \"a\", \"\"); data_all(1, \"a\"); data_add(1, \"a\", \"\", 1);
+        data_append(1, \"a\", \"\", 1); data_set_if_absent(1, \"a\", \"\", 1);
+        data_set(1, \"a\", \"\", 1); data_remove(1, \"a\", \"\");
     }";
     let sources = [("calls".to_string(), calls.to_string())];
     let (_, problems) = Scripts::compile(&sources, crate::bindings::register);

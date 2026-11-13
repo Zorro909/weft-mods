@@ -4,7 +4,7 @@ Everything about the `serverscript` mod. For a short overview, see the [README](
 
 | Page | Covers |
 |---|---|
-| [Writing scripts](scripting.md) | The functions the game calls in a script, the calls a script makes, commands, the store, data on players, where both are saved, limits |
+| [Writing scripts](scripting.md) | The functions the game calls in a script, the calls a script makes, commands, data keys and where they are saved, limits |
 | [Example scripts](examples/) | `welcome.rhai`, `camps.rhai` and `builder.rhai`, which a test loads so they stay right |
 
 ## Not done yet
@@ -15,11 +15,11 @@ Everything about the `serverscript` mod. For a short overview, see the [README](
 - **What a stack holds besides its item.** Scripts see an item's name and a count, not a
   tool's wear or a stack's own name, and can't give an item with any.
 - **Data on other things than players.** Only players have data of their own.
-- **Leaving the store.** The shared store has no way to take a key out or replace a value, so
-  that no script overwrites what another wrote in the same tick. Its file can be deleted while
-  the server is off.
+- **Replacing what is there once.** A data key that is not a player's has no way to take a
+  key out or replace a value, so that no script overwrites what another wrote in the same
+  tick. The file can be deleted while the server is off.
 - **Data per world.** The file is the scripts folder's: two worlds run with one folder share
-  the store.
+  what is there once.
 - **A player's name.** The SDK tells a server-side mod a player's id, not their name, so a
   script can't put a name into its text.
 
@@ -41,8 +41,8 @@ What the mod works around, as of Weft v26.11.4.
    and `--run-dir` is not handed on, so the scripts folder is an option of its own,
    `--scripts`, and what scripts keep is saved there and not with the world.
 6. **A component has one fixed size.** A mod's component is a value of a size set when the
-   game starts, so it can't hold data that grows; the store is a file of the mod's own for
-   that reason. Scripts can't declare components either: a server's clients must have
+   game starts, so it can't hold data that grows; scripts' data is a file of the mod's own for
+   that reason, with data keys named and filled as components are. Scripts can't declare components either: a server's clients must have
    registered the same ones to join.
 7. **A player has no lasting name for a mod.** The game gives a player a new entity id at
    every join and keeps their key to itself, so the mod puts a number of its own on each

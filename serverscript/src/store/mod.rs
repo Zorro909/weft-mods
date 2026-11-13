@@ -1,10 +1,10 @@
-//! What scripts keep: values by key, every script's or one player's own, saved in a file
-//! beside the scripts.
+//! What scripts keep, saved in a file beside the scripts. As the game keeps components, a
+//! script keeps data keys: each is named `<script>:<name>` (`crate::name`) and holds values by
+//! key. A data key is there once for everyone, or once on each player (`Place`).
 //!
 //! Regions tick in parallel and each may run scripts, so every operation is one step under a
-//! short lock. On a shared key none replaces what another wrote: a value is added to, appended
-//! to, or set where there was none. A player's keys are set and removed freely: only the region
-//! the player is in reaches them.
+//! short lock. This file offers them all; which of them a script may use where is
+//! `crate::bindings::data`'s to say.
 //!
 //! Every change goes to the file as it is made (`journal`), so the store has no size of its own
 //! to outgrow and nothing to write when the game stops.
@@ -29,14 +29,36 @@ use crate::value::Value;
 /// How many locks the keys are spread over, so regions writing different keys rarely wait.
 const SHARDS: usize = 16;
 
-/// The owner of the keys every script shares. A player's are owned by the player's id.
-const SHARED: u64 = 0;
+/// The owner of what is there once for everyone. What is a player's is owned by the
+/// player's number (`crate::player`).
+pub const SHARED: u64 = 0;
 
 /// The store every script reads and writes.
 pub static STORE: Store = Store::new();
 
-type Entries = BTreeMap<String, Value>;
-type Shard = Mutex<BTreeMap<u64, Entries>>;
+/// The values of one data key, by key.
+pub type Entries = BTreeMap<String, Value>;
+/// Each owner's data keys, by their full names.
+type Owners = BTreeMap<u64, BTreeMap<String, Entries>>;
+type Shard = Mutex<Owners>;
+
+/// Where a value lies.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Place<'a> {
+    /// `SHARED`, or a player's number.
+    pub owner: u64,
+    /// The data key's full name, `<script>:<name>`.
+    pub component: &'a str,
+    pub key: &'a str,
+}
+
+impl Place<'_> {
+    /// The values of this place's data key, made if there were none.
+    fn entries(self, owners: &mut Owners) -> &mut Entries {
+        let components = owners.entry(self.owner).or_default();
+        components.entry(self.component.to_string()).or_default()
+    }
+}
 
 pub struct Store {
     shards: [Shard; SHARDS],
@@ -51,15 +73,15 @@ pub enum StoreError {
     NotANumber,
     /// `append` to a value that is no list.
     NotAList,
-    /// A key or a value longer than the file can say.
+    /// A data key, a key or a value longer than the file can say.
     TooLong,
 }
 
 impl StoreError {
     pub fn message(self) -> &'static str {
         match self {
-            StoreError::NotANumber => "store_add needs a number, and a number under the key",
-            StoreError::NotAList => "store_append needs a list under the key",
+            StoreError::NotANumber => "data_add needs a number, and a number under the key",
+            StoreError::NotAList => "data_append needs a list under the key",
             StoreError::TooLong => "a key is at most 255 bytes long",
         }
     }
@@ -103,8 +125,13 @@ impl Store {
 
     /// Does what `record` says, without writing it again.
     fn replay(&self, record: Record) {
-        let mut shard = lock(self.shard(record.owner, &record.key));
-        let entries = shard.entry(record.owner).or_default();
+        let place = Place {
+            owner: record.owner,
+            component: &record.component,
+            key: &record.key,
+        };
+        let mut shard = lock(self.shard(place));
+        let entries = place.entries(&mut shard);
         match record.change {
             Change::Set(value) => {
                 entries.insert(record.key, value);
@@ -127,9 +154,9 @@ impl Store {
     fn changes(&self) -> Vec<u8> {
         let mut changes = Vec::new();
         for shard in &self.shards {
-            for (owner, entries) in lock(shard).iter() {
-                for (key, value) in entries {
-                    changes.extend(journal::set(*owner, key, value).unwrap_or_default());
+            for (owner, components) in lock(shard).iter() {
+                for (component, entries) in components {
+                    changes.extend(held(*owner, component, entries));
                 }
             }
         }
@@ -149,26 +176,38 @@ impl Store {
         }
     }
 
-    fn shard(&self, owner: u64, key: &str) -> &Shard {
+    /// The lock of a place's data key: all its keys are under one, so `all` sees them at one
+    /// moment.
+    fn shard(&self, place: Place) -> &Shard {
         let mut hasher = DefaultHasher::new();
-        (owner, key).hash(&mut hasher);
+        (place.owner, place.component).hash(&mut hasher);
         &self.shards[hasher.finish() as usize % SHARDS]
     }
 
-    fn value(&self, owner: u64, key: &str) -> Option<Value> {
-        lock(self.shard(owner, key)).get(&owner)?.get(key).cloned()
+    pub fn get(&self, place: Place) -> Option<Value> {
+        let shard = lock(self.shard(place));
+        let entries = shard.get(&place.owner)?.get(place.component)?;
+        entries.get(place.key).cloned()
     }
 
-    pub fn get(&self, key: &str) -> Option<Value> {
-        self.value(SHARED, key)
+    /// Every value of the data key `component` of `owner`, by key.
+    pub fn all(&self, owner: u64, component: &str) -> Entries {
+        let place = Place {
+            owner,
+            component,
+            key: "",
+        };
+        let shard = lock(self.shard(place));
+        let entries = shard.get(&owner).and_then(|held| held.get(component));
+        entries.cloned().unwrap_or_default()
     }
 
-    /// Adds `amount` to the number under `key`, counting from zero, and gives the new total. Two
+    /// Adds `amount` to the number at `place`, counting from zero, and gives the new total. Two
     /// whole numbers stay whole and stop at the largest; with a fraction the total is one.
-    pub fn add(&self, key: &str, amount: &Value) -> Result<Value, StoreError> {
-        let mut shard = lock(self.shard(SHARED, key));
-        let entries = shard.entry(SHARED).or_default();
-        let total = match (entries.get(key), amount) {
+    pub fn add(&self, place: Place, amount: &Value) -> Result<Value, StoreError> {
+        let mut shard = lock(self.shard(place));
+        let entries = place.entries(&mut shard);
+        let total = match (entries.get(place.key), amount) {
             (None, Value::Int(_) | Value::Float(_)) => amount.clone(),
             (Some(Value::Int(old)), Value::Int(more)) => Value::Int(old.saturating_add(*more)),
             (Some(Value::Int(old)), Value::Float(more)) => Value::Float(*old as f64 + more),
@@ -176,19 +215,19 @@ impl Store {
             (Some(Value::Float(old)), Value::Float(more)) => Value::Float(old + more),
             _ => return Err(StoreError::NotANumber),
         };
-        let change = journal::set(SHARED, key, &total).ok_or(StoreError::TooLong)?;
-        entries.insert(key.to_string(), total.clone());
+        let change = journal::set(place, &total).ok_or(StoreError::TooLong)?;
+        entries.insert(place.key.to_string(), total.clone());
         self.write(&change);
         Ok(total)
     }
 
-    /// Puts `value` at the end of the list under `key`, starting one, and gives its new length.
-    pub fn append(&self, key: &str, value: Value) -> Result<usize, StoreError> {
-        let change = journal::append(SHARED, key, &value).ok_or(StoreError::TooLong)?;
-        let mut shard = lock(self.shard(SHARED, key));
-        let entries = shard.entry(SHARED).or_default();
-        let entry = entries
-            .entry(key.to_string())
+    /// Puts `value` at the end of the list at `place`, starting one, and gives its new length.
+    pub fn append(&self, place: Place, value: Value) -> Result<usize, StoreError> {
+        let change = journal::append(place, &value).ok_or(StoreError::TooLong)?;
+        let mut shard = lock(self.shard(place));
+        let entry = place
+            .entries(&mut shard)
+            .entry(place.key.to_string())
             .or_insert_with(|| Value::List(Vec::new()));
         let Value::List(list) = entry else {
             return Err(StoreError::NotAList);
@@ -198,44 +237,53 @@ impl Store {
         Ok(list.len())
     }
 
-    /// Sets `key` to `value` if nothing is there; whether it did. Of several asking at once,
+    /// Sets `place` to `value` if nothing is there; whether it did. Of several asking at once,
     /// exactly one hears yes.
-    pub fn set_if_absent(&self, key: &str, value: Value) -> Result<bool, StoreError> {
-        let change = journal::set(SHARED, key, &value).ok_or(StoreError::TooLong)?;
-        let mut shard = lock(self.shard(SHARED, key));
-        let entries = shard.entry(SHARED).or_default();
-        if entries.contains_key(key) {
+    pub fn set_if_absent(&self, place: Place, value: Value) -> Result<bool, StoreError> {
+        let change = journal::set(place, &value).ok_or(StoreError::TooLong)?;
+        let mut shard = lock(self.shard(place));
+        let entries = place.entries(&mut shard);
+        if entries.contains_key(place.key) {
             return Ok(false);
         }
-        entries.insert(key.to_string(), value);
+        entries.insert(place.key.to_string(), value);
         self.write(&change);
         Ok(true)
     }
 
-    /// What the player with the id `player` has under `key`.
-    pub fn player_get(&self, player: u64, key: &str) -> Option<Value> {
-        self.value(player, key)
-    }
-
-    /// Sets `key` of the player with the id `player`, replacing what was there.
-    pub fn player_set(&self, player: u64, key: &str, value: Value) -> Result<(), StoreError> {
-        let change = journal::set(player, key, &value).ok_or(StoreError::TooLong)?;
-        let mut shard = lock(self.shard(player, key));
-        let entries = shard.entry(player).or_default();
-        entries.insert(key.to_string(), value);
+    /// Sets `place` to `value`, replacing what was there.
+    pub fn set(&self, place: Place, value: Value) -> Result<(), StoreError> {
+        let change = journal::set(place, &value).ok_or(StoreError::TooLong)?;
+        let mut shard = lock(self.shard(place));
+        place
+            .entries(&mut shard)
+            .insert(place.key.to_string(), value);
         self.write(&change);
         Ok(())
     }
 
-    /// Takes `key` off the player with the id `player`; whether it was there.
-    pub fn player_remove(&self, player: u64, key: &str) -> bool {
-        let mut shard = lock(self.shard(player, key));
-        let removed = shard
-            .get_mut(&player)
-            .and_then(|entries| entries.remove(key));
-        if let (Some(_), Some(change)) = (&removed, journal::remove(player, key)) {
+    /// Takes the key at `place` away; whether it was there.
+    pub fn remove(&self, place: Place) -> bool {
+        let mut shard = lock(self.shard(place));
+        let components = shard.get_mut(&place.owner);
+        let entries = components.and_then(|held| held.get_mut(place.component));
+        let removed = entries.and_then(|entries| entries.remove(place.key));
+        if let (Some(_), Some(change)) = (&removed, journal::remove(place)) {
             self.write(&change);
         }
         removed.is_some()
     }
+}
+
+/// The changes that set every value of one data key of `owner`.
+fn held(owner: u64, component: &str, entries: &Entries) -> Vec<u8> {
+    let set = |(key, value): (&String, &Value)| {
+        let place = Place {
+            owner,
+            component,
+            key,
+        };
+        journal::set(place, value).unwrap_or_default()
+    };
+    entries.iter().flat_map(set).collect()
 }

@@ -15,10 +15,10 @@ Weft mod does.
 - **Commands.** A script adds chat commands with typed arguments and a permission level.
 - **The world.** A script reads and sets blocks, moves, summons, hurts and heals entities, and
   reads and changes what players and chests carry.
-- **A shared store.** Scripts keep counters, lists and claims that every script sees.
-- **Data on players.** A script keeps values that are one player's own.
-- **Saved.** The store and the players' data go into one file beside the scripts, as large
-  as they need.
+- **Data.** A script keeps values under data keys named after it, `camps:camp`, as the game
+  keeps components: once for everyone, or on each player. Other scripts read them by that
+  name.
+- **Saved.** All data goes into one file beside the scripts, as large as it needs.
 - **No new content.** Scripts can't add blocks, items or anything else a client would need.
 
 ## Getting started
@@ -29,12 +29,12 @@ Weft mod does.
    command("visits", "", 0);
 
    fn on_player_joined(e) {
-       let visits = store_add("visits", 1);
+       let visits = data_add("stats", "visits", 1);
        hint(e.player, `Welcome! You are visitor ${visits}.`);
    }
 
    fn cmd_visits(cmd) {
-       `${store_get("visits")} visits so far`
+       `${data_get("stats", "visits")} visits so far`
    }
    ```
 
@@ -81,6 +81,7 @@ tools/check-mods.sh serverscript     # formatting, unit tests, clippy
 | `src/commands.rs` | Script commands, `/s` and `/scripts reload`, the setting |
 | `src/usage.rs` | Usage strings, and reading typed arguments for `/s` |
 | `src/bindings/` | What scripts call in the game: text, blocks, entities, inventories, data |
-| `src/store/` | The store scripts share and players' data, and the file they are saved in |
+| `src/store/` | Scripts' data, and the file it is saved in |
+| `src/name.rs` | How data keys are named after their script |
 | `src/player.rs` | The number on a player that their data is kept under |
 | `src/value.rs` | The values scripts can keep |
