@@ -1,6 +1,7 @@
 # Checks a pull request: its Rust is formatted, every mod takes Weft at a release as the mod index
-# needs, every mod's unit tests and clippy pass, the tests of the scripts in `tools/ci` and `tools/assets` pass, and
-# every mod builds for Windows, Linux and macOS, as `release.yml` builds it.
+# needs, every mod's unit tests and clippy pass, weftkit's tests pass on Windows and macOS too, the
+# tests of the scripts in `tools/ci` and `tools/assets` pass, and every mod builds for Windows,
+# Linux and macOS, as `release.yml` builds it.
 name: Check
 
 on:
@@ -51,6 +52,23 @@ jobs:
 
       - name: Tests and clippy of every mod
         run: tools/check-mods.sh
+
+  # weftkit's store maps, locks, lengthens and replaces files, which each system does its own way.
+  # Linux runs its tests in `mods`.
+  weftkit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+
+      - name: Tests of weftkit
+        working-directory: weftkit
+        run: cargo test --release --all-features
 
   ci-scripts:
     runs-on: ubuntu-latest
