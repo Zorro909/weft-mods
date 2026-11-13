@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Checks this repository's mods and the libraries they share as CI does on every pull request:
-# formatting, unit tests and clippy, each with all its features, so code behind a feature (a
+# the lint of its models and textures (`tools/assets/lint.py`), which costs a second and so
+# comes first, then formatting, unit tests and clippy, each with all its features, so code behind a feature (a
 # mod's films, `--features showcase`) is checked too. A mod's own API crates are covered when its
 # `Cargo.toml` makes them workspace members. Warnings fail it.
 #
@@ -33,6 +34,7 @@ check_format() {
 
 for folder in "${folders[@]}"; do
     echo "::group::checking $folder"
+    python3 tools/assets/lint.py "$folder"
     check_format "$folder"
     manifest=(--manifest-path "$folder/Cargo.toml" --release --workspace --all-features)
     cargo test "${manifest[@]}"

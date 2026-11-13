@@ -29,16 +29,19 @@ Done when your user has answered them.
 - **Stairs.** A stair's `facing` is the side of its high back: a roof slope rising northward has `facing=north`. Its `shape` is not worked out when a structure is placed, so set it where a corner needs it.
 - **Original.** Take proportions from references, never a build.
 
-## 4. Write and photograph
+## 4. Check, write and photograph
 
 ```
+(cd structgen && cargo run --release --example buildings -- --plan <name>...)
 (cd structgen && cargo run --release --example buildings -- <name>...)
 tools/structure-shots.sh --gpu <address> <name>...
 ```
 
-The pictures land in `structgen/out/shots/`: front, back, a side, above and inside. Slots show their defaults, since the engine's `/structure load` takes no palette; `--turn right` shoots the building's turned copy. With several agents drawing at once, each passes its own `--out` and `--no-build`.
+`--plan` takes a second and writes nothing: it prints each structure layer by layer as letters, and names its faults: air in the bottom layer, blocks hanging in the air, furniture no walk from outside reaches (a shut doorway, a floor without a ladder), a misspelt property value. Read the plan for what the rules can't say: a wall with a gap, a lopsided front, a doorway away from the north side. The second command refuses to write a structure with a fault. Photograph only what passes both.
 
-Read every picture of every structure. Change and shoot again until:
+The pictures land in `structgen/out/shots/`, front, back, a side, above and inside, joined per structure in `sheets/<name>.png`. The tool ends with 1 and the game's words when the game placed something else than was drawn, such as a block it does not know. Slots show their defaults, since the engine's `/structure load` takes no palette; `--turn right` shoots the building's turned copy. With several agents drawing at once, each passes its own `--out` and `--no-build`.
+
+Read the sheet of every structure, and a single picture where the sheet leaves a detail unclear. Change, check and shoot again until:
 
 - it matches the mockup your user chose, and reads well from the front and from above;
 - there is no hole, no floating block, no stair facing the wrong way or straight where it should be a corner;
@@ -54,6 +57,6 @@ A longer list changes what the planner draws, so every settlement of every seed 
 
 - Commit the generator code and the `.json` files together.
 - The building count and tables in `structgen/README.md` and `structgen/docs/`, and a bullet in `structgen/CHANGELOG.md`.
-- A reviewer of the look gets the paths of the final pictures and is told to open each one.
+- A reviewer of the look gets the paths of the final sheets and is told to open each one.
 
 Done when your user has the front and inside picture of each structure, with its size and where its doorway is.

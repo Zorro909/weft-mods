@@ -12,6 +12,7 @@ use weft_sdk::*;
 use crate::lock;
 use crate::menus::Menus;
 use crate::playback::Playback;
+use crate::rehearsal::{self, Rehearsal};
 use crate::rig::Pose;
 use crate::rig::math::angles_along;
 use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
@@ -36,6 +37,8 @@ struct Director {
     finished: u32,
     /// The last film asked for that never came, and when that was known.
     missing: Option<(String, Instant)>,
+    /// The faults the rehearsals since the game started found.
+    faults: usize,
     menus: Menus,
 }
 
@@ -45,6 +48,7 @@ enum Phase {
     Idle,
     Loading(Loading),
     Rolling(Playback),
+    Rehearsing(Rehearsal),
 }
 
 /// A film waiting for the world along it to load: the camera visits each stop in turn.
@@ -114,16 +118,26 @@ pub fn finished() -> u32 {
     with(|d| d.finished)
 }
 
+/// How many faults the films rehearsed so far have.
+pub fn faults() -> usize {
+    with(|d| d.faults)
+}
+
 /// Whether a film was asked for and never came.
 pub fn missing() -> bool {
     with(|d| d.missing.is_some())
 }
 
 /// Plays `timeline` on this client, after loading the world along it; the server puts the
-/// player in the film camera meanwhile.
+/// player in the film camera meanwhile. A game started to rehearse goes through it instead.
 pub fn play(c: &Client, timeline: Timeline) {
-    info!("showcase: loading the world along {}", timeline.film);
     c.send(&STARTED, &());
+    if let Some(folder) = rehearsal::folder() {
+        let rehearsal = Rehearsal::new(timeline, camera(c), folder);
+        with(|d| d.phase = Phase::Rehearsing(rehearsal));
+        return;
+    }
+    info!("showcase: loading the world along {}", timeline.film);
     let playback = Playback::new(timeline, camera(c));
     let stops = playback.stops();
     let loading = Loading {
@@ -145,6 +159,14 @@ fn frame(c: &Client, d: &mut Director) {
                 finish(c, d, &playback)
             } else {
                 Phase::Rolling(playback)
+            };
+        }
+        Phase::Rehearsing(mut rehearsal) => {
+            d.phase = if rehearsal.frame(c) {
+                d.faults += rehearsal.faults();
+                close(c, d)
+            } else {
+                Phase::Rehearsing(rehearsal)
             };
         }
     }
@@ -211,6 +233,11 @@ fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
 fn finish(c: &Client, d: &mut Director, playback: &Playback) -> Phase {
     mark("stop", &playback.film);
     d.menus.show(c, None);
+    close(c, d)
+}
+
+/// Gives the player back to the server and forgets what the film was told.
+fn close(c: &Client, d: &mut Director) -> Phase {
     c.send(&FINISHED, &());
     d.signals.clear();
     d.subjects.clear();

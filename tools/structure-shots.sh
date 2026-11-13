@@ -25,6 +25,11 @@
 # structure 12 or more blocks tall, inside_upper (about 6 blocks up); the front is
 # the structure's north side, as saved. A layout's are DIR/<layout>-<view>.png, views
 # being above, north_west, north_east, south_east, south_west, along_south and along_west. The game's log is DIR/run/logs/latest.log.
+#
+# Each structure's views are joined into one picture too, DIR/sheets/<name>.png, which is the
+# one to read first. A warning or error of the game while placing (a block name it does not
+# know, a property a block does not have) is printed and ends the run with 1: the pictures are
+# then of something else than was drawn.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -80,8 +85,27 @@ script="$out/shots.txt"
 headless=("$root/tools/run-headless.sh")
 [[ -n $gpu ]] && headless+=(--gpu "$gpu")
 (cd "$root/Weft" && "${headless[@]}" -- target/release/weft --run-dir "$run" --world shots \
-    --seed 1 --script "$script" --shot-dir "$out" --hide-hud --size 1280x720) ||
+    --seed 1 --script "$script" --shot-dir "$out" --hide-hud --size 1280x720 >/dev/null 2>&1) ||
     { echo "structure-shots.sh: the game stopped with $?; see $run/logs/latest.log" >&2; exit 1; }
 shots=("$out"/*.png)
 [[ -e ${shots[0]} ]] || { echo "structure-shots.sh: no pictures taken; see $run/logs/latest.log" >&2; exit 1; }
 printf '%s\n' "${shots[@]}"
+
+# One sheet per structure or layout: the pictures whose names start with its name.
+rm -rf "$out/sheets"
+labels=("${files[@]}")
+[[ -z $layout ]] || labels+=("$layout")
+for file in "${labels[@]}"; do
+    label=$(basename "${file%.*}")
+    "$root/tools/sheet.sh" --columns 3 "$out/sheets/$label.png" "$out/$label"-*.png
+done
+
+# What the game said against the structures as it placed them, each line once.
+complaints=$(sed 's/\x1b\[[0-9;]*m//g' "$run/logs/latest.log" |
+    grep -E ' (WARN|ERROR) ' | grep -E 'structure|template|mod:structgen' |
+    sed -E 's/^ *[0-9.]+ +//' | sort -u || true)
+if [[ -n $complaints ]]; then
+    echo "structure-shots.sh: the game placed something else than was drawn:" >&2
+    echo "$complaints" >&2
+    exit 1
+fi

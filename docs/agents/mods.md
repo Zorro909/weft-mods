@@ -50,11 +50,15 @@ Run from the repository root; each prints its options with `--help`.
 | Tool | What it does |
 |---|---|
 | `tools/install-mods.sh [<folder>...]` | Builds the engine and the mods, puts them into `Weft/run/mods/`, and starts and stops a server to confirm the game loads each. A mod the game refuses fails it, with the log's reason |
-| `tools/check-mods.sh [<folder>...]` | Formatting, unit tests and clippy with all features, a film behind `showcase` included, as CI runs it. Warnings fail it |
+| `tools/check-mods.sh [<folder>...]` | The asset lint, formatting, unit tests and clippy with all features, a film behind `showcase` included, as CI runs it. Warnings fail it |
+| `tools/assets/lint.py <folder>...` | Names the faults of a mod's models and textures that a rule can find: faces that flicker, corners between texels, textures that are missing |
+| `tools/sheet.sh` | Joins pictures into one sheet with their names; textures enlarged, and tiled to show their seams |
+| `tools/block-shots.sh` | Photographs blocks of a mod in the game from four sides |
+| `tools/film-sheet.sh` | Cuts a take into sheets of frames with their times |
 | `tools/run-headless.sh` | Runs the game or its tests on a GPU without a window (`testing.md`) |
-| `tools/showcase.sh` | Records a mod's film to `showcase/out/<mod>-<film>.mp4`, with sound |
+| `tools/showcase.sh` | Records a mod's film to `showcase/out/<mod>-<film>.mp4`, with sound; `--rehearse` goes through it first, for its faults and a storyboard |
 | `tools/structure-shots.sh` | Photographs structgen structures in the game from every side |
 | `tools/sfx.sh` | Makes a mod's sounds from the prompts in its `sounds.tsv` |
-| `tools/blockbench.sh` | Says whether a model file is what Blockbench saves, and takes a picture of a model |
+| `tools/blockbench.sh` | Says whether a model file is what Blockbench saves, and takes pictures of a model, from one side or all round |
 | `./start.sh [<folder>...]` | Installs, then opens the game in a window on your user's desktop: theirs to run |
 | `tools/ci/` | What the workflows run (`releasing.md`); `mods.sh` there says which folders are mods |

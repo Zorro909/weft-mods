@@ -6,6 +6,7 @@
 #
 #   tools/blockbench.sh check [--write] <model file>...
 #   tools/blockbench.sh shot <model file> <out.png> [texture.png]
+#   tools/blockbench.sh views <model file> <out.png> [texture.png]
 #
 #   check  Opens each file in Blockbench, has Blockbench save it again in memory, and compares
 #          that text with the file byte for byte: prints `same` or `differs` and the file,
@@ -17,6 +18,9 @@
 #          beside its models/ folder. An entity model's is textures/entity/<name>.png, or the
 #          picture named last (piston.geo.json wears spring_piston.png). A texture that is
 #          not found is named, and the picture taken without it.
+#   views  The same from four sides in one picture: from the north-west and the south-east
+#          above, and from the north-east and the south-west below, so every face is seen.
+#          The four pictures stay beside it as <out>-<view>.png. Needs ffmpeg.
 #
 # Every run starts a Blockbench of its own inside a headless weston (about a second), on a
 # port the system picks and in a temporary folder that goes with them, so runs can go side by
@@ -125,18 +129,28 @@ check_models() {
     node "$scripts/check.mjs" "$port" "$mode" "$@"
 }
 
-shoot_model() {
-    [[ $# -eq 2 || $# -eq 3 ]] ||
-        fail "shot: name a model file and the picture to write (see --help)"
-    local model=$1 picture=$2 textures=("${@:3}")
+# Takes the views named in $1, separated by commas, of a model.
+shoot_model() { # <views> <model file> <out.png> [texture.png]
+    [[ $# -eq 3 || $# -eq 4 ]] ||
+        fail "name a model file and the picture to write (see --help)"
+    local views=$1 model=$2 picture=$3 textures=("${@:4}")
     require_files "$model" "${textures[@]}"
     start_headless
-    node "$scripts/shot.mjs" "$port" "$model" "$picture" "${textures[@]}"
+    node "$scripts/shot.mjs" "$port" "$model" "$picture" "$views" "${textures[@]}"
+}
+
+# Takes every view of a model and joins them into one picture.
+shoot_views() { # <model file> <out.png> [texture.png]
+    local picture=${2:-} taken
+    taken=$(shoot_model north_west,south_east,north_east_below,south_west_below "$@")
+    mapfile -t taken <<<"$taken"
+    "$(dirname "$scripts")/sheet.sh" --width 800 --columns 2 "$picture" "${taken[@]}"
 }
 
 case ${1:-} in
     -h | --help) awk 'NR > 1 && !/^#/ { exit } NR > 1' "$0" ;;
     check) check_models "${@:2}" ;;
-    shot) shoot_model "${@:2}" ;;
-    *) fail "name a job, check or shot (see --help)" ;;
+    shot) shoot_model north_west "${@:2}" ;;
+    views) shoot_views "${@:2}" ;;
+    *) fail "name a job, check, shot or views (see --help)" ;;
 esac

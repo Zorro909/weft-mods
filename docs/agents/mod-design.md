@@ -83,7 +83,8 @@ Code that makes a committed file is committed with it:
 | cogwork's recipes | written by hand in `cogwork/assets/recipes/*.toml`; `cogwork/build.rs` turns them into code |
 
 Without `WRITE_ASSETS`, the same cogwork tests fail when a file differs from what they would
-write. A model made by hand is a Blockbench save, which `tools/blockbench.sh check` confirms.
+write. A model made by hand is a Blockbench save, which `tools/blockbench.sh check` confirms;
+`tools/assets/lint.py` names what the game would draw wrongly in it.
 
 The mod index packs a mod's `assets/` from a plain checkout and runs none of its code, so no
 file can be made at build time. A block with a shape for every set of neighbours is put together

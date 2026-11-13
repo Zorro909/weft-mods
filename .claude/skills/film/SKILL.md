@@ -27,7 +27,19 @@ A film is Rust code in the mod, behind its `showcase` feature, played by the sho
 
 For a flight through buildings: join shots along one heading, with a lead-in point along the tangent of the orbit that follows; keep the stretches between points of a flyby similar in length; keep turns under about 75 degrees a second.
 
-## 3. Record
+## 3. Rehearse
+
+```
+tools/showcase.sh --gpu <address> --rehearse <mod>:showcase -- --view 32
+```
+
+A rehearsal goes through the film in a minute or two without recording. It prints its report and ends with 3 while the report has faults: where the camera is inside a block, where it turns faster than 75 degrees a second, which titles stay under 3 or over 7 seconds. Its pictures, along every shot at most five seconds apart, are the film's storyboard: `showcase/out/<mod>-<film>-rehearsal/sheets/`.
+
+Read every sheet against the list above: framing, what stands in the way, which side of a machine shows, where the titles sit. Machines have run only for the rehearsal's minute, so what they do, and motion, sound and menus, are for the take.
+
+Done when the report has no fault and no sheet shows one. Only then record: a take costs the film's length each time.
+
+## 4. Record
 
 ```
 tools/showcase.sh --gpu <address> <mod>:showcase -- --view 32
@@ -38,14 +50,15 @@ tools/showcase.sh --gpu <address> <mod>:showcase -- --view 32
 - For a film without music, write `volume_music = 0` into `showcase/out/run/config/core.txt` before recording.
 - `showcase/out/` is not tracked. No video goes into the repository.
 
-## 4. Review the take
-
-Cut frames from every section and read them:
+## 5. Review the take
 
 ```
-ffmpeg -ss <seconds> -i showcase/out/<mod>-showcase.mp4 -frames:v 1 /tmp/<name>.png
+tools/film-sheet.sh showcase/out/<mod>-showcase.mp4
+tools/film-sheet.sh --every 0.5 --from 80 --to 90 showcase/out/<mod>-showcase.mp4 <folder>
 ```
 
-For a film over a minute, give each section to a subagent with its time range and the list above, and have it name the second of every fault. Fix, record again, and number the takes.
+The first cuts the take into sheets of a frame every five seconds, each under its time; the second looks closely at one stretch, for motion. Read what the rehearsal could not show: machines working when the camera arrives (their screens say "Waiting" when not), moving parts, menus, and `ERROR [mod:<mod>]` lines in `showcase/out/run/logs/latest.log`.
+
+For a film over a minute, give each section to a subagent with its sheets and the list above, and have it name the second of every fault. Fix, rehearse, record again, and number the takes.
 
 Done when no fault from the list is left in any section's frames, and your user has the path of the video.

@@ -58,4 +58,20 @@ quit
 - The top of `Weft/mods/testkit/src/script.rs` lists every step: `chat` for any command, `via` and `travel` to move the camera, `look`, `click`, `press` and `key` for what a player does, `wait` and `idle` for work to finish.
 - The world is kept in `Weft/run/saves/<name>`: a new `--world` name starts clean.
 - For cutting, scaling or joining pictures and video, `ffmpeg` is installed; ImageMagick and Python's PIL are not.
-- Three kinds of content have a tool of their own: `tools/structure-shots.sh` for structgen structures, `tools/showcase.sh` for a film (motion and sound), `tools/blockbench.sh shot` for a model by itself.
+- Textures, models, blocks, structures and films have tools of their own, below: a script by hand is for what they don't cover, such as a machine at work among its neighbours.
+
+## Cheapest check first
+
+A texture, a model, a structure and a film each go through the same ladder: every rung costs more than the one before, so a fault is fixed on the lowest rung that shows it, and a rung is climbed only once the ones below are clean. After a fix, start again from the rung that covers the change.
+
+| Rung | What it finds | Texture | Model | Structure | Film | Costs |
+|---|---|---|---|---|---|---|
+| 1. Lint | What a rule can say | `python3 tools/assets/lint.py <mod>` | the same, then `tools/blockbench.sh check` | `cargo run --release --example buildings -- --plan <name>` in `structgen/` | `tools/check-mods.sh <mod>` | 1 to 2 s; a film's build |
+| 2. Sheet | The look, outside the game | `tools/sheet.sh --pixels 8 [--tiled]` | `tools/blockbench.sh views` | the plan the same command prints | | 1 to 2 s |
+| 3. In the game, still | The look in the world | `tools/block-shots.sh` | `tools/block-shots.sh` | `tools/structure-shots.sh` | `tools/showcase.sh --rehearse` | 10 to 20 s each; a film 1 to 2 min |
+| 4. In the game, moving | Motion, sound, machines at work | | a film or a script | the mod's film | `tools/showcase.sh`, then `tools/film-sheet.sh` | the film's length and more |
+
+- Rung 1 and a rule on a higher rung end with a number other than 0 and name the fault: fix that before reading any picture.
+- Every tool that takes pictures joins them into a sheet (`sheets/` in its output folder). Read the sheet; open a single picture only for a detail the sheet leaves unclear.
+- The lint is part of `tools/check-mods.sh`. Its rules are in `tools/assets/`: a fault seen in the game that a rule could have said becomes a rule there, with its test.
+- Each tool's `--help` has its options and what its pictures are named.
