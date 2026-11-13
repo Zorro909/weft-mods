@@ -13,8 +13,12 @@ Weft mod does.
 - **Events.** A script hears players joining, chat, blocks broken and placed, and deaths.
 - **Questions.** A script can refuse a chat line, a block being broken or one being placed.
 - **Commands.** A script adds chat commands with typed arguments and a permission level.
+- **The world.** A script reads and sets blocks, moves, summons, hurts and heals entities, and
+  reads and changes what players and chests carry.
 - **A shared store.** Scripts keep counters, lists and claims that every script sees.
-- **Data on players.** A script keeps values on a player, saved with them.
+- **Data on players.** A script keeps values that are one player's own.
+- **Saved.** The store and the players' data go into one file beside the scripts, as large
+  as they need.
 - **No new content.** Scripts can't add blocks, items or anything else a client would need.
 
 ## Getting started
@@ -26,11 +30,11 @@ Weft mod does.
 
    fn on_player_joined(e) {
        let visits = store_add("visits", 1);
-       hint(e.player, `Welcome! You are visitor ${visits} since the server started.`);
+       hint(e.player, `Welcome! You are visitor ${visits}.`);
    }
 
    fn cmd_visits(cmd) {
-       `${store_get("visits")} visits since the server started`
+       `${store_get("visits")} visits so far`
    }
    ```
 
@@ -44,7 +48,8 @@ To change scripts without restarting, turn on the setting Development Mode (belo
 
 - [Writing scripts](docs/scripting.md): every function the game calls and every call a script
   can make
-- [Example scripts](docs/examples/): a welcome with a chat filter, and camps kept on players
+- [Example scripts](docs/examples/): a welcome with a chat filter, camps kept on players, and
+  a kit, an item count and a pillar of blocks
 - [What is not there yet](docs/README.md#not-done-yet)
 
 ## Development Mode
@@ -75,7 +80,7 @@ tools/check-mods.sh serverscript     # formatting, unit tests, clippy
 | `src/events.rs` | The game's events and questions handed to scripts |
 | `src/commands.rs` | Script commands, `/s` and `/scripts reload`, the setting |
 | `src/usage.rs` | Usage strings, and reading typed arguments for `/s` |
-| `src/bindings.rs` | What scripts call in the game: text, entities, data |
-| `src/store.rs` | The store scripts share |
-| `src/data/` | The component that keeps script data on a player, and its byte format |
+| `src/bindings/` | What scripts call in the game: text, blocks, entities, inventories, data |
+| `src/store/` | The store scripts share and players' data, and the file they are saved in |
+| `src/player.rs` | The number on a player that their data is kept under |
 | `src/value.rs` | The values scripts can keep |

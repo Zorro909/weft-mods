@@ -4,12 +4,13 @@
 //!
 //! `--scripts <folder>` on the command line names the folder; without it the mod runs none.
 //! `script` loads and calls them, `events` and `commands` hand them the game, `bindings` is what
-//! they call back, and `store` and `data` are where they keep things.
+//! they call back, and `store` is where they keep things, a player's under the number `player`
+//! gives them.
 
 mod bindings;
 mod commands;
-mod data;
 mod events;
+mod player;
 mod script;
 mod store;
 mod usage;
@@ -21,19 +22,24 @@ use std::sync::{Mutex, MutexGuard};
 use weft_sdk::{Registry, declare_mod, info, launch_option, warn};
 
 use crate::script::Scripts;
+use crate::store::STORE;
 
 /// The launch option that names the scripts folder.
 const SCRIPTS_OPTION: &str = "scripts";
 
+/// The store's file, in the scripts folder.
+const DATA_FILE: &str = "data.bin";
+
 declare_mod!(deps: [], init: init);
 
 fn init(r: &mut Registry) {
-    data::register(r);
+    player::register(r);
     commands::register_setting(r);
     let Some(folder) = launch_option(SCRIPTS_OPTION).map(PathBuf::from) else {
         return;
     };
-    let (scripts, problems) = Scripts::load(&folder, bindings::register);
+    let (scripts, mut problems) = Scripts::load(&folder, bindings::register);
+    problems.extend(STORE.open(&folder.join(DATA_FILE)));
     for problem in problems {
         warn!("{problem}");
     }

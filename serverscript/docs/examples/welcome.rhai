@@ -4,7 +4,7 @@ command("visits", "", 0);
 
 fn on_player_joined(e) {
     let visits = store_add("visits", 1);
-    hint(e.player, `Welcome! You are visitor ${visits} since the server started.`);
+    hint(e.player, `Welcome! You are visitor ${visits}.`);
 }
 
 fn before_chat(q) {
@@ -16,5 +16,5 @@ fn before_chat(q) {
 
 fn cmd_visits(cmd) {
     let visits = store_get("visits");
-    `${visits} visits since the server started`
+    `${visits} visits so far`
 }

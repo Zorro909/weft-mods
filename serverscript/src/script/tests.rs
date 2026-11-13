@@ -250,11 +250,33 @@ fn the_example_scripts_load_clean() {
     let folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/examples");
     let (scripts, problems) = Scripts::load(&folder, crate::bindings::register);
     assert_eq!(problems, Vec::<String>::new());
-    assert!(scripts.len() >= 2, "the examples are there");
-    for name in ["spawn", "setcamp", "camp", "visits"] {
+    assert_eq!(scripts.len(), 3, "the examples are there");
+    for name in [
+        "spawn", "setcamp", "camp", "visits", "kit", "carried", "pillar",
+    ] {
         assert!(
             scripts.command(name).is_some(),
             "an example declares /{name}"
         );
     }
+}
+
+#[test]
+fn every_call_can_be_written_in_a_script() {
+    let calls = "fn on_chat(e) {
+        hint(1, \"\"); chat(1, \"\"); title(1, \"\"); broadcast(\"\"); log(\"\");
+        block(0, 0, 0); set_block(0, 0, 0, \"\"); time(); set_time(0);
+        players(); position(1); teleport(1, 0, 0, 0); permission(1); kind(1); health(1);
+        damage(1, 1); heal(1, 1); summon(\"\", 0, 0, 0); remove(1);
+        inventory(1); held(1); give(1, \"\", 1); take(1, \"\", 1);
+        data_get(1, \"\"); data_set(1, \"\", 1); data_remove(1, \"\");
+        store_get(\"\"); store_add(\"\", 1); store_append(\"\", 1); store_set_if_absent(\"\", 1);
+    }";
+    let sources = [("calls".to_string(), calls.to_string())];
+    let (_, problems) = Scripts::compile(&sources, crate::bindings::register);
+    assert_eq!(
+        problems,
+        Vec::<String>::new(),
+        "no call has a name Rhai keeps to itself"
+    );
 }

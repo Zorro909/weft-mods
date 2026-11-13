@@ -4,18 +4,22 @@ Everything about the `serverscript` mod. For a short overview, see the [README](
 
 | Page | Covers |
 |---|---|
-| [Writing scripts](scripting.md) | The functions the game calls in a script, the calls a script makes, commands, the store, data on players, limits |
-| [Example scripts](examples/) | `welcome.rhai` and `camps.rhai`, which a test loads so they stay right |
+| [Writing scripts](scripting.md) | The functions the game calls in a script, the calls a script makes, commands, the store, data on players, where both are saved, limits |
+| [Example scripts](examples/) | `welcome.rhai`, `camps.rhai` and `builder.rhai`, which a test loads so they stay right |
 
 ## Not done yet
 
-- **More of the game.** Scripts hear six events and answer three questions, and can show text,
-  move entities and read permissions. Each further event or call is a small addition to
-  `src/events.rs` or `src/bindings.rs`.
-- **Data on other things than players.** Only players carry the data component.
-- **Leaving the store.** The store has no way to take a key out or replace a value, so that no
-  script overwrites what another wrote in the same tick. It is emptied when another world is
-  opened.
+- **More of the game.** Scripts hear six events and answer three questions, and reach text,
+  blocks, the time of day, entities and inventories. Each further event is a small addition
+  to `src/events.rs`, each further call one to `src/bindings/`.
+- **What a stack holds besides its item.** Scripts see an item's name and a count, not a
+  tool's wear or a stack's own name, and can't give an item with any.
+- **Data on other things than players.** Only players have data of their own.
+- **Leaving the store.** The shared store has no way to take a key out or replace a value, so
+  that no script overwrites what another wrote in the same tick. Its file can be deleted while
+  the server is off.
+- **Data per world.** The file is the scripts folder's: two worlds run with one folder share
+  the store.
 - **A player's name.** The SDK tells a server-side mod a player's id, not their name, so a
   script can't put a name into its text.
 
@@ -33,8 +37,16 @@ What the mod works around, as of Weft v26.11.4.
    script can't call `/give` or `/tp`: everything a script does needs a call of its own.
 4. **Text is a translation key.** A script's text goes through one key, `serverscript.text`,
    as an argument, so it shows as it is: no colors, and not in the reader's language.
-5. **The game folder is unknown to a mod.** Nothing in the SDK names it, and `--run-dir` is not
-   handed on, so the scripts folder is an option of its own, `--scripts`.
-6. **Settings load after mods register.** A setting reads as its default while commands are
+5. **The game folder and the world's are unknown to a mod.** Nothing in the SDK names them,
+   and `--run-dir` is not handed on, so the scripts folder is an option of its own,
+   `--scripts`, and what scripts keep is saved there and not with the world.
+6. **A component has one fixed size.** A mod's component is a value of a size set when the
+   game starts, so it can't hold data that grows; the store is a file of the mod's own for
+   that reason. Scripts can't declare components either: a server's clients must have
+   registered the same ones to join.
+7. **A player has no lasting name for a mod.** The game gives a player a new entity id at
+   every join and keeps their key to itself, so the mod puts a number of its own on each
+   player (`serverscript:player_id`) to find their data again.
+8. **Settings load after mods register.** A setting reads as its default while commands are
    registered, so Development Mode can't decide whether `/s` exists: it is always there and
    answers that it needs the setting.

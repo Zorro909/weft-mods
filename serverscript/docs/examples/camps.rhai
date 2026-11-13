@@ -1,4 +1,4 @@
-// /setcamp remembers where a player stands, on the player, so it is saved with them.
+// /setcamp remembers where a player stands, as that player's own data, which is saved.
 // /camp brings them back, and /spawn takes anyone to a fixed place.
 
 command("spawn", "", 0);

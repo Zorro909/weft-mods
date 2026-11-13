@@ -81,6 +81,8 @@ fn register_store(engine: &mut Engine) {
         let Some(value) = Value::from_dynamic(&value) else {
             return fail("store_set_if_absent takes numbers, text, yes or no, and lists of them");
         };
-        Ok(STORE.set_if_absent(key, value))
+        STORE
+            .set_if_absent(key, value)
+            .or_else(|error| fail(error.message()))
     });
 }
