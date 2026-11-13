@@ -1,5 +1,7 @@
-//! A mod's settings file, read once when the mod starts: `mods/<mod>/config/<name>.toml` under
-//! the folder the game runs in. A missing file is first written from the default the mod ships,
+//! A mod's settings file, read once when the mod starts: `config/<mod>/<name>.toml` under the
+//! folder the game runs in, beside the engine's own `config/<mod>.txt`. Not under `mods/`: the
+//! engine takes every folder there for a mod, and an update replacing a mod's folder would take
+//! its settings with it. A missing file is first written from the default the mod ships,
 //! comments and all, so the server's admin has one to edit. A file that doesn't parse stops the
 //! game from starting, naming the file and the line at fault: running on defaults instead would
 //! quietly undo what the admin set.
@@ -42,7 +44,7 @@ impl<T: DeserializeOwned> ConfigFile<T> {
     /// written or read, or doesn't parse, panics, which fails the mod's load and stops the game
     /// with the reason.
     pub fn load(&self) {
-        let folder = Path::new("mods").join(weft_sdk::mod_id()).join("config");
+        let folder = Path::new("config").join(weft_sdk::mod_id());
         if let Err(fault) = self.load_from(&folder) {
             panic!("{fault}");
         }
@@ -65,6 +67,8 @@ impl<T: DeserializeOwned> ConfigFile<T> {
 
     fn load_from(&self, folder: &Path) -> Result<(), String> {
         let path = folder.join(format!("{}.toml", self.name));
+        std::fs::create_dir_all(folder)
+            .map_err(|error| format!("could not make {}: {error}", folder.display()))?;
         let text = read_or_write_default(&path, self.default)?;
         let value = parse(&text, &path.display().to_string())?;
         let _ = self.value.set(value);
@@ -77,21 +81,13 @@ fn read_or_write_default(path: &Path, default: &str) -> Result<String, String> {
     match std::fs::read_to_string(path) {
         Ok(text) => Ok(text),
         Err(error) if error.kind() == ErrorKind::NotFound => {
-            write_default(path, default)?;
+            std::fs::write(path, default).map_err(|error| {
+                format!("could not write the default to {}: {error}", path.display())
+            })?;
             Ok(default.to_string())
         }
         Err(error) => Err(format!("could not read {}: {error}", path.display())),
     }
-}
-
-fn write_default(path: &Path, default: &str) -> Result<(), String> {
-    let written = match path.parent() {
-        Some(folder) => {
-            std::fs::create_dir_all(folder).and_then(|()| std::fs::write(path, default))
-        }
-        None => std::fs::write(path, default),
-    };
-    written.map_err(|error| format!("could not write the default to {}: {error}", path.display()))
 }
 
 /// `text` read as TOML; `source` names it in the error, which also gives the line.
@@ -165,6 +161,29 @@ mod tests {
             fault.contains("line 2"),
             "the fault names the line: {fault}"
         );
+    }
+
+    #[test]
+    fn a_file_that_cannot_be_read_or_made_is_refused() {
+        let folder = empty_folder("unreadable");
+        std::fs::create_dir_all(folder.join("settings.toml")).expect("a folder in its place");
+        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
+        let fault = config.load_from(&folder).expect_err("a folder is no file");
+        assert!(fault.starts_with("could not read"), "it says so: {fault}");
+        let read_only = folder.join("read-only");
+        std::fs::create_dir_all(&read_only).expect("made");
+        let mut permissions = std::fs::metadata(&read_only).expect("found").permissions();
+        permissions.set_readonly(true);
+        std::fs::set_permissions(&read_only, permissions).expect("made read-only");
+        let fault = config
+            .load_from(&read_only)
+            .expect_err("a read-only folder takes no file");
+        assert!(fault.starts_with("could not write"), "it says so: {fault}");
+        std::fs::write(folder.join("blocked"), b"").expect("a file in the way");
+        let fault = config
+            .load_from(&folder.join("blocked"))
+            .expect_err("a file is no folder");
+        assert!(fault.starts_with("could not make"), "it says so: {fault}");
     }
 
     #[test]

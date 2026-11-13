@@ -48,7 +48,7 @@ each mod; [`docs/agents/mods.md`](docs/agents/mods.md) has the build, load and c
 |---|---|
 | `cogwork/`, `structgen/`, `showcase/` | One mod each: its crate, `assets/`, README, and `docs/` where it has them |
 | `Weft/` | The engine, checked out by `init.sh` and not tracked here |
-| `weftkit/` | A library the mods share: typed block positions, areas and block states, and a mod's TOML settings file |
+| `weftkit/` | A library the mods share: typed block positions, areas and block states, a mod's TOML settings file, and its persistent data |
 | `docs/agents/` | Guides for working on this repository: code style, mod design, mods, testing, engine, releasing |
 | `.claude/skills/` | Step lists for jobs that come up again: adding content, drawing a structgen building, filming, porting to a new Weft, starting a mod |
 | `tools/` | Build, install and load check (`install-mods.sh`), formatting, tests and clippy (`check-mods.sh`), the headless test run, film recording (`showcase.sh`), structure photos, sounds, Blockbench models and CI scripts |
