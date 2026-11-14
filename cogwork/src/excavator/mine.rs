@@ -3,7 +3,7 @@
 
 use weft_sdk::{Vec3, World};
 
-use super::depth::deep_cost;
+use super::depth::at_depth;
 use super::power::{pay, travel};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Status};
 use crate::harvest::{Harvest, cost, harvest};
@@ -31,9 +31,8 @@ pub fn worth_mining(block_state: BlockState) -> bool {
 /// Energy to mine `block_state` at `cell` inside `frame`: dearer the deeper it lies below the
 /// excavator, which stands at the bottom of its frame.
 pub fn block_cost(frame: &Frame, cell: Pos, block_state: BlockState) -> i64 {
-    // In `i64`: from the top of the world to its bottom is past `i32`.
-    let below = i64::from(frame.lo.y) - i64::from(cell.y);
-    deep_cost(cost(block_state, BASE_COST, COST_PER_HARDNESS), below)
+    let plain = cost(block_state, BASE_COST, COST_PER_HARDNESS);
+    at_depth(plain, frame.below(cell))
 }
 
 /// Where the drill is while it mines the block `cell` inside `frame`, `done` of the way through (0
@@ -79,7 +78,13 @@ pub fn mine_block(
         return Mined::Skipped;
     }
     dig.set_status(Status::Mining);
-    if !pay(world, id, dig, block_cost(&dig.frame, cell, block_state)) {
+    if !pay(
+        world,
+        id,
+        dig,
+        cell,
+        block_cost(&dig.frame, cell, block_state),
+    ) {
         return Mined::Waiting(dig.status());
     }
     match harvest(world, id, cell, block_state) {

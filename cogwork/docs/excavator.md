@@ -63,20 +63,19 @@ stay near until it stands.
 A block costs 400 energy and 400 more per point of hardness: stone (1.5) takes 1,000. Down to 64
 blocks below the excavator that is all; past that, the cost doubles every 160 blocks deeper:
 
-| Below the excavator | Cost | Ticks for stone |
+| Below the excavator | Cost | Most put into a block a tick |
 |---|---|---|
-| 64 | 1 times | 8 |
-| 224 | 2 times | 17 |
-| 384 | 4 times | 33 |
-| 704 | 16 times | 133 |
-| 1,024 | 64 times | 533 |
-| 1,344 | 256 times | 2,133 |
+| 64 | 1 times | 120 |
+| 224 | 2 times | 240 |
+| 384 | 4 times | 480 |
+| 704 | 16 times | 1,920 |
+| 1,024 | 64 times | 7,680 |
 
-The work on one block takes at most 120 energy a tick, so deep down more engines don't help: a
-block simply takes longer. Far below, that sets a floor of its own.
+It puts as much more into a block each tick as the block costs more, so with enough engines a
+block takes as long at any depth: depth costs energy, not time.
 
-The drill also pays 80 energy per block it travels, at any depth. What a block drops is what a diamond pickaxe would
-get, and goes into the excavator's 3 by 3 output. Each tick the excavator hands a stack from its
+The drill also pays 80 energy per block it travels, at any depth. What a block drops is what a
+diamond pickaxe would get, and goes into the excavator's 3 by 3 output. Each tick the excavator hands a stack from its
 output to a tube, chest or machine beside it.
 
 ## Energy
@@ -95,11 +94,13 @@ Holding up the gantry costs a standby draw every tick: 10, and 1 more per 4 bloc
 Standby is drawn for as long as it works, also while it waits for room in its output. Short of
 standby, the excavator doesn't run at all, and the energy it had is used up all the same, so a
 weak supply can't save up to run in bursts. What comes in beyond standby pays for the work, up
-to 120 a tick, so the more engines drive it, the faster it digs. One ember engine (40
-a tick) runs a 9 by 9 area slowly; add more to go faster.
+to 120 a tick near the top and more deep down (see [Mining](#mining)), so the more engines drive
+it, the faster it digs. One ember engine (40 a tick) runs a 9 by 9 area slowly; add more to go
+faster.
 
-It stores 20 ticks of its standby, and never less than 20,000 energy: a 255 by 255 area holds
-325,320. It takes in as much a tick as it stores, from any number of engines.
+It stores 20 ticks of its standby and of the most it puts into a block, and never less than
+20,000 energy: a 255 by 255 area holds 327,720 near the top, and a 9 by 9 area 154,200 at 1,024
+below. It takes in as much a tick as it stores, from any number of engines.
 
 ## World settings
 
