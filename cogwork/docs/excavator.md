@@ -80,16 +80,17 @@ output to a tube, chest or machine beside it.
 
 ## Energy
 
-Holding up the gantry costs a standby draw every tick: 10, and 1 more per 4 blocks of area.
+Holding up the gantry costs a standby draw every tick: 12, and 1 more per block across the area,
+along each side.
 
 | Area | Standby per tick |
 |---|---|
 | 9 by 9 | 30 |
-| 17 by 17 | 82 |
-| 33 by 33 | 282 |
-| 63 by 63 | 1,002 |
-| 127 by 127 | 4,042 |
-| 255 by 255 | 16,266 |
+| 17 by 17 | 46 |
+| 33 by 33 | 78 |
+| 63 by 63 | 138 |
+| 127 by 127 | 266 |
+| 255 by 255 | 522 |
 
 Standby is drawn for as long as it works, also while it waits for room in its output. Short of
 standby, the excavator doesn't run at all, and the energy it had is used up all the same, so a
@@ -99,8 +100,8 @@ it, the faster it digs. One ember engine (40 a tick) runs a 9 by 9 area slowly; 
 faster.
 
 It stores 20 ticks of its standby and of the most it puts into a block, and never less than
-20,000 energy: a 255 by 255 area holds 327,720 near the top, and a 9 by 9 area 154,200 at 1,024
-below. It takes in as much a tick as it stores, from any number of engines.
+20,000 energy: a 255 by 255 area holds 20,000 near the top and 20,040 at 384 below, and a 9 by 9
+area 154,200 at 1,024 below. It takes in as much a tick as it stores, from any number of engines.
 
 ## World settings
 
