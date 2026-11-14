@@ -22,7 +22,7 @@ How Rust is written here and in Weft. The examples are files of this repository;
 - The mods have one trait, the extension `weftkit::TypedWorld` over an SDK type. A derive from a crate the mod already uses (`strum::FromRepr`) comes before a hand-written `match` over the same variants.
 - A missing value is handled first and the work follows unindented: `let Some(entity) = world.entity(id) else { continue };`.
 - A file names what it imports, the SDK too (`use weft_sdk::{Dir, World};`): SonarQube flags a wildcard import. Older files still take `use weft_sdk::*;`; name its imports in a file you change. A test module's `use super::*;` stays.
-- `unsafe` stays in the engine's ABI glue, platform calls and backends, behind a safe function. The mods have none.
+- `unsafe` stays in the engine's ABI glue, platform calls and backends, behind a safe function. The mods have none. A library the mods share (not a mod) may hold it only after serious consideration with your user, where no safe way does the job: in a file of its own behind a safe function, with a `// SAFETY:` comment saying why it holds, and with unit tests running every line of that file (`cargo llvm-cov --show-missing-lines`).
 
 ## Names
 

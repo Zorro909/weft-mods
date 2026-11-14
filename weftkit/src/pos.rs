@@ -10,6 +10,7 @@ value! {
     /// A block's position, or an offset from one. Laid out as `[i32; 3]`, so a saved or sent
     /// `[i32; 3]` reads as one.
     #[derive(Default, Eq, Hash)]
+    #[cfg_attr(feature = "store", derive(serde::Serialize, serde::Deserialize))]
     pub struct Pos {
         pub x: i32,
         pub y: i32,

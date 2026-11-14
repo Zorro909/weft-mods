@@ -36,6 +36,7 @@ A `SAVE` component is written to disk as its bytes, so its layout is a file form
 ## Client and server
 
 - A click that changes the world is a `value!` struct sent over a `Channel`; the server handler checks that the sender may do it (`ghost::within_reach`) before acting: `SET_GHOST` in `cogwork/src/ghost.rs`.
+- State the server keeps for itself, across restarts and outside any entity or block, is a `weftkit::Table` (feature `store`): keys and values of any `serde` type in `data/<mod>/`, one set for the whole server. A changed key or value type takes a new table name.
 - State kept across ticks outside a component is a `static` `Mutex` with one `lock()` helper beside it that recovers a poisoned lock (`showcase/src/lib.rs`). It outlives the world it was filled in, and entity ids start over in every world: the top of `cogwork/src/tube/visual.rs` says how it copes.
 
 ## Testable logic
