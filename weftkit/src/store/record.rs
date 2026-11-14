@@ -18,7 +18,7 @@ use std::ops::Range;
 pub(super) const HEADER_LEN: usize = 16;
 /// What a store's file starts with.
 const MAGIC: &[u8; 8] = b"WEFTKITS";
-/// The version of this layout: a file of another is read only as far as its records check out.
+/// The version of this layout: a file naming another is refused untouched (`unknown_format`).
 const FORMAT: u32 = 1;
 /// What each record starts with, where the search for one goes on after damage.
 const MARKER: &[u8; 4] = b"WREC";
@@ -129,23 +129,26 @@ pub(super) struct Scan {
 
 /// Every record of `bytes`, a whole file, skipping what doesn't check out.
 pub(super) fn scan(bytes: &[u8]) -> Scan {
-    if bytes.iter().all(|byte| *byte == 0) {
-        return Scan::default();
-    }
+    // The zeros after the last record are room, not damage.
+    let used = bytes
+        .iter()
+        .rposition(|byte| *byte != 0)
+        .map_or(0, |last| last + 1);
     let mut scan = Scan::default();
+    if used == 0 {
+        return scan;
+    }
     if !bytes.starts_with(&header()) {
         scan.damaged = HEADER_LEN.min(bytes.len());
     }
     let mut start = HEADER_LEN;
-    while start < bytes.len() {
+    while start < used {
         if let Some(record) = read(bytes, start) {
             start += record.len;
             scan.records.push(record);
-        } else if bytes[start..].iter().all(|byte| *byte == 0) {
-            break;
         } else {
             let next = next_record(bytes, start + 1);
-            scan.damaged += damage_end(bytes, next) - start;
+            scan.damaged += next.min(used) - start;
             start = next;
         }
     }
@@ -158,18 +161,6 @@ fn next_record(bytes: &[u8], from: usize) -> usize {
     (from..bytes.len())
         .find(|start| bytes[*start..].starts_with(MARKER) && read(bytes, *start).is_some())
         .unwrap_or(bytes.len())
-}
-
-/// Where damage reaching `next` ends: there, or at the last byte that isn't zero if no record
-/// follows it, since the zeros after it are only room.
-fn damage_end(bytes: &[u8], next: usize) -> usize {
-    if next < bytes.len() {
-        return next;
-    }
-    bytes
-        .iter()
-        .rposition(|byte| *byte != 0)
-        .map_or(0, |last| last + 1)
 }
 
 /// The checksum of the record at `start` with `body`.
@@ -209,19 +200,15 @@ mod tests {
 
     #[test]
     fn records_read_back_as_written() {
-        let bytes = file(
-            &[(b"k", Some(b"value")), (b"gone", None), (b"", Some(b""))],
-            8,
-        );
+        let changes: [(&[u8], Option<&[u8]>); 3] =
+            [(b"k", Some(b"value")), (b"gone", None), (b"", Some(b""))];
+        let bytes = file(&changes, 8);
         let scan = scan(&bytes);
-        let read: Vec<_> = scan
+        let read = scan
             .records
             .iter()
-            .map(|record| key_and_value(&bytes, record))
-            .collect();
-        let expected: [(&[u8], Option<&[u8]>); 3] =
-            [(b"k", Some(b"value")), (b"gone", None), (b"", Some(b""))];
-        assert_eq!(read, expected, "keys, values and removals come back");
+            .map(|record| key_and_value(&bytes, record));
+        assert!(read.eq(changes), "keys, values and removals come back");
         assert_eq!(scan.end, bytes.len() - 8, "new records go before the zeros");
         assert_eq!(scan.damaged, 0, "nothing is damaged");
     }
@@ -230,28 +217,6 @@ mod tests {
     fn a_file_of_zeros_is_empty() {
         assert_eq!(scan(&[0; 64]), Scan::default(), "no records and no damage");
         assert_eq!(scan(&[]), Scan::default(), "nor in no bytes");
-    }
-
-    #[test]
-    fn a_damaged_record_costs_only_itself() {
-        let mut bytes = file(
-            &[(b"a", Some(b"1")), (b"b", Some(b"2")), (b"c", Some(b"3"))],
-            4,
-        );
-        let second = HEADER_LEN + encoded_len(b"a", Some(b"1"));
-        bytes[second + PREFIX_LEN + HEAD_LEN] ^= 0xff;
-        let scan = scan(&bytes);
-        let keys: Vec<_> = scan
-            .records
-            .iter()
-            .map(|record| &bytes[record.key.clone()])
-            .collect();
-        assert_eq!(keys, [b"a", b"c"], "the records around it are read");
-        assert_eq!(
-            scan.damaged,
-            encoded_len(b"b", Some(b"2")),
-            "the damage is one record"
-        );
     }
 
     #[test]

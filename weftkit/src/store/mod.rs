@@ -1,6 +1,6 @@
 //! A mod's persistent data: tables of keys and values in files mapped into memory, in
-//! `data/<mod>/<table>/` under the game folder (`folder.rs`), one set for the whole server. A change
-//! is in the file once the call returns, and the kernel writes it to disk even if the game
+//! `data/<mod>/<table>/` under the game folder (`folder.rs`), one set for the whole server. A
+//! change is in the file when the call ends, and the kernel writes it to disk even if the game
 //! crashes right after. Values stay in the file; memory holds the keys and where values lie.
 //!
 //! ```ignore
@@ -14,12 +14,10 @@
 //! changed type takes a new table name, as a changed `SAVE` component does. So does switching a
 //! table to the other lock design, which lays out its files differently.
 //!
-//! A table opens at its first use, taking its folder's `lock` file. A damaged file is repaired
-//! then: an error is logged, the file as it was is kept as a `.bak` beside it, and every record
-//! that can still be read stays. A file of a newer format is left alone. A table that can't be
-//! opened (another server uses it, no permission, a newer format) panics with the reason, and so
-//! does a change that can't be saved (a full disk; on btrfs or ZFS the kernel may stop the
-//! server instead). Dead records are rewritten away on a thread of their own.
+//! A table opens at its first use, taking its folder's `lock` file and repairing damaged files
+//! (`Log::open`), each logged as an error. A table that can't be opened (another server uses it,
+//! no permission, a newer format) panics with the reason, and so does a change that can't be
+//! saved (a full disk; on btrfs or ZFS the kernel may stop the server instead).
 
 mod log;
 mod mapped;
@@ -169,15 +167,6 @@ fn decode<T: DeserializeOwned>(bytes: &[u8]) -> Option<T> {
         Ok((value, [])) => Some(value),
         _ => None,
     }
-}
-
-/// An empty folder of its own under the system's temporary folder.
-#[cfg(test)]
-pub(crate) fn test_folder(name: &str) -> std::path::PathBuf {
-    let folder = std::env::temp_dir().join(format!("weftkit-store-{}-{name}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&folder);
-    std::fs::create_dir_all(&folder).expect("a test folder can be made");
-    folder
 }
 
 #[cfg(test)]

@@ -2,8 +2,7 @@
 //! repository: block positions that can be saved (`Pos`), boxes of them (`Area`), block states
 //! (`BlockState`) and `World`'s block calls taking and giving them (`TypedWorld`); with the
 //! feature `config`, a mod's settings file (`ConfigFile`); with the feature `store`, its
-//! persistent data (`Table`). A proving ground for what could become
-//! part of the SDK.
+//! persistent data (`Table`). A proving ground for what could become part of the SDK.
 //!
 //! Everything here builds on one Weft release, the one every mod using it names: a mod moving
 //! to another release moves weftkit and every other mod with it.

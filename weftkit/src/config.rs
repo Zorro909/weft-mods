@@ -1,15 +1,11 @@
 //! A mod's settings file, read once when the mod starts: `config/<mod>/<name>.toml` under the
-//! game folder (`folder.rs`). Not under `mods/`: the
-//! engine takes every folder there for a mod, and an update replacing a mod's folder would take
-//! its settings with it. A missing file is first written from the default the mod ships,
-//! comments and all, so the server's admin has one to edit; it is written whole or not at all,
-//! so a crash on the way doesn't leave half a file that stops the next start. A file that doesn't parse stops the
-//! game from starting, naming the file and the line at fault: running on defaults instead would
-//! quietly undo what the admin set.
+//! game folder (`folder.rs`), not under `mods/`, where the engine takes every folder for a mod.
+//! A missing file is first written whole from the default the mod ships, comments and all, so
+//! the server's admin has one to edit. A file that doesn't parse stops the game from starting,
+//! naming the file and the line: running on defaults would quietly undo what the admin set.
 //!
-//! The SDK's `Config` stays the tool for a single value players or operators change in the game:
-//! it has a screen, `/rule` and syncing. This is for what that can't hold, such as lists, tables
-//! and values per tier, kept in a file the admin edits.
+//! The SDK's `Config` stays the tool for a single value changed in the game; this is for lists,
+//! tables and values per tier, kept in a file the admin edits.
 //!
 //! ```ignore
 //! static SETTINGS: ConfigFile<Settings> =
@@ -103,6 +99,7 @@ mod tests {
     use serde::Deserialize;
 
     use super::*;
+    use crate::folder::test_folder;
 
     #[derive(Debug, Deserialize, PartialEq)]
     struct Settings {
@@ -112,31 +109,26 @@ mod tests {
 
     const DEFAULT: &str = "# What a stall costs a day.\nrent = 5\ntiers = [\"hamlet\", \"town\"]\n";
 
-    /// An empty folder of its own under the system's temporary folder.
-    fn empty_folder(name: &str) -> std::path::PathBuf {
-        let folder =
-            std::env::temp_dir().join(format!("weftkit-config-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&folder);
-        folder
+    fn settings() -> ConfigFile<Settings> {
+        ConfigFile::named("settings", DEFAULT)
     }
 
     #[test]
     fn a_missing_file_is_written_from_the_default() {
-        let folder = empty_folder("missing");
-        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
+        let folder = test_folder("config-missing");
+        let config = settings();
         config.load_from(&folder).expect("the default loads");
-        assert_eq!(config.get().rent, 5, "the default's value is read");
-        let written =
-            std::fs::read_to_string(folder.join("settings.toml")).expect("it was written");
+        let default = config.parse_default().expect("the default is valid");
+        assert_eq!(config.get(), &default, "the default's values are read");
+        let written = std::fs::read_to_string(folder.join("settings.toml")).expect("written");
         assert_eq!(written, DEFAULT, "the file keeps the default's comments");
     }
 
     #[test]
     fn the_admins_file_wins_over_the_default() {
-        let folder = empty_folder("edited");
-        std::fs::create_dir_all(&folder).expect("the folder can be made");
+        let folder = test_folder("config-edited");
         std::fs::write(folder.join("settings.toml"), "rent = 9\ntiers = []\n").expect("written");
-        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
+        let config = settings();
         config.load_from(&folder).expect("the file loads");
         let expected = Settings {
             rent: 9,
@@ -147,67 +139,39 @@ mod tests {
 
     #[test]
     fn a_broken_file_is_refused_with_its_path_and_line() {
-        let folder = empty_folder("broken");
-        std::fs::create_dir_all(&folder).expect("the folder can be made");
-        std::fs::write(
-            folder.join("settings.toml"),
-            "tiers = []\nrent = \"five\"\n",
-        )
-        .expect("written");
-        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
-        let fault = config.load_from(&folder).expect_err("a string is no rent");
-        assert!(
-            fault.contains("settings.toml"),
-            "the fault names the file: {fault}"
-        );
-        assert!(
-            fault.contains("line 2"),
-            "the fault names the line: {fault}"
-        );
+        let folder = test_folder("config-broken");
+        let broken = "tiers = []\nrent = \"five\"\n";
+        std::fs::write(folder.join("settings.toml"), broken).expect("written");
+        let fault = settings()
+            .load_from(&folder)
+            .expect_err("a string is no rent");
+        let named = fault.contains("settings.toml") && fault.contains("line 2");
+        assert!(named, "the fault names the file and the line: {fault}");
     }
 
     #[test]
-    fn a_file_that_cannot_be_read_is_refused() {
-        let folder = empty_folder("unreadable");
-        std::fs::create_dir_all(folder.join("settings.toml")).expect("a folder in its place");
-        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
-        let fault = config.load_from(&folder).expect_err("a folder is no file");
-        assert!(fault.starts_with("could not read"), "it says so: {fault}");
+    fn a_file_or_folder_that_cannot_be_used_is_refused() {
+        let folder = test_folder("config-blocked");
+        std::fs::create_dir(folder.join("settings.toml")).expect("a folder in the file's place");
+        std::fs::write(folder.join("file"), b"").expect("a file in the folder's place");
+        for (folder, fault) in [
+            (folder.clone(), "could not read"),
+            (folder.join("file"), "could not make"),
+        ] {
+            let found = settings().load_from(&folder).expect_err("it is refused");
+            assert!(found.starts_with(fault), "it says so: {found}");
+        }
     }
 
     /// Unix only: Windows lets a read-only folder take new files.
     #[cfg(unix)]
     #[test]
     fn a_default_that_cannot_be_written_is_refused() {
-        use std::os::unix::fs::PermissionsExt;
-        let folder = empty_folder("read-only");
-        std::fs::create_dir_all(&folder).expect("made");
-        let mode = |mode| std::fs::set_permissions(&folder, std::fs::Permissions::from_mode(mode));
-        mode(0o555).expect("made read-only");
-        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
-        let fault = config
-            .load_from(&folder)
-            .expect_err("a read-only folder takes no file");
-        mode(0o755).expect("made writable");
+        let folder = test_folder("config-read-only");
+        crate::folder::set_mode(&folder, 0o555);
+        let loaded = settings().load_from(&folder);
+        crate::folder::set_mode(&folder, 0o755);
+        let fault = loaded.expect_err("a read-only folder takes no file");
         assert!(fault.starts_with("could not write"), "it says so: {fault}");
-    }
-
-    #[test]
-    fn a_folder_that_cannot_be_made_is_refused() {
-        let folder = empty_folder("blocked");
-        std::fs::create_dir_all(&folder).expect("made");
-        std::fs::write(folder.join("file"), b"").expect("a file in the way");
-        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
-        let fault = config
-            .load_from(&folder.join("file"))
-            .expect_err("a file is no folder");
-        assert!(fault.starts_with("could not make"), "it says so: {fault}");
-    }
-
-    #[test]
-    fn the_default_parses() {
-        let config: ConfigFile<Settings> = ConfigFile::named("settings", DEFAULT);
-        let tiers = config.parse_default().expect("the default is valid").tiers;
-        assert_eq!(tiers, ["hamlet", "town"], "the default's list is read");
     }
 }

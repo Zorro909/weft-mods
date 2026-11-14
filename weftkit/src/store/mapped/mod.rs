@@ -4,19 +4,15 @@
 //!
 //! Mapping a file is unsafe because another process could change or shorten it under the map.
 //! A table's files are only mapped while its folder's lock file is held (`FolderLock`), which
-//! keeps out every other store, in this server or another. The lock file never moves, so the
-//! files under it can be replaced. It is advisory on Unix: it keeps out every store, not a
-//! program that ignores locks. Windows changes no file that is mapped, so a file's map is let go
-//! before the file is lengthened or replaced.
+//! keeps out every other store, in this server or another; on Unix it is advisory, so not a
+//! program that ignores locks. The lock file never moves, so the files under it can be replaced.
+//! Windows changes no file that is mapped, so a map is let go before its file changes.
 
 use std::fs::{File, OpenOptions};
-use std::io::{self, Seek, SeekFrom, Write};
+use std::io::{self, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use memmap2::MmapMut;
-
-/// Zeros written at a time when a file is lengthened.
-const ZEROS_LEN: usize = 64 * 1024;
 
 /// The lock of a table's folder, held as long as any of its files is mapped.
 pub(super) struct FolderLock {
@@ -28,15 +24,14 @@ impl FolderLock {
     pub(super) fn take(folder: &Path) -> io::Result<FolderLock> {
         let path = folder.join("lock");
         let file = open_file(&path, true)?;
-        let Err(error) = file.try_lock() else {
-            return Ok(FolderLock { _file: file });
-        };
-        let error = io::Error::from(error);
-        let reason = format!(
-            "{} is held: is another server or mod using this table? ({error})",
-            path.display()
-        );
-        Err(io::Error::new(error.kind(), reason))
+        file.try_lock().map_err(|error| {
+            let reason = format!(
+                "{} is held: is another server or mod using this table? ({error})",
+                path.display()
+            );
+            io::Error::new(io::Error::from(error).kind(), reason)
+        })?;
+        Ok(FolderLock { _file: file })
     }
 }
 
@@ -88,7 +83,7 @@ impl MappedFile {
         if len <= self.len() {
             return Ok(());
         }
-        self.unmap();
+        self.map = None;
         let lengthened = open_file(&self.path, false).and_then(|file| lengthen(&file, len));
         self.remap()?;
         lengthened
@@ -99,16 +94,11 @@ impl MappedFile {
     /// whole at this path; if the rename fails, the old one is mapped again. A missing `new` is
     /// an error, never an empty file.
     pub(super) fn replace_with(&mut self, new: &Path, min_len: usize) -> io::Result<()> {
-        self.unmap();
+        self.map = None;
         let renamed = std::fs::rename(new, &self.path);
         self.remap()?;
         renamed?;
         self.grow(min_len)
-    }
-
-    /// Lets go of the file's map, so the file can be changed.
-    fn unmap(&mut self) {
-        self.map = None;
     }
 
     /// Maps the file at this path, whole.
@@ -129,20 +119,11 @@ fn open_file(path: &Path, create: bool) -> io::Result<File> {
 }
 
 /// Makes `file` `len` bytes long, if it is shorter, by writing zeros at its end: a hole would
-/// only be given room when a page of the map is written, and on a full disk the kernel then
-/// stops the process instead of returning an error here. Written, not set: a file that fails
-/// halfway is only as long as the zeros that made it. Copy-on-write file systems (btrfs, ZFS)
-/// may still stop the process.
-fn lengthen(file: &File, len: usize) -> io::Result<()> {
-    let mut writer = file;
-    let mut at = writer.seek(SeekFrom::End(0))?;
-    let len = len as u64;
-    let zeros = [0; ZEROS_LEN];
-    while at < len {
-        let chunk = (len - at).min(ZEROS_LEN as u64) as usize;
-        writer.write_all(&zeros[..chunk])?;
-        at += chunk as u64;
-    }
+/// only get room on disk when the map writes to it, and on a full disk the kernel then stops the
+/// process instead of this failing. Copy-on-write file systems (btrfs, ZFS) still may.
+fn lengthen(mut file: &File, len: usize) -> io::Result<()> {
+    let missing = (len as u64).saturating_sub(file.seek(SeekFrom::End(0))?);
+    io::copy(&mut io::repeat(0).take(missing), &mut file)?;
     Ok(())
 }
 

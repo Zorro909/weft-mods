@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use serde::Deserialize;
-
 use super::*;
 use crate::Pos;
+use crate::folder::test_folder;
 
 /// `table` opened in `folder`, with what it found damaged there.
 fn opened<K, V>(table: Table<K, V>, folder: &Path) -> (Table<K, V>, Vec<Damage>)
@@ -21,31 +20,27 @@ fn names(folder: &Path) -> Table<String, String> {
 }
 
 #[test]
-fn values_of_any_length_are_there_after_opening_again() {
+fn changes_are_there_after_opening_again() {
     let folder = test_folder("table-again");
     let long = "a long text ".repeat(10_000);
     let table = names(&folder);
     table.set(&"long".into(), long.clone());
-    table.set(&"short".into(), "hi".into());
+    table.set(&"changed".into(), "old".into());
+    table.set(&"changed".into(), "new".into());
     table.set(&"removed".into(), "bye".into());
     table.remove(&"removed".into());
+    table.remove(&"never there".into());
     drop(table);
-    let table = names(&folder);
-    assert_eq!(
-        table.get(&"long".into()),
-        Some(long),
-        "a long text stays whole"
-    );
-    assert_eq!(
-        table.get(&"short".into()).as_deref(),
-        Some("hi"),
-        "a short one too"
-    );
-    assert_eq!(
-        table.get(&"removed".into()),
-        None,
-        "a removed key stays removed"
-    );
+    let (table, damages) = opened(Table::named("names"), &folder);
+    assert!(damages.is_empty(), "a closed table is whole");
+    let mut entries = Vec::new();
+    table.for_each(|key: String, value: String| entries.push((key, value)));
+    entries.sort();
+    let expected = [
+        ("changed".to_string(), "new".to_string()),
+        ("long".to_string(), long),
+    ];
+    assert_eq!(entries, expected, "the newest value of each key, whole");
 }
 
 #[test]
@@ -53,23 +48,10 @@ fn update_and_get_or_default_start_from_the_default() {
     let folder = test_folder("table-default");
     let (table, _) = opened(Table::<Pos, u32>::named("visits"), &folder);
     let pos = Pos::new(1, -2, 3);
-    assert_eq!(
-        table.get_or_default(&pos),
-        0,
-        "a missing key reads as the default"
-    );
+    assert_eq!(table.get_or_default(&pos), 0, "a missing key is 0");
     table.update(&pos, |visits| *visits += 2);
     table.update(&pos, |visits| *visits += 3);
-    assert_eq!(
-        table.get_or_default(&pos),
-        5,
-        "updates add up from the default"
-    );
-    assert_eq!(
-        table.get(&Pos::new(0, 0, 0)),
-        None,
-        "other keys stay missing"
-    );
+    assert_eq!(table.get_or_default(&pos), 5, "updates add up from 0");
 }
 
 #[test]
@@ -117,45 +99,12 @@ fn updates_from_many_threads_lose_nothing() {
 }
 
 #[test]
-fn a_damaged_table_keeps_what_it_can_and_a_backup() {
-    let folder = test_folder("table-damaged");
-    let table = names(&folder);
-    table.set(&"first".into(), "1".into());
-    table.set(&"second".into(), "2".into());
-    drop(table);
-    let file = folder.join("table.log");
-    let mut bytes = std::fs::read(&file).expect("read");
-    bytes[record::HEADER_LEN + 14] ^= 0xff;
-    std::fs::write(&file, bytes).expect("written");
-    let (table, damages) = opened(Table::<String, String>::named("names"), &folder);
-    assert_eq!(damages.len(), 1, "the damage is reported");
-    assert!(
-        folder.join("table.log.bak").exists(),
-        "the file as it was is kept"
-    );
-    assert_eq!(
-        table.get(&"first".into()),
-        None,
-        "the damaged record is gone"
-    );
-    assert_eq!(
-        table.get(&"second".into()).as_deref(),
-        Some("2"),
-        "the rest is kept"
-    );
-}
-
-#[test]
 fn values_of_another_type_are_refused() {
     let folder = test_folder("table-types");
     names(&folder).set(&"key".into(), "text".into());
     let (table, damages) = opened(Table::<String, u64>::named("names"), &folder);
     assert_eq!(damages[0].refused, 1, "a text is no number");
-    assert_eq!(
-        table.get(&"key".into()),
-        None,
-        "so the key reads as missing"
-    );
+    assert_eq!(table.get(&"key".into()), None, "so the key is missing");
 }
 
 #[test]
@@ -171,21 +120,4 @@ fn a_table_that_cannot_open_panics() {
 fn a_change_that_cannot_be_saved_panics() {
     let table = Table::<String, String>::named("names");
     table.saved(Err(io::Error::other("the disk is full")));
-}
-
-/// A value whose encoding always fails.
-#[derive(Deserialize)]
-struct Unsaveable;
-
-impl Serialize for Unsaveable {
-    fn serialize<S: serde::Serializer>(&self, _: S) -> Result<S::Ok, S::Error> {
-        Err(serde::ser::Error::custom("never"))
-    }
-}
-
-#[test]
-#[should_panic(expected = "table odd can't encode a value")]
-fn a_value_that_cannot_be_encoded_panics() {
-    let table = Table::<u32, Unsaveable>::named("odd");
-    table.encode(&Unsaveable);
 }

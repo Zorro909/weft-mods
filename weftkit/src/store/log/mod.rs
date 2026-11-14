@@ -2,21 +2,19 @@
 //! memory from each key to where its value lies in the file. Keys and values are bytes here;
 //! the table encodes them.
 //!
-//! A change is a record added at the end, so a crash cuts off at most the record being written,
-//! which the next opening finds damaged. The records a key no longer needs are dead; once they
-//! outweigh the live ones, the live ones are written to a new file on a thread of their own
-//! (`compact.rs`), which then takes the old one's place.
+//! A change is a record added at the end, so a crash cuts off at most the record being written.
+//! Once the records no key needs outweigh the live ones, the live ones are rewritten
+//! (`compact.rs`).
 
 mod compact;
-mod damage;
 
 use std::collections::HashMap;
+use std::fmt;
 use std::io;
 use std::ops::Range;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use self::compact::{Compaction, Live};
-pub(super) use self::damage::Damage;
 use super::mapped::{FolderLock, MappedFile};
 use super::record::{self, HEADER_LEN};
 
@@ -28,31 +26,50 @@ const DEAD_ALLOWED: usize = 1024 * 1024;
 /// A shard's file and the index of its live values.
 pub(super) struct Log {
     file: MappedFile,
-    index: HashMap<Box<[u8]>, Entry>,
-    /// Where the records end and the next goes.
-    end: usize,
-    /// Bytes of records no key needs any more.
-    dead: usize,
+    index: Index,
     compaction: Option<Compaction>,
 }
 
-/// A key and what was recorded for it: its value, or `None` for a removal.
-type Change = (Box<[u8]>, Option<Box<[u8]>>);
-
-/// Where a key's newest record lies.
-struct Entry {
-    record_len: usize,
-    value: Range<usize>,
+/// Where each live key's value lies in a file, where its records end, and how many of their
+/// bytes no key needs any more.
+struct Index {
+    keys: HashMap<Box<[u8]>, Range<usize>>,
+    end: usize,
+    dead: usize,
 }
 
-impl Entry {
-    /// Where the key and value of a record of `key_len` key bytes lie.
-    fn live(&self, key_len: usize) -> Live {
-        let key_start = self.value.end - self.record_len + record::KEY_START;
-        Live {
-            key: key_start..key_start + key_len,
-            value: self.value.clone(),
+impl Index {
+    fn new() -> Index {
+        Index {
+            keys: HashMap::new(),
+            end: HEADER_LEN,
+            dead: 0,
         }
+    }
+
+    /// Takes in the record of `key` and `value` written at the end; a removal has no value.
+    fn add(&mut self, key: &[u8], value: Option<&[u8]>) {
+        let record_len = record::encoded_len(key, value);
+        self.end += record_len;
+        let old = match value {
+            Some(value) => self
+                .keys
+                .insert(key.into(), self.end - value.len()..self.end),
+            None => {
+                self.dead += record_len;
+                self.keys.remove(key)
+            }
+        };
+        self.dead += old.map_or(0, |old| record::KEY_START + key.len() + old.len());
+    }
+
+    /// Where the key and value of each live record lie.
+    fn live(&self) -> Vec<Live> {
+        let live = self.keys.iter().map(|(key, value)| Live {
+            key: value.start - key.len()..value.start,
+            value: value.clone(),
+        });
+        live.collect()
     }
 }
 
@@ -76,38 +93,35 @@ impl Log {
             return Err(io::Error::new(io::ErrorKind::InvalidData, reason));
         }
         let scan = record::scan(file.bytes());
-        let mut log = Log {
-            file,
-            index: HashMap::new(),
-            end: scan.end.max(HEADER_LEN),
-            dead: 0,
-            compaction: None,
-        };
+        let mut index = Index::new();
         let mut refused = 0;
         for found in &scan.records {
-            let key: Box<[u8]> = log.file.bytes()[found.key.clone()].into();
-            match found.value.clone() {
-                Some(value) if readable(&key, &log.file.bytes()[value.clone()]) => {
-                    log.index_set(key, found.len, value)
-                }
-                Some(_) => {
-                    refused += 1;
-                    log.index_remove(&key, found.len);
-                }
-                None => log.index_remove(&key, found.len),
-            }
+            let key = &file.bytes()[found.key.clone()];
+            let value = found.value.clone().map(|value| &file.bytes()[value]);
+            let kept = value.filter(|value| readable(key, value));
+            refused += usize::from(kept.is_none() && value.is_some());
+            // After damage the next record lies further on.
+            index.end = found.start;
+            index.add(key, kept);
         }
+        index.end = scan.end.max(HEADER_LEN);
+        let mut log = Log {
+            file,
+            index,
+            compaction: None,
+        };
         let damaged = scan.damaged > 0 || refused > 0;
         // Backed up before the file is lengthened, so the backup is the file as it was.
         let backup = damaged
-            .then(|| damage::back_up(path, log.file.bytes()))
+            .then(|| back_up(path, log.file.bytes()))
             .transpose()?;
         log.file.grow(NEW_LEN)?;
         let Some(backup) = backup else {
             log.file.bytes_mut()[..HEADER_LEN].copy_from_slice(&record::header());
             return Ok((log, None));
         };
-        log.rewrite_now()?;
+        log.start_compaction(log.index.live());
+        log.finish_compaction()?;
         let damage = Damage {
             path: path.to_path_buf(),
             damaged: scan.damaged,
@@ -118,17 +132,19 @@ impl Log {
     }
 
     pub(super) fn get(&self, key: &[u8]) -> Option<&[u8]> {
-        let entry = self.index.get(key)?;
-        Some(&self.file.bytes()[entry.value.clone()])
+        let value = self.index.keys.get(key)?;
+        Some(&self.file.bytes()[value.clone()])
     }
 
     pub(super) fn set(&mut self, key: &[u8], value: &[u8]) -> io::Result<()> {
-        self.put(key, value)?;
+        self.append(key, Some(value))?;
         self.compact_when_due()
     }
 
     pub(super) fn remove(&mut self, key: &[u8]) -> io::Result<()> {
-        self.take_out(key)?;
+        if self.index.keys.contains_key(key) {
+            self.append(key, None)?;
+        }
         self.compact_when_due()
     }
 
@@ -136,7 +152,7 @@ impl Log {
     /// one's place, the log stays as it was.
     pub(super) fn clear(&mut self) -> io::Result<()> {
         self.abandon_compaction();
-        self.start_compaction_of(Vec::new());
+        self.start_compaction(Vec::new());
         self.finish_compaction()
     }
 
@@ -144,59 +160,29 @@ impl Log {
     pub(super) fn entries(&self) -> impl Iterator<Item = (&[u8], &[u8])> {
         let bytes = self.file.bytes();
         self.index
+            .keys
             .iter()
-            .map(|(key, entry)| (&key[..], &bytes[entry.value.clone()]))
+            .map(|(key, value)| (&key[..], &bytes[value.clone()]))
     }
 
-    /// Writes the record setting `key` to `value` and indexes it.
-    fn put(&mut self, key: &[u8], value: &[u8]) -> io::Result<()> {
-        let start = self.append(key, Some(value))?;
-        let record_len = record::encoded_len(key, Some(value));
-        let value_start = start + record_len - value.len();
-        self.index_set(key.into(), record_len, value_start..start + record_len);
-        Ok(())
-    }
-
-    /// Writes the record removing `key`, if it has a value, and takes it out of the index.
-    fn take_out(&mut self, key: &[u8]) -> io::Result<()> {
-        if self.index.contains_key(key) {
-            self.append(key, None)?;
-            self.index_remove(key, record::encoded_len(key, None));
-        }
-        Ok(())
-    }
-
-    fn index_set(&mut self, key: Box<[u8]>, record_len: usize, value: Range<usize>) {
-        let entry = Entry { record_len, value };
-        if let Some(old) = self.index.insert(key, entry) {
-            self.dead += old.record_len;
-        }
-    }
-
-    /// Takes `key` out of the index; its removal record of `record_len` bytes is dead too.
-    fn index_remove(&mut self, key: &[u8], record_len: usize) {
-        let old = self.index.remove(key).map_or(0, |old| old.record_len);
-        self.dead += old + record_len;
-    }
-
-    /// Writes the record of `key` and `value` at the end, growing the file if needed; returns
-    /// where it starts.
-    fn append(&mut self, key: &[u8], value: Option<&[u8]>) -> io::Result<usize> {
+    /// Writes the record of `key` and `value` at the end, growing the file if needed, and
+    /// indexes it.
+    fn append(&mut self, key: &[u8], value: Option<&[u8]>) -> io::Result<()> {
         let value_len = value.map_or(0, <[u8]>::len);
         if !record::fits(key.len(), value_len) {
             let size = key.len().saturating_add(value_len);
             let reason = format!("a record of {size} bytes is over 4 GiB");
             return Err(io::Error::new(io::ErrorKind::InvalidInput, reason));
         }
-        let start = self.end;
+        let start = self.index.end;
         let end = start + record::encoded_len(key, value);
         let len = self.file.len();
         if end > len {
             self.file.grow(end.max(len * 2))?;
         }
         record::write(&mut self.file.bytes_mut()[start..end], start, key, value);
-        self.end = end;
-        Ok(start)
+        self.index.add(key, value);
+        Ok(())
     }
 
     /// Puts a finished compaction in place, or starts one once dead records outweigh the live.
@@ -208,22 +194,17 @@ impl Log {
         {
             return self.finish_compaction();
         }
-        let live = self.end - HEADER_LEN - self.dead;
-        if self.compaction.is_none() && self.dead > DEAD_ALLOWED && self.dead > live {
-            self.start_compaction();
+        let dead = self.index.dead;
+        let live = self.index.end - HEADER_LEN - dead;
+        if self.compaction.is_none() && dead > DEAD_ALLOWED && dead > live {
+            self.start_compaction(self.index.live());
         }
         Ok(())
     }
 
-    fn start_compaction(&mut self) {
-        let live = self.index.iter();
-        let live = live.map(|(key, entry)| entry.live(key.len())).collect();
-        self.start_compaction_of(live);
-    }
-
     /// Starts a compaction keeping the `live` records.
-    fn start_compaction_of(&mut self, live: Vec<Live>) {
-        self.compaction = Some(Compaction::start(self.file.path(), live, self.end));
+    fn start_compaction(&mut self, live: Vec<Live>) {
+        self.compaction = Some(Compaction::start(self.file.path(), live, self.index.end));
     }
 
     /// Waits for the compaction, writes the changes made since it started into its file, and
@@ -233,52 +214,72 @@ impl Log {
         let Some(compaction) = self.compaction.take() else {
             return Ok(());
         };
-        let (listed_end, new) = (compaction.listed_end, compaction.new.clone());
-        let since = self.changes_since(listed_end);
-        let rewritten = compaction.wait().and_then(|mut rewritten| {
-            rewritten.add_changes(&new, &since)?;
-            Ok(rewritten)
+        let new = self.file.path().with_extension("new");
+        let listed_end = compaction.listed_end;
+        let finished = compaction.wait().and_then(|mut index| {
+            let changes = &self.file.bytes()[..self.index.end];
+            compact::add_changes(&mut index, &new, changes, listed_end)?;
+            let replaced = self.file.replace_with(&new, index.end.max(NEW_LEN));
+            // Renamed, even if mapping it failed: the file is the new one, and its index with it.
+            if !new.exists() {
+                self.index = index;
+            }
+            replaced
         });
-        let rewritten = rewritten.inspect_err(|_| {
+        if finished.is_err() {
             let _ = std::fs::remove_file(&new);
-        })?;
-        let replaced = self.file.replace_with(&new, rewritten.end.max(NEW_LEN));
-        if replaced.is_err() && new.exists() {
-            let _ = std::fs::remove_file(&new);
-            return replaced;
         }
-        // Renamed, even if mapping it failed: the file is the new one, and its index with it.
-        (self.index, self.end, self.dead) = (rewritten.index, rewritten.end, rewritten.dead);
-        replaced
-    }
-
-    /// The changes recorded from `start` to the end, in order.
-    fn changes_since(&self, mut start: usize) -> Vec<Change> {
-        let bytes = self.file.bytes();
-        let mut changes = Vec::new();
-        while let Some(found) = record::read(&bytes[..self.end], start) {
-            let value = found.value.map(|value| bytes[value].into());
-            changes.push((bytes[found.key].into(), value));
-            start += found.len;
-        }
-        changes
-    }
-
-    /// Rewrites the file without its dead records before going on.
-    fn rewrite_now(&mut self) -> io::Result<()> {
-        self.abandon_compaction();
-        self.start_compaction();
-        self.finish_compaction()
+        finished
     }
 
     /// Waits for a compaction under way and throws its file away.
     fn abandon_compaction(&mut self) {
         if let Some(compaction) = self.compaction.take() {
-            let new = compaction.new.clone();
             let _ = compaction.wait();
-            let _ = std::fs::remove_file(new);
+            let _ = std::fs::remove_file(self.file.path().with_extension("new"));
         }
     }
+}
+
+/// What opening a damaged file found and kept.
+#[derive(Debug)]
+pub(in crate::store) struct Damage {
+    pub(in crate::store) path: PathBuf,
+    /// Bytes that were no whole record.
+    pub(in crate::store) damaged: usize,
+    /// Whole records whose key or value the table could not read, each taken as a removal of
+    /// its key: an older value coming back would be wrong too.
+    pub(in crate::store) refused: usize,
+    /// The file as it was before it was repaired.
+    pub(in crate::store) backup: PathBuf,
+}
+
+impl fmt::Display for Damage {
+    fn fmt(&self, out: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            out,
+            "{} was damaged ({} bytes unreadable, {} records of other types); kept what could be \
+             read, and the file as it was is {}",
+            self.path.display(),
+            self.damaged,
+            self.refused,
+            self.backup.display()
+        )
+    }
+}
+
+/// Writes `bytes`, the file at `path` as it is, to the first free `<path>.bak`, `<path>.1.bak`,
+/// .., and gives that path.
+fn back_up(path: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let mut backup = path.with_file_name(format!("{name}.bak"));
+    let mut number = 1;
+    while backup.exists() {
+        backup = path.with_file_name(format!("{name}.{number}.bak"));
+        number += 1;
+    }
+    std::fs::write(&backup, bytes)?;
+    Ok(backup)
 }
 
 impl Drop for Log {
