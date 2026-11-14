@@ -1,8 +1,9 @@
 //! Mining one block: the drill travels to it, energy is paid by how hard it is, and what it drops
 //! goes into the excavator's output.
 
-use weft_sdk::*;
+use weft_sdk::{Vec3, World};
 
+use super::depth::at_depth;
 use super::power::{pay, travel};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Status};
 use crate::harvest::{Harvest, cost, harvest};
@@ -27,9 +28,11 @@ pub fn worth_mining(block_state: BlockState) -> bool {
     block_state.can_break() && !block_state.is(&GANTRY_FRAME) && !block_state.is(&EXCAVATOR)
 }
 
-/// Energy to mine `block_state`.
-pub fn block_cost(block_state: BlockState) -> i64 {
-    cost(block_state, BASE_COST, COST_PER_HARDNESS)
+/// Energy to mine `block_state` at `cell` inside `frame`: dearer the deeper it lies below the
+/// excavator, which stands at the bottom of its frame.
+pub fn block_cost(frame: &Frame, cell: Pos, block_state: BlockState) -> i64 {
+    let plain = cost(block_state, BASE_COST, COST_PER_HARDNESS);
+    at_depth(plain, frame.below(cell))
 }
 
 /// Where the drill is while it mines the block `cell` inside `frame`, `done` of the way through (0
@@ -75,7 +78,13 @@ pub fn mine_block(
         return Mined::Skipped;
     }
     dig.set_status(Status::Mining);
-    if !pay(world, id, dig, block_cost(block_state)) {
+    if !pay(
+        world,
+        id,
+        dig,
+        cell,
+        block_cost(&dig.frame, cell, block_state),
+    ) {
         return Mined::Waiting(dig.status());
     }
     match harvest(world, id, cell, block_state) {

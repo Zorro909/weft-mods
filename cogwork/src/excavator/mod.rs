@@ -1,8 +1,9 @@
 //! The excavator: it builds a gantry frame around its area, then a drill on the gantry mines the
-//! area out layer by layer from the top of the frame down to the floor of the world, handing
-//! everything it mines to the tubes and chests beside it.
+//! area out layer by layer from the top of the frame down as deep as the world's settings let it
+//! (`depth`), handing everything it mines to the tubes and chests beside it.
 
 mod area;
+mod depth;
 mod dig;
 mod framing;
 mod mine;
@@ -10,13 +11,17 @@ mod power;
 mod rig;
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, Block, Component, ENERGY, Holds, Menu, Registry, S, Slots, Ui, Vec3, World,
+    component_flags, tool_tier, value,
+};
 
 pub static EXCAVATOR: Block = Block::named("excavator");
 pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
 pub use area::Frame;
+use depth::Floor;
 
 use crate::lib::Pos;
 use crate::loading::Cubes;
@@ -108,18 +113,18 @@ impl Dig {
     }
 
     /// The cubes of the layer it mines, across the whole frame. None once the cursor has passed
-    /// the floor: it finishes on the next tick.
-    fn mining_layer(&self) -> Option<Cubes> {
+    /// `floor`: it finishes on the next tick.
+    fn mining_layer(&self, floor: Floor) -> Option<Cubes> {
         let (lo, hi, y) = (self.frame.lo, self.frame.hi, self.cursor.y);
-        (y >= dig::FLOOR_Y).then(|| Cubes::spanning(lo.with_y(y), hi.with_y(y)))
+        (!floor.is_above(y)).then(|| Cubes::spanning(lo.with_y(y), hi.with_y(y)))
     }
 }
 
-/// Keeps the cubes the excavator at `pos` needs loaded while it mines, then lets them go.
-/// Building the frame keeps nothing loaded: it takes a player near.
-fn keep_loaded(world: &World, pos: Pos, dig: &Dig) {
+/// Keeps the cubes the excavator at `pos` needs loaded while it mines, down to `floor`, then
+/// lets them go. Building the frame keeps nothing loaded: it takes a player near.
+fn keep_loaded(world: &World, pos: Pos, dig: &Dig, floor: Floor) {
     match dig.stage() {
-        Stage::Mine => crate::loading::keep_machine(world, pos, dig.mining_layer()),
+        Stage::Mine => crate::loading::keep_machine(world, pos, dig.mining_layer(floor)),
         _ => crate::loading::release_machine(world, pos),
     }
 }
@@ -131,6 +136,7 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&DIG, dig::tick);
+    depth::register(r);
     crate::machine::block(r.block(&EXCAVATOR), "excavator")
         .hardness(4.0)
         .on_break(crate::loading::let_go)
@@ -138,8 +144,7 @@ pub fn register(r: &mut Registry) {
             entity
                 .attach(&DIG)
                 .attach(&rig::RIG)
-                // In from any number of engines: standby alone can pass 1000 on a large area.
-                .attach_with(&ENERGY, crate::machine::energy(20_000, 20_000))
+                .attach_with(&ENERGY, power::smallest_store())
                 .inventory(9)
         })
         .opens(&EXCAVATOR_MENU);
@@ -240,6 +245,7 @@ mod tests {
     fn no_cube_is_let_go_and_kept_again_over_a_dig() {
         // The frame stands across the cubes from y 0 to 15 and from 16 up.
         let frame = Frame::from(([3, 13, 3], [40, 17, 40]));
+        let floor = Floor::at(-64);
         let mut dig = Dig {
             stage: Stage::Mine as u32,
             frame,
@@ -247,10 +253,10 @@ mod tests {
             ..Dig::default()
         };
         // What it keeps after each block, as a tick does once the cursor has moved on.
-        let mut kept = vec![dig.mining_layer().expect("the top layer")];
-        while dig.cursor.y >= dig::FLOOR_Y {
+        let mut kept = vec![dig.mining_layer(floor).expect("the top layer")];
+        while !floor.is_above(dig.cursor.y) {
             dig.cursor = frame.next(dig.cursor);
-            kept.extend(dig.mining_layer());
+            kept.extend(dig.mining_layer(floor));
         }
         assert_eq!(
             kept.last().map(|cubes| cubes.lo().y),
