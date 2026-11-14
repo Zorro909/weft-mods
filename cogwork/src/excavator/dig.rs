@@ -50,13 +50,14 @@ fn work(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
 /// Plans the area of the excavator `id` at `pos` and sizes its store to it.
 fn start(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
     dig.frame = Frame::plan(world, pos, crate::machine::front(world, pos));
-    fit_store(world, id, &dig.frame);
+    fit_store(world, id, &dig.frame, dig.frame.below(dig.frame.first()));
     dig.set_stage(Stage::Frame);
     dig.step = 0;
 }
 
 /// Mines toward the next block that is there to mine, for the excavator `id` at `pos`.
 fn mine_next(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
+    fit_store(world, id, &dig.frame, dig.frame.below(dig.cursor));
     let Some(target) = find_target(world, dig) else {
         if dig.stage() == Stage::Done {
             world.play_sound(&sounds::EXCAVATOR_DONE, pos.center(), 1.0);

@@ -12,8 +12,10 @@
 
 - Excavators dig on below y = -64 until a layer never loads, unless the world limits their
   depth. Past 64 blocks below the excavator, a block's energy cost doubles every 160 blocks: 4
-  times as much at 384 below, 64 times at 1,024.
-- An excavator on a large area stores 20 ticks of its standby, not 20,000 energy.
+  times as much at 384 below, 64 times at 1,024. It puts as much more into a block each tick, so
+  with enough engines a block takes as long at any depth.
+- An excavator stores 20 ticks of its standby and of what it puts into a block, at least 20,000
+  energy, so large areas and deep layers can run.
 
 - Oil fields are rare: one in 32 squares of 96 × 96 blocks holds one, not every other, and each
   has its seep. `/structure locate cogwork:oil_field` says where the nearest is.

@@ -4,6 +4,9 @@
 
 use weft_sdk::{Config, Registry};
 
+use super::Frame;
+use crate::lib::Pos;
+
 /// Whether excavators dig on with no lowest layer.
 static UNLIMITED: Config<bool> = Config::named("excavator_unlimited_depth");
 /// The lowest layer excavators mine when depth is limited, as a height.
@@ -47,11 +50,20 @@ impl Floor {
     }
 }
 
-/// What a block of plain price `cost` costs `below` blocks under the excavator.
-pub fn deep_cost(cost: i64, below: i64) -> i64 {
+impl Frame {
+    /// Blocks `cell` lies below the excavator, which stands at the bottom of the frame.
+    pub fn below(&self, cell: Pos) -> i64 {
+        // In `i64`: from the top of the world to its bottom is past `i32`.
+        i64::from(self.lo.y) - i64::from(cell.y)
+    }
+}
+
+/// `amount` of energy, as it is `below` blocks under the excavator: a block's price, or what
+/// the excavator puts into one per tick.
+pub fn at_depth(amount: i64, below: i64) -> i64 {
     let doublings = (below - PLAIN_DEPTH).max(0) as f64 / DOUBLING_DEPTH;
     // A cast from `f64` saturates: absurd depths cost the most there is, not a wrapped number.
-    (cost as f64 * doublings.exp2()) as i64
+    (amount as f64 * doublings.exp2()) as i64
 }
 
 #[cfg(test)]
@@ -79,16 +91,16 @@ mod tests {
 
     #[test]
     fn depth_doubles_the_cost_every_160_blocks_past_64() {
-        assert_eq!(deep_cost(1000, -5), 1000, "above the excavator");
-        assert_eq!(deep_cost(1000, 64), 1000, "64 below at the plain price");
+        assert_eq!(at_depth(1000, -5), 1000, "above the excavator");
+        assert_eq!(at_depth(1000, 64), 1000, "64 below at the plain price");
         assert_eq!(
-            deep_cost(1000, 144),
+            at_depth(1000, 144),
             1414,
             "half a doubling: by the root of 2"
         );
-        assert_eq!(deep_cost(1000, 224), 2000, "twice at 224 below");
-        assert_eq!(deep_cost(1000, 384), 4000, "4 times at 384 below");
-        assert_eq!(deep_cost(1000, 1024), 64_000, "64 times at 1024 below");
-        assert_eq!(deep_cost(1000, i64::MAX), i64::MAX, "the most there is");
+        assert_eq!(at_depth(1000, 224), 2000, "twice at 224 below");
+        assert_eq!(at_depth(1000, 384), 4000, "4 times at 384 below");
+        assert_eq!(at_depth(1000, 1024), 64_000, "64 times at 1024 below");
+        assert_eq!(at_depth(1000, i64::MAX), i64::MAX, "the most there is");
     }
 }

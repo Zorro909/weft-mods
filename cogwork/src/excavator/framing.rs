@@ -45,7 +45,7 @@ fn put_up(world: &World, id: u64, dig: &mut Dig, cell: Pos, block_state: BlockSt
     }
     dig.set_status(Status::Frame);
     dig.refused = 0;
-    if !pay(world, id, dig, FRAME_COST) {
+    if !pay(world, id, dig, cell, FRAME_COST) {
         return;
     }
     world.set_block_typed(cell, BlockState::of(&GANTRY_FRAME));
