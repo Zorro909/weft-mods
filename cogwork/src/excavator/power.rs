@@ -1,5 +1,5 @@
 //! What an excavator's energy pays for. Holding up the gantry costs a standby draw every tick,
-//! by the size of the area; short of that, nothing moves. Energy beyond it pays for the work,
+//! by the length of its sides; short of that, nothing moves. Energy beyond it pays for the work,
 //! so the more engines drive an excavator, the faster it digs, up to a block in the same time
 //! at any depth.
 
@@ -10,9 +10,11 @@ use super::{Dig, Frame, Status};
 use crate::lib::Pos;
 use crate::machine::{self, Payment};
 
-/// Standby energy per tick: a base, and one more per four blocks of area (9 by 9: 30).
-const STANDBY_BASE: i64 = 10;
-const CELLS_PER_STANDBY: i64 = 4;
+/// Standby energy per tick: a base, and one more per block across the inside, along x and along
+/// z (9 by 9: 30). By the sides, not the area: the drill mines no faster on a large area, so
+/// standby by area would cost each block mined as much again per block of area.
+const STANDBY_BASE: i64 = 12;
+const STANDBY_PER_BLOCK_ACROSS: i64 = 1;
 /// The most energy it puts into its work per tick beyond standby, near the top: stone takes at
 /// least 8 ticks. Deeper down it grows as a block's price does (`draw_rate`).
 const DRAW_RATE: i64 = 120;
@@ -27,7 +29,7 @@ impl Frame {
     /// Standby energy per tick to hold up this frame's gantry.
     pub fn standby(&self) -> i64 {
         let [x, z] = self.inside();
-        STANDBY_BASE + x as i64 * z as i64 / CELLS_PER_STANDBY
+        STANDBY_BASE + STANDBY_PER_BLOCK_ACROSS * (x as i64 + z as i64)
     }
 
     /// The energy an excavator working this frame `below` blocks under it stores, and takes in
@@ -43,8 +45,7 @@ fn draw_rate(below: i64) -> i64 {
     at_depth(DRAW_RATE, below)
 }
 
-/// An excavator's store before it has planned its area: in from any number of engines, as
-/// standby alone can pass 1000 on a large area.
+/// An excavator's store before it has planned its area: in from any number of engines.
 pub fn smallest_store() -> Energy {
     machine::energy(SMALLEST_STORE, SMALLEST_STORE)
 }
@@ -113,7 +114,9 @@ mod tests {
         let small = frame([10, 4, 10]).standby();
         let large = frame([34, 4, 34]).standby();
         assert_eq!(small, 30, "9 by 9 needs one ember engine");
-        assert_eq!(large, 10 + 33 * 33 / 4, "33 by 33 needs many more");
+        assert_eq!(large, 78, "33 by 33 needs two");
+        let largest = frame([256, 4, 256]).standby();
+        assert_eq!(largest, 522, "255 by 255 by its sides, not its area");
     }
 
     #[test]
@@ -128,8 +131,8 @@ mod tests {
         );
         let largest = frame([256, 4, 256]);
         assert_eq!(
-            largest.store(0),
-            20 * (largest.standby() + 120),
+            largest.store(384),
+            20 * (522 + 480),
             "20 ticks of standby and work"
         );
     }
