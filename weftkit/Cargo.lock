@@ -222,18 +222,18 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 
 [[package]]
 name = "weft_abi"
-version = "26.11.4"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.4#2e2014f2714943c07d33279a70cdc5ed44e8d601"
+version = "26.11.5"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.5#ee292476a9764bacad3b7876e1541ac23607ac5e"
 
 [[package]]
 name = "weft_noise"
-version = "26.11.4"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.4#2e2014f2714943c07d33279a70cdc5ed44e8d601"
+version = "26.11.5"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.5#ee292476a9764bacad3b7876e1541ac23607ac5e"
 
 [[package]]
 name = "weft_sdk"
-version = "26.11.4"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.4#2e2014f2714943c07d33279a70cdc5ed44e8d601"
+version = "26.11.5"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.5#ee292476a9764bacad3b7876e1541ac23607ac5e"
 dependencies = [
  "weft_abi",
  "weft_noise",
