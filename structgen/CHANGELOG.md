@@ -1,17 +1,30 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 - 2026-11-15
 
 ### Added
 
-- One or two buildings of each hamlet, village and town have something in their chests: bread,
-  apples, wheat, torches, coal, iron, now and then gold or arrows.
 - A building whose bottom layer stands over a cave just under the ground has the gap filled
   with the ground's block, so no paving or yard hangs over air.
 
 ### Changed
 
-- Built for Weft 26.11.5, on the engine's own structures: hamlets, villages and towns are
+- Built for Weft 26.11.5.
+- Settlements read the water instead of taking base's sea level, 63: no building stands where
+  water or ice covers the ground, in any dimension, and dry ground below 63 can be built on.
+  Settlements may stand elsewhere at any seed; seed 42's stand where they did.
+- The showcase film turns more slowly out of the church and the town hall.
+
+## 0.4.0 - 2026-11-12
+
+### Added
+
+- One or two buildings of each hamlet, village and town have something in their chests: bread,
+  apples, wheat, torches, coal, iron, now and then gold or arrows.
+
+### Changed
+
+- Built for Weft 26.11.4, on the engine's own structures: hamlets, villages and towns are
   features of base's overworld, and the buildings are templates in the engine's structure files
   (`assets/structures/*.json`), turned by this mod as before so frames and ladders stay right.
 - `/structure` is the engine's command now: `save` takes both corners, `load` takes a template
@@ -23,10 +36,6 @@
 - No more `.wst` files, Structure Wand or structgen `/structure` of its own (`pos1`, `pos2`,
   styles in `load`).
 - No more cottages, farms, chapels and mills standing alone in the country.
-- Settlements read the water instead of taking base's sea level, 63: no building stands where
-  water or ice covers the ground, in any dimension, and dry ground below 63 can be built on.
-  Settlements may stand elsewhere at any seed; seed 42's stand where they did.
-- The showcase film turns more slowly out of the church and the town hall.
 - The showcase film flies where seed 42 now puts its settlements: a hamlet, a village, a town
   and, over the mountains, a last hamlet.
 

@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "showcase_api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "weft_sdk",
  "weftkit",
@@ -92,7 +92,7 @@ dependencies = [
 
 [[package]]
 name = "structgen"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "base_api",
  "serde_json",
@@ -139,7 +139,7 @@ dependencies = [
 
 [[package]]
 name = "weftkit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "weft_sdk",
 ]
