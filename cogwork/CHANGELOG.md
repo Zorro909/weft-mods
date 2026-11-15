@@ -10,6 +10,7 @@
 
 ### Changed
 
+- Builds against Weft v26.11.5.
 - Excavators dig on below y = -64 until a layer never loads, unless the world limits their
   depth. Past 64 blocks below the excavator, a block's energy cost doubles every 160 blocks: 4
   times as much at 384 below, 64 times at 1,024. It puts as much more into a block each tick, so
