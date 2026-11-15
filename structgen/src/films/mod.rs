@@ -24,13 +24,14 @@ pub fn register(r: &mut Registry) {
 
 fn journey() -> Film {
     let opening = Film::new().screen(screen::BLACK, 1.0, 0.0).cue("morning");
-    let film = hamlets::first(opening.fade_in(2.0));
+    // Fades run in linear light, so one reads on screen at about a third of its length.
+    let film = hamlets::first(opening.fade_in(4.0));
     let film = flights::to_the_village(film);
     let film = village::village(film);
     let film = flights::to_the_town(film);
     let film = town::town(film);
     let film = flights::over_the_mountains(film);
-    hamlets::last(film).fade_out(2.5)
+    hamlets::last(film)
 }
 
 /// A flight through the first of each pair, looking at the second there, turning smoothly

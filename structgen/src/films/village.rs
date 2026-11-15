@@ -154,16 +154,17 @@ fn cottage(film: Film) -> Film {
         (COTTAGE.at([6.0, 2.6, 3.0]), chest),
         (inside, chest),
     ];
-    // Down the step to the green, which lies a block or two below the floor, and up again to
-    // the tavern's.
+    // Down the step to the green, a block or two below the floor, and along the path over it,
+    // clear of the long grass and flowers, up again to the tavern's.
     let across_the_green = [
         (inside, way_out),
         (COTTAGE.at([5.7, 2.55, 2.8]), COTTAGE.at([5.5, 2.4, -3.0])),
         (COTTAGE.at([5.5, 2.5, 1.5]), COTTAGE.at([5.5, 2.3, -4.0])),
-        (COTTAGE.at([5.5, 2.4, -1.0]), [-2213.0, 73.0, 2774.0]),
-        ([-2220.0, 72.6, 2775.0], porch()),
-        ([-2213.0, 72.5, 2773.5], porch()),
-        ([-2206.0, 73.6, 2770.5], TAVERN.at([5.5, 2.6, 8.0])),
+        (COTTAGE.at([5.5, 2.0, -1.0]), [-2214.0, 72.8, 2775.8]),
+        ([-2220.0, 72.2, 2776.0], [-2208.0, 73.5, 2775.0]),
+        ([-2214.0, 72.8, 2775.8], [-2204.0, 74.2, 2772.0]),
+        ([-2208.5, 73.8, 2774.5], porch()),
+        ([-2205.0, 74.6, 2771.5], TAVERN.at([5.5, 2.6, 8.0])),
         (porch(), TAVERN.at([5.5, 2.6, 8.0])),
     ];
     film.shot(glide(&round_to_the_front, 12.0).ease(speeds(4.0, 3.0)))
