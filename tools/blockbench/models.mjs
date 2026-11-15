@@ -7,8 +7,8 @@ import path from 'node:path';
 // for a block or an item.
 export function codecOf(file) {
     if (file.endsWith('.geo.json')) return 'bedrock';
-    const folders = path.dirname(path.resolve(file)).split(path.sep);
-    const javaModel = folders.includes('block') || folders.includes('item');
+    const folders = new Set(path.dirname(path.resolve(file)).split(path.sep));
+    const javaModel = folders.has('block') || folders.has('item');
     if (file.endsWith('.json') && javaModel) return 'java_block';
     throw new Error(
         `${file} is neither an entity model (<name>.geo.json) ` +
