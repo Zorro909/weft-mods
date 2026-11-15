@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use showcase_api::{Pos, Step, Timeline};
+use showcase_api::{Pos, Step, Timeline, Weather};
 use weft_sdk::Vec3;
 
 use crate::playback::Playback;
@@ -37,6 +37,8 @@ pub struct Moment {
     pub cues: Vec<String>,
     /// The lang keys of the titles on screen.
     pub titles: Vec<String>,
+    /// The weather in force, and the step that set it.
+    pub weather: Option<(usize, Weather)>,
     /// The file name of the picture taken here.
     pub still: Option<String>,
 }
@@ -65,6 +67,7 @@ pub fn moments(timeline: Timeline, from: Pose) -> Vec<Moment> {
             step: playback.step(),
             cues,
             titles: playback.titles.iter().map(|t| t.key.clone()).collect(),
+            weather: playback.weather.clone(),
             still: None,
         });
     }

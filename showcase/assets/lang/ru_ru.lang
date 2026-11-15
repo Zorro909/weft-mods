@@ -7,3 +7,7 @@ showcase.camera.marked = Точка {0} отмечена
 showcase.camera.too_few = Сначала отметьте хотя бы две точки командой /camera point
 showcase.camera.cleared = Точки забыты
 showcase.gallery.empty = У {0} нет блоков, которые можно показать
+
+# Film titles
+showcase.film.dusk = Сумерки: туман, небо и солнечный свет для кадра
+showcase.film.mist = С переменой погоды наползает туман

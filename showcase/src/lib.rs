@@ -2,12 +2,14 @@
 //! shots, and records them when the game is started with `--showcase <mod:film>`.
 //!
 //! `/showcase play <mod:film>` plays one in a running game, `/showcase gallery <mod>` shows
-//! every block of a mod, and `/camera` makes camera paths by hand. The server half prepares the
+//! every block of a mod, `/camera` makes camera paths by hand, and `showcase:demo` is a short
+//! film of the steps that change a film's look (`demo`). The server half prepares the
 //! player and builds or asks for the set (`server`, `gallery`); the client half receives the
-//! shots and flies the camera (`director`, `playback`, `rig`, `view`), or goes through them
-//! without recording to find a film's faults first (`rehearsal`).
+//! shots and flies the camera (`director`, `playback`, `rig`, `view`, `weather`), or goes
+//! through them without recording to find a film's faults first (`rehearsal`).
 
 mod camera;
+mod demo;
 mod director;
 mod gallery;
 mod launch;
@@ -17,6 +19,7 @@ mod rehearsal;
 mod rig;
 mod server;
 mod view;
+mod weather;
 
 use std::sync::{Mutex, MutexGuard};
 
@@ -31,6 +34,7 @@ fn init(r: &mut Registry) {
     director::register(r);
     camera::register(r);
     launch::register(r);
+    demo::register(r);
 }
 
 /// `mutex` locked, even if a panic left it poisoned: the state stays usable.

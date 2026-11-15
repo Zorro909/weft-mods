@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use showcase_api::{Path, Pos, Step, Timeline};
+use showcase_api::{Path, Pos, Step, Timeline, Weather};
 use weft_sdk::Vec3;
 
 use crate::rig::math::length;
@@ -48,6 +48,8 @@ pub struct Playback {
     own_fov: f32,
     pub titles: Vec<Title>,
     pub menu: Option<ShownMenu>,
+    /// The weather in force, and the step that set it.
+    pub weather: Option<(usize, Weather)>,
 }
 
 impl Playback {
@@ -65,6 +67,7 @@ impl Playback {
             own_fov: from.fov,
             titles: Vec::new(),
             menu: None,
+            weather: None,
         }
     }
 
@@ -138,6 +141,10 @@ impl Playback {
                     at: self.origin + *at,
                     until: self.elapsed - clock + secs,
                 });
+                Some(0.0)
+            }
+            Step::Weather(weather) => {
+                self.weather = weather.clone().map(|weather| (self.index, weather));
                 Some(0.0)
             }
             Step::Wait(secs) => (clock >= *secs).then_some(*secs),
@@ -217,7 +224,7 @@ impl Playback {
 
 #[cfg(test)]
 mod tests {
-    use showcase_api::{Film, dolly, follow, hold};
+    use showcase_api::{Film, Weather, dolly, follow, hold};
 
     use super::*;
 
@@ -363,6 +370,29 @@ mod tests {
         assert_eq!((open.at, open.until), (Pos::new(12, 64, 9), 3.0));
         p.advance(1.6, &mut signals, &none);
         assert_eq!(p.menu, None, "closed at three seconds");
+    }
+
+    #[test]
+    fn a_weather_holds_until_the_next_and_clearing_lifts_it() {
+        let film = Film::new()
+            .weather(Weather::dusk())
+            .wait(1.0)
+            .weather(Weather::mist())
+            .wait(1.0)
+            .clear_weather()
+            .wait(1.0);
+        let mut p = play(film);
+        let mut signals = HashSet::new();
+        p.advance(0.5, &mut signals, &none);
+        assert_eq!(
+            p.weather,
+            Some((0, Weather::dusk())),
+            "dusk, set at the first step"
+        );
+        p.advance(1.0, &mut signals, &none);
+        assert_eq!(p.weather, Some((2, Weather::mist())), "mist in its place");
+        p.advance(1.0, &mut signals, &none);
+        assert_eq!(p.weather, None, "lifted");
     }
 
     #[test]

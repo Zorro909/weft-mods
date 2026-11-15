@@ -2,6 +2,7 @@
 //! Positions are in blocks from the set's origin (`Set::origin`), angles in degrees.
 
 use crate::Pos;
+use crate::weather::Weather;
 
 /// A film's steps, in the order they play.
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -33,6 +34,9 @@ pub enum Step {
         at: Pos,
         secs: f32,
     },
+    /// The weather from here on, in place of any before; `None` lifts it. The film's end lifts
+    /// it too.
+    Weather(Option<Weather>),
 }
 
 /// One camera move: where the eye goes, where it looks, how long it takes. The functions below
@@ -159,6 +163,19 @@ impl Film {
             at,
             secs,
         });
+        self
+    }
+
+    /// Fog, sky, light and sound from here on, while the film goes on: `Weather::dusk()`, or one
+    /// of your own. It fades in over the weather's `fade`, and a later `weather` takes over.
+    pub fn weather(mut self, weather: Weather) -> Film {
+        self.steps.push(Step::Weather(Some(weather)));
+        self
+    }
+
+    /// Back to the world's own weather, fading out over the weather's `fade`.
+    pub fn clear_weather(mut self) -> Film {
+        self.steps.push(Step::Weather(None));
         self
     }
 }

@@ -1,7 +1,8 @@
 //! A film as bytes, the way `TIMELINE` carries it: the version, the film's name and origin, then
 //! its steps. Each type is written and read back by one `Wire` impl, so the two sides can't
-//! drift apart. Numbers are little-endian, counts a `u32`, texts a `u16` length and UTF-8, and
-//! every step, path, look and ease starts with a tag byte (`film.rs`).
+//! drift apart. Numbers are little-endian, counts a `u32`, texts a `u16` length and UTF-8, a
+//! value that may be missing a byte (1 when it follows), and every step, path, look and ease
+//! starts with a tag byte (`film.rs`).
 //!
 //! Anything cut short, unknown or of another version is refused, and so are numbers that aren't
 //! finite, which would stop a film or fling the camera.
@@ -12,7 +13,7 @@ use crate::Pos;
 use crate::film::Step;
 
 /// Raised whenever the layout changes; films of any other version are refused.
-pub const TIMELINE_VERSION: u16 = 2;
+pub const TIMELINE_VERSION: u16 = 3;
 
 /// A film as the player's client receives it: its full name (`mymod:tour`), the block its
 /// positions are counted from, and its steps.
@@ -125,6 +126,27 @@ impl<T: Wire, const N: usize> Wire for [T; N] {
     }
 }
 
+/// A byte, 1 when the value follows and 0 when there is none.
+impl<T: Wire> Wire for Option<T> {
+    fn put(&self, out: &mut Vec<u8>) {
+        match self {
+            Some(value) => {
+                1u8.put(out);
+                value.put(out);
+            }
+            None => 0u8.put(out),
+        }
+    }
+
+    fn get(bytes: &mut &[u8]) -> Option<Option<T>> {
+        match u8::get(bytes)? {
+            0 => Some(None),
+            1 => T::get(bytes).map(Some),
+            _ => None,
+        }
+    }
+}
+
 impl Wire for Pos {
     fn put(&self, out: &mut Vec<u8>) {
         <[i32; 3]>::from(*self).put(out);
@@ -139,6 +161,7 @@ impl Wire for Pos {
 mod tests {
     use super::*;
     use crate::film::*;
+    use crate::weather::Weather;
 
     fn timeline(film: Film) -> Timeline {
         Timeline {
@@ -184,6 +207,9 @@ mod tests {
             .wait_for("dug", 30.0)
             .cue("start")
             .menu("mymod:press", Pos::new(2, 0, -3), 4.0)
+            .weather(Weather::underground().fade(0.5))
+            .weather(Weather::new().fog(0x102030, 1.0, 9.0))
+            .clear_weather()
     }
 
     /// Where the first step's tag is: after the version, the name's length and text, the origin
@@ -209,7 +235,7 @@ mod tests {
     fn unknown_tags_are_refused() {
         let mut bytes = bytes(Film::new().wait(1.0));
         assert_eq!(bytes[FIRST_TAG], 1, "the wait's tag");
-        bytes[FIRST_TAG] = 6;
+        bytes[FIRST_TAG] = 7;
         let unknown = Timeline::decode(&bytes);
         assert!(unknown.is_none(), "a step this version doesn't know");
     }
@@ -236,6 +262,14 @@ mod tests {
             u16::MAX as usize - 1,
             "cut before the é it would split"
         );
+    }
+
+    #[test]
+    fn a_missing_value_marked_anything_but_0_or_1_is_refused() {
+        let mut bytes = bytes(Film::new().clear_weather());
+        assert_eq!(bytes[FIRST_TAG + 1], 0, "no weather");
+        bytes[FIRST_TAG + 1] = 2;
+        assert!(Timeline::decode(&bytes).is_none());
     }
 
     #[test]
