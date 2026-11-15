@@ -9,9 +9,10 @@ use super::OilEngine;
 
 /// The source's name on the rig.
 const HAZE: &str = "oil_engine_haze";
-/// Blocks from the rig: the haze is whole within the first, thins out to none at the second.
-const WHOLE_WITHIN: f32 = 8.0;
-const GONE_BEYOND: f32 = 20.0;
+/// Blocks from the rig: the haze is whole within the first, thins out to none at the second, so
+/// only those standing at the engine are in it.
+const WHOLE_WITHIN: f32 = 1.0;
+const GONE_BEYOND: f32 = 8.0;
 /// The exhaust's warm brown-grey, a mid tone so it neither glares by day nor lights the night.
 const COLOR: u32 = 0x847866;
 /// Blocks from the eye where the haze begins, and where it hides everything: what stands round
@@ -53,9 +54,6 @@ fn haze() -> Environment {
 mod tests {
     use super::*;
 
-    /// Blocks from the rig, on the engine's top, to the farthest corner of its 3 by 3 by 3 cube.
-    const ENGINE_REACH: f32 = 3.4;
-
     #[test]
     fn only_an_engine_at_work_hazes_the_air() {
         let stroking = OilEngine {
@@ -86,7 +84,8 @@ mod tests {
     #[test]
     fn the_haze_thins_out_round_the_engine() {
         let haze = haze();
-        assert!(haze.inner_radius > ENGINE_REACH, "whole beside it");
+        assert!(haze.inner_radius <= 1.0, "whole only at the rig");
+        assert!(haze.radius <= 8.0, "gone a few steps from the engine");
         assert!(haze.radius > haze.inner_radius, "thinning, not a wall");
     }
 }
