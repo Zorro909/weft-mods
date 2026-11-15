@@ -17,6 +17,7 @@ mod menus;
 mod playback;
 mod rehearsal;
 mod rig;
+mod screens;
 mod server;
 mod view;
 mod weather;

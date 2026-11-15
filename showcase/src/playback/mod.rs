@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use showcase_api::{Pos, Step, Timeline, Weather};
 
 use crate::rig::{Pose, Rig, Subjects};
+use crate::screens::Screens;
 
 /// Most blocks between two places the world is loaded at before a film, well inside what the
 /// world loads round the camera.
@@ -50,6 +51,7 @@ pub struct Playback {
     pub menu: Option<ShownMenu>,
     /// The weather in force, and the step that set it.
     pub weather: Option<(usize, Weather)>,
+    pub screens: Screens,
 }
 
 impl Playback {
@@ -68,6 +70,7 @@ impl Playback {
             titles: Vec::new(),
             menu: None,
             weather: None,
+            screens: Screens::default(),
         }
     }
 
@@ -145,6 +148,15 @@ impl Playback {
             }
             Step::Weather(weather) => {
                 self.weather = weather.clone().map(|weather| (self.index, weather));
+                Some(0.0)
+            }
+            Step::Screen {
+                shader,
+                strength,
+                secs,
+            } => {
+                let now = self.elapsed - clock;
+                self.screens.set(shader, *strength, *secs, now);
                 Some(0.0)
             }
             Step::Wait(secs) => (clock >= *secs).then_some(*secs),
@@ -324,6 +336,35 @@ mod tests {
         assert_eq!((open.at, open.until), (Pos::new(12, 64, 9), 3.0));
         p.advance(1.6, &mut signals, &none);
         assert_eq!(p.menu, None, "closed at three seconds");
+    }
+
+    #[test]
+    fn a_fade_out_holds_the_camera_until_the_picture_is_black() {
+        let film = Film::new()
+            .wait(1.0)
+            .fade_out(2.0)
+            .fade_in(1.0)
+            .cue("after");
+        let mut p = play(film);
+        let mut signals = HashSet::new();
+        assert!(
+            p.advance(2.5, &mut signals, &none).is_empty(),
+            "still fading"
+        );
+        let black = p.screens.at(p.elapsed());
+        assert!(
+            black[0].1 > 0.0 && black[0].1 < 1.0,
+            "on its way: {black:?}"
+        );
+        assert_eq!(
+            p.advance(0.5, &mut signals, &none),
+            ["after"],
+            "on at black"
+        );
+        let full = p.screens.at(p.elapsed());
+        assert_eq!(full, [("showcase:black".to_string(), 1.0)], "black at 3 s");
+        p.advance(1.0, &mut signals, &none);
+        assert_eq!(p.screens.at(p.elapsed()), [], "back a second later");
     }
 
     #[test]
