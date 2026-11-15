@@ -28,8 +28,8 @@ its pistons turn the crankshaft, each one's stroke a heavy boom, and vapor puffs
 chimney.
 One whose energy is hardly used runs only now and then, but its rig keeps turning.
 
-While its rig turns, a warm haze of exhaust hangs round the engine: whole within 8 blocks of
-its top, gone at 20. It fades what lies 24 blocks off and further, so the land round it stays
+While its rig turns, a warm haze of exhaust hangs round the engine: whole within a block of
+its top, gone 8 blocks off. It fades what lies 24 blocks off and further, so the land round it stays
 clear and the distance turns brown-grey, and it muffles every sound but the engine's low beat.
 It gathers over two seconds and clears over four once the engine stops.
 
