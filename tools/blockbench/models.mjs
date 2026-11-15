@@ -4,14 +4,15 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 // The codec of a model file, by its name: `Codecs.bedrock` for an entity, `Codecs.java_block`
-// for a block.
+// for a block or an item.
 export function codecOf(file) {
     if (file.endsWith('.geo.json')) return 'bedrock';
     const folders = path.dirname(path.resolve(file)).split(path.sep);
-    if (file.endsWith('.json') && folders.includes('block')) return 'java_block';
+    const javaModel = folders.includes('block') || folders.includes('item');
+    if (file.endsWith('.json') && javaModel) return 'java_block';
     throw new Error(
         `${file} is neither an entity model (<name>.geo.json) ` +
-            'nor a block model (a .json under a block/ folder)',
+            'nor a block or item model (a .json under a block/ or item/ folder)',
     );
 }
 
