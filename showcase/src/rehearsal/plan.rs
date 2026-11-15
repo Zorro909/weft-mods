@@ -39,6 +39,8 @@ pub struct Moment {
     pub titles: Vec<String>,
     /// The weather in force, and the step that set it.
     pub weather: Option<(usize, Weather)>,
+    /// The screen effects showing and their strengths, by shader name.
+    pub screens: Vec<(String, f32)>,
     /// The file name of the picture taken here.
     pub still: Option<String>,
 }
@@ -68,6 +70,7 @@ pub fn moments(timeline: Timeline, from: Pose) -> Vec<Moment> {
             cues,
             titles: playback.titles.iter().map(|t| t.key.clone()).collect(),
             weather: playback.weather.clone(),
+            screens: playback.screens.at(playback.elapsed()),
             still: None,
         });
     }

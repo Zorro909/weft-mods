@@ -10,11 +10,17 @@
 - `Film::weather(..)` sets fog, sky colour, sunlight, clouds and acoustics from that step on,
   fading in and crossfading into the next; `clear_weather()` and the film's end lift it.
   `Weather::dusk()`, `mist()` and `underground()` are ready to use.
+- `Film::screen(shader, strength, secs)` puts on a screen effect over time, `fade_out(secs)`
+  and `fade_in(secs)` fade to black and back between shots, and `showcase_api::screen` has
+  fades to black and white and warm and cool grades.
 - `showcase:demo`, a short film of these steps.
 
 ### Changed
 
 - Built for Weft 26.11.5.
+- The gallery fades in from black and out to it.
+- Films show what is over the screen under water, and other mods' screen effects, as the
+  player would see them there.
 - Films are sent in a new layout: mods with films have to be rebuilt against this version of
   `showcase_api`.
 

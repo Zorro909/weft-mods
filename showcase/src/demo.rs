@@ -1,8 +1,8 @@
 //! `showcase:demo`: a short film of the steps that change how a film looks rather than where its
-//! camera goes, in the meadow by the lake where seed 42 starts a player. It builds nothing; a
-//! strip of the meadow is levelled for the walk.
+//! camera goes (weather, fades and a grade), in the meadow by the lake where seed 42 starts a
+//! player. It builds nothing; a strip of the meadow is levelled for the walk.
 
-use showcase_api::{Area, Ease, Film, Pos, Set, Weather, dolly, film, orbit};
+use showcase_api::{Area, Ease, Film, Pos, Set, Weather, dolly, film, orbit, screen};
 use weft_sdk::Registry;
 
 /// Height of a standing player's eyes over the ground, in blocks.
@@ -11,6 +11,10 @@ const EYES: f64 = 1.62;
 const WALK: [[f64; 3]; 2] = [[0.5, EYES, -18.0], [0.5, EYES, 18.0]];
 /// Blocks a second the walk goes at: a player's walking speed.
 const WALKING: f64 = 4.3;
+/// Seconds each fade between scenes takes.
+const FADE: f32 = 1.5;
+/// How strongly the dusk is graded warm, 0 to 1.
+const WARMTH: f32 = 0.7;
 
 pub fn register(r: &mut Registry) {
     let strip = Area::between(Pos::new(-3, 0, -21), Pos::new(3, 6, 21));
@@ -20,7 +24,10 @@ pub fn register(r: &mut Registry) {
 fn demo() -> Film {
     let walk_secs = (WALK[1][2] - WALK[0][2]) / WALKING;
     Film::new()
+        .screen(screen::BLACK, 1.0, 0.0)
         .weather(Weather::dusk())
+        .screen(screen::WARM, WARMTH, 0.0)
+        .fade_in(FADE)
         .title("showcase.film.dusk", 5.0)
         .shot(
             orbit([0.5, 1.0, 0.5], 16.0)
@@ -28,13 +35,18 @@ fn demo() -> Film {
                 .height(7.0, 5.0)
                 .secs(12.0),
         )
+        .fade_out(FADE)
+        .screen(screen::WARM, 0.0, 0.0)
         .weather(Weather::mist())
+        .fade_in(FADE)
         .title("showcase.film.mist", 5.0)
         .shot(
             dolly(WALK[0], WALK[1])
                 .ease(Ease::Linear)
                 .secs(walk_secs as f32),
         )
+        .screen(screen::WHITE, 1.0, FADE)
+        .wait(FADE)
 }
 
 #[cfg(test)]

@@ -70,6 +70,9 @@ steps:
 | `cue(name)` | Runs your `on_cue(name, ..)` on the server: start the machines, fill a chest. Block entities only exist after the tick their block was placed in, so fill them here. |
 | `menu(name, at, secs)` | Opens the menu `name` (`mymod:press`) on the block `at` in the set, as if the camera had used it, and closes it after `secs`, while the film goes on. Shots after it go on behind the menu. |
 | `weather(w)` | Fog, sky, sunlight, clouds and how sound carries from here on, while the film goes on: a `Weather`, fading in over its `fade` (2 seconds unless told). A later `weather` takes over, crossfading; `clear_weather()` fades back to the world's own, and so does the film's end. |
+| `screen(shader, strength, secs)` | The screen effect `shader` (a post shader by its full name) going to `strength`, 0 off to 1 in full, over `secs` while the film goes on, and staying there until a later `screen` of the same shader or the film's end. `showcase_api::screen` has `BLACK` and `WHITE` for fades and `WARM` and `COOL` for grading; a post shader of your own mod (`shaders/post/<name>.wgsl`) works too. |
+| `fade_out(secs)` | The picture fades to black over `secs`, the camera holding where it is. |
+| `fade_in(secs)` | The picture comes back from black over `secs`, while the shots after it go on: put it before the shot it opens. A film that opens on black starts with `screen(screen::BLACK, 1.0, 0.0)`. |
 
 A `Weather` is `Weather::dusk()`, `mist()` or `underground()`, or your own:
 `Weather::new().fog(0x9AA5AD, 2.0, 40.0).sky(0x8D99A3).sunlight(0.5).clouds(0.0)`, with colours
@@ -96,9 +99,12 @@ and yours built with `--features showcase` in the game's `mods/`. The film makes
 spectator, sets noon and clear weather, and gives you back your game mode and place when it is
 over, or after ten seconds if no mod sends the film.
 
+Titles stay on screen through fades, which darken only the world.
+
 Every film, however it starts, is seen through showcase's own camera mode: F5 and the free
 camera (P) are locked while it plays, movement keys and clicks do nothing, and the view eases
-back to your own camera at its end.
+back to your own camera at its end. It shows the world as you would see it there: what is over
+the screen under water, and screen effects other mods put on.
 
 `/showcase play showcase:demo` is a short film of the steps that change a film's look.
 

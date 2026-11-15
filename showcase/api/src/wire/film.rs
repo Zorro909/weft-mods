@@ -41,6 +41,16 @@ impl Wire for Step {
                 6u8.put(out);
                 weather.put(out);
             }
+            Step::Screen {
+                shader,
+                strength,
+                secs,
+            } => {
+                7u8.put(out);
+                shader.put(out);
+                strength.put(out);
+                secs.put(out);
+            }
         }
     }
 
@@ -63,6 +73,11 @@ impl Wire for Step {
                 secs: Wire::get(bytes)?,
             },
             6 => Step::Weather(Wire::get(bytes)?),
+            7 => Step::Screen {
+                shader: Wire::get(bytes)?,
+                strength: Wire::get(bytes)?,
+                secs: Wire::get(bytes)?,
+            },
             _ => return None,
         })
     }

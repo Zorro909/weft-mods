@@ -11,6 +11,7 @@
 
 mod film;
 mod name;
+pub mod screen;
 mod set;
 mod waiting;
 mod weather;

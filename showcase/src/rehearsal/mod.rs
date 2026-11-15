@@ -16,7 +16,7 @@ use self::plan::{Fault, Moment, block_of, clipped, fast_turns, moments, title_fa
 use crate::playback::Title;
 use crate::rig::Pose;
 use crate::server::{REACHED, Reached};
-use crate::view::{put, titles};
+use crate::view::{put, screens, titles};
 use crate::weather;
 
 /// Frames the camera waits at a moment for the world around it before going on unchecked.
@@ -113,10 +113,11 @@ impl Rehearsal {
         }
     }
 
-    /// The camera at the moment, with its titles and weather in full.
+    /// The camera at the moment, with its titles and weather in full and its screen effects.
     fn show(&self, c: &Client, moment: &Moment) {
         put(c, moment.pose);
         weather::show(c, moment.weather.as_ref(), true);
+        screens(c, &moment.screens);
         let shown: Vec<Title> = (moment.titles.iter())
             .map(|key| Title {
                 key: key.clone(),

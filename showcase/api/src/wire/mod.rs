@@ -210,6 +210,9 @@ mod tests {
             .weather(Weather::underground().fade(0.5))
             .weather(Weather::new().fog(0x102030, 1.0, 9.0))
             .clear_weather()
+            .fade_out(1.0)
+            .screen(crate::screen::WARM, 0.6, 2.0)
+            .fade_in(0.5)
     }
 
     /// Where the first step's tag is: after the version, the name's length and text, the origin
@@ -235,7 +238,7 @@ mod tests {
     fn unknown_tags_are_refused() {
         let mut bytes = bytes(Film::new().wait(1.0));
         assert_eq!(bytes[FIRST_TAG], 1, "the wait's tag");
-        bytes[FIRST_TAG] = 7;
+        bytes[FIRST_TAG] = 8;
         let unknown = Timeline::decode(&bytes);
         assert!(unknown.is_none(), "a step this version doesn't know");
     }
