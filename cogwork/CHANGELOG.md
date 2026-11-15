@@ -22,7 +22,6 @@
   needs 78 energy a tick, not 282, and 255 by 255 needs 522. 9 by 9 still needs 30.
 - An excavator stores 20 ticks of its standby and of what it puts into a block, at least 20,000
   energy, so deep layers can run.
-
 - Oil fields are rare: one in 32 squares of 96 × 96 blocks holds one, not every other, and each
   has its seep. `/structure locate cogwork:oil_field` says where the nearest is.
 - A field lies 45 to 85 blocks under its seep, and all fields lie elsewhere than in 0.4.0. In a
