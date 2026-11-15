@@ -13,13 +13,14 @@ pub static OILY_DIRT: Block = Block::named("oily_dirt");
 pub static OIL_SAND: Block = Block::named("oil_sand");
 
 pub fn register(r: &mut Registry) {
-    // Slower and shorter than water, about as lava flows: oil is thick.
+    // Slower and shorter than water, about as lava flows: oil is thick. Its fog starts a quarter
+    // of the way out, as the engine drew a fog this short before Weft 26.11.5.
     r.liquid(&OIL)
         .block(|block| block.light_opacity(15).drag(0.4).tag("oil"))
         .flow_delay(20)
         .drop_off(2)
         .slope_find(2)
-        .fog(0x0a0806, 1.5)
+        .fog(0x0a0806, 0.375, 1.5)
         .bucket(&OIL_BUCKET, &BUCKET, &crate::TAB);
     for (block, texture, tool, sounds) in [
         (&OILY_DIRT, "oily_dirt", "shovel", "base:block.gravel"),

@@ -4,7 +4,7 @@
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use weft_sdk::*;
+use weft_sdk::{Channel, Client, Hand, Item, Output, Packet, Payload, Registry, Vec3, value};
 
 use super::tickets::{self, Keeper};
 use super::{CubePos, Cubes};
@@ -54,7 +54,7 @@ fn frame(client: &Client) {
     let lens = CUBOID_LENS.id();
     let held = [Hand::Main, Hand::Off]
         .into_iter()
-        .any(|hand| client.held_item(state.player, hand) == lens);
+        .any(|hand| client.held(state.player, hand).item == lens);
     let mut drawn = lock();
     if !held {
         drawn.boxes.clear();
