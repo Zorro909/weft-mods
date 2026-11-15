@@ -59,7 +59,7 @@ What a mod shows other mods is a crate of its own, `<mod>/api`: `showcase/api`. 
 
 ## Worldgen
 
-- A plan is a pure function of the seed and the terrain's columns, never of blocks: every cube and every client must get the same answer.
+- A plan is a pure function of the seed, the terrain's columns and the blocks of earlier stages (`p.read`, `p.view()`), never of the live world: every cube and every client must get the same answer.
 - All randomness comes from the start's `random()`, and the order of its draws is part of the world: a draw added or moved in `structgen/src/settlement/` moves every settlement. `structgen/src/settlement/random.rs` pins the numbers with a test.
 - Registration order is part of it too: `structgen/build.rs` sorts the structure files.
 
