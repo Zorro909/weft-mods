@@ -1,7 +1,7 @@
 //! Turning a structure a quarter at a time about the vertical axis: where its blocks go, and
 //! which way the blocks then face.
 //!
-//! Block states are turned here and not by the engine: up to v26.11.4 its `turned_state` turns
+//! Block states are turned here and not by the engine: up to v26.11.5 its `turned_state` turns
 //! `facing`, `attach` and `front` but leaves a log's `axis` and a ladder's sides as they were,
 //! so a turned timber frame would show its beams across and its ladders off the wall. This
 //! turns names (`base:oak_log[axis=x]`) rather than states, for the copies `buildings.rs`

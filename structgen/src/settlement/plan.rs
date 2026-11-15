@@ -1,6 +1,6 @@
 //! What the planner works with: the engine's plan of one start, the start's random numbers, and
-//! the buildings' sizes. It reads the terrain's columns and never blocks, so the server and every
-//! client lay a settlement out alike.
+//! the buildings' sizes. It reads the terrain's columns, and blocks only as generation leaves
+//! them before structures, so the server and every client lay a settlement out alike.
 
 use weft_sdk::terrain::Column;
 use weft_sdk::{Block, LootTable, Palette, Template, Transform};
