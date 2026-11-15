@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Drives Blockbench without a desktop, for the model files under <mod>/assets/models/: says
 # whether a file is exactly what Blockbench saves, and takes a picture of a model. An entity
-# model is <name>.geo.json (Blockbench's "Bedrock Model"); a block model is any other .json
-# under a block/ folder ("Java Block/Item").
+# model is <name>.geo.json (Blockbench's "Bedrock Model"); a block or item model is any other
+# .json under a block/ or item/ folder ("Java Block/Item").
 #
 #   tools/blockbench.sh check [--write] <model file>...
 #   tools/blockbench.sh shot <model file> <out.png> [texture.png]
