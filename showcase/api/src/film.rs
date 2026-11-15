@@ -65,6 +65,8 @@ pub struct Shot {
     /// Seconds at the start in which the camera comes over from where the last shot ended;
     /// 0 cuts.
     pub blend: f32,
+    /// The camera sways as a walking player's eyes do, by how fast it goes.
+    pub bob: bool,
 }
 
 /// Where the eye goes during a shot.
@@ -220,6 +222,7 @@ fn shot(path: Path, look: Look) -> Shot {
         fov: [0.0; 2],
         roll: [0.0; 2],
         blend: 0.0,
+        bob: false,
     }
 }
 
@@ -304,6 +307,14 @@ impl Shot {
 
     pub fn blend(mut self, secs: f32) -> Shot {
         self.blend = secs;
+        self
+    }
+
+    /// Sways the camera as a walking player's eyes, for a shot at walking pace: fullest from 2
+    /// blocks a second, still when the camera stands. Shots that follow on from each other
+    /// with it sway on in step.
+    pub fn bob(mut self) -> Shot {
+        self.bob = true;
         self
     }
 

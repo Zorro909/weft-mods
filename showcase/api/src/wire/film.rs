@@ -148,6 +148,7 @@ impl Wire for Shot {
         self.fov.put(out);
         self.roll.put(out);
         self.blend.put(out);
+        self.bob.put(out);
     }
 
     fn get(bytes: &mut &[u8]) -> Option<Shot> {
@@ -159,6 +160,7 @@ impl Wire for Shot {
             fov: Wire::get(bytes)?,
             roll: Wire::get(bytes)?,
             blend: Wire::get(bytes)?,
+            bob: Wire::get(bytes)?,
         })
     }
 }
