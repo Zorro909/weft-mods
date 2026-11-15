@@ -13,6 +13,7 @@
 - `Film::screen(shader, strength, secs)` puts on a screen effect over time, `fade_out(secs)`
   and `fade_in(secs)` fade to black and back between shots, and `showcase_api::screen` has
   fades to black and white and warm and cool grades.
+- `Shot::bob()` sways the camera as a walking player's eyes, for shots at walking pace.
 - `showcase:demo`, a short film of these steps.
 
 ### Changed

@@ -1,5 +1,6 @@
 //! The camera rig: where a shot puts the eye and where it looks, at any moment of it.
 
+mod bob;
 mod curve;
 pub mod math;
 mod turn;
@@ -32,6 +33,9 @@ pub struct Rig {
     pace: Option<[f64; 2]>,
     /// The player's field of view, which a shot's 0 stands for.
     own_fov: f32,
+    /// A shot that sways (`Shot::bob`): how far the walk had gone when it began, and its own
+    /// length, in blocks.
+    walk: Option<[f64; 2]>,
 }
 
 impl Rig {
@@ -52,8 +56,12 @@ impl Rig {
             curve,
             pace: None,
             own_fov,
+            walk: None,
         };
         rig.pace = rig.pace();
+        if rig.shot.bob {
+            rig.walk = rig.length().map(|length| [0.0, length]);
+        }
         rig
     }
 
@@ -106,13 +114,16 @@ impl Rig {
             .map(|v| if v == 0.0 { self.own_fov } else { v });
         let fov = lerp(fov[0] as f64, fov[1] as f64, u) as f32;
         let [from, to] = self.shot.roll;
-        let pose = Pose {
+        let mut pose = Pose {
             eye,
             yaw,
             pitch,
             roll: lerp(from as f64, to as f64, u),
             fov,
         };
+        if self.walk.is_some() {
+            pose = self.swayed(pose, clock);
+        }
         if clock >= self.shot.blend {
             return pose;
         }

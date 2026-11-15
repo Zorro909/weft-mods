@@ -1,8 +1,8 @@
 //! A film as bytes, the way `TIMELINE` carries it: the version, the film's name and origin, then
 //! its steps. Each type is written and read back by one `Wire` impl, so the two sides can't
 //! drift apart. Numbers are little-endian, counts a `u32`, texts a `u16` length and UTF-8, a
-//! value that may be missing a byte (1 when it follows), and every step, path, look and ease
-//! starts with a tag byte (`film.rs`).
+//! truth a byte, a value that may be missing a byte (1 when it follows), and every step, path,
+//! look and ease starts with a tag byte (`film.rs`).
 //!
 //! Anything cut short, unknown or of another version is refused, and so are numbers that aren't
 //! finite, which would stop a film or fling the camera.
@@ -82,6 +82,21 @@ number!(u32, |_| true);
 number!(i32, |_| true);
 number!(f32, |v: &f32| v.is_finite());
 number!(f64, |v: &f64| v.is_finite());
+
+/// A byte, 1 for true and 0 for false.
+impl Wire for bool {
+    fn put(&self, out: &mut Vec<u8>) {
+        u8::from(*self).put(out);
+    }
+
+    fn get(bytes: &mut &[u8]) -> Option<bool> {
+        match u8::get(bytes)? {
+            0 => Some(false),
+            1 => Some(true),
+            _ => None,
+        }
+    }
+}
 
 /// A `u16` length and UTF-8, cut short at 65535 bytes on a character.
 impl Wire for String {
@@ -193,6 +208,7 @@ mod tests {
             )
             .shot(
                 dolly([0.0; 3], [1.0; 3])
+                    .bob()
                     .look(Look::Pan([0.0; 3], [2.0; 3]))
                     .ease(Ease::Speeds { from: 2.0, to: 0.5 }),
             )
@@ -265,6 +281,15 @@ mod tests {
             u16::MAX as usize - 1,
             "cut before the é it would split"
         );
+    }
+
+    #[test]
+    fn a_truth_other_than_0_or_1_is_refused() {
+        let mut bytes = bytes(Film::new().shot(hold([0.0; 3]).bob()));
+        let last = bytes.len() - 1;
+        assert_eq!(bytes[last], 1, "the shot ends with its bob");
+        bytes[last] = 2;
+        assert!(Timeline::decode(&bytes).is_none());
     }
 
     #[test]

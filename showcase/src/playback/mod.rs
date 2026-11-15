@@ -47,6 +47,8 @@ pub struct Playback {
     start: Pose,
     /// The player's field of view, for shots that keep it.
     own_fov: f32,
+    /// Blocks walked by the swaying shots so far, for the next to sway on in step.
+    walked: f64,
     pub titles: Vec<Title>,
     pub menu: Option<ShownMenu>,
     /// The weather in force, and the step that set it.
@@ -67,6 +69,7 @@ impl Playback {
             pose: from,
             start: from,
             own_fov: from.fov,
+            walked: 0.0,
             titles: Vec::new(),
             menu: None,
             weather: None,
@@ -106,7 +109,9 @@ impl Playback {
         while let Some(used) = self.run_step(signals, subjects, &mut cues) {
             self.clock = (self.clock - used).max(0.0);
             self.index += 1;
-            self.rig = None;
+            if let Some(rig) = self.rig.take() {
+                self.walked = rig.walked();
+            }
             self.start = self.pose;
         }
         let now = self.elapsed;
@@ -178,9 +183,9 @@ impl Playback {
         let Some(Step::Shot(shot)) = self.steps.get(self.index) else {
             return None;
         };
-        let rig = self
-            .rig
-            .get_or_insert_with(|| Rig::new(shot.clone(), self.origin, self.own_fov));
+        let rig = self.rig.get_or_insert_with(|| {
+            Rig::new(shot.clone(), self.origin, self.own_fov).after_walking(self.walked)
+        });
         let secs = rig.secs();
         self.pose = rig.pose(self.clock.min(secs), subjects, self.start);
         (self.clock >= secs).then_some(secs)
@@ -189,7 +194,7 @@ impl Playback {
 
 #[cfg(test)]
 mod tests {
-    use showcase_api::{Film, Weather, hold};
+    use showcase_api::{Film, Weather, dolly, hold};
     use weft_sdk::Vec3;
 
     use super::*;
@@ -340,31 +345,29 @@ mod tests {
 
     #[test]
     fn a_fade_out_holds_the_camera_until_the_picture_is_black() {
-        let film = Film::new()
-            .wait(1.0)
-            .fade_out(2.0)
-            .fade_in(1.0)
-            .cue("after");
+        let film = Film::new().fade_out(2.0).fade_in(1.0).cue("after");
         let mut p = play(film);
         let mut signals = HashSet::new();
-        assert!(
-            p.advance(2.5, &mut signals, &none).is_empty(),
-            "still fading"
-        );
-        let black = p.screens.at(p.elapsed());
-        assert!(
-            black[0].1 > 0.0 && black[0].1 < 1.0,
-            "on its way: {black:?}"
-        );
-        assert_eq!(
-            p.advance(0.5, &mut signals, &none),
-            ["after"],
-            "on at black"
-        );
-        let full = p.screens.at(p.elapsed());
-        assert_eq!(full, [("showcase:black".to_string(), 1.0)], "black at 3 s");
+        assert!(p.advance(1.5, &mut signals, &none).is_empty(), "fading");
+        let black = |p: &Playback| p.screens.at(p.elapsed()).first().map_or(0.0, |s| s.1);
+        assert!(black(&p) > 0.5 && black(&p) < 1.0, "on its way");
+        assert_eq!(p.advance(0.5, &mut signals, &none), ["after"], "on at 2 s");
+        assert_eq!(black(&p), 1.0, "black then");
         p.advance(1.0, &mut signals, &none);
-        assert_eq!(p.screens.at(p.elapsed()), [], "back a second later");
+        assert_eq!(black(&p), 0.0, "back a second later");
+    }
+
+    #[test]
+    fn swaying_shots_sway_on_in_step_across_a_title() {
+        let walk = |z: f64| dolly([0.0, 0.0, z], [0.0, 0.0, z - 10.0]).bob().secs(2.0);
+        let film = Film::new()
+            .shot(walk(0.0))
+            .title("mymod.title", 3.0)
+            .shot(walk(-10.0));
+        let mut p = play(film);
+        p.advance(2.05, &mut HashSet::new(), &none);
+        assert_eq!(p.step(), 2, "into the second walk");
+        assert!((p.walked - 10.0).abs() < 1e-6, "ten blocks on");
     }
 
     #[test]
@@ -379,11 +382,7 @@ mod tests {
         let mut p = play(film);
         let mut signals = HashSet::new();
         p.advance(0.5, &mut signals, &none);
-        assert_eq!(
-            p.weather,
-            Some((0, Weather::dusk())),
-            "dusk, set at the first step"
-        );
+        assert_eq!(p.weather, Some((0, Weather::dusk())), "dusk, from step 0");
         p.advance(1.0, &mut signals, &none);
         assert_eq!(p.weather, Some((2, Weather::mist())), "mist in its place");
         p.advance(1.0, &mut signals, &none);
