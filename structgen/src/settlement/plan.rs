@@ -1,12 +1,14 @@
 //! What the planner works with: the engine's plan of one start, the start's random numbers, and
 //! the buildings' sizes. It reads the terrain's columns, and blocks only as generation leaves
-//! them before structures, so the server and every client lay a settlement out alike.
+//! them before structures and as the plan itself puts them, so the server and every client lay
+//! a settlement out alike.
 
 use weft_sdk::terrain::Column;
 use weft_sdk::{Block, LootTable, Palette, Template, Transform};
-use weftkit::{BlockState, Pos};
+use weftkit::{BlockState, Pos, TypedGeneration};
 
 use super::fit::Fit;
+use super::ground::{self, Cover};
 use super::random::Random;
 use crate::buildings;
 use crate::turn::Turn;
@@ -33,10 +35,20 @@ impl<'a> Plan<'a> {
     }
 
     /// The ground of column (`x`, `z`): `None` where nothing may stand (no terrain, a cave
-    /// mouth).
+    /// mouth, water or ice over it).
     pub fn ground(&self, x: i32, z: i32) -> Option<Column> {
         let column = self.start.ground(x, z);
-        (column.height != i32::MIN && !self.start.surface_carved(x, z)).then_some(column)
+        if column.height == i32::MIN {
+            return None;
+        }
+        let top = self.read(Pos::new(x, column.height, z));
+        let above = self.read(Pos::new(x, column.height + 1, z));
+        ground::dry(column, top, above, Cover::of)
+    }
+
+    /// The block at `pos`, as earlier stages and this plan have left it.
+    pub fn read(&self, pos: Pos) -> BlockState {
+        self.start.view().read_typed(pos)
     }
 
     /// The size of building `template` along x, y and z once turned by `turn`.

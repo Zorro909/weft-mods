@@ -5,7 +5,8 @@ use weft_sdk::terrain::Column;
 
 use super::biomes::Biomes;
 
-/// The ground of column (`x`, `z`): `None` where nothing may stand (no terrain, a cave mouth).
+/// The ground of column (`x`, `z`): `None` where nothing may stand (no terrain, a cave mouth,
+/// water).
 pub(crate) type Columns<'a> = &'a dyn Fn(i32, i32) -> Option<Column>;
 
 /// The conditions a spot must meet, shared by static structures and plans.
@@ -13,7 +14,6 @@ pub(crate) type Columns<'a> = &'a dyn Fn(i32, i32) -> Option<Column>;
 pub struct Fit {
     biomes: Option<&'static Biomes>,
     max_slope: i32,
-    lowest: i32,
 }
 
 impl Default for Fit {
@@ -29,7 +29,6 @@ impl Fit {
         Fit {
             biomes: None,
             max_slope: 6,
-            lowest: i32::MIN,
         }
     }
     /// Only where the biome under its middle is one of `biomes`.
@@ -40,12 +39,6 @@ impl Fit {
     /// How much the ground under it may rise and fall, in blocks.
     pub fn max_slope(mut self, blocks: i32) -> Fit {
         self.max_slope = blocks;
-        self
-    }
-    /// Only where the ground under every column is at least at height `y`: with a world's sea
-    /// level, never in a lake or the sea, whose floor is lower.
-    pub fn min_height(mut self, y: i32) -> Fit {
-        self.lowest = y;
         self
     }
 
@@ -72,7 +65,7 @@ fn floor(
     let heights: Option<Vec<i32>> = heights([x, z], [sx, sz], ground).into_iter().collect();
     let heights = heights?;
     let (lowest, highest) = (heights.iter().min()?, heights.iter().max()?);
-    if highest - lowest > fit.max_slope || *lowest < fit.lowest {
+    if highest - lowest > fit.max_slope {
         return None;
     }
     Some(median(&heights))
@@ -167,25 +160,5 @@ mod tests {
     fn another_biome_does_not_fit() {
         let y = floor(&slope4(), [0, 0], [5, 5], &flat(70), &|_| false);
         assert_eq!(y, None, "the biome is asked");
-    }
-
-    #[test]
-    fn ground_below_the_lowest_height_does_not_fit() {
-        let shore = |x: i32, _| {
-            Some(Column {
-                height: if x < 2 { 61 } else { 64 },
-                biome: 1,
-            })
-        };
-        let dry = slope4().min_height(63);
-        assert_eq!(
-            floor(&dry, [0, 0], [5, 5], &shore, &anywhere),
-            None,
-            "two columns in the lake"
-        );
-        assert!(
-            floor(&dry, [2, 0], [5, 5], &shore, &anywhere).is_some(),
-            "all on the bank"
-        );
     }
 }

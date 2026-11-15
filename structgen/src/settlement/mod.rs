@@ -9,8 +9,10 @@ mod biomes;
 mod buildings;
 mod draw;
 mod fit;
+mod footing;
 mod frontage;
 mod grid;
+mod ground;
 mod plan;
 mod planting;
 mod random;
@@ -37,9 +39,6 @@ use crate::styles;
 /// stand cut through a building.
 pub const OPEN: &str = "#animals !#forest !#mountain";
 static OPEN_LAND: Biomes = Biomes::named(OPEN);
-/// Base's sea level: lakes and the sea fill the ground below it, so buildings stand at least
-/// this high.
-const SEA: i32 = 63;
 /// How many spots a settlement tries, and how far from its start the others are at most.
 const SPOTS: usize = 3;
 pub const SHIFT: i32 = 48;
@@ -173,7 +172,7 @@ pub fn plan(start: &mut weft_sdk::Plan, s: &Settlement) {
             ],
         };
         let open = p.ground(middle[0], middle[1]);
-        let open = open.is_some_and(|g| g.height >= SEA && OPEN_LAND.contains(g.biome));
+        let open = open.is_some_and(|g| OPEN_LAND.contains(g.biome));
         if !open || !s.keeps_to_its_square(at, middle) {
             continue;
         }
@@ -185,8 +184,8 @@ pub fn plan(start: &mut weft_sdk::Plan, s: &Settlement) {
 }
 
 /// Puts up the buildings in a settlement's styles, a town's paved round (but not its trees or
-/// its mill out in the fields), stocks the chests of one or two, then lays its roads, squares
-/// and fields.
+/// its mill out in the fields), stocks the chests of one or two, lays its roads, squares and
+/// fields, and last fills what is still open under its buildings.
 fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) {
     let walls = [one_of(p, s.frames), one_of(p, s.infills)].map(Option::unwrap_or_default);
     for site in sites {
@@ -198,7 +197,8 @@ fn build(p: &mut Plan, s: &Settlement, grid: &Grid, sites: &[Site]) {
         p.building(site.template, site.corner, site.turn, palette, paved);
     }
     stock_chests(p, sites);
-    draw::draw(p, grid)
+    draw::draw(p, grid);
+    footing::fill_under(p, sites);
 }
 
 /// Fills the chests of one or two of `sites` from `CHESTS`.
@@ -269,7 +269,7 @@ fn rules(s: &Settlement) -> Rules {
     Rules {
         setback: s.setback,
         gap: s.gap,
-        fit: Fit::new().biome(&OPEN_LAND).max_slope(4).min_height(SEA),
+        fit: Fit::new().biome(&OPEN_LAND).max_slope(4),
         path: s.kind.road(),
     }
 }

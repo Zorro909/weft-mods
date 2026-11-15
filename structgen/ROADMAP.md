@@ -5,9 +5,8 @@ drawn in `examples/buildings/` with the Hearthwood kit; see [Material slots](doc
 
 ## Buildings that need more than a spot of land
 
-These need the planner to know about water, which the SDK doesn't tell a plan yet (see
-[Missing in the engine](docs/README.md#missing-in-the-engine)): no sea level, and a plan sees
-the terrain's height and biome only.
+These need the planner to find water: it tells water from land column by column, reading the
+block above the ground, but nothing yet looks for where the two meet.
 
 - **Watermill.** About 9 x 11 with a wheel, on a river or a stream. Needs a way to find a
   column of water next to a bank, or a biome tag for rivers.
