@@ -5,10 +5,11 @@ mod stops;
 
 use std::collections::HashSet;
 
-use showcase_api::{Pos, Step, Timeline, Weather};
+use showcase_api::{Pos, Step, Timeline};
 
 use crate::rig::{Pose, Rig, Subjects};
 use crate::screens::Screens;
+use crate::weather::{Layer, WeatherFade};
 
 /// Most blocks between two places the world is loaded at before a film, well inside what the
 /// world loads round the camera.
@@ -51,8 +52,7 @@ pub struct Playback {
     walked: f64,
     pub titles: Vec<Title>,
     pub menu: Option<ShownMenu>,
-    /// The weather in force, and the step that set it.
-    pub weather: Option<(usize, Weather)>,
+    weather: WeatherFade,
     pub screens: Screens,
 }
 
@@ -72,7 +72,7 @@ impl Playback {
             walked: 0.0,
             titles: Vec::new(),
             menu: None,
-            weather: None,
+            weather: WeatherFade::default(),
             screens: Screens::default(),
         }
     }
@@ -83,6 +83,14 @@ impl Playback {
 
     pub fn elapsed(&self) -> f32 {
         self.elapsed
+    }
+
+    /// The film's weather now; none once the film is over.
+    pub fn weather(&self) -> Vec<Layer> {
+        if self.done() {
+            return Vec::new();
+        }
+        self.weather.at(self.elapsed)
     }
 
     /// The step of the film that plays now, counted from 0.
@@ -152,7 +160,8 @@ impl Playback {
                 Some(0.0)
             }
             Step::Weather(weather) => {
-                self.weather = weather.clone().map(|weather| (self.index, weather));
+                let now = self.elapsed - clock;
+                self.weather.set(weather.clone(), now);
                 Some(0.0)
             }
             Step::Screen {
@@ -198,6 +207,7 @@ mod tests {
     use weft_sdk::Vec3;
 
     use super::*;
+    use crate::weather::Part;
 
     const START: Pose = Pose {
         eye: Vec3::ZERO,
@@ -371,21 +381,38 @@ mod tests {
     }
 
     #[test]
-    fn a_weather_holds_until_the_next_and_clearing_lifts_it() {
+    fn a_weather_fades_with_film_time_and_the_film_end_lifts_it() {
         let film = Film::new()
-            .weather(Weather::dusk())
             .wait(1.0)
-            .weather(Weather::mist())
-            .wait(1.0)
-            .clear_weather()
-            .wait(1.0);
+            .weather(Weather::dusk().fade(2.0))
+            .wait(4.0)
+            .weather(Weather::mist().fade(2.0))
+            .wait(2.0);
         let mut p = play(film);
         let mut signals = HashSet::new();
-        p.advance(0.5, &mut signals, &none);
-        assert_eq!(p.weather, Some((0, Weather::dusk())), "dusk, from step 0");
+        let coming = |p: &Playback| {
+            (p.weather().into_iter())
+                .find(|layer| layer.part == Part::Coming)
+                .map(|layer| (layer.weather, layer.weight))
+        };
+        p.advance(2.0, &mut signals, &none);
+        assert_eq!(
+            coming(&p),
+            Some((Weather::dusk().fade(2.0), 0.5)),
+            "dusk half in"
+        );
+        p.advance(2.0, &mut signals, &none);
+        assert_eq!(
+            coming(&p),
+            Some((Weather::dusk().fade(2.0), 1.0)),
+            "in by 3 s"
+        );
+        p.advance(2.0, &mut signals, &none);
+        let layers = p.weather();
+        assert_eq!(layers.len(), 3, "dusk going as mist comes: {layers:?}");
+        assert_eq!(coming(&p).map(|(_, weight)| weight), Some(0.5));
         p.advance(1.0, &mut signals, &none);
-        assert_eq!(p.weather, Some((2, Weather::mist())), "mist in its place");
-        p.advance(1.0, &mut signals, &none);
-        assert_eq!(p.weather, None, "lifted");
+        assert!(p.done(), "over at 7 s");
+        assert_eq!(p.weather(), [], "lifted at its end, mist half in or not");
     }
 }

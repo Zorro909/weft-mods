@@ -8,8 +8,9 @@
   every shot, and a report of where the camera is inside a block or turns too fast and which
   titles stay too short or too long.
 - `Film::weather(..)` sets fog, sky colour, sunlight, clouds and acoustics from that step on,
-  fading in and crossfading into the next; `clear_weather()` and the film's end lift it.
-  `Weather::dusk()`, `mist()` and `underground()` are ready to use.
+  fading in and crossfading into the next over film time, in step with screen effects;
+  `clear_weather()` and the film's end lift it. `Weather::dusk()`, `mist()` and
+  `underground()` are ready to use.
 - `Film::screen(shader, strength, secs)` puts on a screen effect over time, `fade_out(secs)`
   and `fade_in(secs)` fade to black and back between shots, and `showcase_api::screen` has
   fades to black and white and warm and cool grades.

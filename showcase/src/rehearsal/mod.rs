@@ -113,10 +113,10 @@ impl Rehearsal {
         }
     }
 
-    /// The camera at the moment, with its titles and weather in full and its screen effects.
+    /// The camera at the moment, with its titles, weather and screen effects.
     fn show(&self, c: &Client, moment: &Moment) {
         put(c, moment.pose);
-        weather::show(c, moment.weather.as_ref(), true);
+        weather::show(c, &moment.weather, moment.pose.eye);
         screens(c, &moment.screens);
         let shown: Vec<Title> = (moment.titles.iter())
             .map(|key| Title {

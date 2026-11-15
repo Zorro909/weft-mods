@@ -228,7 +228,7 @@ fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
     let pose = playback.pose();
     put(c, pose);
     titles(c, &playback.titles, playback.elapsed(), pose);
-    weather::show(c, playback.weather.as_ref(), false);
+    weather::show(c, &playback.weather(), pose.eye);
     screens(c, &playback.screens.at(playback.elapsed()));
     d.menus.show(c, playback.menu.as_ref());
 }

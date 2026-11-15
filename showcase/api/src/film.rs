@@ -36,7 +36,7 @@ pub enum Step {
         secs: f32,
     },
     /// The weather from here on, in place of any before; `None` lifts it. The film's end lifts
-    /// it too.
+    /// it at once.
     Weather(Option<Weather>),
     /// The screen effect `shader` (a post shader by its full name) going to `strength`, 0 off
     /// to 1 in full, over `secs` while the film goes on. It stays there until a later `Screen`
@@ -178,7 +178,8 @@ impl Film {
     }
 
     /// Fog, sky, light and sound from here on, while the film goes on: `Weather::dusk()`, or one
-    /// of your own. It fades in over the weather's `fade`, and a later `weather` takes over.
+    /// of your own. It fades in over the weather's `fade` of film time, and a later `weather`
+    /// takes over, crossfading over its own.
     pub fn weather(mut self, weather: Weather) -> Film {
         self.steps.push(Step::Weather(Some(weather)));
         self

@@ -15,7 +15,7 @@ pub struct Weather {
     /// The clouds' colour before lighting, `0xRRGGBB`.
     pub cloud_color: Option<u32>,
     pub acoustics: Option<Acoustics>,
-    /// Seconds it takes to come in, and to go again.
+    /// Seconds of film it takes to come in, and to go again.
     pub fade: f32,
 }
 
