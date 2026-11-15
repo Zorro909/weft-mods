@@ -7,6 +7,10 @@
 - World settings for how deep excavators dig, `excavator_unlimited_depth` (on) and
   `excavator_lowest_y` (-64), and how far apart survey markers may stand, `marker_max_area`: 32,
   64 (the default), 128 or 256 blocks.
+- A running oil engine hazes the air round it, warm exhaust that fades the distance, and muffles
+  the world's sounds close by, all but its own low beat. The haze clears a few seconds after it
+  stops.
+
 ### Changed
 
 - Builds against Weft v26.11.5.
