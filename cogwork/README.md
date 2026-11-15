@@ -26,7 +26,8 @@ The spring engine runs on redstone, the ember engine burns fuel for four times a
 and overheats when nothing takes it. Engines push energy into the block their trunk points at,
 and torque shafts carry it further, joining any mod's cables. The oil engine, a cube of 27
 blocks built around a combustion chamber, burns oil with water for 600 energy a tick, its two
-pistons and flywheel turning on top: about 4 hours on a medium oil field.
+pistons and flywheel turning on top and its exhaust hazing the air round it: about 4 hours on a
+medium oil field.
 
 ### Oil and liquids
 
