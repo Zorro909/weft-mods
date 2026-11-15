@@ -69,6 +69,14 @@ steps:
 | `title(key, secs)` | A line from your lang files on screen while the film goes on. |
 | `cue(name)` | Runs your `on_cue(name, ..)` on the server: start the machines, fill a chest. Block entities only exist after the tick their block was placed in, so fill them here. |
 | `menu(name, at, secs)` | Opens the menu `name` (`mymod:press`) on the block `at` in the set, as if the camera had used it, and closes it after `secs`, while the film goes on. Shots after it go on behind the menu. |
+| `weather(w)` | Fog, sky, sunlight, clouds and how sound carries from here on, while the film goes on: a `Weather`, fading in over its `fade` (2 seconds unless told). A later `weather` takes over, crossfading; `clear_weather()` fades back to the world's own, and so does the film's end. |
+
+A `Weather` is `Weather::dusk()`, `mist()` or `underground()`, or your own:
+`Weather::new().fog(0x9AA5AD, 2.0, 40.0).sky(0x8D99A3).sunlight(0.5).clouds(0.0)`, with colours
+as `0xRRGGBB`, fog `start` and `end` in blocks, sunlight and clouds from 0 (none) to 1, and
+`.cloud_color(rgb)`, `.acoustics(cutoff_hz, reverb, volume)` and `.fade(secs)`. What it leaves
+out stays as the world has it. It changes only what the watching player sees and hears: the
+world's time and weather go on as they are, and dusk is a look, not an evening.
 
 Where a shot looks: `Look::At(point)`, `Pan(from, to)`, `Subject(name)`, `Ahead` along the
 path (a `hold` keeps looking the way the camera did), fixed `Angles`, or `Along(angles)`, a yaw
@@ -91,6 +99,8 @@ over, or after ten seconds if no mod sends the film.
 Every film, however it starts, is seen through showcase's own camera mode: F5 and the free
 camera (P) are locked while it plays, movement keys and clicks do nothing, and the view eases
 back to your own camera at its end.
+
+`/showcase play showcase:demo` is a short film of the steps that change a film's look.
 
 `/showcase gallery <mod>` needs no film: it puts every block of the mod on a plinth in a row
 from where you stand and shows each in turn under its name.

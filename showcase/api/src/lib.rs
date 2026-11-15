@@ -13,12 +13,14 @@ mod film;
 mod name;
 mod set;
 mod waiting;
+mod weather;
 mod wire;
 
 pub use film::{Ease, Film, Look, Path, Shot, Step, crane, dolly, flyby, follow, hold, orbit};
 pub use name::Name;
 pub use set::{FilmOptions, Set, film, send, signal, subject};
 pub use waiting::Waiting;
+pub use weather::{Acoustics, Fog, Weather};
 use weft_sdk::*;
 pub use weftkit::{Area, BlockState, Pos};
 pub use wire::{TIMELINE_VERSION, Timeline};

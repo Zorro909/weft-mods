@@ -7,3 +7,7 @@ showcase.camera.marked = Point {0} marked
 showcase.camera.too_few = Mark at least two points with /camera point first
 showcase.camera.cleared = Points forgotten
 showcase.gallery.empty = {0} has no blocks to show
+
+# Film titles
+showcase.film.dusk = Dusk: fog, sky and sunlight for a shot
+showcase.film.mist = Mist rolls in as the weather changes

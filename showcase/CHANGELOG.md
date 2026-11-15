@@ -7,10 +7,16 @@
 - `--showcase-rehearse <folder>` goes through a film without recording it: pictures along
   every shot, and a report of where the camera is inside a block or turns too fast and which
   titles stay too short or too long.
+- `Film::weather(..)` sets fog, sky colour, sunlight, clouds and acoustics from that step on,
+  fading in and crossfading into the next; `clear_weather()` and the film's end lift it.
+  `Weather::dusk()`, `mist()` and `underground()` are ready to use.
+- `showcase:demo`, a short film of these steps.
 
 ### Changed
 
 - Built for Weft 26.11.5.
+- Films are sent in a new layout: mods with films have to be rebuilt against this version of
+  `showcase_api`.
 
 ## 0.3.1 - 2026-11-12
 
