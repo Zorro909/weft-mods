@@ -32,6 +32,9 @@
   ground or a tree stands. A place with no dry dirt or sand to lie on holds no field, so any
   field may lie a little higher or lower than in earlier builds of this version, and some are
   gone.
+- The spring and ember engines' items stand on their base plate with the trunk up, as an engine
+  placed on the floor does, in slots, in the hand and on the ground, instead of lying on their
+  side.
 
 ### Fixed
 

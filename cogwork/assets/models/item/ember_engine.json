@@ -1,0 +1,11 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"parent": "block/engine",
+	"textures": {
+		"particle": "block/engine_ember_plate_top",
+		"plate_top": "block/engine_ember_plate_top",
+		"plate_side": "block/engine_ember_plate_side",
+		"trunk": "block/engine_trunk_blue"
+	}
+}
