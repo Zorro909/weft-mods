@@ -106,7 +106,10 @@ camera (P) are locked while it plays, movement keys and clicks do nothing, and t
 back to your own camera at its end. It shows the world as you would see it there: what is over
 the screen under water, and screen effects other mods put on.
 
-`/showcase play showcase:demo` is a short film of the steps that change a film's look.
+`/showcase play showcase:demo` is a short film of the steps that change a film's look, made
+for the meadow by the lake where seed 42 starts a player: dusk with a warm grade, a walk as mist
+rolls in and the grade turns cool, a flight down to the lake as both lift, and a dive under its
+water.
 
 `/showcase gallery <mod>` needs no film: it puts every block of the mod on a plinth in a row
 from where you stand and shows each in turn under its name.

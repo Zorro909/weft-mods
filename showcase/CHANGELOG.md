@@ -15,7 +15,7 @@
   and `fade_in(secs)` fade to black and back between shots, and `showcase_api::screen` has
   fades to black and white and warm and cool grades.
 - `Shot::bob()` sways the camera as a walking player's eyes, for shots at walking pace.
-- `showcase:demo`, a short film of these steps.
+- `showcase:demo`, a short film of these steps, ending under the water of a lake.
 
 ### Changed
 
