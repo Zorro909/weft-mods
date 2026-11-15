@@ -141,8 +141,8 @@ fn cottage(film: Film) -> Film {
         ([-2243.0, 88.0, 2793.0], door),
         ([-2231.0, 87.0, 2797.0], door),
         ([-2215.0, 87.0, 2793.0], door),
-        ([-2208.0, 84.0, 2784.0], door),
-        ([-2210.0, 79.0, 2777.5], door),
+        ([-2207.0, 85.0, 2785.0], door),
+        ([-2211.0, 81.0, 2776.0], door),
         (COTTAGE.at([5.5, 5.0, -7.0]), COTTAGE.at([5.5, 2.4, 2.0])),
     ];
     // The door is two blocks high, its lintel three blocks up.
@@ -172,7 +172,7 @@ fn cottage(film: Film) -> Film {
         .shot(glide(&in_at_the_door, 5.0).ease(speeds(3.0, 0.0)))
         .wait(1.0)
         .menu("base:chest", CHEST, 4.0)
-        .shot(hold(inside).look_at(chest).secs(4.5))
+        .shot(hold(inside).look_at(chest).secs(4.0))
         .shot(turn(inside, &round_to_the_door, 5.0).ease(Ease::Smooth))
         .shot(glide(&across_the_green, 10.0).ease(speeds(0.0, 2.0)).bob())
 }

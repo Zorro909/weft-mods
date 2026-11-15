@@ -4,7 +4,7 @@
 
 use showcase_api::Film;
 
-use super::hamlets::LAST;
+use super::hamlets::{LAST, OVER_LAST};
 use super::town::SQUARE;
 use super::village::VILLAGE;
 use super::{glide, on_orbit, speeds};
@@ -61,9 +61,9 @@ pub fn over_the_mountains(film: Film) -> Film {
         ([-3610.0, 108.0, 440.0], LAST),
         ([-3606.0, 96.0, 330.0], LAST),
         ([-3606.0, 91.0, 262.0], LAST),
-        // Into the way the orbit then goes on.
-        (on_orbit(LAST, 32.0, 18.0, 15.0), LAST),
-        (on_orbit(LAST, 32.0, 18.0, 0.0), LAST),
+        // Into the way the orbit then goes on, looking up to where it looks.
+        (on_orbit(LAST, 32.0, 18.0, 15.0), OVER_LAST),
+        (on_orbit(LAST, 32.0, 18.0, 0.0), OVER_LAST),
     ];
     film.title("structgen.film.mountains", 5.0)
         .shot(glide(&path, 20.0).ease(speeds(10.0, 12.0)))

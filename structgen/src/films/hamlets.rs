@@ -19,7 +19,7 @@ const CROFT: Building = Building {
 /// The last hamlet, round its well at the foot of the mountains.
 pub const LAST: [f64; 3] = [-3638.0, 72.0, 238.0];
 /// Over it, which the closing orbit looks at to keep the land beyond in view.
-const OVER_LAST: [f64; 3] = [-3638.0, 84.0, 238.0];
+pub const OVER_LAST: [f64; 3] = [-3638.0, 84.0, 238.0];
 /// Seconds the picture takes to fade to black at the end, the camera coming to rest meanwhile.
 const FADE_OUT: f32 = 4.0;
 
