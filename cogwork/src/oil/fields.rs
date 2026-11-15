@@ -1,11 +1,15 @@
 //! Where oil lies. A field is an engine feature on a grid: the overworld is split into squares
 //! `SPACING` blocks wide, and one in `SQUARES_TO_A_FIELD` of those whose place is dry dirt or
-//! sand holds a field. The engine lays each one out once, from the seed and the ground alone,
-//! and every cube it reaches takes its part. A field is a ball of oil sources deep underground,
-//! and above its middle a seep: a puddle of oil in oil-soaked ground.
+//! sand holds a field. The engine lays each one out once, from the seed and what generation
+//! made before it, and every cube it reaches takes its part. A field is a ball of oil sources
+//! deep underground, and above its middle a seep: a puddle of oil in oil-soaked ground.
+//!
+//! A seep lies on the ground as generation left it, which trees, buildings, caves and ravines
+//! have changed since the terrain gave each column its height: each block of it looks down its
+//! column for the ground (`ground`). A field whose puddle finds none is left out.
 
 use base_api::OVERWORLD;
-use weft_sdk::{Feature, Placed, Plan, Registry, abi::stage};
+use weft_sdk::{Feature, Placed, Plan, Registry, Tag, abi::stage};
 
 use super::{OIL, OIL_SAND, OILY_DIRT};
 use crate::lib::{Area, Pos};
@@ -28,11 +32,15 @@ const SEEP_REACH: i32 = 2;
 const SEEP_STEP: i32 = 3;
 /// How high above soaked ground plants are taken away: a sugar cane's height.
 const PLANT_HEIGHT: i32 = 3;
-/// Ground under the sea stays as it is: base's sea level.
-const SEA: i32 = 63;
 /// What a field's ball takes: everything but the air of a cave.
 const NOT_AIR: &str = "!core:air";
 const AIR: u32 = 0;
+
+/// What a seep looks down through for the ground, and the ground it soaks.
+static PLANTS: Tag = Tag::named("plantable");
+static LEAVES: Tag = Tag::named("leaves");
+static DIRT: Tag = Tag::named("dirt");
+static SAND: Tag = Tag::named("sand");
 
 pub fn register(r: &mut Registry) {
     r.feature(&OIL_FIELD)
@@ -43,7 +51,11 @@ pub fn register(r: &mut Registry) {
         .stage(stage::DECORATION)
         .after(&BASE_PLANTS)
         .reach(RADIUS[1])
-        .reach_y(SEEP_STEP + PLANT_HEIGHT, DEPTH[1] + RADIUS[1] + 1)
+        // The puddle may lie up to a step from the start's ground, and its seep a step further.
+        .reach_y(
+            2 * SEEP_STEP + PLANT_HEIGHT,
+            SEEP_STEP + DEPTH[1] + RADIUS[1] + 1,
+        )
         .plan(plan);
 }
 
@@ -107,10 +119,61 @@ impl Field {
     }
 }
 
-/// Lays out the field that starts at the plan's place, the block above its puddle.
+/// What a seep finds in a cell, looking down its column for the ground.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Cell {
+    /// Air, a plant or leaves: it looks on down.
+    Open,
+    Dirt,
+    Sand,
+    /// Anything else: stone, a log, a floor, water. A seep soaks none of it.
+    Other,
+}
+
+impl Cell {
+    fn of(state: u32) -> Cell {
+        if state == AIR || PLANTS.on_block(state) || LEAVES.on_block(state) {
+            Cell::Open
+        } else if DIRT.on_block(state) {
+            Cell::Dirt
+        } else if SAND.on_block(state) {
+            Cell::Sand
+        } else {
+            Cell::Other
+        }
+    }
+}
+
+/// The ground of a seep's column, looking down from `top` at most two steps (`SEEP_STEP`): the
+/// first cell that is not open, if it is dirt or sand. A column open all the way, or standing
+/// on anything else, has none.
+fn ground(top: Pos, cell: impl Fn(Pos) -> Cell) -> Option<(Pos, Cell)> {
+    (0..=2 * SEEP_STEP)
+        .map(|down| top.add_y(-down))
+        .map(|pos| (pos, cell(pos)))
+        .find(|&(_, found)| found != Cell::Open)
+        .filter(|&(_, found)| matches!(found, Cell::Dirt | Cell::Sand))
+}
+
+/// The ground of column `x`, `z` within a step of height `y`, where caves and ravines left it.
+fn ground_near(p: &Plan, x: i32, z: i32, y: i32) -> Option<(Pos, Cell)> {
+    if p.surface_carved(x, z) {
+        return None;
+    }
+    let view = p.view();
+    ground(Pos::new(x, y + SEEP_STEP, z), |pos| {
+        Cell::of(view.read(pos))
+    })
+}
+
+/// Lays out the field that starts at the plan's place, the block above the terrain's ground,
+/// with its puddle on the ground found there.
 fn plan(p: &mut Plan) {
+    let start = Pos::from(p.pos());
+    let Some((puddle, _)) = ground_near(p, start.x, start.z, start.y - 1) else {
+        return;
+    };
     let field = Field::of(p.random());
-    let puddle = Pos::from(p.pos()).add_y(-1);
     for row in field.rows(puddle.add_y(-field.depth)) {
         p.replace(row.lo, row.hi, NOT_AIR, OIL.id());
     }
@@ -123,14 +186,15 @@ fn plan(p: &mut Plan) {
 /// plants on it, which the soaked ground no longer holds.
 fn soak(p: &mut Plan, puddle: Pos, dx: i32, dz: i32) {
     let (x, z) = (puddle.x + dx, puddle.z + dz);
-    let ground = Pos::new(x, p.ground(x, z).height, z);
-    if ground.y < SEA || (ground.y - puddle.y).abs() > SEEP_STEP {
+    let Some((ground, soil)) = ground_near(p, x, z, puddle.y) else {
         return;
-    }
-    let is_puddle = dx == 0 && dz == 0;
-    let soaked = |soaked_ground: u32| if is_puddle { OIL.id() } else { soaked_ground };
-    p.replace(ground, ground, "#dirt", soaked(OILY_DIRT.id()));
-    p.replace(ground, ground, "#sand", soaked(OIL_SAND.id()));
+    };
+    let soaked = match soil {
+        _ if dx == 0 && dz == 0 => OIL.id(),
+        Cell::Sand => OIL_SAND.id(),
+        _ => OILY_DIRT.id(),
+    };
+    p.set(ground, soaked);
     let plants = Area::between(ground.add_y(1), ground.add_y(PLANT_HEIGHT));
     p.replace(plants.lo, plants.hi, "#plantable", AIR);
 }
@@ -140,6 +204,8 @@ mod tests {
     use super::*;
 
     const MIDDLE: Pos = Pos::new(100, -10, 200);
+    /// The lowest a field starts: base's sea level, as nothing on the grid stands under the sea.
+    const SEA: i32 = 63;
 
     fn field(radius: i32, seep: u64) -> Field {
         Field {
@@ -167,7 +233,7 @@ mod tests {
             assert!((RADIUS[0]..=RADIUS[1]).contains(&made.radius), "radius");
             assert!((DEPTH[0]..=DEPTH[1]).contains(&made.depth), "depth");
         }
-        let lowest = SEA - DEPTH[1] - RADIUS[1];
+        let lowest = SEA - SEEP_STEP - DEPTH[1] - RADIUS[1];
         assert!(lowest > -32, "above the floor of the world: {lowest}");
     }
 
@@ -208,5 +274,51 @@ mod tests {
         assert!(!dry.soaks(3, 0), "beyond its reach");
         assert_eq!(dry.seep().count(), 5, "the least a seep soaks");
         assert_eq!(field(4, u64::MAX).seep().count(), 13, "and the most");
+    }
+
+    /// A column at `MIDDLE`'s x and z: `cells` from `top` down, open below them.
+    fn column(top: i32, cells: &[Cell]) -> impl Fn(Pos) -> Cell + '_ {
+        move |pos| {
+            let down = (top - pos.y) as usize;
+            cells.get(down).copied().unwrap_or(Cell::Open)
+        }
+    }
+
+    #[test]
+    fn a_seep_lies_on_the_first_ground_down() {
+        use Cell::{Dirt, Open, Sand};
+        let top = MIDDLE.add_y(SEEP_STEP);
+        let found = ground(top, column(top.y, &[Open, Open, Dirt, Dirt]));
+        assert_eq!(found, Some((top.add_y(-2), Dirt)), "the dirt on top");
+        let at_the_top = ground(top, column(top.y, &[Sand]));
+        assert_eq!(at_the_top, Some((top, Sand)), "a step above, on a rise");
+    }
+
+    #[test]
+    fn a_seep_soaks_nothing_but_dirt_and_sand() {
+        use Cell::{Dirt, Open, Other};
+        let top = MIDDLE.add_y(SEEP_STEP);
+        let floor = ground(top, column(top.y, &[Open, Other, Dirt]));
+        assert_eq!(floor, None, "a floor or a log over the dirt");
+        let water = ground(top, column(top.y, &[Open, Open, Other]));
+        assert_eq!(water, None, "water or stone on top");
+    }
+
+    #[test]
+    fn a_seep_looks_no_further_than_a_step_either_way() {
+        use Cell::{Dirt, Open};
+        let top = MIDDLE.add_y(SEEP_STEP);
+        let span = (2 * SEEP_STEP) as usize;
+        let mut lowest = vec![Open; span];
+        lowest.push(Dirt);
+        let found = ground(top, column(top.y, &lowest));
+        assert_eq!(
+            found,
+            Some((MIDDLE.add_y(-SEEP_STEP), Dirt)),
+            "a step below"
+        );
+        let mut too_low = vec![Open; span + 1];
+        too_low.push(Dirt);
+        assert_eq!(ground(top, column(top.y, &too_low)), None, "down a cliff");
     }
 }
