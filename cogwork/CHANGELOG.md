@@ -7,7 +7,6 @@
 - World settings for how deep excavators dig, `excavator_unlimited_depth` (on) and
   `excavator_lowest_y` (-64), and how far apart survey markers may stand, `marker_max_area`: 32,
   64 (the default), 128 or 256 blocks.
-
 ### Changed
 
 - Builds against Weft v26.11.5.
@@ -24,6 +23,11 @@
   has its seep. `/structure locate cogwork:oil_field` says where the nearest is.
 - A field lies 45 to 85 blocks under its seep, and all fields lie elsewhere than in 0.4.0. In a
   world made with 0.4.0 the old fields and seeps are gone, except in cubes somebody changed.
+- A seep lies on the ground as the world generated it, trees, caves and ravines included: on a
+  rise or in a dip within three blocks of the terrain's height, never where a cave opened the
+  ground or a tree stands. A place with no dry dirt or sand to lie on holds no field, so any
+  field may lie a little higher or lower than in earlier builds of this version, and some are
+  gone.
 
 ### Fixed
 
