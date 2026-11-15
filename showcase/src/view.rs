@@ -4,9 +4,9 @@
 use std::sync::Mutex;
 
 use weft_sdk::abi::comp::camera::{DETACHED, NO_INTERACT};
-use weft_sdk::abi::{CameraArgs, CameraPose, PlayerControl, control_mask as cm};
+use weft_sdk::abi::{CameraPose, PlayerControl, control_mask as cm};
 use weft_sdk::settings::FOV;
-use weft_sdk::*;
+use weft_sdk::{Arg, CameraFrame, CameraMode, Client, Output, Registry, Shot, Vec3};
 
 use crate::lock;
 use crate::playback::Title;
@@ -36,8 +36,8 @@ pub fn register(r: &mut Registry) {
 
 /// The film camera's frame: what `put` showed last, or the player's eyes before any film. Frame
 /// hooks run before the camera moves, so a film's pose shows the same frame, not the next.
-fn film_shot(args: &mut CameraArgs) {
-    args.out = match *lock(&SHOWN) {
+fn film_shot(frame: &mut CameraFrame<'_>) {
+    frame.out = match *lock(&SHOWN) {
         Some(pose) => CameraPose {
             pos: pose.eye,
             yaw: pose.yaw.to_radians() as f32,
@@ -47,9 +47,9 @@ fn film_shot(args: &mut CameraArgs) {
             fov: pose.fov / FOV.get(),
         },
         None => CameraPose {
-            pos: args.eye,
-            yaw: args.eye_yaw,
-            pitch: args.eye_pitch,
+            pos: frame.eye,
+            yaw: frame.eye_yaw,
+            pitch: frame.eye_pitch,
             ..CameraPose::DEFAULT
         },
     };
