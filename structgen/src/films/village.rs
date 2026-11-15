@@ -91,7 +91,7 @@ pub fn village(film: Film) -> Film {
         // Up as soon as the door is behind.
         (CHURCH.at([5.5, 4.3, -1.0]), CHURCH.at([5.5, 6.0, -10.0])),
         (CHURCH.at([5.5, 6.0, -2.8]), CHURCH.at([4.0, 7.0, -12.0])),
-        (CHURCH.at([5.5, 8.2, -5.5]), [-2232.0, 78.0, 2768.0]),
+        (CHURCH.at([5.5, 8.2, -5.5]), [-2229.0, 78.0, 2768.0]),
         ([-2231.0, 86.0, 2764.0], [-2246.0, 80.0, 2766.0]),
         ([-2242.0, 94.0, 2766.0], [-2262.0, 84.0, 2748.0]),
         ([-2254.0, 100.0, 2756.0], MILL),
@@ -117,5 +117,5 @@ pub fn village(film: Film) -> Film {
         .title("structgen.film.church", 4.0)
         .shot(glide(&to_the_altar, 8.0).ease(speeds(4.0, 0.5)))
         .shot(turn(at_the_altar, &round_at_the_altar, 6.0))
-        .shot(glide(&out_and_away, 12.0).ease(speeds(1.0, 12.0)))
+        .shot(glide(&out_and_away, 14.0).ease(speeds(1.0, 12.0)))
 }

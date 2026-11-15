@@ -36,8 +36,9 @@ What is planned for the buildings and settlements is in the [roadmap](../ROADMAP
 - **Leaving the world as it is.** The engine's files leave a cell out to keep what is there,
   but the buildings drawn in code set every cell, so the air above their ground layer clears
   flowers and tall grass.
-- **Water.** No settlement stands below sea level, which structgen takes as base's, 63. Nothing
-  that needs a river or a shore can be built yet.
+- **Water.** No settlement stands on a column with water or ice over its ground, read from the
+  blocks generation leaves, so in any dimension. Nothing that needs a river or a shore can be
+  built yet: nothing looks for where land meets water.
 
 ## Missing in the engine
 
@@ -75,10 +76,10 @@ workaround go.
    Would go with: a feature's own starts kept apart as well, by its `separation`.
 6. **A plan's fit is thin.** `Plan::fit`, which is `Generation::fit`
    (`Weft/crates/sdk/src/generation.rs`), looks at four corners and the middle, asks about
-   caves at the corners only, knows no biome and no lowest height, and stands the template on
+   caves at the corners only, knows no biome and no water, and stands the template on
    the middle column. Structgen's own (`src/settlement/fit.rs`) looks at every column under
-   the building: the biome under its middle, how far the ground rises and falls, none below
-   sea level, no cave mouth, and the floor at the median height. Would go with: those options
+   the building: the biome under its middle, how far the ground rises and falls, none under
+   water, no cave mouth, and the floor at the median height. Would go with: those options
    on `Plan::fit`.
 7. **No biome reference in a plan.** A feature takes `.biome("#animals !#forest")`, but a plan
    has only biome numbers (`Plan::ground`, `Plan::biome`) and no call that tests one against
@@ -89,17 +90,21 @@ workaround go.
    `src/settlement/mod.rs`), so `/structure locate`, `w.structure_near` and `FEATURE_PLACED`
    can point that far from the settlement's middle. Would go with: a plan able to say where it
    really stands.
-9. **No sea level for a plan.** The engine keeps a grid start off the sea by its dimension's
-   sea level (`grid_site` in `features.rs`), but the SDK tells a plan none, so structgen keeps
-   base's as `SEA`, 63 (`src/settlement/mod.rs`), for its spots, its grid and every building.
-   Would go with: the dimension's sea level on `Plan`.
-10. **A template can't be read.** The SDK gives a template's size and joints
-    (`template_size`, `template_joints`), not its cells, and a mod can't read its own files
-    while the game runs. Structgen compiles every file in (`build.rs`) to turn the buildings and
-    to find their chests for loot (`src/buildings.rs`). Would go with: a template's cells from
-    the SDK.
-11. **Undo's docs say per dimension.** `Weft/docs/worldgen.md` ("Placing and finding") and
+9. **A template can't be read.** The SDK gives a template's size and joints
+   (`template_size`, `template_joints`), not its cells, and a mod can't read its own files
+   while the game runs. Structgen compiles every file in (`build.rs`) to turn the buildings and
+   to find their chests for loot (`src/buildings.rs`). Would go with: a template's cells from
+   the SDK.
+10. **Undo's docs say per dimension.** `Weft/docs/worldgen.md` ("Placing and finding") and
     `World::unplace` in `Weft/crates/sdk/src/game.rs` say the last 16 placings of a dimension
     are kept, but `Weft/crates/engine/src/server/placing.rs` keeps 16 in one list for all
     dimensions together (`KEPT`, `PLACINGS`): 16 loads in another dimension drop all of this
     one's. Either the docs or the code should change.
+11. **A plan can't find another feature's starts.** The engine picks each feature's start in a
+    grid square from the seed and a salt made from the feature's name (`grid_site` in
+    `Weft/crates/engine/src/features.rs`), and a plan has no `structure_near`, which needs a
+    live `World`. So a second feature at `abi::stage::POST_PROCESS` can't find the settlement it
+    would tidy up after the trees: structgen fills the holes under its buildings as the last
+    step of the settlement's own plan instead (`src/settlement/footing.rs`), which sees only
+    what the plan put. Would go with: a plan reading the starts of another feature near it, or
+    a feature placing a second plan of its own at a later stage.

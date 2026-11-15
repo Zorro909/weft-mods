@@ -9,7 +9,7 @@ use super::grid::{Cell, Grid};
 use super::plan::Plan;
 use super::roads::Road;
 use super::shape::{Point, add, heading, length_of, scale, sub};
-use super::{Kind, SEA, Settlement, one_of, planting};
+use super::{Kind, Settlement, one_of, planting};
 
 /// The heart's own buildings, in it along the main road, the first in the middle; `None` if the
 /// first, the well or fountain, has no room.
@@ -23,7 +23,7 @@ pub fn centre(
     let rules = Rules {
         setback: [0, 0],
         gap: 2,
-        fit: Fit::new().max_slope(3).min_height(SEA),
+        fit: Fit::new().max_slope(3),
         path: Cell::Free,
     };
     let along = heading(angle);

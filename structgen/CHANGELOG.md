@@ -6,6 +6,8 @@
 
 - One or two buildings of each hamlet, village and town have something in their chests: bread,
   apples, wheat, torches, coal, iron, now and then gold or arrows.
+- A building whose bottom layer stands over a cave just under the ground has the gap filled
+  with the ground's block, so no paving or yard hangs over air.
 
 ### Changed
 
@@ -21,6 +23,10 @@
 - No more `.wst` files, Structure Wand or structgen `/structure` of its own (`pos1`, `pos2`,
   styles in `load`).
 - No more cottages, farms, chapels and mills standing alone in the country.
+- Settlements read the water instead of taking base's sea level, 63: no building stands where
+  water or ice covers the ground, in any dimension, and dry ground below 63 can be built on.
+  Settlements may stand elsewhere at any seed; seed 42's stand where they did.
+- The showcase film turns more slowly out of the church and the town hall.
 - The showcase film flies where seed 42 now puts its settlements: a hamlet, a village, a town
   and, over the mountains, a last hamlet.
 
