@@ -6,27 +6,30 @@ Where the SDK, its docs and examples live, and the tools that build, load and ch
 
 Look a call up in this order. The engine's own source (`Weft/crates/engine`, `Weft/crates/abi`) is for engine work, and for a question none of these answers.
 
-1. `Weft/docs/modding.md`, the cheat sheet, and the topic guide it links for the content.
-2. The same kind of content in the mods here: the table below.
-3. The SDK, `Weft/crates/sdk/src/`: `content.rs` Registry and block/item builders, `world.rs` and `game.rs` World, inventories, entities, menus, `extend.rs` events and interceptors, `client.rs`/`ui.rs` client side, `terrain.rs` worldgen. `grep -n "pub fn" <file>` lists a file's calls.
-4. Base in real use, `Weft/mods/base/src/`, and its typed API `base_api` (`Weft/mods/base/api/src/lib.rs`).
-5. `Weft/examples/examplemod/`, the template, and `Weft/mods/testmod/`, which extends and replaces base.
+1. `Weft/docs/modding.md`, the quick start: names, references, how registering works, components and tags. Its "Where to go next" links the topic guide for the content; shorter pages for the rarer parts are in `Weft/docs/details/`.
+2. `Weft/docs/reference/`, every public method of every SDK builder and type with its one-line doc and a link to its source, by topic (`index.md` lists them): for a call's exact name and arguments.
+3. The same kind of content in the mods here: the table below.
+4. The SDK, `Weft/crates/sdk/src/`: `content.rs` Registry and block/item builders, `world.rs` and `game.rs` World, inventories, entities, menus, `extend.rs` events and questions (`before_event`), `client.rs`/`ui.rs` client side, `environment.rs` fog, sky and post effects, `terrain.rs` and `generation.rs` worldgen. `grep -n "pub fn" <file>` lists a file's calls.
+5. Base in real use, `Weft/mods/base/src/`, and its typed API `base_api` (`Weft/mods/base/api/src/lib.rs`).
+6. `Weft/examples/examplemod/`, the template, and `Weft/mods/testmod/`, which extends and replaces base.
+
+Doc names below are under `Weft/docs/`.
 
 | Content | Weft doc | Example here |
 |---|---|---|
-| Block | `modding.md` "Blocks", `registration.md` | `cogwork/src/markers.rs` |
-| Item | `modding.md` "Items" | `cogwork/src/cogs.rs` |
+| Block | `blocks.md`, `registration.md` | `cogwork/src/markers.rs` |
+| Item | `items.md` | `cogwork/src/cogs.rs` |
 | Block entity, machine, energy | `block_entities.md` | `cogwork/src/leveler/`, `cogwork/src/machine.rs` |
 | Screen | `ui.md` | `screen` in `cogwork/src/bench/mod.rs` |
-| Recipe | `modding.md` "Recipes" | `cogwork/assets/recipes/`, `cogwork/src/recipes.rs` |
-| Command | `modding.md` "Commands" | `showcase/src/server.rs` |
+| Recipe | `details/recipes-loot.md`, `block_entities.md` "Recipes" | `cogwork/assets/recipes/`, `cogwork/src/recipes.rs` |
+| Command | `details/commands.md` | `showcase/src/server.rs` |
 | Worldgen, structure, template, palette | `worldgen.md` | `structgen/src/villages.rs`, `structgen/src/buildings.rs`, `structgen/src/settlement/plan.rs` |
-| Entity, model, animation | `modding.md` "Entities", `models.md` | `cogwork/src/engines/piston.rs`, `cogwork/src/arms/` |
-| Sound | `modding.md` "World API" | `cogwork/src/sounds.rs` |
-| Component, tag | `modding.md` "Components and tags" | `cogwork/src/owned.rs` |
-| Event, interceptor | `modding.md` "Hooking into the game" | `cogwork/src/tube/visual.rs` |
-| Channel between client and server | `modding.md` "Client side" | `cogwork/src/ghost.rs`, `cogwork/src/loading/lens.rs` |
-| Client drawing | `modding.md` "Client side", `shaders.md` | `cogwork/src/loading/lens.rs`, `showcase/src/view.rs` |
+| Entity, model, animation | `entities.md`, `models.md` | `cogwork/src/engines/piston.rs`, `cogwork/src/arms/` |
+| Sound | `details/particles-sounds.md` | `cogwork/src/sounds.rs` |
+| Component, tag | `modding.md` "Components and tags as inter-mod communication" | `cogwork/src/owned.rs` |
+| Event, question | `events.md` | `cogwork/src/tube/visual.rs` |
+| Channel between client and server | `client.md` "Messages between server and client" | `cogwork/src/ghost.rs`, `cogwork/src/loading/lens.rs` |
+| Client drawing | `client.md`, `shaders.md`, `environment.md` | `cogwork/src/loading/lens.rs`, `showcase/src/view.rs` |
 | Text | `localization.md` | any mod's `assets/lang/en_us.lang` |
 
 ## Building against a Weft release
