@@ -1,7 +1,8 @@
 # How a place is chosen
 
-All of it comes from the seed and the terrain's columns, never from blocks, so every cube and
-every client gets the same answer. The engine does the grid, the keeping out and the writing;
+All of it comes from the seed and the world as generation leaves it before structures (the
+terrain's columns, and its blocks only to find cave mouths), never from the world as it is
+loaded or played in, so every cube and every client gets the same answer. The engine does the grid, the keeping out and the writing;
 structgen's plan (`src/settlement/`) picks the spot and lays the settlement out.
 
 1. **The grid.** Each kind of settlement is a feature on a grid of squares, 384, 512 or 640

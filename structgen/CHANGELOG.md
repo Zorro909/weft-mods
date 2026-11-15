@@ -9,6 +9,7 @@
 
 ### Changed
 
+- Builds against Weft 26.11.5.
 - Built for Weft 26.11.4, on the engine's own structures: hamlets, villages and towns are
   features of base's overworld, and the buildings are templates in the engine's structure files
   (`assets/structures/*.json`), turned by this mod as before so frames and ladders stay right.

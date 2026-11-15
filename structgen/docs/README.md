@@ -41,11 +41,11 @@ What is planned for the buildings and settlements is in the [roadmap](../ROADMAP
 
 ## Missing in the engine
 
-What structgen works around, as of Weft v26.11.4, and what change to the engine would let each
+What structgen works around, as of Weft v26.11.5, and what change to the engine would let each
 workaround go.
 
 1. **Logs and ladders don't turn.** `turned_state` and `mirrored_state`
-   (`Weft/crates/engine/src/content.rs`, around line 1180) only take a state whose model turn
+   (`Weft/crates/engine/src/content.rs`, around line 1210) only take a state whose model turn
    and sides are exactly the turned ones. A log's `axis=x` turned a quarter is not the model
    turn of `axis=z`, and a ladder's states (an `on_sides` block) all share one model turn, so
    none has the turned one; both keep their state: a turned timber frame shows its beams
@@ -73,12 +73,13 @@ workaround go.
    Structgen keeps each settlement inside its own square, its reach from the square's edges
    (`keeps_to_its_square` in `src/settlement/mod.rs`), which gives up every start near an edge.
    Would go with: a feature's own starts kept apart as well, by its `separation`.
-6. **A plan's fit is thin.** `Plan::fit` (`Weft/crates/sdk/src/feature.rs`) looks at four
-   corners and the middle, asks about caves at the corners only, knows no biome and no lowest
-   height, and stands the template on the middle column. Structgen's own (`src/settlement/fit.rs`)
-   looks at every column under the building: the biome under its middle, how far the ground
-   rises and falls, none below sea level, no cave mouth, and the floor at the median height.
-   Would go with: those options on `Plan::fit`.
+6. **A plan's fit is thin.** `Plan::fit`, which is `Generation::fit`
+   (`Weft/crates/sdk/src/generation.rs`), looks at four corners and the middle, asks about
+   caves at the corners only, knows no biome and no lowest height, and stands the template on
+   the middle column. Structgen's own (`src/settlement/fit.rs`) looks at every column under
+   the building: the biome under its middle, how far the ground rises and falls, none below
+   sea level, no cave mouth, and the floor at the median height. Would go with: those options
+   on `Plan::fit`.
 7. **No biome reference in a plan.** A feature takes `.biome("#animals !#forest")`, but a plan
    has only biome numbers (`Plan::ground`, `Plan::biome`) and no call that tests one against
    such a text, so structgen reads the text itself (`src/settlement/biomes.rs`). Would go with: a
