@@ -29,9 +29,9 @@ chimney.
 One whose energy is hardly used runs only now and then, but its rig keeps turning.
 
 While its rig turns, a warm haze of exhaust hangs round the engine: whole within a block of
-its top, gone 8 blocks off. It fades what lies 24 blocks off and further, so the land round it stays
-clear and the distance turns brown-grey, and it muffles every sound but the engine's low beat.
-It gathers over two seconds and clears over four once the engine stops.
+its top, gone 8 blocks off. It fades what lies 24 blocks off and further, so the land round it
+stays clear and the distance turns brown-grey, and it muffles every sound but the engine's low
+beat. It gathers over two seconds and clears over four once the engine stops.
 
 | | |
 |---|---|
