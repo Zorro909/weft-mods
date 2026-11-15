@@ -410,17 +410,17 @@ fn sorting(film: Film) -> Film {
 /// and where the knoll's shot leaves it after the fade, north-west of it and high, from where
 /// the knoll lies straight on.
 const PIT_OUT: f64 = 8.0;
-const PIT_UP: [f64; 2] = [9.0, 3.0];
+const PIT_UP: [f64; 2] = [9.0, 2.5];
 const PIT_ARC: [f64; 2] = [108.0, 180.0];
 const PIT_LEFT: f64 = 215.0;
 
 /// Where the camera goes down the pit: in through the open west side of the frame, under the
 /// gantry's beams, and down between two of the rows the drill mines along x, so that its shaft
 /// never comes through the camera; and how far above the drill it stops.
-const INTO_PIT: [f64; 3] = [30.0, 2.5, -4.0];
+const INTO_PIT: [f64; 3] = [30.0, 2.0, -4.0];
 /// Ten blocks down the line from there to the drill: where the camera looks as it goes in, so
 /// that its look runs on unturned down to the drill.
-const DOWN_PIT: [f64; 3] = [30.25, -7.5, -4.0];
+const DOWN_PIT: [f64; 3] = [30.25, -8.0, -4.0];
 const OVER_DRILL: f64 = 4.0;
 
 /// Up over the digging excavator and round the west of its pit, looking down into it, then
