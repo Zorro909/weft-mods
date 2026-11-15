@@ -2,18 +2,21 @@
 //! `tools/showcase.sh cogwork:showcase -- --view 32`. A small oil works on the meadow by the
 //! lake north of seed 42's spawn (`site`), built into the slope on terraces (`ground`): a pump
 //! on the lake and one on an oil seep, which bores down to its field on camera; their lines of
-//! liquid tubes into an open hall with the tanks, the oil engine and a row of assembly benches
-//! the engine drives; an excavator on the engine's shaft and its sorting tube; a leveler
-//! cutting a shoulder of the knoll flat; an excavator putting up its frame; and a cuboid
-//! loader, with the lens that shows what it keeps. The camera comes in over the lake, goes
-//! east through it all, and back to the loader by the hall. The set is for a fresh world: built
-//! a second time in the same one, it lands on what the first left.
+//! liquid tubes into an open hall with the tanks, the oil engine, which hazes the air round
+//! it, and a row of assembly benches the engine drives; an excavator on the engine's shaft, its
+//! pit dug down past y = -64, and its sorting tube; a leveler cutting a shoulder of the knoll
+//! flat; an excavator putting up its frame; and a cuboid loader, with the lens that shows what
+//! it keeps. The camera carries engines (`kit`), which show under the screens it opens. It
+//! comes in over the lake, goes east through it all, and back to the loader by the hall. The
+//! set is for a fresh world: built a second time in the same one, it lands on what the first
+//! left.
 
 mod crafting;
 mod engine_bay;
 mod ground;
 mod hall;
 mod jetty;
+mod kit;
 mod leveling;
 mod loading;
 mod parts;
@@ -22,7 +25,7 @@ mod seep;
 mod signals;
 mod site;
 
-use showcase_api::{Ease, Film, Look, Set, dolly, film, flyby, orbit};
+use showcase_api::{Ease, Film, Look, Set, dolly, film, flyby, hold, orbit};
 use weft_sdk::Registry;
 
 use self::engine_bay::SHAFT_X;
@@ -63,7 +66,7 @@ const PADS: [Pad; 3] = [
 /// What the camera looks at, in blocks from the site: the two pumps, the hall's west end, its
 /// oil tank, the tubes up into the oil engine and the engine, its shaft under the roof and
 /// where that comes down behind the benches, the second bench, the sorting tube, the middles
-/// of the two excavators' areas, the loader and the sky over it, the works as a whole, and the
+/// of the two excavators' areas, the drill at the bottom of the pit, the loader and the sky over it, the works as a whole, and the
 /// shore below them.
 const JETTY_PUMP: [f64; 3] = above(jetty::PUMP_AT, 0.0);
 const SEEP: [f64; 3] = above(seep::PUMP_AT, 1.0);
@@ -76,6 +79,7 @@ const SHAFT_FOOT: [f64; 3] = above(Pos::new(SHAFT_X, 1, crafting::SHAFT_Z), 0.0)
 const BENCH: [f64; 3] = above(crafting::STONE_COGS, 0.1);
 const SORTER: [f64; 3] = above(quarry::SORTER, 0.0);
 const PIT: [f64; 3] = above(quarry::PIT, 0.5);
+const DRILL: [f64; 3] = above(quarry::DRILL, 0.0);
 const FRAME: [f64; 3] = above(quarry::RAISED, 0.5);
 const LOADER: [f64; 3] = above(loading::LOADER, 0.0);
 const OVER_LOADER: [f64; 3] = above(loading::LOADER, 1.3);
@@ -95,12 +99,14 @@ pub fn register(r: &mut Registry) {
         .on_cue("wrench", at_site(leveling::turn_engines))
         .on_cue("frame", at_site(quarry::raise_frame))
         .on_cue("lens", at_site(loading::lens))
-        .on_cue("lens_away", at_site(loading::lens_away));
+        .on_cue("lens_away", at_site(loading::lens_away))
+        .on_cue("unpack", at_site(kit::unpack));
     signals::register(r);
 }
 
-/// What runs or waits ready from the film's first second.
+/// What runs or waits ready from the film's first second, and the engines the camera carries.
 fn start(set: &Set) {
+    kit::pack(set);
     jetty::pump(set);
     engine_bay::stock_oil(set);
     crafting::start(set);
@@ -130,6 +136,7 @@ fn showcase(set: &Set) -> Film {
     let film = boring(film);
     let film = oil_line(film);
     let film = oil_engine(film);
+    let film = haze(film);
     let film = benches(film);
     let film = sorting(film);
     let film = digging(film);
@@ -305,25 +312,49 @@ fn oil_engine(film: Film) -> Film {
         .shot(round(75.0, 40.0, [2.0, 2.4], 5.0))
 }
 
+/// Where the camera stands in the engine's haze, beside its rig and a little above, and where
+/// it drifts to while it looks out north-west, between two posts of the hall, over the shore to
+/// the lake and the hills beyond, which the haze browns.
+const IN_HAZE: [[f64; 3]; 2] = [[11.2, 4.7, -2.6], [10.9, 4.8, -2.4]];
+const OVER_SHORE: [f64; 3] = [5.5, 3.0, -12.0];
+
+/// Up beside the running engine's rig, into its haze, to look out of the hall through it.
+fn haze(film: Film) -> Film {
+    let from_engine = on_orbit(OIL_ENGINE, ENGINE_OUT, 2.4, 40.0);
+    film.title("cogwork.film.haze", 6.0)
+        .shot(
+            dolly(from_engine, IN_HAZE[0])
+                .look(Look::Pan(OIL_ENGINE, OVER_SHORE))
+                .ease(speeds(0.7, 0.15))
+                .secs(4.0),
+        )
+        .shot(
+            dolly(IN_HAZE[0], IN_HAZE[1])
+                .look_at(OVER_SHORE)
+                .ease(speeds(0.15, 0.15))
+                .secs(2.5),
+        )
+}
+
 /// How far from the second bench, toward where, and how high above it at first and at last,
 /// the camera comes to it.
 const BENCH_OUT: f64 = 3.6;
 const BENCH_FROM: f64 = -130.0;
 const BENCH_UP: [f64; 2] = [2.1, 1.0];
 
-/// On east, the look following the shaft: from the engine up to where it crosses the hall
+/// On east, the look following the shaft: from where it leaves the engine up to where it crosses the hall
 /// under the roof, down behind the benches, and along their row to the second bench and into
 /// its screen.
 fn benches(film: Film) -> Film {
-    let from_engine = on_orbit(OIL_ENGINE, ENGINE_OUT, 2.4, 40.0);
+    let from_engine = IN_HAZE[1];
     let [over_bench, at_bench] = BENCH_UP.map(|up| on_orbit(BENCH, BENCH_OUT, up, BENCH_FROM));
     let under_shaft = halfway(from_engine, over_bench);
     film.title("cogwork.film.shaft", 5.0)
         .shot(
             dolly(from_engine, under_shaft)
-                .look(Look::Pan(OIL_ENGINE, SHAFT))
-                .ease(speeds(0.7, 0.5))
-                .secs(3.0),
+                .look(Look::Pan(OVER_SHORE, SHAFT))
+                .ease(speeds(0.15, 0.5))
+                .secs(4.0),
         )
         .shot(
             dolly(under_shaft, over_bench)
@@ -374,16 +405,31 @@ fn sorting(film: Film) -> Film {
     .shot(round(140.0, SORTER_ARC[1], speeds(0.15, 1.0), 2.5))
 }
 
-/// The pit's orbit: how far out, how high above its floor's middle, and from where to where:
-/// south of it, then west, to north-west, from where the knoll lies straight on.
+/// The pit's orbit: how far out, how high above the middle of its top at its two ends (it sinks
+/// to the height of the frame's open sides), and from where to where: south of it, then west;
+/// and where the knoll's shot leaves it after the fade, north-west of it and high, from where
+/// the knoll lies straight on.
 const PIT_OUT: f64 = 8.0;
-const PIT_UP: f64 = 13.0;
-const PIT_ARC: [f64; 2] = [108.0, 215.0];
+const PIT_UP: [f64; 2] = [9.0, 3.0];
+const PIT_ARC: [f64; 2] = [108.0, 180.0];
+const PIT_LEFT: f64 = 215.0;
 
-/// Up over the digging excavator and round the west of its pit, looking down into it.
+/// Where the camera goes down the pit: in through the open west side of the frame, under the
+/// gantry's beams, and down between two of the rows the drill mines along x, so that its shaft
+/// never comes through the camera; and how far above the drill it stops.
+const INTO_PIT: [f64; 3] = [30.0, 2.5, -4.0];
+/// Ten blocks down the line from there to the drill: where the camera looks as it goes in, so
+/// that its look runs on unturned down to the drill.
+const DOWN_PIT: [f64; 3] = [30.25, -7.5, -4.0];
+const OVER_DRILL: f64 = 4.0;
+
+/// Up over the digging excavator and round the west of its pit, looking down into it, then
+/// down the pit to its drill, which mines below y = -64, and into its screen.
 fn digging(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
-    let over_pit = on_orbit(PIT, PIT_OUT, PIT_UP, PIT_ARC[0]);
+    let over_pit = on_orbit(PIT, PIT_OUT, PIT_UP[0], PIT_ARC[0]);
+    let west_of_pit = on_orbit(PIT, PIT_OUT, PIT_UP[1], PIT_ARC[1]);
+    let at_drill = [INTO_PIT[0], DRILL[1] + OVER_DRILL, INTO_PIT[2]];
     film.shot(
         dolly(at_sorter, over_pit)
             .look(Look::Pan(SORTER, PIT))
@@ -394,10 +440,26 @@ fn digging(film: Film) -> Film {
     .shot(
         orbit(PIT, PIT_OUT)
             .arc(PIT_ARC[0], PIT_ARC[1])
-            .height(PIT_UP, PIT_UP)
+            .height(PIT_UP[0], PIT_UP[1])
             .ease(speeds(1.5, 1.5))
-            .secs(10.0),
+            .secs(7.0),
     )
+    .shot(
+        dolly(west_of_pit, INTO_PIT)
+            .look(Look::Pan(PIT, DOWN_PIT))
+            .ease(speeds(1.5, 4.0))
+            .secs(3.0),
+    )
+    .title("cogwork.film.deep", 6.0)
+    .shot(
+        dolly(INTO_PIT, at_drill)
+            .look_at(DRILL)
+            .ease(speeds(4.0, 0.3))
+            .secs(13.0),
+    )
+    .menu("cogwork:excavator", quarry::DIGGER, 5.0)
+    .shot(hold(at_drill).look_at(DRILL).secs(5.0))
+    .fade_out(1.5)
 }
 
 /// The knoll's orbit, round the middle of the marked square: from where to where (west, then
@@ -419,11 +481,11 @@ fn on_knoll(angle: f64) -> [f64; 3] {
     on_orbit(leveling::MIDDLE, out, up, angle)
 }
 
-/// Over the pit to the knoll and round its north: the corner marker shows the square, the
+/// Out of the dark over the pit to the knoll and round its north: the corner marker shows the square, the
 /// leveler goes down, the wrench turns its engines to it, and it cuts and fills while the
 /// camera comes round to it.
 fn knoll(film: Film) -> Film {
-    let over_pit = on_orbit(PIT, PIT_OUT, PIT_UP, PIT_ARC[1]);
+    let over_pit = on_orbit(PIT, PIT_OUT, PIT_UP[0], PIT_LEFT);
     let round = |from: f64, to: f64, secs: f32| {
         let at_ends = |of: [f64; 2]| [from, to].map(|angle| between(of, knoll_part(angle)));
         let (out, up) = (at_ends(KNOLL_OUT), at_ends(KNOLL_UP));
@@ -434,23 +496,24 @@ fn knoll(film: Film) -> Film {
             .ease(speeds(0.75, 0.75))
             .secs(secs)
     };
-    film.shot(
-        dolly(over_pit, on_knoll(KNOLL_ARC[0]))
-            .look(Look::Pan(PIT, leveling::MIDDLE))
-            .ease(speeds(1.5, 0.75))
-            .secs(5.0),
-    )
-    .title("cogwork.film.survey", 4.0)
-    .cue("survey")
-    .shot(round(KNOLL_ARC[0], 218.0, 3.0))
-    .shot(round(218.0, 231.0, 3.0))
-    .cue("leveler")
-    .title("cogwork.film.wrench", 4.5)
-    .shot(round(231.0, 244.0, 3.0))
-    .cue("wrench")
-    .shot(round(244.0, 250.0, 1.5))
-    .title("cogwork.film.level", 5.0)
-    .shot(round(250.0, KNOLL_ARC[1], 11.5))
+    film.fade_in(1.5)
+        .shot(
+            dolly(over_pit, on_knoll(KNOLL_ARC[0]))
+                .look(Look::Pan(PIT, leveling::MIDDLE))
+                .ease(speeds(1.5, 0.75))
+                .secs(5.0),
+        )
+        .title("cogwork.film.survey", 4.0)
+        .cue("survey")
+        .shot(round(KNOLL_ARC[0], 218.0, 3.0))
+        .shot(round(218.0, 231.0, 3.0))
+        .cue("leveler")
+        .title("cogwork.film.wrench", 4.5)
+        .shot(round(231.0, 244.0, 3.0))
+        .cue("wrench")
+        .shot(round(244.0, 250.0, 1.5))
+        .title("cogwork.film.level", 5.0)
+        .shot(round(250.0, KNOLL_ARC[1], 11.5))
 }
 
 /// The builder's orbit: how far out, how high above its area at its two ends, and from where
@@ -553,4 +616,5 @@ fn closing(film: Film) -> Film {
             .secs(6.5),
     )
     .wait(1.5)
+    .cue("unpack")
 }
