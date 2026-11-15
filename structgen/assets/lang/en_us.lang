@@ -5,6 +5,7 @@ mod.structgen.description = Hamlets, villages and towns across the overworld, ea
 structgen.film.hamlet = A hamlet: a few cottages and a farm round a well
 structgen.film.inside = Every house is furnished inside
 structgen.film.village = A village round its green
+structgen.film.chest = Some chests hold bread, coal, iron, now and then gold
 structgen.film.tavern = Its tavern
 structgen.film.church = Its church
 structgen.film.town = A town of cobbled streets round a market square

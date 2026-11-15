@@ -1,7 +1,8 @@
-//! The village: round its green, into its tavern and out across the green into its church, then
-//! out past its post mill and away.
+//! The village: round its green, into a cottage on it to open a chest that has something in it,
+//! out across the green into its tavern and back across into its church, then out past its post
+//! mill and away.
 
-use showcase_api::{Film, orbit};
+use showcase_api::{Ease, Film, hold, orbit};
 use weftkit::Pos;
 
 use super::building::Building;
@@ -10,6 +11,15 @@ use crate::turn::Turn;
 
 /// The village, round its well on the green.
 pub const VILLAGE: [f64; 3] = [-2217.0, 72.0, 2765.0];
+/// A dormer cottage on the west of the green, its door to the east and the tavern's porch: the
+/// building whose chests seed 42 fills in this village.
+const COTTAGE: Building = Building {
+    corner: Pos::new(-2235, 71, 2771),
+    size: [11, 9],
+    turn: Turn::Right,
+};
+/// The chest in the cottage's back corner, past the furnace.
+const CHEST: Pos = Pos::new(-2233, 72, 2779);
 /// Its tavern on the east of the green, its porch to the west, in line with the well.
 const TAVERN: Building = Building {
     corner: Pos::new(-2199, 72, 2765),
@@ -25,26 +35,16 @@ const CHURCH: Building = Building {
 /// Its post mill, north-west of the green.
 const MILL: [f64; 3] = [-2264.5, 85.0, 2726.5];
 
-/// Down round the green from the east, under the hill there, by the north to the west; over a cottage and the well onto the
-/// tavern's porch and in. Round the room to the door, out from under the porch, over the well
-/// and round to the church door, in down the nave to the altar; round and out again, up over a
-/// cottage and the mill and away to the north-west.
+/// Down round the green from the east, under the hill there, by the north to the west; into the
+/// cottage (`cottage`) and across the green into the tavern. Round the room to the door, out
+/// from under the porch, over the well and round to the church door, in down the nave to the
+/// altar; round and out again, up over a cottage and the mill and away to the north-west.
 pub fn village(film: Film) -> Film {
     let in_the_tavern = TAVERN.at([5.5, 2.6, 8.5]);
     let tables = TAVERN.at([2.5, 2.0, 7.0]);
-    let porch = TAVERN.at([5.5, 3.8, -2.0]);
-    let to_the_porch = [
-        (on_orbit(VILLAGE, 40.0, 18.0, 150.0), VILLAGE),
-        ([-2243.0, 89.0, 2784.0], TAVERN.at([5.5, 3.0, -12.0])),
-        // Over a cottage, then down over the well, which keeps behind the camera.
-        ([-2230.0, 87.0, 2777.0], TAVERN.at([5.5, 3.0, -4.0])),
-        (TAVERN.at([5.5, 11.0, -14.0]), TAVERN.at([5.5, 3.0, 0.0])),
-        (TAVERN.at([5.5, 7.5, -6.0]), TAVERN.at([5.5, 2.6, 4.0])),
-        (porch, TAVERN.at([5.5, 2.6, 8.0])),
-    ];
     // Under the porch roof, which is three blocks up.
     let in_at_the_door = [
-        (porch, TAVERN.at([5.5, 2.6, 8.0])),
+        (porch(), TAVERN.at([5.5, 2.6, 8.0])),
         (TAVERN.at([5.5, 2.4, 1.0]), TAVERN.at([5.5, 2.4, 10.0])),
         (TAVERN.at([5.5, 2.4, 3.0]), TAVERN.at([5.5, 2.4, 11.0])),
         (TAVERN.at([5.5, 2.5, 5.5]), TAVERN.at([5.5, 2.4, 13.0])),
@@ -100,22 +100,83 @@ pub fn village(film: Film) -> Film {
         // On the way the flight goes.
         ([-2280.0, 116.0, 2716.0], [-2340.0, 95.0, 2650.0]),
     ];
-    film.title("structgen.film.village", 5.0)
-        .shot(
-            orbit(VILLAGE, 50.0)
-                .arc(360.0, 150.0)
-                .radius(50.0, 40.0)
-                .height(55.0, 18.0)
-                .ease(speeds(12.0, 4.0))
-                .secs(14.0),
-        )
-        .shot(glide(&to_the_porch, 8.0).ease(speeds(4.0, 3.0)))
+    let film = film.title("structgen.film.village", 5.0).shot(
+        orbit(VILLAGE, 50.0)
+            .arc(360.0, 150.0)
+            .radius(50.0, 40.0)
+            .height(55.0, 18.0)
+            .ease(speeds(12.0, 4.0))
+            .secs(14.0),
+    );
+    cottage(film)
         .title("structgen.film.tavern", 5.0)
-        .shot(glide(&in_at_the_door, 4.0).ease(speeds(3.0, 0.5)))
+        .shot(glide(&in_at_the_door, 5.0).ease(speeds(2.0, 0.5)).bob())
         .shot(turn(in_the_tavern, &round_the_room, 6.0))
         .shot(glide(&across_the_green, 10.0).ease(speeds(1.0, 4.0)))
         .title("structgen.film.church", 4.0)
         .shot(glide(&to_the_altar, 8.0).ease(speeds(4.0, 0.5)))
         .shot(turn(at_the_altar, &round_at_the_altar, 6.0))
         .shot(glide(&out_and_away, 14.0).ease(speeds(1.0, 12.0)))
+}
+
+/// Round the south of the cottage from where the orbit left off and down onto the green before
+/// its door; in, past the stove to the chest in the back corner, which opens. Round to the door,
+/// and out across the green, at a walk, past the well to the tavern's porch.
+fn cottage(film: Film) -> Film {
+    // Beside the table, the chest in the corner past it.
+    let inside = COTTAGE.at([6.5, 2.6, 4.2]);
+    let (door, chest) = (COTTAGE.at([5.5, 3.0, 0.0]), COTTAGE.at([8.5, 1.4, 6.5]));
+    let way_out = COTTAGE.at([5.5, 2.5, -2.0]);
+    // Past the stove and the bench, a like angle apart, so it turns at an even pace.
+    let round_to_the_door = [
+        chest,
+        COTTAGE.at([8.9, 1.8, 4.7]),
+        COTTAGE.at([8.8, 2.0, 3.1]),
+        COTTAGE.at([7.7, 2.3, 2.0]),
+        way_out,
+    ];
+    // Over the houses south of the cottage and round to the east of it, the door in view.
+    let round_to_the_front = [
+        (on_orbit(VILLAGE, 40.0, 18.0, 150.0), VILLAGE),
+        ([-2243.0, 88.0, 2793.0], door),
+        ([-2231.0, 87.0, 2797.0], door),
+        ([-2215.0, 87.0, 2793.0], door),
+        ([-2208.0, 84.0, 2784.0], door),
+        ([-2210.0, 79.0, 2777.5], door),
+        (COTTAGE.at([5.5, 5.0, -7.0]), COTTAGE.at([5.5, 2.4, 2.0])),
+    ];
+    // The door is two blocks high, its lintel three blocks up.
+    let in_at_the_door = [
+        (COTTAGE.at([5.5, 5.0, -7.0]), COTTAGE.at([5.5, 2.4, 2.0])),
+        (COTTAGE.at([5.5, 3.6, -3.5]), COTTAGE.at([5.5, 2.4, 3.0])),
+        (COTTAGE.at([5.5, 2.8, -0.5]), COTTAGE.at([5.5, 2.2, 5.0])),
+        (COTTAGE.at([5.5, 2.5, 1.5]), COTTAGE.at([7.5, 2.0, 5.5])),
+        (COTTAGE.at([6.0, 2.6, 3.0]), chest),
+        (inside, chest),
+    ];
+    // Down the step to the green, which lies a block or two below the floor, and up again to
+    // the tavern's.
+    let across_the_green = [
+        (inside, way_out),
+        (COTTAGE.at([5.7, 2.55, 2.8]), COTTAGE.at([5.5, 2.4, -3.0])),
+        (COTTAGE.at([5.5, 2.5, 1.5]), COTTAGE.at([5.5, 2.3, -4.0])),
+        (COTTAGE.at([5.5, 2.4, -1.0]), [-2213.0, 73.0, 2774.0]),
+        ([-2220.0, 72.6, 2775.0], porch()),
+        ([-2213.0, 72.5, 2773.5], porch()),
+        ([-2206.0, 73.6, 2770.5], TAVERN.at([5.5, 2.6, 8.0])),
+        (porch(), TAVERN.at([5.5, 2.6, 8.0])),
+    ];
+    film.shot(glide(&round_to_the_front, 12.0).ease(speeds(4.0, 3.0)))
+        .title("structgen.film.chest", 5.0)
+        .shot(glide(&in_at_the_door, 5.0).ease(speeds(3.0, 0.0)))
+        .wait(1.0)
+        .menu("base:chest", CHEST, 4.0)
+        .shot(hold(inside).look_at(chest).secs(4.5))
+        .shot(turn(inside, &round_to_the_door, 5.0).ease(Ease::Smooth))
+        .shot(glide(&across_the_green, 10.0).ease(speeds(0.0, 2.0)).bob())
+}
+
+/// On the green before the tavern's porch, at a walker's eye height.
+fn porch() -> [f64; 3] {
+    TAVERN.at([5.5, 2.6, -2.0])
 }

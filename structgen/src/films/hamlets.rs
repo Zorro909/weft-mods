@@ -89,7 +89,7 @@ pub fn first(film: Film) -> Film {
 }
 
 /// Round the last hamlet from the east by the north to the west, rising and widening, so
-/// the mountains it stands under come into view behind it.
+/// the mountains it stands under come into view behind it, and coming to rest there.
 pub fn last(film: Film) -> Film {
     film.title("structgen.film.end", 7.0).shot(
         orbit(LAST, 32.0)
@@ -97,7 +97,7 @@ pub fn last(film: Film) -> Film {
             .radius(32.0, 90.0)
             .height(18.0, 55.0)
             .look_at(OVER_LAST)
-            .ease(speeds(12.0, 3.0))
+            .ease(speeds(12.0, 0.0))
             .secs(16.0),
     )
 }
