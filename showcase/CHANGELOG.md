@@ -8,6 +8,10 @@
   every shot, and a report of where the camera is inside a block or turns too fast and which
   titles stay too short or too long.
 
+### Changed
+
+- Built for Weft 26.11.5.
+
 ## 0.3.1 - 2026-11-12
 
 ### Added
