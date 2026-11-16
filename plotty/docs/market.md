@@ -42,14 +42,14 @@ rented can't be undone.
 
 Right-clicking your own stall opens its setup:
 
-- **Offers**, eight rows. Each has what the stall gives on the left and what it gets for it on
-  the right. Put a stack in a side's slot to make that side those items, that many of them: 16
-  bread means 16 bread a trade. The stack is only a sample; take it back any time. Or type a
-  price into the side's field to make it Golden Woof instead; empty, it is the slot's items
-  again. Woof for Woof isn't an offer.
-- **Stock**, 27 slots: what the stall gives out of.
-- **Till**, 27 slots: items customers paid with. Take them out from time to time; a full till
-  stops the offers that pay into it.
+- **Offers**, eight rows, five in view at a time: the mouse wheel scrolls to the rest. Each has
+  what the stall gives on the left and what it gets for it on the right. Put a stack in a side's
+  slot to make that side those items, that many of them: 16 bread means 16 bread a trade. The
+  stack is only a sample; take it back any time. Or type a price into the side's field to make it
+  Golden Woof instead; empty, it is the slot's items again. Woof for Woof isn't an offer.
+- **Stock**, 27 slots beside the offers: what the stall gives out of.
+- **Till**, 27 slots beside the stock: items customers paid with. Take them out from time to
+  time; a full till stops the offers that pay into it.
 
 Woof the stall gets goes straight to your balance, and Woof it gives comes out of it.
 
@@ -63,10 +63,11 @@ Woof the stall gets goes straight to your balance, and Woof it gives comes out o
 ## Trading
 
 Anyone else who right-clicks the stall sees its shop: each offer, how many more times the stall
-can do it, and a Trade button. A trade happens whole or not at all: the stall gives its side, the
-customer pays theirs, from their inventory or balance. If something falls short, the line above
-the hotbar says what: the stall's stock or till, its owner's Woof, or the customer's items,
-room or Woof. An offer its owner changed while the shop was open asks the customer to look again.
+can do it, and a Trade button, four offers in view at a time and the rest a scroll away. A trade
+happens whole or not at all: the stall gives its side, the customer pays theirs, from their
+inventory or balance. If something falls short, the line above the hotbar says what: the stall's
+stock or till, its owner's Woof, or the customer's items, room or Woof. An offer its owner changed
+while the shop was open asks the customer to look again.
 
 Customers trade from within eight blocks. When the owner next joins, a line says how often their
 stalls traded since they last did.
