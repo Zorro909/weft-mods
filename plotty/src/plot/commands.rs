@@ -6,12 +6,12 @@ use weftkit::{PlayerKey, Pos};
 use super::{allowance_of, at, may_claim, owned_by, post};
 use crate::city::grid::{CellXZ, Footprint};
 use crate::city::{Plot, PlotSize};
-use crate::players::{self, Found};
+use crate::players;
 use crate::tables::{CITIES, PLAYERS, PLOTS};
 use crate::{dims, protect};
 
 const USAGE: &str = "info | claim | unclaim | trust <name:word> | untrust <name:word> | show | list \
-                     | give <name:word> | take | allowance <name:word> <count:int(0,64)> | bypass";
+                     | give <name:word> | take | allowance <name:word> <count:int> | bypass";
 
 /// Cells out from the player whose plots `/plot show` outlines.
 const SHOW_REACH: i32 = 4;
@@ -131,7 +131,7 @@ fn trust(cmd: &mut ServerCommand, here: &Here, add: bool) {
     let Some((id, mut plot)) = mine(cmd, here) else {
         return;
     };
-    let Some((key, name)) = named(cmd) else {
+    let Some((key, name)) = players::named(cmd) else {
         return;
     };
     plot.trusted.retain(|trusted| *trusted != key);
@@ -208,7 +208,7 @@ fn give(cmd: &mut ServerCommand, here: &Here) {
     let Some((id, plot)) = at(here.dim, here.pos) else {
         return cmd.reply("plotty.plot.none_here", &[]);
     };
-    let Some((key, name)) = named(cmd) else {
+    let Some((key, name)) = players::named(cmd) else {
         return;
     };
     PLOTS.set(
@@ -244,7 +244,7 @@ fn take(cmd: &mut ServerCommand, here: &Here) {
 }
 
 fn allowance(cmd: &mut ServerCommand) {
-    let Some((key, name)) = named(cmd) else {
+    let Some((key, name)) = players::named(cmd) else {
         return;
     };
     let count = cmd.int("count").unwrap_or(0).clamp(0, 64) as u32;
@@ -275,20 +275,4 @@ fn mine(cmd: &mut ServerCommand, here: &Here) -> Option<(u32, Plot)> {
         return None;
     }
     Some((id, plot))
-}
-
-/// The player the `name` parameter names, with that name.
-fn named(cmd: &mut ServerCommand) -> Option<(PlayerKey, String)> {
-    let name = cmd.text("name").unwrap_or_default().to_string();
-    match players::find(&name) {
-        Found::One(key) => Some((key, name)),
-        Found::Nobody => {
-            cmd.reply("plotty.unknown_name", &[Arg::Text(&name)]);
-            None
-        }
-        Found::Several => {
-            cmd.reply("plotty.shared_name", &[Arg::Text(&name)]);
-            None
-        }
-    }
 }

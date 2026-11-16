@@ -16,7 +16,7 @@ Stand on the plot and type:
 
 | Command | What it does |
 |---|---|
-| `/plot` or `/plot info` | Its number, city, size and owner |
+| `/plot info` | Its number, city, size and owner |
 | `/plot claim` | Makes a free plot yours, if your allowance has room |
 | `/plot unclaim` | Gives yours up; your trusted players go with it |
 | `/plot trust <name>` | Lets a player build and use things on your plot |

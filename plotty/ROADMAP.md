@@ -4,17 +4,6 @@ What Plotty is still to get, in the order it comes.
 
 ## Next
 
-### Golden Woof
-
-A balance per player, not an item, kept in a table every region reads, so a stall pays its owner
-while they are offline. Every payment goes through one function under one lock, so two trades at
-once never make or lose Woof. Players see their balance in a corner of the inventory screen.
-
-- `/woof` shows your balance, `/woof pay <name> <amount>` pays another player.
-- `/woof give | take <name> <amount>` for game masters, the only source besides the starting
-  balance (`starting_woof` in the settings).
-- At join, a note of what your stalls sold while you were away.
-
 ### Market stalls
 
 A 3 × 2 × 3 multiblock in three woods (oak with red and white, spruce with blue and white, birch
@@ -28,6 +17,7 @@ with green and yellow), each its own set of blocks: register, counter, crate, po
   or 30 real days (`rent_woof` in the settings); the rent leaves the game. When it ends the stall
   closes, and after `rent_grace_days` moderators may clear it.
 - `/market rent`, `/market places`.
+- At join, a note of what your stalls sold while you were away.
 
 ### A film
 

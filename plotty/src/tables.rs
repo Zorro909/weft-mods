@@ -30,3 +30,6 @@ pub static BUILDS: Table<u32, Build> = Table::named("builds");
 
 /// The next numbers for cities, plots and builds: one value, under the key `()`.
 pub static COUNTERS: Table<(), Counters> = Table::named("counters");
+
+/// Each player's Golden Woof. Written at every payment, from every region: write-optimized.
+pub static BALANCES: Table<PlayerKey, u64> = Table::write_optimized("balances");

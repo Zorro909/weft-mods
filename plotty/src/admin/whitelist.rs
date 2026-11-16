@@ -10,7 +10,7 @@ use weft_sdk::{Arg, ServerCommand, permission};
 use weftkit::PlayerKey;
 
 use super::whitelist_file;
-use crate::players::{self, Found};
+use crate::players;
 
 const USAGE: &str = "on | off | list | add <who:targets> | key <key:word> | remove <name:word>";
 
@@ -121,17 +121,8 @@ fn add(cmd: &mut ServerCommand, key: &PlayerKey) -> io::Result<()> {
 
 /// Takes out the player Plotty knows by that name. One who is online stays until they leave.
 fn remove(cmd: &mut ServerCommand) -> io::Result<()> {
-    let name = cmd.text("name").unwrap_or_default().to_string();
-    let key = match players::find(&name) {
-        Found::One(key) => key,
-        Found::Nobody => {
-            cmd.reply("plotty.unknown_name", &[Arg::Text(&name)]);
-            return Ok(());
-        }
-        Found::Several => {
-            cmd.reply("plotty.shared_name", &[Arg::Text(&name)]);
-            return Ok(());
-        }
+    let Some((key, name)) = players::named(cmd) else {
+        return Ok(());
     };
     write(&whitelist_file::without(&read()?, key.as_str()))?;
     cmd.reply("plotty.whitelist.removed", &[Arg::Text(&name)]);
