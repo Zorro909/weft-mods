@@ -5,7 +5,7 @@
 
 use weft_sdk::terrain::Column;
 use weft_sdk::{Block, LootTable, Palette, Template, Transform};
-use weftkit::{BlockState, Pos, TypedGeneration};
+use weftkit::{BlockState, Pos};
 
 use super::fit::Fit;
 use super::ground::{self, Cover};
@@ -48,7 +48,7 @@ impl<'a> Plan<'a> {
 
     /// The block at `pos`, as earlier stages and this plan have left it.
     pub fn read(&self, pos: Pos) -> BlockState {
-        self.start.view().read_typed(pos)
+        self.start.read(pos).into()
     }
 
     /// The size of building `template` along x, y and z once turned by `turn`.
