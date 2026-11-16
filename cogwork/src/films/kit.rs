@@ -1,9 +1,7 @@
 //! What the camera carries while the film goes on: ember and spring engines, the engines the
 //! works are built with, in its hotbar under every screen the film opens, where they stand on
 //! their base plate as a placed engine does. They go only into slots the camera has free, and
-//! only those slots are emptied when the film takes them back.
-
-use std::sync::{Mutex, MutexGuard, PoisonError};
+//! the film takes back only stacks that are still exactly as it gave them.
 
 use showcase_api::Set;
 use weft_sdk::{Item, ItemStack};
@@ -13,47 +11,36 @@ const KIT: [(&str, u32); 2] = [("cogwork:ember_engine", 12), ("cogwork:spring_en
 /// The slots of the hotbar, which every screen shows under it.
 const HOTBAR: u32 = 9;
 
-/// A slot of a camera's that the film filled.
-struct Given {
-    player: u64,
-    slot: u32,
-}
-
-static GIVEN: Mutex<Vec<Given>> = Mutex::new(Vec::new());
-
-fn given() -> MutexGuard<'static, Vec<Given>> {
-    GIVEN.lock().unwrap_or_else(PoisonError::into_inner)
+/// The kit's stacks, as the film hands them out.
+fn stacks() -> impl Iterator<Item = ItemStack> {
+    KIT.into_iter()
+        .filter_map(|(name, count)| Some(ItemStack::new(Item::lookup(name)?, count)))
 }
 
 /// Puts the engines into free slots of the camera's hotbar, the last first, and keeps the
-/// selected one free: the camera's hand stays empty.
+/// selected one free: the camera's hand stays empty. A kit left over from a take cut short is
+/// taken back first.
 pub fn pack(set: &Set) {
+    unpack(set);
     let world = set.world();
     let player = set.player();
     let inventory = world.inventory(player);
     let selected = world.selected_slot(player);
-    let mut given = given();
-    let mut free = (0..HOTBAR)
+    let free = (0..HOTBAR)
         .rev()
         .filter(|&slot| slot != selected && inventory.get(slot).is_empty());
-    for (name, count) in KIT {
-        let (Some(item), Some(slot)) = (Item::lookup(name), free.next()) else {
-            continue;
-        };
-        inventory.set(slot, ItemStack::new(item, count));
-        given.push(Given { player, slot });
+    for (slot, stack) in free.zip(stacks()) {
+        inventory.set(slot, stack);
     }
 }
 
-/// Empties the slots the film filled for the camera.
+/// Empties the hotbar slots that hold a stack of the kit.
 pub fn unpack(set: &Set) {
-    let player = set.player();
-    let inventory = set.world().inventory(player);
-    given().retain(|given| {
-        let ours = given.player == player;
-        if ours {
-            inventory.set(given.slot, ItemStack::EMPTY);
+    let inventory = set.world().inventory(set.player());
+    let kit: Vec<ItemStack> = stacks().collect();
+    for slot in 0..HOTBAR {
+        if kit.contains(&inventory.get(slot)) {
+            inventory.set(slot, ItemStack::EMPTY);
         }
-        !ours
-    });
+    }
 }
