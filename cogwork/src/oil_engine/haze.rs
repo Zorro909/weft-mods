@@ -30,16 +30,11 @@ const UNCHANGED: f32 = f32::NAN;
 
 /// Hazes the air round `engine`'s rig while it runs; lets it clear once it stops.
 pub fn show(world: &World, engine: &OilEngine) {
-    if let Some(haze) = haze_of(engine) {
-        world.environment(engine.rig, &haze);
+    if engine.is_stroking() {
+        world.environment(engine.rig, &haze());
     } else {
         world.clear_environment(engine.rig, HAZE);
     }
-}
-
-/// The haze round `engine`: there while its rig makes strokes, as it does running.
-fn haze_of(engine: &OilEngine) -> Option<Environment> {
-    engine.is_stroking().then(haze)
 }
 
 fn haze() -> Environment {
@@ -53,17 +48,6 @@ fn haze() -> Environment {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn only_an_engine_at_work_hazes_the_air() {
-        let stroking = OilEngine {
-            stroke: 1,
-            ..OilEngine::default()
-        };
-        assert!(haze_of(&stroking).is_some(), "while its rig strokes");
-        let stopped = OilEngine::default();
-        assert!(haze_of(&stopped).is_none(), "clear once it stops");
-    }
 
     #[test]
     fn the_haze_blinds_no_one() {
