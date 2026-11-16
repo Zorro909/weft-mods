@@ -16,3 +16,5 @@
 - Protection at the spawn, on a city's streets and on plots, with a moderator bypass
   (`/plot bypass`).
 - A line above the hotbar says which city, plot or owner you walk into.
+- Golden Woof, a balance per player shown beside the inventory: `/woof`, `/woof pay`, and
+  `/woof give` and `take` for game masters. New players start with `starting_woof`.

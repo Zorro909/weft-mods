@@ -14,6 +14,7 @@ mod protect;
 mod rules;
 mod settings;
 mod tables;
+mod woof;
 
 use weft_sdk::{CreativeTab, Item, Registry, declare_mod};
 
@@ -29,6 +30,7 @@ fn init(r: &mut Registry) {
     protect::register(r);
     plot::register(r);
     city::register(r);
+    woof::register(r);
 }
 
 /// Whether every language file of the mod has `key`.

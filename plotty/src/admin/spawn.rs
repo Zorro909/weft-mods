@@ -10,6 +10,9 @@ use weftkit::Pos;
 
 use crate::{dims, settings, tables::SPAWN};
 
+/// The widest protected circle `/setspawn` sets, in blocks.
+const MAX_RADIUS: i64 = 256;
+
 /// Where players start, and how far around it is protected.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct Spawn {
@@ -29,7 +32,7 @@ impl Spawn {
 }
 
 pub fn register(r: &mut Registry) {
-    r.command("setspawn", "[radius:int(0,256)]", set)
+    r.command("setspawn", "[radius:int]", set)
         .permission(permission::GAME_MASTER);
     r.command("spawn", "", go).permission(permission::EVERYONE);
     r.on_event(&PLAYER_RESPAWNED, |batch| {
@@ -63,7 +66,9 @@ fn set(cmd: &mut ServerCommand) {
     };
     let radius = cmd
         .int("radius")
-        .map_or(settings::get().spawn_radius, |given| given as u32);
+        .map_or(settings::get().spawn_radius, |given| {
+            given.clamp(0, MAX_RADIUS) as u32
+        });
     let pos = Pos::from(state.pos.block());
     SPAWN.set(
         &(),

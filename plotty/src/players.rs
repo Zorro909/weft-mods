@@ -5,7 +5,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use weft_sdk::{PLAYER_JOINED, Registry};
+use weft_sdk::{Arg, PLAYER_JOINED, Registry, ServerCommand};
 use weftkit::PlayerKey;
 
 use crate::tables::PLAYERS;
@@ -39,6 +39,7 @@ pub fn register(r: &mut Registry) {
             };
             let name = world.player_name(joined.player).unwrap_or_default();
             if remember(key, name) {
+                crate::woof::start(&key);
                 crate::admin::spawn::welcome(&world, joined.player);
             }
         }
@@ -63,6 +64,23 @@ pub fn find(name: &str) -> Found {
     let mut known = Vec::new();
     PLAYERS.for_each(|key, entry| known.push((key, entry.name)));
     matching(known, name)
+}
+
+/// The player a command's `name` parameter names, with that name; where it names nobody or
+/// several players, the command says so.
+pub fn named(cmd: &mut ServerCommand) -> Option<(PlayerKey, String)> {
+    let name = cmd.text("name").unwrap_or_default().to_string();
+    match find(&name) {
+        Found::One(key) => Some((key, name)),
+        Found::Nobody => {
+            cmd.reply("plotty.unknown_name", &[Arg::Text(&name)]);
+            None
+        }
+        Found::Several => {
+            cmd.reply("plotty.shared_name", &[Arg::Text(&name)]);
+            None
+        }
+    }
 }
 
 /// The name Plotty last saw `key` under; its key's start where it never saw it.

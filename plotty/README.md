@@ -3,9 +3,9 @@
 # Plotty
 
 A Weft mod for running a server town: a whitelist, a protected spawn that new players start at,
-and cities that game masters lay out on a grid of 16-block cells, with plots players claim and
-build on. Golden Woof and market stalls follow; [`ROADMAP.md`](ROADMAP.md) says what is still to
-come.
+cities that game masters lay out on a grid of 16-block cells, with plots players claim and build
+on, and Golden Woof, a money that is no item. Market stalls follow; [`ROADMAP.md`](ROADMAP.md)
+says what is still to come.
 
 It needs the base game (`base`). [Structgen](../structgen/README.md) is optional: when it is
 loaded, game masters can also put its buildings on free plots.
@@ -39,6 +39,12 @@ one normal plot and one small plot with `/plot claim`; moderators raise the numb
 and give out large ones. The owner trusts friends to build with them. A post by the street says
 whose a plot is, and a line above the hotbar says where you are as you walk.
 
+### Golden Woof
+
+Every player has a balance of Golden Woof, shown beside their inventory. It isn't an item, so it
+can't be dropped, stolen or lost in death. `/woof` tells it and `/woof pay <name> <amount>` pays
+another player, online or not. New players start with some; game masters give and take more.
+
 ## Getting started
 
 1. As a game master, stand where the town should be and type `/city found Rivertown`, then
@@ -55,6 +61,7 @@ The details are in [`docs/`](docs/README.md):
 - [Running the server](docs/admin.md): the whitelist, the spawn, protection and the settings
 - [Cities](docs/cities.md): the grid, the structures, building and undoing
 - [Plots](docs/plots.md): sizes, claiming, trust, and what moderators do
+- [Golden Woof](docs/woof.md): balances and paying
 
 ## Building
 
@@ -86,4 +93,5 @@ tools/install-mods.sh plotty
 | `src/city/commands.rs` | `/city` |
 | `src/city/notice.rs` | The line above the hotbar |
 | `src/plot/` | Claim rules, `/plot`, the plot post and city stone |
+| `src/woof/` | Balances and the one way they change, `/woof`, the panel beside the inventory |
 | `src/art.rs` | Draws the textures (`WRITE_ASSETS=1 cargo test --release art`) |

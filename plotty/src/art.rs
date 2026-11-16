@@ -92,6 +92,26 @@ const ICON: [&str; 16] = [
     "................",
 ];
 
+/// A Golden Woof: a gold coin with a paw print struck on it.
+const WOOF: [&str; 16] = [
+    "................",
+    ".....yyyyyy.....",
+    "...yyGGGGGGyy...",
+    "..yGYGGGGGGGGy..",
+    "..yYGGyGGyGGGy..",
+    ".yGGGyyGGyyGGGy.",
+    ".yGGGGGGGGGGGGy.",
+    ".yGyyGGGGGGyyGy.",
+    ".yGyyGGyyGGyyGy.",
+    ".yGGGGyyyyGGGGy.",
+    ".yGGGyyyyyyGGGy.",
+    "..yGGyyyyyyGGy..",
+    "..yGGGyyyyGGGy..",
+    "...yyGGGGGGyy...",
+    ".....yyyyyy.....",
+    "................",
+];
+
 /// What each letter means.
 fn key() -> Vec<(char, Rgba)> {
     vec![
@@ -171,6 +191,7 @@ fn art_drawings_are_square() {
         ("plot post", &PLOT_POST),
         ("city stone", &CITY_STONE),
         ("icon", &ICON),
+        ("woof", &WOOF),
     ] {
         assert!(
             rows.iter().all(|row| row.chars().count() == 16),
@@ -185,6 +206,7 @@ fn art_pictures_are_written() {
         ("textures/block/plot_post.png", &PLOT_POST, 1),
         ("textures/block/city_stone.png", &CITY_STONE, 1),
         ("textures/gui/icon.png", &ICON, 4),
+        ("textures/gui/woof.png", &WOOF, 1),
     ] {
         let (side, pixels) = pixels(rows, scale);
         save_or_check(&asset(path), &png(side, &pixels));

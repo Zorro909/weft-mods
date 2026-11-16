@@ -20,14 +20,14 @@ pub enum Wilderness {
 #[serde(default)]
 pub struct Settings {
     /// Golden Woof a player gets the first time they join.
-    pub starting_woof: i64,
+    pub starting_woof: u64,
     /// Normal plots a player may claim, on top of one small plot.
     pub plot_allowance: u32,
     /// Blocks around the spawn that only moderators may change.
     pub spawn_radius: u32,
     pub wilderness: Wilderness,
     /// Golden Woof for a market place for 1, 7 and 30 days.
-    pub rent_woof: [i64; 3],
+    pub rent_woof: [u64; 3],
     /// Days after a rent ends before moderators may clear the place.
     pub rent_grace_days: u32,
 }

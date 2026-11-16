@@ -61,6 +61,6 @@ mod's machines ([`ROADMAP.md`](../ROADMAP.md), gap E).
 | `plot_allowance` | 1 | Normal plots a player may claim, besides one small plot |
 | `spawn_radius` | 32 | The spawn's protected radius when `/setspawn` names none |
 | `wilderness` | `"open"` | `"open"`: anyone builds outside towns; `"closed"`: only moderators with `/plot bypass` |
-| `starting_woof` | 100 | Golden Woof a new player gets (with the market) |
+| `starting_woof` | 100 | Golden Woof a player gets the first time they join |
 | `rent_woof` | `[10, 50, 150]` | The rent of a market place for 1, 7 and 30 days (with the market) |
 | `rent_grace_days` | 3 | Days after a rent ends before moderators may clear the place (with the market) |

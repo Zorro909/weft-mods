@@ -12,7 +12,7 @@ ships as its own mod.
 |---|---|---|
 | <img src="cogwork/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Cogwork](cogwork/README.md) | Item tubes you can see into, engines, and machines that work for you: an excavator that mines out a whole area, an assembly bench that crafts on its own, and a leveler that makes land flat. |
 | <img src="structgen/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Structgen](structgen/README.md) | Hamlets, villages and towns across the overworld, each laid out afresh from the land, built of timber-framed buildings in the engine's structure files. |
-| <img src="plotty/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Plotty](plotty/README.md) | Towns for a server: a whitelist, a protected spawn, and cities game masters lay out in cells, with plots players claim and build on. |
+| <img src="plotty/assets/textures/gui/icon.png" width="48" height="48" alt=""> | [Plotty](plotty/README.md) | Towns for a server: a whitelist, a protected spawn, and cities game masters lay out in cells, with plots players claim and build on, and Golden Woof, a money that is no item. |
 | | [Showcase](showcase/README.md) | A tool for mod makers: plays films that mods make of their content in code, and records them to video. |
 
 Each mod's README gives an overview; Cogwork's, Structgen's and Plotty's `docs/` folders describe

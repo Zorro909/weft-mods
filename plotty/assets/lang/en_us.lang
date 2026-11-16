@@ -95,3 +95,15 @@ plotty.plot.taken_back = Plot {0} is free again.
 plotty.plot.allowance_set = {0} may claim {1} normal plots.
 plotty.plot.large_given = Large plots can't be claimed: a moderator gives them out.
 plotty.plot.allowance_used = You have as many plots as you may claim. Give one up with /plot unclaim, or ask a moderator.
+
+plotty.woof.name = Golden Woof
+plotty.woof.amount = {0}
+plotty.woof.yours = You have {0} Golden Woof.
+plotty.woof.theirs = {0} has {1} Golden Woof.
+plotty.woof.paid = You paid {0} Golden Woof to {1}.
+plotty.woof.given = {1} got {0} Golden Woof.
+plotty.woof.taken = {0} Golden Woof taken from {1}.
+plotty.woof.short = Not enough Golden Woof for that.
+plotty.woof.too_much = {0} can't hold that much Golden Woof.
+plotty.woof.self = You can't pay yourself.
+plotty.woof.bad_amount = The amount must be at least 1.
