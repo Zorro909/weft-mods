@@ -2,6 +2,8 @@
 //! `data/plotty/`. A changed key or value type takes a new table name, as a changed `SAVE`
 //! component does.
 
+use std::sync::{Mutex, MutexGuard, PoisonError};
+
 use weftkit::{PlayerKey, Pos, Table};
 
 use crate::admin::spawn::Spawn;
@@ -10,6 +12,16 @@ use crate::city::undo::Build;
 use crate::city::{Cell, City, Counters, Plot};
 use crate::market::{Rent, StallEntry};
 use crate::players::PlayerEntry;
+
+/// Held while a command changes cities, plots or rents. Each reads what it changes and writes it
+/// back, and regions run in parallel: two players claiming one plot, or a rent paid for a market
+/// being undone, would otherwise both go through.
+static CHANGING: Mutex<()> = Mutex::new(());
+
+/// Takes `CHANGING`, before any other lock of Plotty's.
+pub fn changing() -> MutexGuard<'static, ()> {
+    CHANGING.lock().unwrap_or_else(PoisonError::into_inner)
+}
 
 /// Everyone who has joined: their name when last seen, and what moderators gave them.
 pub static PLAYERS: Table<PlayerKey, PlayerEntry> = Table::named("players");

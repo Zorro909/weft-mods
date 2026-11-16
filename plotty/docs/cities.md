@@ -52,7 +52,7 @@ chest, a stall), and where the area isn't loaded.
 | `/city info` | everyone | The city here: its name, what this cell is, its free and claimed plots |
 | `/city list` | everyone | Every city |
 | `/city rename <name>` | game master | Renames the city here |
-| `/city delete <name>` | game master | Forgets a city, its cells and plots. Its blocks stay |
+| `/city delete <name>` | game master | Forgets a city, its cells, plots and rents. Its blocks stay |
 
 Walking into a city, a plot or the spawn, a line above the hotbar says where you are and whose
 the plot is.

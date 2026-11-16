@@ -1,7 +1,5 @@
 //! `/plot`: claiming, sharing and giving up plots, seeing them, and what moderators do with them.
 
-use std::sync::Mutex;
-
 use weft_sdk::{Arg, Output, ServerCommand, World, permission};
 use weftkit::{PlayerKey, Pos};
 
@@ -9,7 +7,7 @@ use super::{allowance_of, at, may_claim, owned_by, post};
 use crate::city::grid::{CellXZ, Footprint};
 use crate::city::{Plot, PlotSize};
 use crate::players;
-use crate::tables::{CITIES, PLAYERS, PLOTS};
+use crate::tables::{self, CITIES, PLAYERS, PLOTS};
 use crate::{dims, protect};
 
 const USAGE: &str = "info | claim | unclaim | trust <name:word> | untrust <name:word> | show | list \
@@ -21,9 +19,6 @@ const SHOW_REACH: i32 = 4;
 const SHOW_TICKS: u32 = 20 * 30;
 /// Outline colors, as 0xRRGGBBAA: yours, someone else's, free.
 const COLORS: [u32; 3] = [0x4CC38AFF, 0x6FA8DCFF, 0xF2F2F2FF];
-
-/// Held while a plot command runs.
-static CHANGING: Mutex<()> = Mutex::new(());
 
 /// Who runs a plot command, and where.
 struct Here {
@@ -48,11 +43,7 @@ fn run(cmd: &mut ServerCommand) {
     if !moderator && only_moderators.iter().any(|word| cmd.given(word)) {
         return cmd.reply("plotty.moderators_only", &[]);
     }
-    // One plot command at a time: a claim reads a plot and writes it back, and two players
-    // claiming the same plot from two regions must not both get it.
-    let _changing = CHANGING
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let _changing = tables::changing();
     if cmd.given("claim") {
         claim(cmd, &here);
     } else if cmd.given("unclaim") {

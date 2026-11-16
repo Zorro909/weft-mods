@@ -129,13 +129,14 @@ fn exchange(
     };
     offer.check(&held).map_err(|short| short.key())?;
     pay_woof(offer, &owner, &customer)?;
-    if let Goods::Items(kind) = offer.gives {
-        stacks::take(&mut stock, kind, kind.count);
-        stacks::put(&mut yours, kind, kind.count, stall::max_stack(kind));
-    }
+    // The customer pays first, so what they get may go where their payment was.
     if let Goods::Items(kind) = offer.gets {
         stacks::take(&mut yours, kind, kind.count);
         stacks::put(&mut till, kind, kind.count, stall::max_stack(kind));
+    }
+    if let Goods::Items(kind) = offer.gives {
+        stacks::take(&mut stock, kind, kind.count);
+        stacks::put(&mut yours, kind, kind.count, stall::max_stack(kind));
     }
     write(&stall_items, "stock", &stock);
     write(&stall_items, "till", &till);

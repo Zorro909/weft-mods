@@ -86,11 +86,15 @@ pub fn named(cmd: &mut ServerCommand) -> Option<(PlayerKey, String)> {
 
 /// The name Plotty last saw `key` under; its key's start where it never saw it.
 pub fn name_of(key: &PlayerKey) -> String {
+    known_name(key).unwrap_or_else(|| key.as_str().chars().take(8).collect())
+}
+
+/// The name `key` last joined under, if they joined.
+pub fn known_name(key: &PlayerKey) -> Option<String> {
     PLAYERS
         .get(key)
         .map(|entry| entry.name)
         .filter(|name| !name.is_empty())
-        .unwrap_or_else(|| key.as_str().chars().take(8).collect())
 }
 
 /// Every key Plotty has seen join.

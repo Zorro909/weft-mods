@@ -7,7 +7,7 @@ use super::build::{self, Plan, Target, What};
 use super::grid::CellXZ;
 use super::structures::Kind;
 use super::{CellKind, buildings, cell_at, city_named, undo};
-use crate::tables::{CELLS, CITIES, PLOTS};
+use crate::tables::{self, CELLS, CITIES, PLOTS};
 use crate::{dims, plot};
 
 const USAGE: &str = "found <name:word> [how:word(build,mark)] \
@@ -37,6 +37,7 @@ fn run(cmd: &mut ServerCommand) {
     if !for_anyone && here.world.permission(cmd.player()) < permission::GAME_MASTER {
         return cmd.reply("plotty.game_masters_only", &[]);
     }
+    let _changing = tables::changing();
     if cmd.given("found") {
         found(cmd, &here);
     } else if cmd.given("build") || cmd.given("mark") {
@@ -277,14 +278,17 @@ fn delete(cmd: &mut ServerCommand) {
     let mut cells = Vec::new();
     CELLS.for_each(|key, cell| {
         if cell.city == id {
-            cells.push((key, cell.builds))
+            cells.push((key, cell))
         }
     });
-    for (key, builds) in cells {
-        CELLS.remove(&key);
-        builds
+    for ((dim, at), cell) in cells {
+        CELLS.remove(&(dim, at));
+        cell.builds
             .iter()
             .for_each(|build| crate::tables::BUILDS.remove(build));
+        if cell.kind == CellKind::Market {
+            crate::market::forget_rents(dim, cell.corner);
+        }
     }
     let mut plots = Vec::new();
     PLOTS.for_each(|plot, entry| {
