@@ -64,7 +64,7 @@ fn demo(set: &Set) -> Film {
 fn film_over(walk: &[[f64; 3]]) -> Film {
     let film = dusk(Film::new());
     let film = mist(film, walk);
-    let film = clearing(film, walk.last().copied().unwrap_or_default());
+    let film = clearing(film, walk[walk.len() - 1]);
     under_water(film)
 }
 
@@ -87,13 +87,13 @@ fn dusk(film: Film) -> Film {
 
 /// Walks toward the lake, still at dusk, as mist rolls in and the grade turns cool together.
 fn mist(film: Film, walk: &[[f64; 3]]) -> Film {
-    let (at_dusk, in_mist) = walk.split_at(DUSK_POINTS.min(walk.len()));
-    let end = walk.last().copied().unwrap_or_default();
+    let at_dusk = &walk[..DUSK_POINTS];
+    // The mist's walk starts on the point where the dusk's ends.
+    let in_mist = &walk[DUSK_POINTS - 1..];
+    let end = walk[walk.len() - 1];
     let ahead = [end[0], end[1], end[2] - LOOK_AHEAD];
-    // The mist's walk starts where the dusk's ends.
-    let in_mist = [&at_dusk[at_dusk.len().saturating_sub(1)..], in_mist].concat();
     let stretch = |points: &[[f64; 3]]| {
-        let blocks = (points.len().saturating_sub(1) as i32 * PACE) as f64;
+        let blocks = ((points.len() - 1) as i32 * PACE) as f64;
         flyby(points)
             .look(Look::At(ahead))
             .bob()
@@ -106,7 +106,7 @@ fn mist(film: Film, walk: &[[f64; 3]]) -> Film {
         .screen(screen::WARM, 0.0, CHANGE)
         .screen(screen::COOL, COOLNESS, CHANGE)
         .title("showcase.film.mist", 5.0)
-        .shot(stretch(&in_mist))
+        .shot(stretch(in_mist))
 }
 
 /// Flies on from the walk's end, `from`, down the meadow to the lake as the mist and the grade
