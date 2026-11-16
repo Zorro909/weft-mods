@@ -18,3 +18,5 @@
 - A line above the hotbar says which city, plot or owner you walk into.
 - Golden Woof, a balance per player shown beside the inventory: `/woof`, `/woof pay`, and
   `/woof give` and `take` for game masters. New players start with `starting_woof`.
+- Market stalls in oak, spruce and birch, built of sixteen blocks on the owner's plot. Up to eight
+  offers sell or buy, for items or Golden Woof, while the owner is away too.

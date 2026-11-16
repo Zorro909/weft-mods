@@ -2,12 +2,13 @@
 //! `data/plotty/`. A changed key or value type takes a new table name, as a changed `SAVE`
 //! component does.
 
-use weftkit::{PlayerKey, Table};
+use weftkit::{PlayerKey, Pos, Table};
 
 use crate::admin::spawn::Spawn;
 use crate::city::grid::CellXZ;
 use crate::city::undo::Build;
 use crate::city::{Cell, City, Counters, Plot};
+use crate::market::StallEntry;
 use crate::players::PlayerEntry;
 
 /// Everyone who has joined: their name when last seen, and what moderators gave them.
@@ -33,3 +34,6 @@ pub static COUNTERS: Table<(), Counters> = Table::named("counters");
 
 /// Each player's Golden Woof. Written at every payment, from every region: write-optimized.
 pub static BALANCES: Table<PlayerKey, u64> = Table::write_optimized("balances");
+
+/// Each stall's owner, by dimension key and its register's position.
+pub static STALLS: Table<(u64, Pos), StallEntry> = Table::named("stalls");

@@ -29,6 +29,10 @@ const GOLD: [Rgba; 3] = [
     [0xf6, 0xd8, 0x6a, 255],
 ];
 const PAPER: Rgba = [0xf2, 0xee, 0xe2, 255];
+/// White cloth.
+const CLOTH: Rgba = [0xee, 0xea, 0xe4, 255];
+/// A till's dark wood, dark and light.
+const TILL: [Rgba; 2] = [[0x4f, 0x2e, 0x1a, 255], [0x6e, 0x42, 0x26, 255]];
 const INK: Rgba = [0x4a, 0x3a, 0x2a, 255];
 const GRASS: [Rgba; 2] = [[0x4f, 0x7a, 0x2c, 255], [0x6a, 0x96, 0x3a, 255]];
 
@@ -112,6 +116,129 @@ const WOOF: [&str; 16] = [
     "................",
 ];
 
+/// A stall's counter: planks laid across, light and dark by wood (`L`, `M`, `D`).
+const STALL_PLANKS: [&str; 16] = [
+    "MMMMMMMMMMMMMMMM",
+    "MLLMMMMMMMMMLMMM",
+    "MMMMMMMMMMMMMMMM",
+    "MMMMMMLMMMMMMMMM",
+    "DDDDDDDDDDDDDDDD",
+    "MMMMMMMMMMMMMMMM",
+    "MMMMLLMMMMMMMMMM",
+    "MMMMMMMMMMMLLMMM",
+    "DDDDDDDDDDDDDDDD",
+    "MMMMMMMMMMMMMMMM",
+    "MMMLMMMMMMMMMMMM",
+    "MMMMMMMMMLLMMMMM",
+    "DDDDDDDDDDDDDDDD",
+    "MMMMMMMMMMMMMMMM",
+    "MMMMMMLLMMMMMMLM",
+    "DDDDDDDDDDDDDDDD",
+];
+
+/// A stall's stock crate: a frame braced with a cross.
+const STALL_CRATE: [&str; 16] = [
+    "DDDDDDDDDDDDDDDD",
+    "DLLLLLLLLLLLLLLD",
+    "DLDMMMMMMMMMMDLD",
+    "DLMDMMMMMMMMDMLD",
+    "DLMMDMMMMMMDMMLD",
+    "DLMMMDMMMMDMMMLD",
+    "DLMMMMDMMDMMMMLD",
+    "DLMMMMMDDMMMMMLD",
+    "DLMMMMMDDMMMMMLD",
+    "DLMMMMDMMDMMMMLD",
+    "DLMMMDMMMMDMMMLD",
+    "DLMMDMMMMMMDMMLD",
+    "DLMDMMMMMMMMDMLD",
+    "DLDMMMMMMMMMMDLD",
+    "DLLLLLLLLLLLLLLD",
+    "DDDDDDDDDDDDDDDD",
+];
+
+/// A stall's post: grain running up.
+const STALL_POST: [&str; 16] = [
+    "DMMLMMDMMLMMDMML",
+    "DMMLMMDMMLMMDMML",
+    "DMMMMMDMMLMMDMMM",
+    "DMMLMMDMMMMMDMML",
+    "DMMLMMDMMLMMDMML",
+    "DMMLMMMMMLMMDMML",
+    "DMMLMMDMMLMMDMML",
+    "DMMMMMDMMLMMMMML",
+    "DMMLMMDMMLMMDMML",
+    "DMMLMMDMMMMMDMML",
+    "DMMLMMDMMLMMDMML",
+    "MMMLMMDMMLMMDMML",
+    "DMMLMMDMMLMMDMMM",
+    "DMMLMMMMMLMMDMML",
+    "DMMLMMDMMLMMDMML",
+    "DMMLMMDMMLMMDMML",
+];
+
+/// A stall's awning: stripes of cloth in the wood's two colors (`a`, `b`).
+const STALL_AWNING: [&str; 16] = [
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+    "aaaabbbbaaaabbbb",
+];
+
+/// The till on a register's counter: dark wood, gold keys and the drawer's handle.
+const STALL_TILL: [&str; 16] = [
+    "rrrrrrrrrrrrrrrr",
+    "rRRRRRRRRRRRRRRr",
+    "rRYYRYYRYYRYYRRr",
+    "rRyyRyyRyyRyyRRr",
+    "rRRRRRRRRRRRRRRr",
+    "rRYYRYYRYYRYYRRr",
+    "rRyyRyyRyyRyyRRr",
+    "rRRRRRRRRRRRRRRr",
+    "rrrrrrrrrrrrrrrr",
+    "rRRRRRRRRRRRRRRr",
+    "rRRRRRGGGGRRRRRr",
+    "rRRRRRyyyyRRRRRr",
+    "rRRRRRRRRRRRRRRr",
+    "rRRRRRRRRRRRRRRr",
+    "rRRRRRRRRRRRRRRr",
+    "rrrrrrrrrrrrrrrr",
+];
+
+/// The woods a stall comes in: their planks dark to light, and their awning's two colors.
+const STALL_WOODS: [(&str, [Rgba; 3], [Rgba; 2]); 3] = [
+    ("oak", OAK, [[0xb3, 0x2b, 0x2b, 255], CLOTH]),
+    (
+        "spruce",
+        [
+            [0x4a, 0x33, 0x1d, 255],
+            [0x6b, 0x4c, 0x2c, 255],
+            [0x86, 0x63, 0x3d, 255],
+        ],
+        [[0x2d, 0x52, 0xa3, 255], CLOTH],
+    ),
+    (
+        "birch",
+        [
+            [0xa8, 0x94, 0x62, 255],
+            [0xc8, 0xb7, 0x82, 255],
+            [0xde, 0xd0, 0xa0, 255],
+        ],
+        [[0x3e, 0x8c, 0x3a, 255], [0xe8, 0xc5, 0x3a, 255]],
+    ),
+];
+
 /// What each letter means.
 fn key() -> Vec<(char, Rgba)> {
     vec![
@@ -127,12 +254,31 @@ fn key() -> Vec<(char, Rgba)> {
         ('Y', GOLD[2]),
         ('p', PAPER),
         ('i', INK),
+        ('r', TILL[0]),
+        ('R', TILL[1]),
     ]
+}
+
+/// `key` with a stall wood's letters: its planks (`D`, `M`, `L`) and awning (`a`, `b`).
+fn wood_key((_, planks, cloth): (&str, [Rgba; 3], [Rgba; 2])) -> Vec<(char, Rgba)> {
+    let mut letters = key();
+    letters.extend([
+        ('D', planks[0]),
+        ('M', planks[1]),
+        ('L', planks[2]),
+        ('a', cloth[0]),
+        ('b', cloth[1]),
+    ]);
+    letters
 }
 
 /// The pixels of `rows`, `scale` times as large; a letter the key lacks is clear.
 fn pixels(rows: &[&str], scale: usize) -> (usize, Vec<u8>) {
-    let key = key();
+    pixels_keyed(rows, scale, &key())
+}
+
+/// `pixels` with letters meaning what `key` says.
+fn pixels_keyed(rows: &[&str], scale: usize, key: &[(char, Rgba)]) -> (usize, Vec<u8>) {
     let side = rows.len() * scale;
     let mut bytes = vec![0; side * side * 4];
     for (y, row) in rows.iter().enumerate() {
@@ -192,6 +338,11 @@ fn art_drawings_are_square() {
         ("city stone", &CITY_STONE),
         ("icon", &ICON),
         ("woof", &WOOF),
+        ("stall planks", &STALL_PLANKS),
+        ("stall crate", &STALL_CRATE),
+        ("stall post", &STALL_POST),
+        ("stall awning", &STALL_AWNING),
+        ("stall till", &STALL_TILL),
     ] {
         assert!(
             rows.iter().all(|row| row.chars().count() == 16),
@@ -207,8 +358,26 @@ fn art_pictures_are_written() {
         ("textures/block/city_stone.png", &CITY_STONE, 1),
         ("textures/gui/icon.png", &ICON, 4),
         ("textures/gui/woof.png", &WOOF, 1),
+        ("textures/block/stall_till.png", &STALL_TILL, 1),
     ] {
         let (side, pixels) = pixels(rows, scale);
         save_or_check(&asset(path), &png(side, &pixels));
+    }
+}
+
+#[test]
+fn art_stall_woods_are_written() {
+    for wood in STALL_WOODS {
+        let key = wood_key(wood);
+        for (part, rows) in [
+            ("planks", &STALL_PLANKS),
+            ("crate", &STALL_CRATE),
+            ("post", &STALL_POST),
+            ("awning", &STALL_AWNING),
+        ] {
+            let (side, pixels) = pixels_keyed(rows, 1, &key);
+            let path = format!("textures/block/{}_stall_{part}.png", wood.0);
+            save_or_check(&asset(&path), &png(side, &pixels));
+        }
     }
 }

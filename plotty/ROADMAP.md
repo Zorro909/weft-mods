@@ -4,19 +4,13 @@ What Plotty is still to get, in the order it comes.
 
 ## Next
 
-### Market stalls
+### Market places
 
-A 3 × 2 × 3 multiblock in three woods (oak with red and white, spruce with blue and white, birch
-with green and yellow), each its own set of blocks: register, counter, crate, post and awning.
-
-- Eight offers and 27 stock slots. An offer gives items for items or Woof, or buys them: both
-  directions use one offer model.
-- A shop screen for customers and a setup screen for the owner; the crosshair panel shows the
-  owner and offers without opening anything.
-- On the owner's own plot a stall is free. On a market square the six places are rented for 1, 7
-  or 30 real days (`rent_woof` in the settings); the rent leaves the game. When it ends the stall
-  closes, and after `rent_grace_days` moderators may clear it.
-- `/market rent`, `/market places`.
+- On a market square the six places are rented for 1, 7 or 30 real days (`rent_woof` in the
+  settings); the rent leaves the game. When it ends the stall closes, and after
+  `rent_grace_days` moderators may clear it. `/market rent`, `/market places`, a rent post at
+  each place.
+- Looking at a stall shows its owner and offers in base's crosshair panel.
 - At join, a note of what your stalls sold while you were away.
 
 ### A film

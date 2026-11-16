@@ -28,6 +28,8 @@ pub enum Action {
     Use,
     /// Opening a market stall's screen.
     UseStall,
+    /// Placing or breaking a block of a market stall.
+    BuildStall,
     /// One player hurting another.
     PlayerFight,
     /// A player hurting an animal or another creature.
@@ -39,7 +41,10 @@ pub enum Action {
 /// Whether `action` may happen in `zone`. `bypass` is a moderator who switched protection off for
 /// themselves; it lets them change and use anything, never fight where fighting is off.
 pub fn allowed(zone: Zone, action: Action, bypass: bool, wilderness: Wilderness) -> bool {
-    let by_player = matches!(action, Action::Change | Action::Use | Action::HurtCreature);
+    let by_player = matches!(
+        action,
+        Action::Change | Action::Use | Action::BuildStall | Action::HurtCreature
+    );
     if bypass && by_player {
         return true;
     }
@@ -51,9 +56,14 @@ pub fn allowed(zone: Zone, action: Action, bypass: bool, wilderness: Wilderness)
     }
 }
 
-/// Outside towns everything goes, except changing blocks where the wilderness is closed.
+/// Outside towns everything goes, except changing blocks where the wilderness is closed, and
+/// stalls, which stand on plots.
 fn wild(action: Action, wilderness: Wilderness) -> bool {
-    action != Action::Change || wilderness == Wilderness::Open
+    match action {
+        Action::Change => wilderness == Wilderness::Open,
+        Action::BuildStall => false,
+        _ => true,
+    }
 }
 
 #[cfg(test)]
@@ -101,6 +111,24 @@ mod tests {
         assert!(
             !may(Zone::FreePlot, Action::Change),
             "a free plot waits for its claim"
+        );
+    }
+
+    #[test]
+    fn stalls_stand_on_their_owners_plots_only() {
+        assert!(may(Zone::OwnPlot, Action::BuildStall), "your plot");
+        for zone in [
+            Zone::Wilderness,
+            Zone::Spawn,
+            Zone::Public,
+            Zone::FreePlot,
+            Zone::OthersPlot,
+        ] {
+            assert!(!may(zone, Action::BuildStall), "{zone:?}");
+        }
+        assert!(
+            may(Zone::Wilderness, Action::UseStall),
+            "trading goes anywhere"
         );
     }
 
