@@ -1,12 +1,15 @@
 //! What the player sees while a film plays: the film camera, their own player moved along with
-//! it, and the film's text on screen.
+//! it, the film's text on screen and its screen effects.
 
 use std::sync::Mutex;
 
-use weft_sdk::abi::comp::camera::{DETACHED, NO_INTERACT};
-use weft_sdk::abi::{CameraArgs, CameraPose, PlayerControl, control_mask as cm};
+use weft_sdk::abi::comp::camera::{DETACHED, EFFECTS, NO_INTERACT};
+use weft_sdk::abi::{CameraPose, PlayerControl, control_mask as cm};
+use weft_sdk::environment::EnvironmentWeight;
 use weft_sdk::settings::FOV;
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, CameraFrame, CameraMode, Client, Config, Environment, Output, Registry, Shot, Vec3,
+};
 
 use crate::lock;
 use crate::playback::Title;
@@ -26,30 +29,42 @@ const FADE: f32 = 0.6;
 const TITLE_DISTANCE: f64 = 12.0;
 /// Where titles sit, as a share of the half picture below the middle.
 const TITLE_LOW: f64 = 0.78;
+/// How much wider the engine draws a flying player's view, times `core:fov_effects`
+/// (`ease_camera` in Weft's `client/mod.rs`). A film's player always flies, and the film
+/// camera's `EFFECTS` let that widening through, so its field of view is narrowed by as much.
+const FLYING_WIDER: f32 = 0.1;
+/// The share of that widening the player chose to see.
+static FOV_EFFECTS: Config<f32> = Config::named("core:fov_effects");
+
+/// The environment source the film's screen effects are in.
+const SCREENS: &str = "film_screens";
+/// After every other source, the film's weather (500) too, so a fade to black darkens all.
+const SCREENS_PRIORITY: i32 = 1000;
 
 pub fn register(r: &mut Registry) {
-    // No body, hand, HUD or effects: what is seen is the film's alone, its field of view too.
-    // The keys and clicks that would move the player or use blocks do nothing meanwhile.
+    // No body, hand or HUD: what is seen is the film's alone, its field of view too. `EFFECTS`
+    // for the screen effects, which the engine draws only through cameras with it; the
+    // walking bob it also brings stays still, as the player flies. The keys and clicks that
+    // would move the player or use blocks do nothing meanwhile.
     r.camera(&FILM)
-        .shot(Shot::new(&[DETACHED, NO_INTERACT], film_shot));
+        .shot(Shot::new(&[DETACHED, NO_INTERACT, EFFECTS], film_shot));
 }
 
 /// The film camera's frame: what `put` showed last, or the player's eyes before any film. Frame
 /// hooks run before the camera moves, so a film's pose shows the same frame, not the next.
-fn film_shot(args: &mut CameraArgs) {
-    args.out = match *lock(&SHOWN) {
+fn film_shot(frame: &mut CameraFrame<'_>) {
+    frame.out = match *lock(&SHOWN) {
         Some(pose) => CameraPose {
             pos: pose.eye,
             yaw: pose.yaw.to_radians() as f32,
             pitch: pose.pitch.to_radians() as f32,
             roll: pose.roll.to_radians() as f32,
-            // The camera's field of view is a multiple of the player's.
-            fov: pose.fov / FOV.get(),
+            fov: fov_multiple(pose.fov, FOV.get(), FOV_EFFECTS.get()),
         },
         None => CameraPose {
-            pos: args.eye,
-            yaw: args.eye_yaw,
-            pitch: args.eye_pitch,
+            pos: frame.eye,
+            yaw: frame.eye_yaw,
+            pitch: frame.eye_pitch,
             ..CameraPose::DEFAULT
         },
     };
@@ -80,6 +95,33 @@ pub fn put(c: &Client, pose: Pose) {
         flying: 1,
         ..PlayerControl::DEFAULT
     });
+}
+
+/// What the camera's field of view is given as: a multiple of the player's own `own`, which
+/// the engine widens for flying by `FLYING_WIDER` times `fov_effects`.
+fn fov_multiple(fov: f32, own: f32, fov_effects: f32) -> f32 {
+    fov / own / (1.0 + FLYING_WIDER * fov_effects)
+}
+
+/// Shows the film's screen effects at their strengths, by shader name.
+pub fn screens(c: &Client, effects: &[(String, f32)]) {
+    if effects.is_empty() {
+        clear_screens(c);
+        return;
+    }
+    let mut layer = Environment::new(SCREENS).priority(SCREENS_PRIORITY);
+    layer.post = (effects.iter())
+        .map(|(shader, strength)| EnvironmentWeight {
+            name: shader.clone(),
+            weight: *strength,
+        })
+        .collect();
+    c.environment(&layer);
+}
+
+/// Takes the film's screen effects off at once.
+pub fn clear_screens(c: &Client) {
+    c.clear_environment(SCREENS);
 }
 
 fn eye_height(c: &Client) -> f64 {
@@ -172,6 +214,17 @@ mod tests {
             "as far left as it was down"
         );
         assert!((banked.z - below.z).abs() < 1e-9, "as far ahead");
+    }
+
+    #[test]
+    fn the_film_camera_takes_back_the_widening_for_flying() {
+        let widened = 1.0 + FLYING_WIDER;
+        let own = fov_multiple(70.0, 70.0, 1.0) * 70.0 * widened;
+        assert!((own - 70.0).abs() < 1e-4, "the player's own view: {own}");
+        let narrow = fov_multiple(35.0, 70.0, 1.0) * 70.0 * widened;
+        assert!((narrow - 35.0).abs() < 1e-4, "a narrower shot: {narrow}");
+        let off = fov_multiple(70.0, 70.0, 0.0);
+        assert_eq!(off, 1.0, "nothing to take back with the effects off");
     }
 
     #[test]

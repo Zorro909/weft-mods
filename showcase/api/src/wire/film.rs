@@ -4,6 +4,7 @@
 
 use super::Wire;
 use crate::film::{Ease, Look, Path, Shot, Step};
+use crate::weather::{Acoustics, Fog, Weather};
 
 impl Wire for Step {
     fn put(&self, out: &mut Vec<u8>) {
@@ -36,6 +37,20 @@ impl Wire for Step {
                 at.put(out);
                 secs.put(out);
             }
+            Step::Weather(weather) => {
+                6u8.put(out);
+                weather.put(out);
+            }
+            Step::Screen {
+                shader,
+                strength,
+                secs,
+            } => {
+                7u8.put(out);
+                shader.put(out);
+                strength.put(out);
+                secs.put(out);
+            }
         }
     }
 
@@ -57,7 +72,69 @@ impl Wire for Step {
                 at: Wire::get(bytes)?,
                 secs: Wire::get(bytes)?,
             },
+            6 => Step::Weather(Wire::get(bytes)?),
+            7 => Step::Screen {
+                shader: Wire::get(bytes)?,
+                strength: Wire::get(bytes)?,
+                secs: Wire::get(bytes)?,
+            },
             _ => return None,
+        })
+    }
+}
+
+impl Wire for Weather {
+    fn put(&self, out: &mut Vec<u8>) {
+        self.fog.put(out);
+        self.sky.put(out);
+        self.sunlight.put(out);
+        self.clouds.put(out);
+        self.cloud_color.put(out);
+        self.acoustics.put(out);
+        self.fade.put(out);
+    }
+
+    fn get(bytes: &mut &[u8]) -> Option<Weather> {
+        Some(Weather {
+            fog: Wire::get(bytes)?,
+            sky: Wire::get(bytes)?,
+            sunlight: Wire::get(bytes)?,
+            clouds: Wire::get(bytes)?,
+            cloud_color: Wire::get(bytes)?,
+            acoustics: Wire::get(bytes)?,
+            fade: Wire::get(bytes)?,
+        })
+    }
+}
+
+impl Wire for Fog {
+    fn put(&self, out: &mut Vec<u8>) {
+        self.color.put(out);
+        self.start.put(out);
+        self.end.put(out);
+    }
+
+    fn get(bytes: &mut &[u8]) -> Option<Fog> {
+        Some(Fog {
+            color: Wire::get(bytes)?,
+            start: Wire::get(bytes)?,
+            end: Wire::get(bytes)?,
+        })
+    }
+}
+
+impl Wire for Acoustics {
+    fn put(&self, out: &mut Vec<u8>) {
+        self.cutoff_hz.put(out);
+        self.reverb.put(out);
+        self.volume.put(out);
+    }
+
+    fn get(bytes: &mut &[u8]) -> Option<Acoustics> {
+        Some(Acoustics {
+            cutoff_hz: Wire::get(bytes)?,
+            reverb: Wire::get(bytes)?,
+            volume: Wire::get(bytes)?,
         })
     }
 }
@@ -71,6 +148,7 @@ impl Wire for Shot {
         self.fov.put(out);
         self.roll.put(out);
         self.blend.put(out);
+        self.bob.put(out);
     }
 
     fn get(bytes: &mut &[u8]) -> Option<Shot> {
@@ -82,6 +160,7 @@ impl Wire for Shot {
             fov: Wire::get(bytes)?,
             roll: Wire::get(bytes)?,
             blend: Wire::get(bytes)?,
+            bob: Wire::get(bytes)?,
         })
     }
 }

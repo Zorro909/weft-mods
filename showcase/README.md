@@ -63,12 +63,23 @@ steps:
 
 | Step | |
 |---|---|
-| `shot(..)` | A camera move: `orbit`, `flyby` (a smooth curve through points), `dolly` (a straight line), `crane` (up or down beside a point), `hold` (still), `follow` (a subject). Each takes `.secs` (5 unless told), `.ease` (`Ease::Smooth` unless told; `Linear`, `In`, `Out`, or `Speeds { from, to }` in blocks a second at its two ends, so shots that follow on from each other go on without stopping between), `.look(..)` or `.look_at(point)`, `.fov(from, to)` (the player's own unless told), `.roll(from, to)` in degrees (level unless told; more than 0 banks the camera right) and `.blend(secs)`, which brings the camera over from where the shot before ended instead of cutting. Orbits and cranes also take `.arc(from, to)` in degrees, `.radius(from, to)` and `.height(from, to)`. |
+| `shot(..)` | A camera move: `orbit`, `flyby` (a smooth curve through points), `dolly` (a straight line), `crane` (up or down beside a point), `hold` (still), `follow` (a subject). Each takes `.secs` (5 unless told), `.ease` (`Ease::Smooth` unless told; `Linear`, `In`, `Out`, or `Speeds { from, to }` in blocks a second at its two ends, so shots that follow on from each other go on without stopping between), `.look(..)` or `.look_at(point)`, `.fov(from, to)` (the player's own unless told), `.roll(from, to)` in degrees (level unless told; more than 0 banks the camera right), `.blend(secs)`, which brings the camera over from where the shot before ended instead of cutting, and `.bob()`, which sways the camera as a walking player's eyes for a shot at walking pace (fullest from 2 blocks a second; shots that follow on with it sway on in step). Orbits and cranes also take `.arc(from, to)` in degrees, `.radius(from, to)` and `.height(from, to)`. |
 | `wait(secs)` | The camera stays. |
 | `wait_for(name, max)` | The camera stays until your mod calls `signal(world, player, name)` (or `set.signal(name)`), at most `max` seconds. |
 | `title(key, secs)` | A line from your lang files on screen while the film goes on. |
 | `cue(name)` | Runs your `on_cue(name, ..)` on the server: start the machines, fill a chest. Block entities only exist after the tick their block was placed in, so fill them here. |
 | `menu(name, at, secs)` | Opens the menu `name` (`mymod:press`) on the block `at` in the set, as if the camera had used it, and closes it after `secs`, while the film goes on. Shots after it go on behind the menu. |
+| `weather(w)` | Fog, sky, sunlight, clouds and how sound carries from here on, while the film goes on: a `Weather`, fading in over its `fade` (2 seconds of film unless told), eased as screen effects are, so it starts and ends at the same moments in a rehearsal and a take. A later `weather` takes over, crossfading over its own `fade`: what both set goes straight from one to the other. `clear_weather()` fades back to the world's own over the weather's `fade`; the film's end lifts it at once, as it does screen effects. |
+| `screen(shader, strength, secs)` | The screen effect `shader` (a post shader by its full name) going to `strength`, 0 off to 1 in full, over `secs` while the film goes on, and staying there until a later `screen` of the same shader or the film's end. `showcase_api::screen` has `BLACK` and `WHITE` for fades and `WARM` and `COOL` for grading; a post shader of your own mod (`shaders/post/<name>.wgsl`) works too. |
+| `fade_out(secs)` | The picture fades to black over `secs`, the camera holding where it is. |
+| `fade_in(secs)` | The picture comes back from black over `secs`, while the shots after it go on: put it before the shot it opens. A film that opens on black starts with `screen(screen::BLACK, 1.0, 0.0)`. |
+
+A `Weather` is `Weather::dusk()`, `mist()` or `underground()`, or your own:
+`Weather::new().fog(0x9AA5AD, 2.0, 40.0).sky(0x8D99A3).sunlight(0.5).clouds(0.0)`, with colours
+as `0xRRGGBB`, fog `start` and `end` in blocks, sunlight and clouds from 0 (none) to 1, and
+`.cloud_color(rgb)`, `.acoustics(cutoff_hz, reverb, volume)` and `.fade(secs)`. What it leaves
+out stays as the world has it. It changes only what the watching player sees and hears: the
+world's time and weather go on as they are, and dusk is a look, not an evening.
 
 Where a shot looks: `Look::At(point)`, `Pan(from, to)`, `Subject(name)`, `Ahead` along the
 path (a `hold` keeps looking the way the camera did), fixed `Angles`, or `Along(angles)`, a yaw
@@ -88,9 +99,17 @@ and yours built with `--features showcase` in the game's `mods/`. The film makes
 spectator, sets noon and clear weather, and gives you back your game mode and place when it is
 over, or after ten seconds if no mod sends the film.
 
+Titles stay on screen through fades, which darken only the world.
+
 Every film, however it starts, is seen through showcase's own camera mode: F5 and the free
 camera (P) are locked while it plays, movement keys and clicks do nothing, and the view eases
-back to your own camera at its end.
+back to your own camera at its end. It shows the world as you would see it there: what is over
+the screen under water, and screen effects other mods put on.
+
+`/showcase play showcase:demo` is a short film of the steps that change a film's look, made
+for the meadow by the lake where seed 42 starts a player: dusk with a warm grade, a walk as mist
+rolls in and the grade turns cool, a flight down to the lake as both lift, and a dive under its
+water.
 
 `/showcase gallery <mod>` needs no film: it puts every block of the mod on a plinth in a row
 from where you stand and shows each in turn under its name.

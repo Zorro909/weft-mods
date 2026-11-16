@@ -10,7 +10,7 @@ mod hamlets;
 mod town;
 mod village;
 
-use showcase_api::{Ease, Film, Look, Path, Pos, Shot, Step, film, flyby, hold};
+use showcase_api::{Ease, Film, Look, Path, Pos, Shot, Step, film, flyby, hold, screen};
 use weft_sdk::*;
 
 /// Mid-morning: the film plays into the early afternoon. The showcase sets noon when it is
@@ -23,7 +23,9 @@ pub fn register(r: &mut Registry) {
 }
 
 fn journey() -> Film {
-    let film = hamlets::first(Film::new().cue("morning"));
+    let opening = Film::new().screen(screen::BLACK, 1.0, 0.0).cue("morning");
+    // Fades run in linear light, so one reads on screen at about a third of its length.
+    let film = hamlets::first(opening.fade_in(4.0));
     let film = flights::to_the_village(film);
     let film = village::village(film);
     let film = flights::to_the_town(film);
@@ -78,8 +80,8 @@ fn toward(eye: [f64; 3], at: [f64; 3]) -> [f32; 2] {
     [yaw as f32, pitch as f32]
 }
 
-/// `film`, written in world coordinates, with every place counted from `origin` instead: the
-/// block the film starts at, from which the showcase counts.
+/// `film`, written in world coordinates, with every place (shots and menus) counted from
+/// `origin` instead: the block the film starts at, from which the showcase counts.
 fn from(origin: Pos, film: Film) -> Film {
     let o = [origin.x, origin.y, origin.z].map(f64::from);
     let at = |p: [f64; 3]| [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
@@ -109,6 +111,11 @@ fn from(origin: Pos, film: Film) -> Film {
             };
             Step::Shot(shot)
         }
+        Step::Menu { menu, at, secs } => Step::Menu {
+            menu,
+            at: Pos::new(at.x - origin.x, at.y - origin.y, at.z - origin.z),
+            secs,
+        },
         step => step,
     });
     Film {
@@ -126,7 +133,8 @@ mod tests {
     fn places_are_counted_from_where_the_film_starts() {
         let film = Film::new()
             .shot(dolly([10.0, 70.0, -5.0], [20.0, 70.0, -5.0]).look_at([0.0, 64.0, 0.0]))
-            .shot(orbit([1.0, 2.0, 3.0], 5.0));
+            .shot(orbit([1.0, 2.0, 3.0], 5.0))
+            .menu("base:chest", Pos::new(12, 65, -8), 4.0);
         let moved = from(Pos::new(10, 64, -10), film);
         let Step::Shot(dolly) = &moved.steps[0] else {
             panic!("a shot")
@@ -148,6 +156,10 @@ mod tests {
             ([-9.0, -62.0, 13.0], [5.0; 2]),
             "only the center moves"
         );
+        let Step::Menu { at, .. } = &moved.steps[2] else {
+            panic!("a menu")
+        };
+        assert_eq!(*at, Pos::new(2, 1, 2), "the block the menu opens on");
     }
 
     #[test]

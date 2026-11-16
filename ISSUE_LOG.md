@@ -7,7 +7,8 @@ the smallest fix, so it can be turned into an upstream issue. Newest first.
 ## `schedule_tick` does nothing unless some mod listens to `BLOCK_TICK`
 
 Found 2026-11-12, while building cogwork's film. Where: Weft v26.11.4, `crates/sdk/src/extend.rs`
-and `crates/engine/src/host.rs`. Status: not yet reported.
+and `crates/engine/src/host.rs`. Status: fixed upstream in v26.11.5, whose `find_event` answers
+an event's id whether or not anyone listens (`crates/engine/src/host.rs:1959`).
 
 **What breaks.** `World::schedule_tick(pos, ticks)` asks for the block's own tick, which the
 engine answers by calling the block's `on_scheduled`. With no mod listening to the `BLOCK_TICK`
@@ -34,7 +35,10 @@ into one tank.
 resolves `BLOCK_TICK` by name alone for timers, or `find_event` answers the id of an engine event
 that the engine acts on itself.
 
-**Here meanwhile.** `cogwork/src/tank/mod.rs` registers an empty `BLOCK_TICK` handler.
+**Here meanwhile.** Up to v26.11.4, `cogwork/src/tank/mod.rs` registered an empty `BLOCK_TICK`
+handler. At v26.11.5 it is gone: with cogwork alone with base, testkit and testmod, none of which
+listens to `BLOCK_TICK`, four tanks set by `/setblock` joined (`/tk prop` said `true` on each
+joined side).
 
 ## The mod index moves only the mod's own `weft_sdk` line to a new Weft release
 

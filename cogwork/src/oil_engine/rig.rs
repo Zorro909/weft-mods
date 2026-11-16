@@ -83,11 +83,12 @@ impl OilEngine {
 }
 
 /// Keeps the rig of the engine `id`, built as `cube`, on its top facing its front, starts its
-/// stroke when one begins at `time`, and while it runs lets off vapor, with a boom and a puff
-/// at each beat.
+/// stroke when one begins at `time`, and while it runs hazes the air round it and lets off
+/// vapor, with a boom and a puff at each beat.
 pub fn show(world: &World, id: u64, cube: Cube, engine: &mut OilEngine, time: u64) {
     let top = cube.middle.center().offset(0.0, TOP_ABOVE_MIDDLE, 0.0);
     engine.rig = crate::owned::place(world, id, engine.rig, &RIG, top, yaw(cube.front));
+    super::haze::show(world, engine);
     if !engine.is_stroking() {
         return;
     }

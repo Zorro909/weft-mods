@@ -7,3 +7,9 @@ showcase.camera.marked = Point {0} marked
 showcase.camera.too_few = Mark at least two points with /camera point first
 showcase.camera.cleared = Points forgotten
 showcase.gallery.empty = {0} has no blocks to show
+
+# Film titles
+showcase.film.dusk = Dusk: fog, sky, sunlight and a warm grade
+showcase.film.mist = Mist rolls in at a walking pace, the grade turning cool with it
+showcase.film.clearing = The mist and the grade lift together on the way to the lake
+showcase.film.under_water = Under water, the screen as a player sees it

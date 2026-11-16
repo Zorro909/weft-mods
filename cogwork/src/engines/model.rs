@@ -1,6 +1,10 @@
 //! An engine's block: a base plate on the side it was placed against and a trunk pointing the
 //! other way that glows with its heat. Both are the Blockbench model `models/block/engine.json`,
 //! lying on the floor with the trunk up. The piston riding the trunk is an entity (`piston`).
+//!
+//! The engines' items stand that way too, cool, through `models/item/<kind>_engine.json`, which
+//! name `engine.json` as their parent and set only its textures. Without them an item would show
+//! its block facing south, lying on its side.
 
 use weft_sdk::*;
 
@@ -70,16 +74,41 @@ pub fn output(world: &World, pos: Pos) -> Option<Dir> {
 mod tests {
     use super::*;
 
+    /// The engines' kinds, as their blocks and textures are named.
+    const KINDS: [&str; 2] = ["spring", "ember"];
+
     #[test]
     fn the_engines_have_their_model_and_its_textures() {
         let model = format!("models/block/{MODEL}.json");
         assert!(crate::has_asset(&model), "no {model}");
-        let plates = ["spring", "ember"]
+        let plates = KINDS
             .into_iter()
             .flat_map(|kind| ["top", "side"].map(|face| format!("engine_{kind}_plate_{face}")));
         for texture in plates.chain(TRUNKS.map(String::from)) {
             let file = format!("textures/block/{texture}.png");
             assert!(crate::has_asset(&file), "no {file}");
+        }
+    }
+
+    #[test]
+    fn each_engine_item_is_the_block_model_upright_and_cool() {
+        let items = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/models/item");
+        for kind in KINDS {
+            let file = items.join(format!("{kind}_engine.json"));
+            let text = std::fs::read_to_string(&file).expect("each engine item has a model");
+            let model: serde_json::Value =
+                serde_json::from_str(&text).expect("an item model is JSON");
+            let shape = format!("block/{MODEL}");
+            assert_eq!(model["parent"], shape, "{kind}: the engine's shape");
+            // Its own plate, and the trunk cool.
+            let textures = [
+                ("plate_top", format!("block/engine_{kind}_plate_top")),
+                ("plate_side", format!("block/engine_{kind}_plate_side")),
+                ("trunk", format!("block/{}", TRUNKS[0])),
+            ];
+            for (place, texture) in textures {
+                assert_eq!(model["textures"][place], texture, "{kind}: its {place}");
+            }
         }
     }
 }

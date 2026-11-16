@@ -1,13 +1,15 @@
 //! A film playing: which step it is at, how far into it, and where that puts the camera. Plain
 //! data stepped by the frame's time, so that the director only applies what comes out.
 
+mod stops;
+
 use std::collections::HashSet;
 
-use showcase_api::{Path, Pos, Step, Timeline};
-use weft_sdk::Vec3;
+use showcase_api::{Pos, Step, Timeline};
 
-use crate::rig::math::length;
 use crate::rig::{Pose, Rig, Subjects};
+use crate::screens::Screens;
+use crate::weather::{Layer, WeatherFade};
 
 /// Most blocks between two places the world is loaded at before a film, well inside what the
 /// world loads round the camera.
@@ -46,8 +48,12 @@ pub struct Playback {
     start: Pose,
     /// The player's field of view, for shots that keep it.
     own_fov: f32,
+    /// Blocks walked by the swaying shots so far, for the next to sway on in step.
+    walked: f64,
     pub titles: Vec<Title>,
     pub menu: Option<ShownMenu>,
+    weather: WeatherFade,
+    pub screens: Screens,
 }
 
 impl Playback {
@@ -63,8 +69,11 @@ impl Playback {
             pose: from,
             start: from,
             own_fov: from.fov,
+            walked: 0.0,
             titles: Vec::new(),
             menu: None,
+            weather: WeatherFade::default(),
+            screens: Screens::default(),
         }
     }
 
@@ -74,6 +83,14 @@ impl Playback {
 
     pub fn elapsed(&self) -> f32 {
         self.elapsed
+    }
+
+    /// The film's weather now; none once the film is over.
+    pub fn weather(&self) -> Vec<Layer> {
+        if self.done() {
+            return Vec::new();
+        }
+        self.weather.at(self.elapsed)
     }
 
     /// The step of the film that plays now, counted from 0.
@@ -100,7 +117,9 @@ impl Playback {
         while let Some(used) = self.run_step(signals, subjects, &mut cues) {
             self.clock = (self.clock - used).max(0.0);
             self.index += 1;
-            self.rig = None;
+            if let Some(rig) = self.rig.take() {
+                self.walked = rig.walked();
+            }
             self.start = self.pose;
         }
         let now = self.elapsed;
@@ -140,6 +159,20 @@ impl Playback {
                 });
                 Some(0.0)
             }
+            Step::Weather(weather) => {
+                let now = self.elapsed - clock;
+                self.weather.set(weather.clone(), now);
+                Some(0.0)
+            }
+            Step::Screen {
+                shader,
+                strength,
+                secs,
+            } => {
+                let now = self.elapsed - clock;
+                self.screens.set(shader, *strength, *secs, now);
+                Some(0.0)
+            }
             Step::Wait(secs) => (clock >= *secs).then_some(*secs),
             Step::WaitFor { name, max } => {
                 if signals.remove(name) {
@@ -159,67 +192,22 @@ impl Playback {
         let Some(Step::Shot(shot)) = self.steps.get(self.index) else {
             return None;
         };
-        let rig = self
-            .rig
-            .get_or_insert_with(|| Rig::new(shot.clone(), self.origin, self.own_fov));
+        let rig = self.rig.get_or_insert_with(|| {
+            Rig::new(shot.clone(), self.origin, self.own_fov).after_walking(self.walked)
+        });
         let secs = rig.secs();
         self.pose = rig.pose(self.clock.min(secs), subjects, self.start);
         (self.clock >= secs).then_some(secs)
-    }
-
-    /// Where the camera is as the film starts: the start of its first shot. `None` for a film
-    /// that opens following a subject, or has no shots.
-    pub fn opening(&self) -> Option<Pose> {
-        let shot = self.steps.iter().find_map(|step| match step {
-            Step::Shot(shot) => Some(shot),
-            _ => None,
-        })?;
-        if matches!(shot.path, Path::Follow { .. }) {
-            return None;
-        }
-        let rig = Rig::new(shot.clone().blend(0.0), self.origin, self.own_fov);
-        Some(rig.pose(0.0, &|_: &str| None, self.start))
-    }
-
-    /// Eye positions the film's shots pass, to load the world around before it starts: the
-    /// start and end of every shot that doesn't follow a subject, and points at most
-    /// `STOP_SPACING` blocks apart between, so a long flight finds the land along it ready.
-    /// The film's opening comes again last, so the world there is still loaded when it starts.
-    pub fn stops(&self) -> Vec<Vec3> {
-        let none = |_: &str| None;
-        let mut out = Vec::new();
-        for step in &self.steps {
-            let Step::Shot(shot) = step else { continue };
-            if matches!(shot.path, Path::Follow { .. }) {
-                continue;
-            }
-            let rig = Rig::new(shot.clone().blend(0.0), self.origin, self.own_fov);
-            let eye = |i: usize| {
-                rig.pose(rig.secs() * i as f32 / SAMPLES as f32, &none, self.start)
-                    .eye
-            };
-            let (mut last, mut before) = (eye(0), eye(0));
-            out.push(last);
-            for i in 1..=SAMPLES {
-                let next = eye(i);
-                if length(next - last) > STOP_SPACING {
-                    out.push(before);
-                    last = before;
-                }
-                before = next;
-            }
-            out.push(before);
-        }
-        out.extend(self.opening().map(|pose| pose.eye));
-        out
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use showcase_api::{Film, dolly, follow, hold};
+    use showcase_api::{Film, Weather, dolly, hold};
+    use weft_sdk::Vec3;
 
     use super::*;
+    use crate::weather::Part;
 
     const START: Pose = Pose {
         eye: Vec3::ZERO,
@@ -366,42 +354,65 @@ mod tests {
     }
 
     #[test]
-    fn the_world_is_loaded_along_every_shot_but_a_follow() {
-        let film = Film::new()
-            .shot(dolly([0.0; 3], [10.0, 0.0, 0.0]))
-            .shot(follow("item", [0.0, 1.0, 0.0]));
-        let p = play_at(Pos::new(100, 64, 0), film);
-        let stops = [100.0, 110.0, 100.0].map(|x| Vec3::new(x, 64.0, 0.0));
-        assert_eq!(
-            p.stops(),
-            stops,
-            "the dolly's start and end in the world, then its start again"
-        );
+    fn a_fade_out_holds_the_camera_until_the_picture_is_black() {
+        let film = Film::new().fade_out(2.0).fade_in(1.0).cue("after");
+        let mut p = play(film);
+        let mut signals = HashSet::new();
+        assert!(p.advance(1.5, &mut signals, &none).is_empty(), "fading");
+        let black = |p: &Playback| p.screens.at(p.elapsed()).first().map_or(0.0, |s| s.1);
+        assert!(black(&p) > 0.5 && black(&p) < 1.0, "on its way");
+        assert_eq!(p.advance(0.5, &mut signals, &none), ["after"], "on at 2 s");
+        assert_eq!(black(&p), 1.0, "black then");
+        p.advance(1.0, &mut signals, &none);
+        assert_eq!(black(&p), 0.0, "back a second later");
     }
 
     #[test]
-    fn the_film_opens_where_its_first_shot_starts() {
+    fn swaying_shots_sway_on_in_step_across_a_title() {
+        let walk = |z: f64| dolly([0.0, 0.0, z], [0.0, 0.0, z - 10.0]).bob().secs(2.0);
         let film = Film::new()
-            .title("mymod.film.tour", 4.0)
-            .shot(dolly([0.0; 3], [10.0, 0.0, 0.0]).look_at([0.0, 0.0, -10.0]));
-        let opening = play_at(Pos::new(100, 64, 0), film)
-            .opening()
-            .expect("a shot");
-        assert_eq!(opening.eye, Vec3::new(100.0, 64.0, 0.0), "where it starts");
-        assert!(opening.yaw.abs() < 1e-9, "looking north: {}", opening.yaw);
+            .shot(walk(0.0))
+            .title("mymod.title", 3.0)
+            .shot(walk(-10.0));
+        let mut p = play(film);
+        p.advance(2.05, &mut HashSet::new(), &none);
+        assert_eq!(p.step(), 2, "into the second walk");
+        assert!((p.walked - 10.0).abs() < 1e-6, "ten blocks on");
     }
 
     #[test]
-    fn a_long_flight_is_loaded_all_along() {
-        let film = Film::new().shot(dolly([0.0; 3], [1000.0, 0.0, 0.0]));
-        let mut stops = play(film).stops();
-        stops.pop();
-        let mut gaps = stops.windows(2).map(|w| w[1].x - w[0].x);
-        assert!(gaps.all(|gap| gap <= STOP_SPACING), "{stops:?}");
+    fn a_weather_fades_with_film_time_and_the_film_end_lifts_it() {
+        let film = Film::new()
+            .wait(1.0)
+            .weather(Weather::dusk().fade(2.0))
+            .wait(4.0)
+            .weather(Weather::mist().fade(2.0))
+            .wait(2.0);
+        let mut p = play(film);
+        let mut signals = HashSet::new();
+        let coming = |p: &Playback| {
+            (p.weather().into_iter())
+                .find(|layer| layer.part == Part::Coming)
+                .map(|layer| (layer.weather, layer.weight))
+        };
+        p.advance(2.0, &mut signals, &none);
         assert_eq!(
-            stops.last(),
-            Some(&Vec3::new(1000.0, 0.0, 0.0)),
-            "to its end"
+            coming(&p),
+            Some((Weather::dusk().fade(2.0), 0.5)),
+            "dusk half in"
         );
+        p.advance(2.0, &mut signals, &none);
+        assert_eq!(
+            coming(&p),
+            Some((Weather::dusk().fade(2.0), 1.0)),
+            "in by 3 s"
+        );
+        p.advance(2.0, &mut signals, &none);
+        let layers = p.weather();
+        assert_eq!(layers.len(), 3, "dusk going as mist comes: {layers:?}");
+        assert_eq!(coming(&p).map(|(_, weight)| weight), Some(0.5));
+        p.advance(1.0, &mut signals, &none);
+        assert!(p.done(), "over at 7 s");
+        assert_eq!(p.weather(), [], "lifted at its end, mist half in or not");
     }
 }

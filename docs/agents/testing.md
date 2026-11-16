@@ -27,14 +27,16 @@ From inside `Weft/`, with your mods installed (they load for every test):
 
 ### Known failures
 
-At Weft v26.11.4, checked with and without the mods of this repository:
+At Weft v26.11.5, checked with and without the mods of this repository:
 
 | Test | What happens |
 |---|---|
 | `ctm_any_model` | Fails alone too: "plant: green in the middle" and more. The engine's, not a mod's |
-| `edit_while_loading` | Fails alone too: "shown after 2456 ms". The engine's, not a mod's |
+| `clouds` | Fails with structgen, alone too: "thunder darkens clouds" by about 10 where it wants 15; about 19 without it. structgen touches no sky or weather, so most likely its settlements change the natural world (seed 5) whose view the test averages |
+| `redstone_flying_machine` | Sometimes, without the mods too: once in three runs alone, "blocks a flying machine went: 0" though the player rode 21 blocks. The engine's |
+| `redstone_piston_moves` | Sometimes in a whole run, without the mods too ("carried along: 0.70"); passes alone. The engine's |
 
-A run with these two and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
+A run with these four and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
 
 ## Pictures
 

@@ -1,7 +1,7 @@
 //! The hamlets the journey starts and ends in: in from the north-east and round the first, into
 //! a cottage there and out again; down from the mountains to the last and round it, rising.
 
-use showcase_api::{Film, flyby, orbit};
+use showcase_api::{Film, flyby, orbit, screen};
 use weftkit::Pos;
 
 use super::building::Building;
@@ -19,7 +19,9 @@ const CROFT: Building = Building {
 /// The last hamlet, round its well at the foot of the mountains.
 pub const LAST: [f64; 3] = [-3638.0, 72.0, 238.0];
 /// Over it, which the closing orbit looks at to keep the land beyond in view.
-const OVER_LAST: [f64; 3] = [-3638.0, 84.0, 238.0];
+pub const OVER_LAST: [f64; 3] = [-3638.0, 84.0, 238.0];
+/// Seconds the picture takes to fade to black at the end, the camera coming to rest meanwhile.
+const FADE_OUT: f32 = 4.0;
 
 /// Down from the north-east and round the hamlet to the south; past the birch to the crofter's
 /// door and in. Round past the bed and the stove to the door, out, and up over the longhouses,
@@ -89,15 +91,28 @@ pub fn first(film: Film) -> Film {
 }
 
 /// Round the last hamlet from the east by the north to the west, rising and widening, so
-/// the mountains it stands under come into view behind it.
+/// the mountains it stands under come into view behind it; it drifts on to rest there as the
+/// picture fades to black.
 pub fn last(film: Film) -> Film {
-    film.title("structgen.film.end", 7.0).shot(
-        orbit(LAST, 32.0)
-            .arc(360.0, 200.0)
-            .radius(32.0, 90.0)
-            .height(18.0, 55.0)
-            .look_at(OVER_LAST)
-            .ease(speeds(12.0, 3.0))
-            .secs(16.0),
-    )
+    film.title("structgen.film.end", 7.0)
+        .shot(
+            orbit(LAST, 32.0)
+                .arc(360.0, 200.0)
+                .radius(32.0, 90.0)
+                .height(18.0, 55.0)
+                .look_at(OVER_LAST)
+                .ease(speeds(12.0, 1.5))
+                .secs(16.0),
+        )
+        .screen(screen::BLACK, 1.0, FADE_OUT)
+        .shot(
+            orbit(LAST, 90.0)
+                .arc(200.0, 198.0)
+                .radius(90.0, 90.7)
+                .height(55.0, 55.5)
+                .look_at(OVER_LAST)
+                .ease(speeds(1.5, 0.0))
+                .secs(FADE_OUT),
+        )
+        .wait(0.5)
 }

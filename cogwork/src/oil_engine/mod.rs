@@ -7,6 +7,7 @@
 //! makes, so no oil goes to waste.
 
 pub mod fuel;
+mod haze;
 mod parts;
 pub mod pattern;
 mod rig;

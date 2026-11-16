@@ -1,6 +1,7 @@
 //! A block position that can be saved and sent, for code that works positions out. The SDK
-//! takes and gives `BlockPos`, which is no `Value`; `Pos` goes to SDK calls as it is and comes
-//! back from them with `from`.
+//! takes and gives `BlockPos`, which is neither a `Value` (entity and block components, events,
+//! channels) nor `Data` (stack components); `Pos` goes to SDK calls as it is and comes back from
+//! them with `from`.
 
 use std::ops::Add;
 

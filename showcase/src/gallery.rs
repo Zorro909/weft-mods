@@ -2,13 +2,15 @@
 //! little around each in turn under its name, after a look at the whole row and before rising
 //! over it. Works for any mod, with films or without.
 
-use showcase_api::{Area, BlockState, Film, Pos, Set, Waiting, crane, flyby, orbit, send};
+use showcase_api::{Area, BlockState, Film, Pos, Set, Waiting, crane, flyby, orbit, screen, send};
 use weft_sdk::*;
 
 /// Blocks between two plinths' middles.
 const SPACING: i32 = 3;
 /// Seconds the camera spends on each block.
 const TURN_SECS: f32 = 2.6;
+/// Seconds the gallery takes to fade in from black, and out to it.
+const FADE: f32 = 1.0;
 /// What the blocks stand on: the first of these that exists.
 const PLINTHS: [&str; 2] = ["base:stone_bricks", "base:stone"];
 
@@ -99,12 +101,14 @@ fn wide(length: f64) -> f64 {
     length * 0.4 + 5.0
 }
 
-/// The whole row from in front, each block in turn, then up and away.
+/// The whole row from in front, each block in turn, then up and away, faded in and out.
 fn film(mod_id: &str, blocks: &[(BlockState, &str)]) -> Film {
     let length = row_length(blocks.len());
     let row = shown_at(length / 2.0);
     let wide = wide(length);
     let mut film = Film::new()
+        .screen(screen::BLACK, 1.0, 0.0)
+        .fade_in(FADE)
         .title(&format!("mod.{mod_id}.name"), 4.0)
         .shot(crane(row, wide, 90.0, [4.0, 2.0]).secs(5.0));
     for (i, (_, name)) in blocks.iter().enumerate() {
@@ -122,6 +126,7 @@ fn film(mod_id: &str, blocks: &[(BlockState, &str)]) -> Film {
         [row[0], wide * 0.6, wide],
     ];
     film.shot(flyby(&away).look_at(row).secs(6.0).blend(1.0))
+        .fade_out(FADE)
 }
 
 #[cfg(test)]

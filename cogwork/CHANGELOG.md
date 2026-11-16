@@ -1,15 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 - 2026-11-15
 
 ### Added
 
 - World settings for how deep excavators dig, `excavator_unlimited_depth` (on) and
   `excavator_lowest_y` (-64), and how far apart survey markers may stand, `marker_max_area`: 32,
   64 (the default), 128 or 256 blocks.
+- A running oil engine hazes the air round it, warm exhaust that fades the distance, and muffles
+  the world's sounds close by, all but its own low beat. The haze clears a few seconds after it
+  stops.
 
 ### Changed
 
+- Builds against Weft v26.11.5.
 - Excavators dig on below y = -64 until a layer never loads, unless the world limits their
   depth. Past 64 blocks below the excavator, a block's energy cost doubles every 160 blocks: 4
   times as much at 384 below, 64 times at 1,024. It puts as much more into a block each tick, so
@@ -18,11 +22,18 @@
   needs 78 energy a tick, not 282, and 255 by 255 needs 522. 9 by 9 still needs 30.
 - An excavator stores 20 ticks of its standby and of what it puts into a block, at least 20,000
   energy, so deep layers can run.
-
 - Oil fields are rare: one in 32 squares of 96 × 96 blocks holds one, not every other, and each
   has its seep. `/structure locate cogwork:oil_field` says where the nearest is.
 - A field lies 45 to 85 blocks under its seep, and all fields lie elsewhere than in 0.4.0. In a
   world made with 0.4.0 the old fields and seeps are gone, except in cubes somebody changed.
+- A seep lies on the ground as the world generated it, trees, caves and ravines included: on a
+  rise or in a dip within three blocks of the terrain's height, never where a cave opened the
+  ground or a tree stands. A place with no dry dirt or sand to lie on holds no field, so any
+  field may lie a little higher or lower than in earlier builds of this version, and some are
+  gone.
+- The spring and ember engines' items stand on their base plate with the trunk up, as an engine
+  placed on the floor does, in slots, in the hand and on the ground, instead of lying on their
+  side.
 
 ### Fixed
 

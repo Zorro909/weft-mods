@@ -1,12 +1,30 @@
 # Changelog
 
-## Unreleased
+## 0.3.2 - 2026-11-15
 
 ### Added
 
 - `--showcase-rehearse <folder>` goes through a film without recording it: pictures along
   every shot, and a report of where the camera is inside a block or turns too fast and which
   titles stay too short or too long.
+- `Film::weather(..)` sets fog, sky colour, sunlight, clouds and acoustics from that step on,
+  fading in and crossfading into the next over film time, in step with screen effects;
+  `clear_weather()` and the film's end lift it. `Weather::dusk()`, `mist()` and
+  `underground()` are ready to use.
+- `Film::screen(shader, strength, secs)` puts on a screen effect over time, `fade_out(secs)`
+  and `fade_in(secs)` fade to black and back between shots, and `showcase_api::screen` has
+  fades to black and white and warm and cool grades.
+- `Shot::bob()` sways the camera as a walking player's eyes, for shots at walking pace.
+- `showcase:demo`, a short film of these steps, ending under the water of a lake.
+
+### Changed
+
+- Built for Weft 26.11.5.
+- The gallery fades in from black and out to it.
+- Films show what is over the screen under water, and other mods' screen effects, as the
+  player would see them there.
+- Films are sent in a new layout: mods with films have to be rebuilt against this version of
+  `showcase_api`.
 
 ## 0.3.1 - 2026-11-12
 

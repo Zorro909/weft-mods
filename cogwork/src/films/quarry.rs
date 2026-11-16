@@ -1,29 +1,33 @@
 //! The two excavators east of the hall, both facing south with their areas behind them. The
-//! nearer one stands on the pad next to the hall's, its frame up and its pit some layers deep
-//! already: the shaft from the hall drives it from its east side, and its output leaves it to
+//! nearer one stands on the pad next to the hall's, its frame up and its pit dug down past
+//! y = -64 already, the depth old worlds ended at: the shaft from the hall drives it from its east side, and its output leaves it to
 //! the west through tubes, sped up by gilded ones, to a sorting tube with three chests by the
 //! hall's east end. The farther one, beyond the knoll, has ember engines of its own and puts
 //! up its frame on camera.
 
 use showcase_api::Set;
-use weft_sdk::{Dir, Item};
+use weft_sdk::{Dir, Item, Shape};
 
 use super::parts::{CHEST, area, engine, fuel, shafts, tubes};
+use super::site::SITE;
 use crate::excavator::{DIG, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
 
-/// The one digging, and how deep its pit is when the film starts.
-const DIGGER: Pos = Pos::new(33, 0, 2);
-const PIT_DEPTH: i32 = 5;
+/// The one digging, the height in the world of the layer it mines when the film starts, and
+/// so how deep its pit is then.
+pub const DIGGER: Pos = Pos::new(33, 0, 2);
+const MINING_Y: i32 = -70;
+const PIT_DEPTH: i32 = DIGGER.y + SITE.y - MINING_Y - 1;
 /// The one that builds its frame while the camera watches, and the sides its engines are on.
 const BUILDER: Pos = Pos::new(64, 1, 3);
 const BUILDER_ENGINES: [Dir; 2] = [Dir::Up, Dir::East];
 /// How far behind an excavator the middle of its 9 by 9 area lies.
 const AREA_BEHIND: i32 = 6;
-/// What the camera turns round: the middle of the pit, a block above its lowest layer, and
-/// the middle of the frame the builder puts up.
-pub const PIT: Pos = Pos::new(DIGGER.x, 1 - PIT_DEPTH, DIGGER.z - AREA_BEHIND);
+/// What the camera turns round and goes down to: the middle of the pit at the top of the
+/// ground, and of the layer the drill mines; and the middle of the frame the builder puts up.
+pub const PIT: Pos = Pos::new(DIGGER.x, DIGGER.y, DIGGER.z - AREA_BEHIND);
+pub const DRILL: Pos = PIT.add_y(-PIT_DEPTH - 1);
 pub const RAISED: Pos = Pos::new(BUILDER.x, BUILDER.y + 1, BUILDER.z - AREA_BEHIND);
 /// Where the digger's output is sorted, west of it in its own row, and the gilded stretch of
 /// the tubes between, along x.
@@ -55,7 +59,7 @@ pub fn build(set: &Set) {
 }
 
 /// The digger's frame, and the area inside it dug out `PIT_DEPTH` deep, as if it had been
-/// working a while.
+/// working a long while: one fill, which reaches the cubes far down as they load.
 fn frame_and_pit(set: &Set) {
     let world = set.world();
     let pos = set.at(DIGGER);
@@ -64,10 +68,9 @@ fn frame_and_pit(set: &Set) {
         world.set_block_typed(cell, BlockState::of(&GANTRY_FRAME));
     }
     let lowest = frame.lo.add_x(1).add_z(1).with_y(pos.y - PIT_DEPTH);
-    let highest = frame.hi.add_x(-1).add_z(-1).with_y(pos.y - 1);
-    for block in area(lowest, highest).blocks() {
-        world.set_block_typed(block, BlockState::AIR);
-    }
+    // The far corner of the box: blocks whose middles lie inside it are cleared.
+    let far_corner = frame.hi.with_y(pos.y);
+    world.fill(Shape::cuboid(lowest, far_corner), BlockState::AIR.id());
 }
 
 /// From the digger's west side along its row to the sorting tube, which has a chest on three
@@ -109,7 +112,7 @@ fn mine(set: &Set) {
     dig.step = frame.cells().len() as u32;
     dig.set_stage(Stage::Mine);
     dig.set_status(Status::NoPower);
-    dig.cursor = frame.first();
+    dig.cursor = frame.first().with_y(set.at(DRILL).y);
     dig.set_head(dig.cursor.floor_middle());
 }
 

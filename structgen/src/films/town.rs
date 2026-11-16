@@ -72,8 +72,8 @@ pub fn town(film: Film) -> Film {
     let out_and_up = [
         (at_the_bench, back_round),
         (HALL.at([4.0, 2.8, 9.0]), HALL.at([6.0, 2.8, 5.0])),
-        (HALL.at([6.0, 2.8, 6.2]), HALL.at([11.0, 2.7, 5.2])),
-        (HALL.at([9.0, 2.7, 5.5]), HALL.at([11.5, 2.6, 2.0])),
+        (HALL.at([6.0, 2.8, 6.2]), HALL.at([11.5, 2.7, 3.5])),
+        (HALL.at([9.0, 2.7, 5.5]), HALL.at([11.0, 2.6, 0.5])),
         (HALL.at([10.5, 2.6, 4.6]), HALL.at([10.5, 2.6, -2.0])),
         (HALL.at([10.5, 2.6, 3.5]), HALL.at([10.5, 2.6, -3.0])),
         (HALL.at([10.5, 2.6, 1.5]), HALL.at([10.5, 3.0, -8.0])),
@@ -107,5 +107,5 @@ pub fn town(film: Film) -> Film {
             &[HALL.at([10.0, 2.3, 16.0]), bench, tower, back_round],
             7.0,
         ))
-        .shot(glide(&out_and_up, 16.0).ease(speeds(1.0, 10.0)))
+        .shot(glide(&out_and_up, 18.0).ease(speeds(1.0, 10.0)))
 }

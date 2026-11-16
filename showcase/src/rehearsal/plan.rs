@@ -11,6 +11,7 @@ use weft_sdk::Vec3;
 use crate::playback::Playback;
 use crate::rig::Pose;
 use crate::rig::math::short_turn;
+use crate::weather::Layer;
 
 /// Seconds of film between two moments.
 pub const STEP: f32 = 0.1;
@@ -37,6 +38,10 @@ pub struct Moment {
     pub cues: Vec<String>,
     /// The lang keys of the titles on screen.
     pub titles: Vec<String>,
+    /// The film's weather, by its parts.
+    pub weather: Vec<Layer>,
+    /// The screen effects showing and their strengths, by shader name.
+    pub screens: Vec<(String, f32)>,
     /// The file name of the picture taken here.
     pub still: Option<String>,
 }
@@ -65,6 +70,8 @@ pub fn moments(timeline: Timeline, from: Pose) -> Vec<Moment> {
             step: playback.step(),
             cues,
             titles: playback.titles.iter().map(|t| t.key.clone()).collect(),
+            weather: playback.weather(),
+            screens: playback.screens.at(playback.elapsed()),
             still: None,
         });
     }

@@ -2,6 +2,8 @@
 //! Positions are in blocks from the set's origin (`Set::origin`), angles in degrees.
 
 use crate::Pos;
+use crate::screen;
+use crate::weather::Weather;
 
 /// A film's steps, in the order they play.
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -33,6 +35,17 @@ pub enum Step {
         at: Pos,
         secs: f32,
     },
+    /// The weather from here on, in place of any before; `None` lifts it. The film's end lifts
+    /// it at once.
+    Weather(Option<Weather>),
+    /// The screen effect `shader` (a post shader by its full name) going to `strength`, 0 off
+    /// to 1 in full, over `secs` while the film goes on. It stays there until a later `Screen`
+    /// of the same shader, or the film's end.
+    Screen {
+        shader: String,
+        strength: f32,
+        secs: f32,
+    },
 }
 
 /// One camera move: where the eye goes, where it looks, how long it takes. The functions below
@@ -52,6 +65,8 @@ pub struct Shot {
     /// Seconds at the start in which the camera comes over from where the last shot ended;
     /// 0 cuts.
     pub blend: f32,
+    /// The camera sways as a walking player's eyes do, by how fast it goes.
+    pub bob: bool,
 }
 
 /// Where the eye goes during a shot.
@@ -161,6 +176,42 @@ impl Film {
         });
         self
     }
+
+    /// Fog, sky, light and sound from here on, while the film goes on: `Weather::dusk()`, or one
+    /// of your own. It fades in over the weather's `fade` of film time, and a later `weather`
+    /// takes over, crossfading over its own.
+    pub fn weather(mut self, weather: Weather) -> Film {
+        self.steps.push(Step::Weather(Some(weather)));
+        self
+    }
+
+    /// Back to the world's own weather, fading out over the weather's `fade`.
+    pub fn clear_weather(mut self) -> Film {
+        self.steps.push(Step::Weather(None));
+        self
+    }
+
+    /// The screen effect `shader` going to `strength` (0 off, 1 in full) over `secs`, while the
+    /// film goes on: a grade such as `screen::WARM`, a fade such as `screen::WHITE`, or a post
+    /// shader of your mod (`mymod:sepia`). It stays until a later `screen` of the same shader.
+    pub fn screen(mut self, shader: &str, strength: f32, secs: f32) -> Film {
+        self.steps.push(Step::Screen {
+            shader: shader.into(),
+            strength,
+            secs,
+        });
+        self
+    }
+
+    /// The picture fades to black over `secs`, the camera holding where it is.
+    pub fn fade_out(self, secs: f32) -> Film {
+        self.screen(screen::BLACK, 1.0, secs).wait(secs)
+    }
+
+    /// The picture comes back from black over `secs`, while the shots after it go on.
+    pub fn fade_in(self, secs: f32) -> Film {
+        self.screen(screen::BLACK, 0.0, secs)
+    }
 }
 
 fn shot(path: Path, look: Look) -> Shot {
@@ -172,6 +223,7 @@ fn shot(path: Path, look: Look) -> Shot {
         fov: [0.0; 2],
         roll: [0.0; 2],
         blend: 0.0,
+        bob: false,
     }
 }
 
@@ -256,6 +308,14 @@ impl Shot {
 
     pub fn blend(mut self, secs: f32) -> Shot {
         self.blend = secs;
+        self
+    }
+
+    /// Sways the camera as a walking player's eyes, for a shot at walking pace: fullest from 2
+    /// blocks a second, still when the camera stands. Shots that follow on from each other
+    /// with it sway on in step.
+    pub fn bob(mut self) -> Shot {
+        self.bob = true;
         self
     }
 

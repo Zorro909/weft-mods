@@ -8,8 +8,6 @@ use super::shape::{Point, add, distance, inside, scale};
 mod paving;
 mod walking;
 
-use super::SEA;
-
 /// What one column is for.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Cell {
@@ -69,13 +67,11 @@ impl Grid {
         };
         for z in origin[1]..origin[1] + side {
             for x in origin[0]..origin[0] + side {
-                let ground = p
-                    .ground(x, z)
-                    .filter(|g| g.height >= SEA && land.contains(g.biome));
+                let ground = p.ground(x, z).filter(|g| land.contains(g.biome));
                 let usable = ground.is_some();
                 grid.cells
                     .push(if usable { Cell::Free } else { Cell::Blocked });
-                grid.heights.push(ground.map_or(SEA, |g| g.height));
+                grid.heights.push(ground.map_or(i32::MIN, |g| g.height));
             }
         }
         grid
@@ -195,7 +191,7 @@ pub fn row(heights: &[Option<i32>]) -> Grid {
         origin: [0, 0],
         side,
         cells: vec![Cell::Blocked; (side * side) as usize],
-        heights: vec![SEA; (side * side) as usize],
+        heights: vec![i32::MIN; (side * side) as usize],
     };
     for (x, height) in heights.iter().enumerate() {
         if let Some(height) = height {

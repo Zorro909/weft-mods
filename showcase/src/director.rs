@@ -16,7 +16,8 @@ use crate::rehearsal::{self, Rehearsal};
 use crate::rig::Pose;
 use crate::rig::math::angles_along;
 use crate::server::{FINISHED, MISSING, REACHED, Reached, STARTED};
-use crate::view::{camera, missing_notice, put, titles};
+use crate::view::{camera, clear_screens, missing_notice, put, screens, titles};
+use crate::weather;
 
 /// Frames the camera stays at each stop before the film, however soon the world says it is loaded.
 const STOP_FRAMES: u32 = 20;
@@ -227,6 +228,8 @@ fn roll(c: &Client, d: &mut Director, playback: &mut Playback) {
     let pose = playback.pose();
     put(c, pose);
     titles(c, &playback.titles, playback.elapsed(), pose);
+    weather::show(c, &playback.weather(), pose.eye);
+    screens(c, &playback.screens.at(playback.elapsed()));
     d.menus.show(c, playback.menu.as_ref());
 }
 
@@ -236,9 +239,12 @@ fn finish(c: &Client, d: &mut Director, playback: &Playback) -> Phase {
     close(c, d)
 }
 
-/// Gives the player back to the server and forgets what the film was told.
+/// Gives the player back to the server, lifts the film's weather and screen effects and forgets
+/// what the film was told.
 fn close(c: &Client, d: &mut Director) -> Phase {
     c.send(&FINISHED, &());
+    weather::clear(c);
+    clear_screens(c);
     d.signals.clear();
     d.subjects.clear();
     d.finished += 1;

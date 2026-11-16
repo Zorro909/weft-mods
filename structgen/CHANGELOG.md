@@ -1,6 +1,21 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 - 2026-11-15
+
+### Added
+
+- A building whose bottom layer stands over a cave just under the ground has the gap filled
+  with the ground's block, so no paving or yard hangs over air.
+
+### Changed
+
+- Built for Weft 26.11.5.
+- Settlements read the water instead of taking base's sea level, 63: no building stands where
+  water or ice covers the ground, in any dimension, and dry ground below 63 can be built on.
+  Settlements may stand elsewhere at any seed; seed 42's stand where they did.
+- The showcase film turns more slowly out of the church and the town hall.
+
+## 0.4.0 - 2026-11-12
 
 ### Added
 

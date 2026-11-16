@@ -1,6 +1,7 @@
-//! The oil seep west of the hall: a puddle of oil in oil-soaked ground, and its field 90 blocks
+//! The oil seep west of the hall: a puddle of oil in oil-soaked ground, and its field 70 blocks
 //! below. The world's own fields are few and none lies here, so the film lays this one as the
-//! world would. A pump stands on the puddle under a timber derrick,
+//! world would: on the ground as it generated, clear of trees and grass, its field within the
+//! world's 45 to 85 blocks under it. A pump stands on the puddle under a timber derrick,
 //! with ember engines on two sides and on top, its south side left clear for the camera; lit
 //! on camera, it bores down to the field and pumps. A line of liquid tubes carries the oil
 //! over the ground into the hall's oil tank, with a gravel path beside it.
@@ -28,7 +29,7 @@ const SOAKED: [(i32, i32); 8] = [
     (1, 0),
     (1, 1),
 ];
-const FIELD_DEPTH: i32 = 90;
+const FIELD_DEPTH: i32 = 70;
 const FIELD_RADIUS: i32 = 6;
 /// The sides of the pump its engines stand on; its line leaves it to the east.
 const ENGINE_SIDES: [Dir; 3] = [Dir::North, Dir::West, Dir::Up];

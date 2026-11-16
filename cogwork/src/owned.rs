@@ -72,7 +72,7 @@ pub fn place(world: &World, owner: u64, id: u64, kind: &EntityKind, pos: Vec3, y
 }
 
 /// Degrees past its yaw a new owned entity looks, then as far short of it, a tick each, so that
-/// its body faces its yaw. The models are drawn turned with the body. Weft 26.11.4 starts the
+/// its body faces its yaw. The models are drawn turned with the body. Weft 26.11.5 starts the
 /// body at 0 whatever yaw the entity is made with, and turns one standing still only to within
 /// 50 degrees of its yaw (`physics::turn_body`): 50 past brings it onto the yaw, and 50 short
 /// leaves it there, or brings one that started at its yaw back onto it.
@@ -123,7 +123,7 @@ fn spawn(world: &World, owner: u64, kind: &EntityKind, pos: Vec3, yaw: f32) -> u
 mod tests {
     use super::*;
 
-    /// The body of one standing still after a tick, as Weft 26.11.4 turns it: to within 50
+    /// The body of one standing still after a tick, as Weft 26.11.5 turns it: to within 50
     /// degrees of where it looks. Degrees.
     fn turned_body(body: f32, looks: f32) -> f32 {
         let off = looks - body;
