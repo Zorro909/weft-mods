@@ -5,6 +5,7 @@
 
 use std::io;
 use std::path::PathBuf;
+use std::sync::{Mutex, PoisonError};
 
 use weft_sdk::{Arg, ServerCommand, permission};
 use weftkit::PlayerKey;
@@ -14,12 +15,16 @@ use crate::players;
 
 const USAGE: &str = "on | off | list | add <who:targets> | key <key:word> | remove <name:word>";
 
+/// Held while a `/whitelist` command reads and writes the file: two regions may run one each.
+static EDITING: Mutex<()> = Mutex::new(());
+
 pub fn register(r: &mut weft_sdk::Registry) {
     r.command("whitelist", USAGE, run)
         .permission(permission::ADMIN);
 }
 
 fn run(cmd: &mut ServerCommand) {
+    let _editing = EDITING.lock().unwrap_or_else(PoisonError::into_inner);
     let done = if cmd.given("on") {
         turn_on(cmd)
     } else if cmd.given("off") {
@@ -86,10 +91,9 @@ fn list(cmd: &mut ServerCommand) -> io::Result<()> {
         .collect();
     cmd.reply("plotty.whitelist.listed", &[Arg::Int(keys.len() as i64)]);
     for key in keys {
-        cmd.reply(
-            "plotty.whitelist.entry",
-            &[Arg::Text(&players::name_of(&key))],
-        );
+        // The whole key where there's no name, as `remove` takes it.
+        let shown = players::known_name(&key).unwrap_or_else(|| key.as_str().to_string());
+        cmd.reply("plotty.whitelist.entry", &[Arg::Text(&shown)]);
     }
     Ok(())
 }

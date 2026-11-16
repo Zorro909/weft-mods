@@ -10,7 +10,7 @@ in by taking a listed player's name. Only admins (level 3) use `/whitelist`.
 |---|---|
 | `/whitelist on` | Turns it on. The first time, every player Plotty has seen join is listed, so nobody already playing is shut out, and so is the admin turning it on. It refuses to turn on a list that would let nobody in. Says which file it turned on |
 | `/whitelist off` | Sets the file aside as `whitelist.txt.off`, which the engine doesn't read. Its list is kept for when it goes back on |
-| `/whitelist list` | The listed players, by name where Plotty knows it, else the start of the key |
+| `/whitelist list` | The listed players, by name where Plotty knows it, else by key |
 | `/whitelist add <players>` | Adds players who are online, chosen as any command chooses players: a name, `@a` |
 | `/whitelist key <key>` | Adds a key as the server log printed it for a player it turned away |
 | `/whitelist remove <name>` | Takes a player off, by name or by the key the list shows. One who is online stays until they leave |
@@ -43,6 +43,8 @@ before a creature spawns by itself. Where a block lies decides:
 | The spawn, a city's streets, plaza and market | no | yes | no | no | no |
 | A free plot, someone else's plot | no | no | no | no | no |
 | Your plot, or one you're trusted on | yes | yes | no | yes | no |
+
+A city built around the spawn keeps its own rules, so its plots are their owners' there too.
 
 Plot posts and city stones answer anyone who right-clicks them, and anyone trades at a stall
 wherever it stands. Stall blocks go only on your own plot, one you're trusted on, or a market place you rent, and

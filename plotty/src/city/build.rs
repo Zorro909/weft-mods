@@ -112,22 +112,20 @@ pub fn mark(cmd: &mut ServerCommand, plan: &Plan) {
     cmd.reply("plotty.city.marked", &[]);
 }
 
-/// Builds the holder's plan and frees the slot.
+/// Builds the holder's plan and frees the slot, holding it till then so no other build starts.
 pub fn confirm(cmd: &mut ServerCommand, holder: &PlayerKey) {
-    let plan = {
-        let slot = lock();
-        match slot.as_ref().filter(|pending| held(pending)) {
-            Some(pending) if &pending.holder == holder => pending.plan.clone(),
-            Some(_) => return cmd.reply("plotty.city.not_your_preview", &[]),
-            None => return cmd.reply("plotty.city.nothing_to_confirm", &[]),
-        }
+    let mut slot = lock();
+    let plan = match slot.as_ref().filter(|pending| held(pending)) {
+        Some(pending) if &pending.holder == holder => pending.plan.clone(),
+        Some(_) => return cmd.reply("plotty.city.not_your_preview", &[]),
+        None => return cmd.reply("plotty.city.nothing_to_confirm", &[]),
     };
     if let Err(problem) = still_fits(&plan) {
-        *lock() = None;
+        *slot = None;
         return cmd.reply(problem, &[]);
     }
     if place::build(cmd, &plan) {
-        *lock() = None;
+        *slot = None;
     }
 }
 

@@ -3,8 +3,6 @@
 //! the time is up the stall closes, but its renter may still empty it, break it or renew; after
 //! the grace days the place is free again.
 
-use std::sync::Mutex;
-
 use serde::{Deserialize, Serialize};
 use weft_sdk::{Arg, Block, Output, Registry, ServerCommand, Use, World, permission};
 use weftkit::{PlayerKey, Pos};
@@ -12,7 +10,7 @@ use weftkit::{PlayerKey, Pos};
 use crate::city::grid::CellXZ;
 use crate::city::structures::{PLACE_SIZE, PLACES};
 use crate::city::{CellKind, cell_at};
-use crate::tables::{RENTS, STALLS};
+use crate::tables::{self, RENTS, STALLS};
 use crate::woof::{self, Account, Refused};
 use crate::{dims, players, settings};
 
@@ -22,9 +20,6 @@ pub static RENT_POST: Block = Block::named("rent_post");
 const DAY: u64 = 24 * 60 * 60;
 /// The days a place is rented for, matching `settings::rent_woof`.
 const TERMS: [u64; 3] = [1, 7, 30];
-
-/// Held while a place's rent is read and written.
-static RENTING: Mutex<()> = Mutex::new(());
 
 /// A place: the dimension, the market square's corner cell, and which of its places.
 pub type PlaceKey = (u64, CellXZ, u8);
@@ -138,6 +133,7 @@ fn command(cmd: &mut ServerCommand) {
     if cmd.given("places") {
         return list(cmd, &you);
     }
+    let _changing = tables::changing();
     let Some(place) = place_at(dim, pos) else {
         return cmd.reply("plotty.rent.no_place", &[]);
     };
@@ -154,9 +150,6 @@ fn rent(cmd: &mut ServerCommand, place: PlaceKey, you: &PlayerKey) {
     let Some(term) = TERMS.iter().position(|term| Some(*term) == days) else {
         return cmd.reply("plotty.rent.bad_days", &[]);
     };
-    let _renting = RENTING
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let now = players::now();
     let current = rent_of(&place);
     match &current {

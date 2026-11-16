@@ -1,6 +1,6 @@
-//! What a build replaced, so `/city undo` can always put it back: every block state of its area
-//! by name (ids shift when mods come or go), as runs of one name in the order `Area::blocks`
-//! walks the area.
+//! What a build replaced, so `/city undo` can always put it back: every cell of its area by the
+//! names of what is in it (ids shift when mods come or go), as runs of one name in the order
+//! `Area::blocks` walks the area.
 
 use serde::{Deserialize, Serialize};
 use weft_sdk::{World, abi, name_of};
@@ -22,6 +22,9 @@ pub struct Build {
     pub founded: Option<u32>,
     pub before: Blocks,
 }
+
+/// Between the parts of one cell's name: a slab and the water in it, a flower and the snow on it.
+const PARTS: char = ' ';
 
 /// Block states of an area as runs: `names`, and (index into `names`, how many) in walking order.
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Debug)]
@@ -74,16 +77,39 @@ pub fn save(world: &World, area: Area) -> Result<Blocks, Unsaveable> {
         if world.block_entity(pos) != 0 {
             return Err(Unsaveable::Holds(pos));
         }
-        blocks.push(name_of(abi::entry_kind::BLOCK, state));
+        let parts: Vec<&str> = world
+            .parts(pos)
+            .into_iter()
+            .map(|part| name_of(abi::entry_kind::BLOCK, part))
+            .collect();
+        blocks.push(&cell_name(name_of(abi::entry_kind::BLOCK, state), &parts));
     }
     Ok(blocks)
+}
+
+/// The name a cell is saved by: `main`, the block in it, or every part where it has more.
+fn cell_name(main: &str, parts: &[&str]) -> String {
+    if parts.len() > 1 {
+        parts.join(&PARTS.to_string())
+    } else {
+        main.to_string()
+    }
 }
 
 /// Puts back what `save` saved of `area`; a block whose mod is gone becomes air.
 pub fn restore(world: &World, area: Area, blocks: &Blocks) {
     for (pos, name) in area.blocks().zip(blocks.names_in_order()) {
-        let state = BlockState::named(name).unwrap_or(BlockState::AIR);
-        world.set_block_typed(pos, state);
+        let mut parts = name
+            .split(PARTS)
+            .map(|part| BlockState::named(part).unwrap_or(BlockState::AIR));
+        // A block set over the same block keeps the rest of its cell, which would come twice.
+        if world.parts(pos).len() > 1 {
+            world.set_block_typed(pos, BlockState::AIR);
+        }
+        world.set_block_typed(pos, parts.next().unwrap_or(BlockState::AIR));
+        parts.for_each(|part| {
+            world.part_add_typed(pos, part);
+        });
     }
 }
 
@@ -181,6 +207,17 @@ mod tests {
             walked,
             "the same order back"
         );
+    }
+
+    #[test]
+    fn a_cell_keeps_every_part() {
+        let name = cell_name("base:oak_slab", &["base:oak_slab", "base:water"]);
+        assert_eq!(
+            name.split(PARTS).collect::<Vec<_>>(),
+            ["base:oak_slab", "base:water"],
+            "the water too"
+        );
+        assert_eq!(cell_name("base:air", &[]), "base:air", "air has no parts");
     }
 
     #[test]

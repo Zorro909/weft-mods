@@ -34,6 +34,9 @@ These need a change to the SDK first, agreed with the upstream project.
   instead, and then `/whitelist` and the settings and tables are elsewhere than the engine's own
   files. `/whitelist on` says which file it turned on. Start a server with `--run-dir` until the
   SDK says.
+- **Big blocks under a build:** the SDK reads a big block (a door, a bed) as itself in each of
+  its cells and doesn't say which is its own. A build over one saves it in every cell, and
+  `/city undo` may then put back more than was there. Build cities on open land until it does.
 - **Hosted games:** only a dedicated server reads the whitelist; a game hosted from the client
   ignores it, and the SDK can't tell a mod which one it runs in.
 

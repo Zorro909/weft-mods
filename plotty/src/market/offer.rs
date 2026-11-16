@@ -119,12 +119,19 @@ impl Offer {
         match self.gives {
             Goods::Items(kind) => (stacks::count(held.stock, kind) < kind.count)
                 .then_some(Short::Stock)
-                .or(
-                    (stacks::room(held.yours, kind, (held.max_stack)(kind)) < kind.count)
-                        .then_some(Short::YourRoom),
-                ),
+                .or((self.your_room_after_paying(held, kind) < kind.count)
+                    .then_some(Short::YourRoom)),
             Goods::Woof(price) => (held.owner_woof < price).then_some(Short::OwnerWoof),
         }
+    }
+
+    /// Room for `kind` in the customer's inventory once they paid: paying may empty a slot.
+    fn your_room_after_paying(&self, held: &Holdings, kind: ItemStack) -> u32 {
+        let mut yours = held.yours.to_vec();
+        if let Goods::Items(paid) = self.gets {
+            stacks::take(&mut yours, paid, paid.count);
+        }
+        stacks::room(&yours, kind, (held.max_stack)(kind))
     }
 
     /// What keeps the customer from paying the stall's price once: from their inventory into
@@ -219,9 +226,14 @@ mod tests {
             "2 of 3 iron"
         );
         assert_eq!(
-            offer.check(&held(&stock, &[of(IRON, 3)])),
+            offer.check(&held(&stock, &[of(IRON, 4)])),
             Err(Short::YourRoom),
             "no room for bread"
+        );
+        assert_eq!(
+            offer.check(&held(&stock, &[of(IRON, 3)])),
+            Ok(()),
+            "paying empties the slot the bread goes into"
         );
     }
 
