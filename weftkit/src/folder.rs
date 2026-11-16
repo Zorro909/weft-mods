@@ -7,13 +7,17 @@ use std::path::PathBuf;
 
 /// `<game folder>/<kind>/<mod>`, for the mod that compiles this.
 pub(crate) fn mod_folder(kind: &str) -> PathBuf {
-    game_folder(std::env::args())
-        .join(kind)
-        .join(weft_sdk::mod_id())
+    game_folder().join(kind).join(weft_sdk::mod_id())
+}
+
+/// The game folder: what `--run-dir` names, or the working folder (an empty path) without one.
+/// A mod reaches the engine's own files from it, such as `config/whitelist.txt`.
+pub fn game_folder() -> PathBuf {
+    game_folder_in(std::env::args())
 }
 
 /// The folder `--run-dir` names in `args`, or the working folder (an empty path) without one.
-fn game_folder(args: impl IntoIterator<Item = String>) -> PathBuf {
+fn game_folder_in(args: impl IntoIterator<Item = String>) -> PathBuf {
     let args: Vec<String> = args.into_iter().collect();
     let last = args.iter().rposition(|arg| arg == "--run-dir");
     last.and_then(|at| args.get(at + 1))
@@ -61,7 +65,7 @@ mod tests {
             (&["weft", "--run-dir"], ""),
         ];
         for (args, folder) in cases {
-            let found = game_folder(args.iter().map(|arg| arg.to_string()));
+            let found = game_folder_in(args.iter().map(|arg| arg.to_string()));
             assert_eq!(
                 found,
                 PathBuf::from(folder),
