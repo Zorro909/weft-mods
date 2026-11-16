@@ -77,10 +77,21 @@ impl Rig {
         let Some([before, length]) = self.walk else {
             return pose;
         };
-        let span = [(clock - SPEED_SPAN).max(0.0), clock + SPEED_SPAN];
+        sway(
+            before + length * self.progress(clock),
+            self.speed(clock, length),
+        )
+        .applied(pose)
+    }
+
+    /// Blocks a second the shot goes at `clock` seconds in, along a walk `length` blocks long.
+    fn speed(&self, clock: f32, length: f64) -> f64 {
+        let span = [
+            (clock - SPEED_SPAN).max(0.0),
+            (clock + SPEED_SPAN).min(self.secs()),
+        ];
         let moved = self.progress(span[1]) - self.progress(span[0]);
-        let speed = length * moved / (span[1] - span[0]) as f64;
-        sway(before + length * self.progress(clock), speed).applied(pose)
+        length * moved / (span[1] - span[0]).max(f32::EPSILON) as f64
     }
 }
 
@@ -126,6 +137,19 @@ mod tests {
             0.0,
             "a shot that doesn't sway ends the walk"
         );
+    }
+
+    #[test]
+    fn a_walk_sways_at_its_speed_to_its_last_moment() {
+        let walk = dolly([0.0; 3], [0.0, 0.0, -10.0])
+            .ease(Ease::Linear)
+            .secs(5.0)
+            .bob();
+        let rig = Rig::new(walk, Pos::default(), 70.0);
+        for clock in [0.0, 2.5, 5.0] {
+            let speed = rig.speed(clock, 10.0);
+            assert!((speed - 2.0).abs() < 1e-3, "{speed} at {clock}");
+        }
     }
 
     #[test]
