@@ -10,7 +10,7 @@ use weftkit::{PlayerKey, Pos};
 use super::grid::{CellXZ, Footprint};
 use super::place;
 use crate::players;
-use crate::tables::{CELLS, CITIES};
+use crate::tables::{CELLS, CITIES, PLOTS};
 
 /// Seconds a preview holds the slot before anyone may take it.
 const HOLD_SECONDS: u64 = 120;
@@ -98,6 +98,20 @@ pub fn propose(cmd: &mut ServerCommand, holder: PlayerKey, plan: Plan) {
     });
 }
 
+/// Marks `plan`'s cells for its city without building, unless they lie under someone's preview.
+pub fn mark(cmd: &mut ServerCommand, plan: &Plan) {
+    let previewed = lock().as_ref().is_some_and(|pending| {
+        held(pending)
+            && pending.plan.dim == plan.dim
+            && pending.plan.footprint.overlaps(plan.footprint)
+    });
+    if previewed {
+        return cmd.reply("plotty.city.under_preview", &[]);
+    }
+    place::mark(plan);
+    cmd.reply("plotty.city.marked", &[]);
+}
+
 /// Builds the holder's plan and frees the slot.
 pub fn confirm(cmd: &mut ServerCommand, holder: &PlayerKey) {
     let plan = {
@@ -108,6 +122,10 @@ pub fn confirm(cmd: &mut ServerCommand, holder: &PlayerKey) {
             None => return cmd.reply("plotty.city.nothing_to_confirm", &[]),
         }
     };
+    if let Err(problem) = still_fits(&plan) {
+        *lock() = None;
+        return cmd.reply(problem, &[]);
+    }
     if place::build(cmd, &plan) {
         *lock() = None;
     }
@@ -137,10 +155,7 @@ pub fn footprint_for(
 ) -> Result<(Footprint, Option<u32>), &'static str> {
     let footprint = Footprint::around(pos, side);
     let city_of = |cell: CellXZ| CELLS.get(&(dim, cell)).map(|cell| cell.city);
-    match fit(footprint, founding, city_of) {
-        Ok(city) => Ok((footprint, city)),
-        Err(problem) => Err(problem),
-    }
+    fit(footprint, founding, city_of).map(|city| (footprint, city))
 }
 
 /// Whether `footprint` is free, and the one city it joins; `city_of` says whose a cell is.
@@ -160,6 +175,39 @@ fn fit(
         (false, [city]) => Ok(Some(*city)),
         (false, []) => Err("plotty.city.not_next_to_city"),
         (false, _) => Err("plotty.city.two_cities"),
+    }
+}
+
+/// Whether `plan` can still be built as it was previewed: in the two minutes, another build or
+/// a mark may have taken its cells, a player claimed its plot, or a city taken its name.
+fn still_fits(plan: &Plan) -> Result<(), &'static str> {
+    if let Target::New(name) = &plan.target
+        && super::city_named(name).is_some()
+    {
+        return Err("plotty.city.name_taken");
+    }
+    let city_of = |cell: CellXZ| CELLS.get(&(plan.dim, cell)).map(|cell| cell.city);
+    let claimed = |plot: u32| PLOTS.get(&plot).is_some_and(|plot| plot.owner.is_some());
+    recheck(plan, city_of, claimed)
+}
+
+/// `still_fits` for the cells and plots: `city_of` says whose a cell is, `claimed` whether a
+/// plot has an owner.
+fn recheck(
+    plan: &Plan,
+    city_of: impl Fn(CellXZ) -> Option<u32>,
+    claimed: impl Fn(u32) -> bool,
+) -> Result<(), &'static str> {
+    match (&plan.what, &plan.target) {
+        (What::Building { plot, .. }, _) if claimed(*plot) => {
+            Err("plotty.city.building_on_claimed")
+        }
+        (What::Building { .. }, _) => Ok(()),
+        (What::Kind(_), Target::New(_)) => fit(plan.footprint, true, city_of).map(|_| ()),
+        (What::Kind(_), Target::Existing(city)) => match fit(plan.footprint, false, city_of)? {
+            Some(joined) if joined == *city => Ok(()),
+            _ => Err("plotty.city.two_cities"),
+        },
     }
 }
 
@@ -231,6 +279,35 @@ mod tests {
             fit(ONE, false, between),
             Err("plotty.city.two_cities"),
             "between two"
+        );
+    }
+
+    #[test]
+    fn a_confirmed_build_is_checked_again() {
+        let plan = |what| Plan {
+            what,
+            target: Target::Existing(7),
+            dim: 0,
+            footprint: ONE,
+            ground_y: 3,
+        };
+        let road = plan(What::Kind(crate::city::structures::Kind::Road));
+        let beside_7 = |cell: CellXZ| (cell == CellXZ::new(1, 0)).then_some(7);
+        assert_eq!(recheck(&road, beside_7, |_| false), Ok(()), "still free");
+        let marked_since = |cell: CellXZ| (cell.x <= 1 && cell.z == 0).then_some(7);
+        assert_eq!(
+            recheck(&road, marked_since, |_| false),
+            Err("plotty.city.taken"),
+            "its cell was marked meanwhile"
+        );
+        let house = plan(What::Building {
+            template: "hof".to_string(),
+            plot: 4,
+        });
+        assert_eq!(
+            recheck(&house, beside_7, |plot| plot == 4),
+            Err("plotty.city.building_on_claimed"),
+            "its plot was claimed meanwhile"
         );
     }
 }

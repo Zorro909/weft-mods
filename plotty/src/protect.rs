@@ -53,6 +53,13 @@ fn by_player(ask: &Ask, action: Action) -> Verdict {
     }
     let action = on_stalls(action, ask.state());
     let pos = Pos::from(ask.pos());
+    if action == Action::BuildStall {
+        let owner = market::owner_in(dims::key_of(&world), pos);
+        if !market::may_break(owner.as_ref(), &key, bypassing(&world, player, &key)) {
+            world.hint("plotty.refused.not_your_stall", &[]).to(player);
+            return Verdict::Deny;
+        }
+    }
     let zone = zone_at(&world, pos, Some(&key));
     if decide(&world, zone, action, player, &key) {
         return Verdict::Abstain;
@@ -120,9 +127,18 @@ fn spawned(ask: &Ask) -> Verdict {
 
 /// The rules for `player` (`key`), with their bypass where they are still a moderator.
 fn decide(world: &World, zone: Zone, action: Action, player: u64, key: &PlayerKey) -> bool {
-    let bypass = world.permission(player) >= permission::MODERATOR
-        && lock().as_ref().is_some_and(|set| set.contains(key));
-    rules::allowed(zone, action, bypass, settings::get().wilderness)
+    rules::allowed(
+        zone,
+        action,
+        bypassing(world, player, key),
+        settings::get().wilderness,
+    )
+}
+
+/// Whether `player` (`key`) switched protection off, and is still a moderator.
+fn bypassing(world: &World, player: u64, key: &PlayerKey) -> bool {
+    world.permission(player) >= permission::MODERATOR
+        && lock().as_ref().is_some_and(|set| set.contains(key))
 }
 
 /// What the block at `pos` is part of, for the player `viewer` where a player asks.

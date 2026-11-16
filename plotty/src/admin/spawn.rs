@@ -53,11 +53,6 @@ pub fn get() -> Option<Spawn> {
     SPAWN.get(&())
 }
 
-/// A player's first join: off to the spawn.
-pub fn welcome(world: &World, player: u64) {
-    send(world, player);
-}
-
 fn set(cmd: &mut ServerCommand) {
     let (world, player) = (cmd.world(), cmd.player());
     let Some(state) = world.entity(player) else {
@@ -98,7 +93,7 @@ fn go(cmd: &mut ServerCommand) {
 }
 
 /// Moves `player` to the spawn, where one is set and its dimension is still there.
-fn send(world: &World, player: u64) {
+pub fn send(world: &World, player: u64) {
     let Some(spawn) = get() else { return };
     let Some(dim) = dims::handle(spawn.dim) else {
         return;

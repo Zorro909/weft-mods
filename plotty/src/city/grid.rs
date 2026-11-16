@@ -79,6 +79,13 @@ impl Footprint {
             .flat_map(move |dz| (0..side).map(move |dx| CellXZ::new(corner.x + dx, corner.z + dz)))
     }
 
+    /// Whether it and `other` share a cell.
+    pub fn overlaps(self, other: Footprint) -> bool {
+        let apart = |a: i32, b: i32, a_side: i32, b_side: i32| a + a_side <= b || b + b_side <= a;
+        !apart(self.corner.x, other.corner.x, self.side, other.side)
+            && !apart(self.corner.z, other.corner.z, self.side, other.side)
+    }
+
     /// The cells outside it that share a side with it.
     pub fn ring(self) -> Vec<CellXZ> {
         let inside: Vec<CellXZ> = self.cells().collect();
@@ -191,5 +198,20 @@ mod tests {
         assert!(area.contains(Pos::new(-16, 60, 32)), "low corner");
         assert!(area.contains(Pos::new(-1, 70, 47)), "high corner");
         assert!(!area.contains(Pos::new(0, 65, 40)), "next cell");
+    }
+
+    #[test]
+    fn footprints_overlap_when_they_share_a_cell() {
+        let plaza = Footprint {
+            corner: CellXZ::new(0, 0),
+            side: 2,
+        };
+        let at = |x, z| Footprint {
+            corner: CellXZ::new(x, z),
+            side: 1,
+        };
+        assert!(plaza.overlaps(at(1, 1)), "its far corner");
+        assert!(!plaza.overlaps(at(2, 0)), "beside it");
+        assert!(!plaza.overlaps(at(-1, 1)), "beside it on the other side");
     }
 }

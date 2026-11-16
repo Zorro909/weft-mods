@@ -17,7 +17,8 @@ around it as above. Right-click any block of it. While a part is missing, its sc
 and the stall doesn't trade. A stall that ends up off its owner's plot, for a plot taken back or
 given up, closes too, and so does one whose market place's rent has ended.
 
-The register holds everything: breaking it drops the samples, the stock and the till.
+The register holds everything: breaking it drops the samples, the stock and the till. Only its
+owner can break it, or a moderator with `/plot bypass`; a friend trusted on the plot can't.
 
 ## Market places
 

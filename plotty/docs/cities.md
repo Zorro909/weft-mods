@@ -13,9 +13,9 @@ on. A build always joins the one city it touches; it may not touch two.
 | Small plot | 1 | 16 × 16 of grass inside a stone kerb, with its post by the street |
 | Normal plot | 2 × 2 | 32 × 32 |
 | Large plot | 4 × 4 | 64 × 64 |
-| Market | 2 × 2 | A square with a fountain and six places for stalls |
+| Market | 2 × 2 | A square with a well and six places for stalls, each with a rent post |
 
-Under a build the ground is levelled: from 4 blocks below the city's ground to 32 above, the
+Under a build the ground is levelled: from 3 blocks below the city's ground to 32 above, the
 cells' blocks are replaced.
 
 ## Building
@@ -24,11 +24,13 @@ Only game masters build. One build at a time on the whole server:
 
 1. `/city found <name>` or `/city build <kind>` takes the build slot and shows an orange outline
    of the cells around where you stand.
-2. `/city confirm` builds it. `/city cancel` drops it; a game master may also cancel someone
+2. `/city confirm` builds it, if its cells are still free and its plot still unclaimed.
+   `/city cancel` drops it; a game master may also cancel someone
    else's. After two minutes anyone may take the slot.
 
 `/city found <name> mark` and `/city mark <kind>` claim cells without building anything, for a
-town already standing; `/city unmark` takes a marked cell back.
+town already standing, though not under someone's preview; `/city unmark` takes a marked cell
+back.
 
 ### Structgen buildings
 
@@ -40,7 +42,8 @@ stand on, turned to face the street, centred, with a block to spare at each side
 
 Every build saves what it replaced, block by block. `/city undo`, standing on a cell, takes the
 last build there back and puts the land as it was. It refuses on a claimed plot, on a plaza while
-the city has other cells, and where the area isn't loaded.
+the city has other cells, on a market with a place rented, where something now holds items (a
+chest, a stall), and where the area isn't loaded.
 
 ## Looking at cities
 

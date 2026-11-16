@@ -22,6 +22,28 @@ pub enum Part {
     Awning,
 }
 
+impl Part {
+    /// Every part, in the order `Stall::missing` numbers them.
+    pub const ALL: [Part; 5] = [
+        Part::Register,
+        Part::Counter,
+        Part::Crate,
+        Part::Post,
+        Part::Awning,
+    ];
+
+    /// The lang key naming it.
+    pub fn key(self) -> &'static str {
+        match self {
+            Part::Register => "plotty.part.register",
+            Part::Counter => "plotty.part.counter",
+            Part::Crate => "plotty.part.crates",
+            Part::Post => "plotty.part.posts",
+            Part::Awning => "plotty.part.awning",
+        }
+    }
+}
+
 /// Every block of the stall whose register stands at `register` facing `front`, with the part
 /// that belongs there; the register first.
 pub fn layout(register: Pos, front: Dir) -> Vec<(Pos, Part)> {

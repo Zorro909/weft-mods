@@ -107,12 +107,11 @@ pub fn undo_at(world: &World, dim: u64, cell: CellXZ) -> Result<(), &'static str
     if market_rented(dim, &build) {
         return Err("plotty.city.undo_rented");
     }
-    if build
-        .area
-        .blocks()
-        .any(|pos| world.block_loaded(pos).is_none())
-    {
-        return Err("plotty.city.undo_not_loaded");
+    // What was built there since, chests and stalls among them, would be lost.
+    match save(world, build.area) {
+        Err(Unsaveable::NotLoaded(_)) => return Err("plotty.city.undo_not_loaded"),
+        Err(Unsaveable::Holds(_)) => return Err("plotty.city.undo_holds"),
+        Ok(_) => {}
     }
     restore(world, build.area, &build.before);
     forget(dim, id, &build, here.plot);
