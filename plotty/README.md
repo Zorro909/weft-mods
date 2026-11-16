@@ -47,7 +47,8 @@ another player, online or not. New players start with some; game masters give an
 
 ### Market stalls
 
-A player builds a stall of sixteen blocks on their own plot, in oak, spruce or birch: a register
+A player builds a stall of sixteen blocks on their own plot or a market place they rent for
+1, 7 or 30 days, in oak, spruce or birch: a register
 between two counters, three crates behind, four posts and an awning. It trades with any other
 player, whether its owner is online or not, through up to eight offers. Each offer gives
 something and gets something for it, items or Golden Woof either way, so a stall can sell and
@@ -103,5 +104,5 @@ tools/install-mods.sh plotty
 | `src/city/notice.rs` | The line above the hotbar |
 | `src/plot/` | Claim rules, `/plot`, the plot post and city stone |
 | `src/woof/` | Balances and the one way they change, `/woof`, the panel beside the inventory |
-| `src/market/` | Stalls: their blocks and pattern, state, offers, screens and trades |
+| `src/market/` | Stalls: their blocks and pattern, state, offers, screens and trades; renting market places |
 | `src/art.rs` | Draws the textures (`WRITE_ASSETS=1 cargo test --release art`) |

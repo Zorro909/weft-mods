@@ -8,7 +8,7 @@ use crate::admin::spawn::Spawn;
 use crate::city::grid::CellXZ;
 use crate::city::undo::Build;
 use crate::city::{Cell, City, Counters, Plot};
-use crate::market::StallEntry;
+use crate::market::{Rent, StallEntry};
 use crate::players::PlayerEntry;
 
 /// Everyone who has joined: their name when last seen, and what moderators gave them.
@@ -37,3 +37,6 @@ pub static BALANCES: Table<PlayerKey, u64> = Table::write_optimized("balances");
 
 /// Each stall's owner, by dimension key and its register's position.
 pub static STALLS: Table<(u64, Pos), StallEntry> = Table::named("stalls");
+
+/// Who rents each market place, by dimension key, market square corner cell and place number.
+pub static RENTS: Table<(u64, CellXZ, u8), Rent> = Table::named("rents");

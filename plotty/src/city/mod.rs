@@ -43,6 +43,8 @@ pub enum CellKind {
 pub struct Cell {
     pub city: u32,
     pub kind: CellKind,
+    /// The corner cell of what it is part of: a plot's, a market square's.
+    pub corner: CellXZ,
     pub plot: Option<u32>,
     /// The builds over it, oldest first; `/city undo` takes back the last.
     pub builds: Vec<u32>,
@@ -98,6 +100,9 @@ pub fn cell_at(dim: u64, pos: Pos) -> Option<Cell> {
 /// What the block `pos` of dimension `dim` is part of, for `viewer`; `None` outside cities.
 pub fn zone(dim: u64, pos: Pos, viewer: Option<&PlayerKey>) -> Option<Zone> {
     let cell = cell_at(dim, pos)?;
+    if cell.kind == CellKind::Market {
+        return Some(market_zone(dim, pos, viewer));
+    }
     let Some(plot) = cell.plot.and_then(|id| PLOTS.get(&id)) else {
         return Some(Zone::Public);
     };
@@ -106,6 +111,14 @@ pub fn zone(dim: u64, pos: Pos, viewer: Option<&PlayerKey>) -> Option<Zone> {
         (Some(_), Some(key)) if plot.lets_build(key) => Zone::OwnPlot,
         (Some(_), _) => Zone::OthersPlot,
     })
+}
+
+/// A market square's block: on a place `viewer` rents, theirs for a stall; else public.
+fn market_zone(dim: u64, pos: Pos, viewer: Option<&PlayerKey>) -> Zone {
+    match viewer.and_then(|viewer| crate::market::owners_term(dim, pos, viewer)) {
+        Some(_) => Zone::OwnPlace,
+        None => Zone::Public,
+    }
 }
 
 /// The next number of a kind, taken: `pick` names which counter.

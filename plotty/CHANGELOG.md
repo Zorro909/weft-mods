@@ -20,3 +20,5 @@
   `/woof give` and `take` for game masters. New players start with `starting_woof`.
 - Market stalls in oak, spruce and birch, built of sixteen blocks on the owner's plot. Up to eight
   offers sell or buy, for items or Golden Woof, while the owner is away too.
+- Market places to rent for a stall, 1, 7 or 30 days for Golden Woof: `/market rent`,
+  `/market info` and `/market places`, and a rent post at each place.

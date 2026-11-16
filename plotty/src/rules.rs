@@ -15,6 +15,8 @@ pub enum Zone {
     FreePlot,
     /// A plot the player owns or is trusted on.
     OwnPlot,
+    /// A market place the player rents, for a stall.
+    OwnPlace,
     /// Someone else's plot.
     OthersPlot,
 }
@@ -53,6 +55,7 @@ pub fn allowed(zone: Zone, action: Action, bypass: bool, wilderness: Wilderness)
         Zone::Spawn | Zone::Public => matches!(action, Action::Use | Action::UseStall),
         Zone::FreePlot | Zone::OthersPlot => action == Action::UseStall,
         Zone::OwnPlot => !matches!(action, Action::PlayerFight | Action::NaturalSpawn),
+        Zone::OwnPlace => matches!(action, Action::Use | Action::UseStall | Action::BuildStall),
     }
 }
 
@@ -117,6 +120,7 @@ mod tests {
     #[test]
     fn stalls_stand_on_their_owners_plots_only() {
         assert!(may(Zone::OwnPlot, Action::BuildStall), "your plot");
+        assert!(may(Zone::OwnPlace, Action::BuildStall), "your market place");
         for zone in [
             Zone::Wilderness,
             Zone::Spawn,
@@ -130,6 +134,12 @@ mod tests {
             may(Zone::Wilderness, Action::UseStall),
             "trading goes anywhere"
         );
+    }
+
+    #[test]
+    fn a_rented_place_takes_a_stall_and_nothing_else() {
+        assert!(may(Zone::OwnPlace, Action::BuildStall), "a stall");
+        assert!(!may(Zone::OwnPlace, Action::Change), "no other building");
     }
 
     #[test]

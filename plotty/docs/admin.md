@@ -45,7 +45,8 @@ before a creature spawns by itself. Where a block lies decides:
 | Your plot, or one you're trusted on | yes | yes | no | yes | no |
 
 Plot posts and city stones answer anyone who right-clicks them, and anyone trades at a stall
-wherever it stands. Stall blocks go only on your own plot, or one you're trusted on.
+wherever it stands. Stall blocks go only on your own plot, one you're trusted on, or a market place you rent, and
+nothing else goes on a market place.
 
 `/plot bypass` lets a moderator change, use and hurt anything until they type it again; it never
 lets them fight where fighting is off. It ends when they lose the moderator level.
@@ -63,5 +64,5 @@ mod's machines ([`ROADMAP.md`](../ROADMAP.md), gap E).
 | `spawn_radius` | 32 | The spawn's protected radius when `/setspawn` names none |
 | `wilderness` | `"open"` | `"open"`: anyone builds outside towns; `"closed"`: only moderators with `/plot bypass` |
 | `starting_woof` | 100 | Golden Woof a player gets the first time they join |
-| `rent_woof` | `[10, 50, 150]` | The rent of a market place for 1, 7 and 30 days (with the market) |
-| `rent_grace_days` | 3 | Days after a rent ends before moderators may clear the place (with the market) |
+| `rent_woof` | `[10, 50, 150]` | The rent of a market place for 1, 7 and 30 days |
+| `rent_grace_days` | 3 | Days after a rent ends before the place is free again |

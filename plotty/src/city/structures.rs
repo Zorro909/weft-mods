@@ -16,6 +16,7 @@ pub static MARKET: Template = Template::named("market");
 
 const PAVING: &str = "base:cobblestone";
 const EDGING: &str = "base:stone_bricks";
+const RENT_POST: &str = "plotty:rent_post";
 const KERB: &str = "base:stone_bricks_slab";
 const GRASS: &str = "base:grass";
 const POST: &str = "base:oak_log";
@@ -180,12 +181,22 @@ fn plot(t: TemplateBuilder, side: i32) {
         .fill(KERB, [last, 1, 1], [last, 1, last - 1]);
 }
 
-/// A square with six places outlined for stalls, a well in the middle and lamps at the corners.
+/// A square with six places outlined for stalls, each with its rent post at the corner toward
+/// the middle, a well in the middle and lamps at the corners.
 fn market(t: TemplateBuilder) {
     let t = PLACES.into_iter().fold(edged_square(t, 32), |t, [x, z]| {
         let [width, depth] = PLACE_SIZE;
         t.fill(EDGING, [x - 1, 0, z - 1], [x + width, 0, z + depth])
             .fill(PAVING, [x, 0, z], [x + width - 1, 0, z + depth - 1])
+    });
+    let t = PLACES.into_iter().fold(t, |t, [x, z]| {
+        let [_, depth] = PLACE_SIZE;
+        let toward_middle = if z < 16 { z + depth } else { z - 1 };
+        t.fill(
+            RENT_POST,
+            [x - 1, 1, toward_middle],
+            [x - 1, 1, toward_middle],
+        )
     });
     let t = well(t, 14);
     [[1, 1], [30, 1], [1, 30], [30, 30]]

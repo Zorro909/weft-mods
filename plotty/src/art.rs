@@ -239,6 +239,26 @@ const STALL_WOODS: [(&str, [Rgba; 3], [Rgba; 2]); 3] = [
     ),
 ];
 
+/// A market place's rent post: oak boards with a gold coin on a paper plaque.
+const RENT_POST: [&str; 16] = [
+    "dmlmdmlmdmlmdmlm",
+    "dmlmdmlmdmlmdmlm",
+    "dmGGGGGGGGGGGGlm",
+    "dmGppppppppppGlm",
+    "dmGppppyyppppGlm",
+    "dmGpppyGGypppGlm",
+    "dmGppyGYGGyppGlm",
+    "dmGppyGGGGyppGlm",
+    "dmGpppyGGypppGlm",
+    "dmGppppyyppppGlm",
+    "dmGppppppppppGlm",
+    "dmGpiiiiiiiipGlm",
+    "dmGppppppppppGlm",
+    "dmgGGGGGGGGGGglm",
+    "dmlmdmlmdmlmdmlm",
+    "dmlmdmlmdmlmdmlm",
+];
+
 /// What each letter means.
 fn key() -> Vec<(char, Rgba)> {
     vec![
@@ -338,6 +358,7 @@ fn art_drawings_are_square() {
         ("city stone", &CITY_STONE),
         ("icon", &ICON),
         ("woof", &WOOF),
+        ("rent post", &RENT_POST),
         ("stall planks", &STALL_PLANKS),
         ("stall crate", &STALL_CRATE),
         ("stall post", &STALL_POST),
@@ -359,6 +380,7 @@ fn art_pictures_are_written() {
         ("textures/gui/icon.png", &ICON, 4),
         ("textures/gui/woof.png", &WOOF, 1),
         ("textures/block/stall_till.png", &STALL_TILL, 1),
+        ("textures/block/rent_post.png", &RENT_POST, 1),
     ] {
         let (side, pixels) = pixels(rows, scale);
         save_or_check(&asset(path), &png(side, &pixels));
