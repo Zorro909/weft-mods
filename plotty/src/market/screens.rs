@@ -17,6 +17,13 @@ pub static SHOP: Menu = Menu::named("stall_shop");
 
 /// Width of a price field, in GUI pixels.
 const PRICE_WIDTH: f32 = 30.0;
+/// Offers each screen shows at once; the others are a scroll away.
+const SETUP_ROWS: f32 = 5.0;
+const SHOP_ROWS: f32 = 4.0;
+/// Height of an offer's row in GUI pixels: a slot in the owner's screen, a button and the gap
+/// under it in the shop.
+const SETUP_ROW: f32 = 18.0;
+const SHOP_ROW: f32 = 24.0;
 
 value! {
     /// The owner sets a Woof price of offer `offer` of the register `register`: what it gives
@@ -44,38 +51,42 @@ pub fn register(r: &mut Registry) {
     r.packet(&PRICE, set_price);
 }
 
-/// The owner's screen:
+/// The owner's screen, its offers scrolling five at a time:
 ///
 /// ```text
-/// +------------------------------------------------------+
-/// | Oak Stall Register                                   |
-/// | Open                                                 |
-/// | Gives          Gets           Stock                  |
-/// | [ ] [  0]  ->  [ ] [ 40]      [ ][ ][ ][ ][ ][ ][ ]..|
-/// | ... eight offers                                     |
-/// |                               Till                   |
-/// |                               [ ][ ][ ][ ][ ][ ][ ]..|
-/// | [the player's inventory]                             |
-/// +------------------------------------------------------+
+/// +----------------------------------------------------------------------+
+/// | Oak Stall Register                                                   |
+/// | Open                                                                 |
+/// | Offers: gives, for gets   Stock                Till                  |
+/// | [ ] [  0] for [ ] [ 40] | [ ][ ][ ][ ][ ][ ].. [ ][ ][ ][ ][ ][ ]..  |
+/// | ... five of eight       |                                            |
+/// | [the player's inventory]                                             |
+/// +----------------------------------------------------------------------+
 /// ```
 fn setup_screen(ui: &mut Ui) {
     let shown = ui.view().menu_component(&STALL).unwrap_or_default();
     ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
         ui.title();
         status_line(ui);
-        ui.row(S::row().gap(10.0), |ui| {
-            ui.column(S::column().gap(0.0), |ui| {
-                ui.text_styled(S::column().class("dim"), "plotty.setup.offers", &[]);
-                for offer in 0..OFFERS as u32 {
-                    offer_row(ui, offer, &shown);
-                }
-            });
+        ui.row(S::row().gap(10.0).stretch(), |ui| {
             ui.column(S::column().gap(2.0), |ui| {
-                ui.text_styled(S::column().class("dim"), "plotty.setup.stock", &[]);
-                ui.group("stock");
-                ui.text_styled(S::column().class("dim"), "plotty.setup.till", &[]);
-                ui.group("till");
+                ui.text_styled(S::column().class("dim"), "plotty.setup.offers", &[]);
+                let rows = S::column().h(SETUP_ROWS * SETUP_ROW).scroll();
+                ui.column(rows, |ui| {
+                    for offer in 0..OFFERS as u32 {
+                        offer_row(ui, offer, &shown);
+                    }
+                });
             });
+            for (label, group) in [
+                ("plotty.setup.stock", "stock"),
+                ("plotty.setup.till", "till"),
+            ] {
+                ui.column(S::column().gap(2.0), |ui| {
+                    ui.text_styled(S::column().class("dim"), label, &[]);
+                    ui.group(group);
+                });
+            }
         });
         ui.player_inventory(true);
     });
@@ -116,25 +127,28 @@ fn price_field(ui: &mut Ui, offer: u32, gets: u32, now: u32) {
     });
 }
 
-/// Everyone else's screen:
+/// Everyone else's screen, its offers scrolling four at a time:
 ///
 /// ```text
-/// +--------------------------------------------+
-/// | Oak Stall Register                         |
-/// | Open                                       |
-/// | 16 [bread]  for  3 [iron]    12x  [Trade]  |
-/// | 32 [wheat]  for  40 Woof      3x  [Trade]  |
-/// | ... eight offers, blank where none         |
-/// | [the player's inventory]                   |
-/// +--------------------------------------------+
+/// +-----------------------------------------------+
+/// | Oak Stall Register                            |
+/// | Open                                          |
+/// | 16 [bread]  for  3 [iron]   12 left  [Trade]  |
+/// | 32 [wheat]  for  40 Woof     3 left  [Trade]  |
+/// | ... four of eight, a dash where none          |
+/// | [the player's inventory]                      |
+/// +-----------------------------------------------+
 /// ```
 fn shop_screen(ui: &mut Ui) {
     ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
         ui.title();
         status_line(ui);
-        for offer in 0..OFFERS {
-            ui.row(S::row().gap(6.0), |ui| shop_row(ui, offer));
-        }
+        let rows = S::column().gap(4.0).h(SHOP_ROWS * SHOP_ROW).scroll();
+        ui.column(rows, |ui| {
+            for offer in 0..OFFERS {
+                ui.row(S::row().gap(6.0), |ui| shop_row(ui, offer));
+            }
+        });
         ui.player_inventory(true);
     });
 }
