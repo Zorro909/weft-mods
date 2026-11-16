@@ -9,7 +9,7 @@ use super::build::{Plan, Target, What};
 use super::grid::Footprint;
 use super::structures::Kind;
 use super::undo::{self, Build, Unsaveable};
-use super::{Cell, CellKind, City, Plot, next_id};
+use super::{Cell, City, Plot, next_id};
 use crate::tables::{BUILDS, CELLS, CITIES, PLOTS};
 use crate::{dims, plot};
 
@@ -170,7 +170,7 @@ fn take_cells(plan: &Plan, build: Option<u32>) -> Option<(u32, Option<u32>)> {
         PLOTS.set(&id, plot);
         id
     });
-    let kind_of_cells: CellKind = kind.cell_kind();
+    let kind_of_cells = kind.cell_kind();
     for cell in plan.footprint.cells() {
         let builds = build.into_iter().collect();
         CELLS.set(

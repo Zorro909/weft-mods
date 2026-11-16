@@ -48,12 +48,20 @@ fn turn_on(cmd: &mut ServerCommand) -> io::Result<()> {
         cmd.reply("plotty.whitelist.already_on", &[]);
         return Ok(());
     }
-    if !set_aside().exists() {
-        let text = players::all_keys().iter().fold(String::new(), |text, key| {
+    let text = if set_aside().exists() {
+        read()?
+    } else {
+        players::all_keys().iter().fold(String::new(), |text, key| {
             whitelist_file::with(&text, key.as_str())
-        });
-        write(&text)?;
-    }
+        })
+    };
+    let admin = PlayerKey::of(&cmd.world(), cmd.player());
+    let Some(text) = whitelist_file::to_turn_on(&text, admin.as_ref().map(PlayerKey::as_str))
+    else {
+        cmd.reply("plotty.whitelist.empty", &[]);
+        return Ok(());
+    };
+    write(&text)?;
     std::fs::rename(set_aside(), file())?;
     let path = file().display().to_string();
     cmd.reply("plotty.whitelist.on", &[Arg::Text(&path)]);
@@ -72,9 +80,12 @@ fn turn_off(cmd: &mut ServerCommand) -> io::Result<()> {
 
 fn list(cmd: &mut ServerCommand) -> io::Result<()> {
     let text = read()?;
-    let keys = whitelist_file::keys(&text);
+    let keys: Vec<PlayerKey> = whitelist_file::keys(&text)
+        .into_iter()
+        .filter_map(PlayerKey::new)
+        .collect();
     cmd.reply("plotty.whitelist.listed", &[Arg::Int(keys.len() as i64)]);
-    for key in keys.iter().filter_map(|key| PlayerKey::new(key)) {
+    for key in keys {
         cmd.reply(
             "plotty.whitelist.entry",
             &[Arg::Text(&players::name_of(&key))],
@@ -119,12 +130,20 @@ fn add(cmd: &mut ServerCommand, key: &PlayerKey) -> io::Result<()> {
     Ok(())
 }
 
-/// Takes out the player Plotty knows by that name. One who is online stays until they leave.
+/// Takes out the player Plotty knows by that name, or the key as the file lists it. One who is
+/// online stays until they leave.
 fn remove(cmd: &mut ServerCommand) -> io::Result<()> {
-    let Some((key, name)) = players::named(cmd) else {
-        return Ok(());
+    let text = read()?;
+    let typed = cmd.text("name").unwrap_or_default().to_string();
+    let listed_key = whitelist_file::keys(&text).contains(&typed.as_str());
+    let (key, name) = match PlayerKey::new(&typed).filter(|_| listed_key) {
+        Some(key) => (key, players::name_of(&key)),
+        None => match players::named(cmd) {
+            Some(found) => found,
+            None => return Ok(()),
+        },
     };
-    write(&whitelist_file::without(&read()?, key.as_str()))?;
+    write(&whitelist_file::without(&text, key.as_str()))?;
     cmd.reply("plotty.whitelist.removed", &[Arg::Text(&name)]);
     Ok(())
 }

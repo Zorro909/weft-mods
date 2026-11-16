@@ -1,29 +1,25 @@
-//! A stall's state, kept on its register's block entity in `STALL`, which the screens read: whether
-//! it stands whole where it may, its offers' Woof prices and samples, and how often each offer
-//! can go through from the stall's side. Its owner, the player who placed the register, is in
-//! the `STALLS` table, which other players' commands and protection read too.
+//! A stall's state, on its register's block entity. Its owner's Woof prices are saved in
+//! `PRICES`. What the screens show is worked out from them and the register's slots once a
+//! second into `STALL`, which isn't saved: whether it stands whole where it may, its offers, and
+//! how often each can go through from the stall's side. Its owner is in `owner.rs`.
 //!
 //! The register holds the items: per offer a sample of what it gives and gets (`gives`, `gets`),
 //! then the `stock` it sells from and the `till` payments in items go into.
 
-use serde::{Deserialize, Serialize};
 use weft_sdk::{
-    Ask, BlockBuilder, BlockChange, Component, Dir, Holds, ItemStack, Registry, SystemBatch, Vec3,
-    Verdict, World, actions, component_flags, permission, value,
+    BlockBuilder, Component, Dir, Holds, ItemStack, Registry, SystemBatch, Vec3, World,
+    component_flags, value,
 };
 use weftkit::{PlayerKey, Pos, TypedWorld};
 
-use super::blocks::{self, REGISTERS};
+use super::blocks;
 use super::offer::{OFFERS, Offer};
+use super::owner::{self, owner_at};
 use super::pattern::{self, Part};
 use super::rent::{self, Term};
-use super::screens::{SETUP, SHOP};
-
-/// Blocks from a stall a player may change its prices or trade.
-pub const REACH: f64 = 8.0;
+use super::screens::SETUP;
 use crate::city;
 use crate::rules::Zone;
-use crate::tables::STALLS;
 use crate::{dims, woof};
 
 /// Slots a register holds: samples, stock, till.
@@ -32,6 +28,8 @@ pub const SLOTS: u32 = 2 * OFFERS as u32 + 2 * STOCK;
 pub const STOCK: u32 = 27;
 /// Ticks between looks at a stall.
 const EVERY: u64 = 20;
+/// Blocks from a stall a player may change its prices or trade.
+pub const REACH: f64 = 8.0;
 
 value! {
     /// Woof prices of one offer: what the stall gives and gets, 0 where that side is items.
@@ -43,9 +41,20 @@ value! {
 }
 
 value! {
+    /// The Woof prices of a stall's offers, as its owner set them. Saved: its layout is a file
+    /// format, and new fields go last.
+    #[derive(Default)]
+    pub struct OfferPrices {
+        pub offers: [Prices; OFFERS],
+    }
+}
+
+pub static PRICES: Component<OfferPrices> = Component::named("stall_prices");
+
+value! {
     /// What a stall's screens show. `status` is a `Status` by number, `missing` a `Part` by
     /// number where one is missing; `revision` changes whenever an offer does, so a trade
-    /// clicked on an offer as it was is refused. New fields go last.
+    /// clicked on an offer as it was is refused. Not saved: it holds item ids.
     #[derive(Default)]
     pub struct Stall {
         pub status: u32,
@@ -59,13 +68,7 @@ value! {
 
 pub static STALL: Component<Stall> = Component::named("stall");
 
-/// Whose a stall is.
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct StallEntry {
-    pub owner: PlayerKey,
-}
-
-/// Whether a stall trades, and why not. Kept in `Stall::status` by number: new ones go last.
+/// Whether a stall trades, and why not. Kept in `Stall::status` by number.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Status {
     #[default]
@@ -86,6 +89,7 @@ impl Status {
         Status::RentEnded,
     ];
 
+    /// The status of `stall`; one by a number it doesn't know, `Open`.
     pub fn of(stall: &Stall) -> Status {
         Status::ALL
             .get(stall.status as usize)
@@ -104,96 +108,28 @@ impl Status {
     }
 }
 
-/// Parts by number, as `Stall::missing` keeps them.
-pub const PARTS: [Part; 5] = [
-    Part::Register,
-    Part::Counter,
-    Part::Crate,
-    Part::Post,
-    Part::Awning,
-];
-
 pub fn register(r: &mut Registry) {
-    r.entity_component(
-        &STALL,
-        Stall::default(),
-        component_flags::SAVE | component_flags::SYNC_MENU,
-    );
+    r.entity_component(&PRICES, OfferPrices::default(), component_flags::SAVE);
+    r.entity_component(&STALL, Stall::default(), component_flags::SYNC_MENU);
     r.system(&STALL, tick);
-    r.before_event(&actions::USE_BLOCK, open);
 }
 
 /// The register's own part of its block: its state, items and owner.
 pub fn finish_register(builder: BlockBuilder<'_>) -> BlockBuilder<'_> {
     builder
-        .entity(|entity| entity.attach(&STALL).inventory(SLOTS))
+        .entity(|entity| entity.attach(&PRICES).attach(&STALL).inventory(SLOTS))
         .opens(&SETUP)
-        .on_place(placed)
-        .on_break(broken)
+        .on_place(owner::placed)
+        .on_break(owner::broken)
 }
 
-/// Opens the stall a used block belongs to, instead of what using it would do: its owner sets
-/// it up, everyone else shops. Asked before the engine opens the register's own menu, which is
-/// there only so its slot groups have names.
-fn open(ask: &Ask) -> Verdict {
-    if blocks::part_of(ask.state()).is_none() {
-        return Verdict::Abstain;
-    }
-    let world = ask.world();
-    let Some(register) = register_of(&world, Pos::from(ask.pos())) else {
-        return Verdict::Abstain;
-    };
-    let player = ask.entity();
-    let owner = owner_at(&world, register);
-    let mine = owner.is_some() && owner == PlayerKey::of(&world, player);
-    let menu = if mine { &SETUP } else { &SHOP };
-    world.open_menu(player, menu, world.block_entity(register));
-    Verdict::Deny
-}
-
-/// The register of the stall holding the block `pos`.
-fn register_of(world: &World, pos: Pos) -> Option<Pos> {
-    pattern::registers_near(pos).find(|near| {
-        let state = world.block_typed(*near);
-        REGISTERS.iter().any(|register| state.is(register))
-            && pattern::layout(*near, front_of(world, *near))
-                .iter()
-                .any(|(at, _)| *at == pos)
-    })
-}
-
-fn front_of(world: &World, register: Pos) -> Dir {
+/// The way the register at `register` faces.
+pub fn front_of(world: &World, register: Pos) -> Dir {
     world
         .block_typed(register)
         .prop("facing")
         .and_then(Dir::from_name)
         .unwrap_or(Dir::North)
-}
-
-fn placed(world: &World, change: &BlockChange) {
-    let Some(owner) = PlayerKey::of(world, change.player) else {
-        return;
-    };
-    let key = (dims::key_of(world), Pos::from(change.pos));
-    STALLS.set(&key, StallEntry { owner });
-}
-
-fn broken(world: &World, change: &BlockChange) {
-    STALLS.remove(&(dims::key_of(world), Pos::from(change.pos)));
-}
-
-/// Whose the stall at `pos` is.
-pub fn owner_at(world: &World, pos: Pos) -> Option<PlayerKey> {
-    STALLS
-        .get(&(dims::key_of(world), pos))
-        .map(|entry| entry.owner)
-}
-
-/// Whether `player` may change the stall at `pos`'s offers: its owner, or a moderator.
-pub fn may_set_up(world: &World, player: u64, pos: Pos) -> bool {
-    let owner = owner_at(world, pos);
-    owner.is_some() && owner == PlayerKey::of(world, player)
-        || world.permission(player) >= permission::MODERATOR
 }
 
 /// Looks at every stall once a second: whether it stands whole and where it may, and what its
@@ -216,6 +152,7 @@ pub fn look(world: &World, id: u64, pos: Pos, stall: &mut Stall) {
     let owner = owner_at(world, pos);
     let status = status_of(world, pos, owner.as_ref(), stall);
     stall.status = status as u32;
+    stall.prices = world.component(id, &PRICES).unwrap_or_default().offers;
     let inventory = world.inventory(id);
     let mut samples = slots(&inventory, "gives");
     samples.extend(slots(&inventory, "gets"));
@@ -245,11 +182,19 @@ fn status_of(world: &World, pos: Pos, owner: Option<&PlayerKey>, stall: &mut Sta
     });
     match checked {
         Err((part, _)) => {
-            stall.missing = PARTS.iter().position(|p| *p == part).unwrap_or(0) as u32;
+            stall.missing = Part::ALL.iter().position(|p| *p == part).unwrap_or(0) as u32;
             Status::Missing
         }
         Ok(()) => standing(world, pos, owner),
     }
+}
+
+/// The part `stall` lacks, where its status says one is missing.
+pub fn missing(stall: &Stall) -> Part {
+    Part::ALL
+        .get(stall.missing as usize)
+        .copied()
+        .unwrap_or(Part::Register)
 }
 
 /// Offer `index` of `stall` as its samples and prices make it.
@@ -317,14 +262,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_status_and_part_has_a_name() {
+    fn every_status_has_a_name() {
         for status in Status::ALL {
             assert!(crate::translated(status.key()), "{status:?}");
         }
-        for (number, part) in PARTS.iter().enumerate() {
-            let key = format!("plotty.part.{number}");
-            assert!(crate::translated(&key), "{part:?} as {key}");
+        for part in Part::ALL {
+            assert!(crate::translated(part.key()), "{part:?}");
         }
+    }
+
+    #[test]
+    fn an_unknown_number_reads_as_open() {
+        let stall = Stall {
+            status: 99,
+            ..Stall::default()
+        };
+        assert_eq!(Status::of(&stall), Status::Open, "from a newer plotty");
+    }
+
+    #[test]
+    fn the_saved_prices_lie_in_pairs() {
+        use std::mem::{offset_of, size_of};
+        assert_eq!(offset_of!(Prices, gets), 4, "after gives");
+        assert_eq!(size_of::<OfferPrices>(), 8 * OFFERS, "eight pairs");
     }
 
     #[test]

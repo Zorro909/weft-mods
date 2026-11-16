@@ -5,10 +5,11 @@
 //! can reach its items.
 
 use weft_sdk::{Arg, Channel, ClientView, Menu, Packet, Registry, S, Slots, Ui, value};
-use weftkit::Pos;
+use weftkit::{PlayerKey, Pos};
 
 use super::offer::{Goods, OFFERS};
-use super::stall::{self, PARTS, STALL, STOCK, Stall, Status};
+use super::owner::{self, owner_at};
+use super::stall::{self, PRICES, STALL, STOCK, Stall, Status};
 use super::trade::{TRADE, Trade};
 
 pub static SETUP: Menu = Menu::named("stall_setup");
@@ -192,15 +193,12 @@ fn say_goods(out: &mut weft_sdk::TextOut, goods: Option<Goods>) {
 fn status_line(ui: &mut Ui) {
     ui.text_bind(|view, out| {
         let stall = view.menu_component(&STALL).unwrap_or_default();
-        let status = Status::of(&stall);
-        let part = PARTS
-            .get(stall.missing as usize)
-            .map_or(0, |_| stall.missing);
-        out.set(status.key(), &[Arg::Key(&format!("plotty.part.{part}"))]);
+        let part = stall::missing(&stall).key();
+        out.set(Status::of(&stall).key(), &[Arg::Key(part)]);
     });
 }
 
-/// Sets a Woof price the owner typed, where the player may and stands near.
+/// Sets a Woof price the owner typed, where they stand near.
 fn set_price(packet: &Packet, asked: SetPrice) {
     let world = packet.world();
     let player = packet.player();
@@ -209,17 +207,23 @@ fn set_price(packet: &Packet, asked: SetPrice) {
     };
     let pos = Pos::from(register.block_pos());
     let near = stall::within_reach(register.pos, you.pos);
-    if !near || !stall::may_set_up(&world, player, pos) || asked.offer as usize >= OFFERS {
+    let mine = owner::is_owner(
+        owner_at(&world, pos).as_ref(),
+        PlayerKey::of(&world, player).as_ref(),
+    );
+    if !near || !mine || asked.offer as usize >= OFFERS {
         return;
     }
-    let Some(stall) = world.component_mut(asked.register, &STALL) else {
+    let Some(saved) = world.component_mut(asked.register, &PRICES) else {
         return;
     };
-    let prices = &mut stall.prices[asked.offer as usize];
+    let prices = &mut saved.offers[asked.offer as usize];
     if asked.gets == 0 {
         prices.gives = asked.woof;
     } else {
         prices.gets = asked.woof;
     }
-    stall::look(&world, asked.register, pos, stall);
+    if let Some(stall) = world.component_mut(asked.register, &STALL) {
+        stall::look(&world, asked.register, pos, stall);
+    }
 }

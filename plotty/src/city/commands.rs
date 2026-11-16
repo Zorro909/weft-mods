@@ -6,7 +6,7 @@ use weftkit::{PlayerKey, Pos};
 use super::build::{self, Plan, Target, What};
 use super::grid::CellXZ;
 use super::structures::Kind;
-use super::{CellKind, buildings, cell_at, city_named, place, undo};
+use super::{CellKind, buildings, cell_at, city_named, undo};
 use crate::tables::{CELLS, CITIES, PLOTS};
 use crate::{dims, plot};
 
@@ -37,20 +37,30 @@ fn run(cmd: &mut ServerCommand) {
     if !for_anyone && here.world.permission(cmd.player()) < permission::GAME_MASTER {
         return cmd.reply("plotty.game_masters_only", &[]);
     }
-    match () {
-        _ if cmd.given("found") => found(cmd, &here),
-        _ if cmd.given("build") => grow(cmd, &here, false),
-        _ if cmd.given("mark") => grow(cmd, &here, true),
-        _ if cmd.given("building") => building(cmd, &here),
-        _ if cmd.given("buildings") => list_buildings(cmd),
-        _ if cmd.given("confirm") => build::confirm(cmd, &here.key),
-        _ if cmd.given("cancel") => build::cancel(cmd, &here.key),
-        _ if cmd.given("undo") => undo(cmd, &here),
-        _ if cmd.given("unmark") => unmark(cmd, &here),
-        _ if cmd.given("list") => list(cmd),
-        _ if cmd.given("rename") => rename(cmd, &here),
-        _ if cmd.given("delete") => delete(cmd),
-        _ => info(cmd, &here),
+    if cmd.given("found") {
+        found(cmd, &here);
+    } else if cmd.given("build") || cmd.given("mark") {
+        grow(cmd, &here, cmd.given("mark"));
+    } else if cmd.given("building") {
+        building(cmd, &here);
+    } else if cmd.given("buildings") {
+        list_buildings(cmd);
+    } else if cmd.given("confirm") {
+        build::confirm(cmd, &here.key);
+    } else if cmd.given("cancel") {
+        build::cancel(cmd, &here.key);
+    } else if cmd.given("undo") {
+        undo(cmd, &here);
+    } else if cmd.given("unmark") {
+        unmark(cmd, &here);
+    } else if cmd.given("list") {
+        list(cmd);
+    } else if cmd.given("rename") {
+        rename(cmd, &here);
+    } else if cmd.given("delete") {
+        delete(cmd);
+    } else {
+        info(cmd, &here);
     }
 }
 
@@ -85,8 +95,7 @@ fn found(cmd: &mut ServerCommand, here: &Here) {
         ground_y: here.pos.y - 1,
     };
     if cmd.text("how") == Some("mark") {
-        place::mark(&plan);
-        return cmd.reply("plotty.city.marked", &[]);
+        return build::mark(cmd, &plan);
     }
     build::propose(cmd, here.key, plan);
 }
@@ -112,8 +121,7 @@ fn grow(cmd: &mut ServerCommand, here: &Here, mark: bool) {
         ground_y,
     };
     if mark {
-        place::mark(&plan);
-        return cmd.reply("plotty.city.marked", &[]);
+        return build::mark(cmd, &plan);
     }
     build::propose(cmd, here.key, plan);
 }

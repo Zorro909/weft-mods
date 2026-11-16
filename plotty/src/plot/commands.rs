@@ -1,5 +1,7 @@
 //! `/plot`: claiming, sharing and giving up plots, seeing them, and what moderators do with them.
 
+use std::sync::Mutex;
+
 use weft_sdk::{Arg, Output, ServerCommand, World, permission};
 use weftkit::{PlayerKey, Pos};
 
@@ -19,6 +21,9 @@ const SHOW_REACH: i32 = 4;
 const SHOW_TICKS: u32 = 20 * 30;
 /// Outline colors, as 0xRRGGBBAA: yours, someone else's, free.
 const COLORS: [u32; 3] = [0x4CC38AFF, 0x6FA8DCFF, 0xF2F2F2FF];
+
+/// Held while a plot command runs.
+static CHANGING: Mutex<()> = Mutex::new(());
 
 /// Who runs a plot command, and where.
 struct Here {
@@ -43,18 +48,31 @@ fn run(cmd: &mut ServerCommand) {
     if !moderator && only_moderators.iter().any(|word| cmd.given(word)) {
         return cmd.reply("plotty.moderators_only", &[]);
     }
-    match () {
-        _ if cmd.given("claim") => claim(cmd, &here),
-        _ if cmd.given("unclaim") => unclaim(cmd, &here),
-        _ if cmd.given("trust") => trust(cmd, &here, true),
-        _ if cmd.given("untrust") => trust(cmd, &here, false),
-        _ if cmd.given("show") => show(&here),
-        _ if cmd.given("list") => list(cmd, &here),
-        _ if cmd.given("give") => give(cmd, &here),
-        _ if cmd.given("take") => take(cmd, &here),
-        _ if cmd.given("allowance") => allowance(cmd),
-        _ if cmd.given("bypass") => bypass(cmd, &here),
-        _ => info(cmd, &here),
+    // One plot command at a time: a claim reads a plot and writes it back, and two players
+    // claiming the same plot from two regions must not both get it.
+    let _changing = CHANGING
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if cmd.given("claim") {
+        claim(cmd, &here);
+    } else if cmd.given("unclaim") {
+        unclaim(cmd, &here);
+    } else if cmd.given("trust") || cmd.given("untrust") {
+        trust(cmd, &here, cmd.given("trust"));
+    } else if cmd.given("show") {
+        show(&here);
+    } else if cmd.given("list") {
+        list(cmd, &here);
+    } else if cmd.given("give") {
+        give(cmd, &here);
+    } else if cmd.given("take") {
+        take(cmd, &here);
+    } else if cmd.given("allowance") {
+        allowance(cmd);
+    } else if cmd.given("bypass") {
+        bypass(cmd, &here);
+    } else {
+        info(cmd, &here);
     }
 }
 

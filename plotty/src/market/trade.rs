@@ -7,6 +7,8 @@ use weft_sdk::{Arg, Channel, Inventory, ItemStack, Output, Packet, Registry, Wor
 use weftkit::{PlayerKey, Pos};
 
 use super::offer::{Goods, Holdings, OFFERS, Offer};
+use super::owner::owner_at;
+use super::pattern::Part;
 use super::stacks;
 use super::stall::{self, STALL, Status};
 use crate::tables::SALES;
@@ -31,14 +33,27 @@ pub fn register(r: &mut Registry) {
     r.packet(&TRADE, answer);
 }
 
+/// Why a trade didn't happen: a lang key, and the part a closed stall lacks for its argument.
+struct Refusal {
+    key: &'static str,
+    part: Option<Part>,
+}
+
+impl From<&'static str> for Refusal {
+    fn from(key: &'static str) -> Refusal {
+        Refusal { key, part: None }
+    }
+}
+
 fn answer(packet: &Packet, trade: Trade) {
     let world = packet.world();
     let player = packet.player();
-    let key = match attempt(&world, player, trade) {
-        Ok(()) => "plotty.trade.done",
-        Err(key) => key,
+    let Err(Refusal { key, part }) = attempt(&world, player, trade) else {
+        world.hint("plotty.trade.done", &[]).to(player);
+        return;
     };
-    world.hint(key, &[]).to(player);
+    let args: Vec<Arg> = part.map(|part| Arg::Key(part.key())).into_iter().collect();
+    world.hint(key, &args).to(player);
 }
 
 /// Tells a player who just joined how often their stalls traded since they last did.
@@ -53,29 +68,36 @@ pub fn tell_sales(world: &World, player: u64, key: &PlayerKey) {
 }
 
 /// Trades once, or says why not.
-fn attempt(world: &World, player: u64, trade: Trade) -> Result<(), &'static str> {
+fn attempt(world: &World, player: u64, trade: Trade) -> Result<(), Refusal> {
     let gone = "plotty.trade.gone";
     let register = world.entity(trade.register).ok_or(gone)?;
     let you = world.entity(player).ok_or(gone)?;
     if !stall::within_reach(register.pos, you.pos) {
-        return Err("plotty.trade.far");
+        return Err("plotty.trade.far".into());
     }
     let pos = Pos::from(register.block_pos());
     let stall = world.component_mut(trade.register, &STALL).ok_or(gone)?;
     stall::look(world, trade.register, pos, stall);
     let status = Status::of(stall);
     if status != Status::Open {
-        return Err(status.key());
+        return Err(Refusal {
+            key: status.key(),
+            part: Some(stall::missing(stall)),
+        });
     }
     if stall.revision != trade.revision {
-        return Err("plotty.trade.changed");
+        return Err("plotty.trade.changed".into());
     }
-    let index = (trade.offer as usize).min(OFFERS - 1);
-    let offer = stall::offer_of(stall, index).ok_or("plotty.trade.no_offer")?;
-    let owner = stall::owner_at(world, pos).ok_or(gone)?;
+    let no_offer = "plotty.trade.no_offer";
+    let index = trade.offer as usize;
+    let offer = (index < OFFERS)
+        .then(|| stall::offer_of(stall, index))
+        .flatten()
+        .ok_or(no_offer)?;
+    let owner = owner_at(world, pos).ok_or(gone)?;
     let customer = PlayerKey::of(world, player).ok_or(gone)?;
     if owner == customer {
-        return Err("plotty.trade.own_stall");
+        return Err("plotty.trade.own_stall".into());
     }
     exchange(world, trade.register, player, offer, [owner, customer])?;
     SALES.update(&owner, |sales| *sales = sales.saturating_add(1));

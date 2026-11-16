@@ -41,7 +41,7 @@ pub fn register(r: &mut Registry) {
             crate::market::tell_sales(&world, joined.player, &key);
             if remember(key, name) {
                 crate::woof::start(&key);
-                crate::admin::spawn::welcome(&world, joined.player);
+                crate::admin::spawn::send(&world, joined.player);
             }
         }
     });

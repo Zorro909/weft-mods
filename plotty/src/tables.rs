@@ -21,7 +21,7 @@ pub static SPAWN: Table<(), Spawn> = Table::named("spawn");
 pub static CITIES: Table<u32, City> = Table::named("cities");
 
 /// Every cell some city has, by dimension key and cell: asked by every protection hook.
-pub static CELLS: Table<(u64, CellXZ), Cell> = Table::named("cells");
+pub static CELLS: Table<(u64, CellXZ), Cell> = Table::named("city_cells");
 
 /// Plots by number.
 pub static PLOTS: Table<u32, Plot> = Table::named("plots");

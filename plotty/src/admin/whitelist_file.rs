@@ -25,6 +25,16 @@ pub fn without(text: &str, key: &str) -> String {
     joined(&lines)
 }
 
+/// The file to turn the whitelist on with: `text` and `keeping`, the admin turning it on;
+/// `None` where it would let nobody in, the admins among them.
+pub fn to_turn_on(text: &str, keeping: Option<&str>) -> Option<String> {
+    let text = match keeping {
+        Some(key) => with(text, key),
+        None => text.to_string(),
+    };
+    (!keys(&text).is_empty()).then_some(text)
+}
+
 /// Lines ending with a newline each, as a hand-edited file would.
 fn joined(lines: &[&str]) -> String {
     lines.iter().map(|line| format!("{line}\n")).collect()
@@ -53,6 +63,25 @@ mod tests {
     #[test]
     fn blank_lines_let_nobody_in() {
         assert_eq!(keys("aa\n\n  \nbb"), vec!["aa", "bb"], "two keys");
+    }
+
+    #[test]
+    fn the_whitelist_never_turns_on_empty() {
+        assert_eq!(
+            to_turn_on("", None),
+            None,
+            "from the console, before anyone joined"
+        );
+        assert_eq!(
+            to_turn_on("", Some("aa")),
+            Some("aa\n".to_string()),
+            "the admin stays in"
+        );
+        assert_eq!(
+            to_turn_on("bb\n", Some("bb")),
+            Some("bb\n".to_string()),
+            "once"
+        );
     }
 
     #[test]

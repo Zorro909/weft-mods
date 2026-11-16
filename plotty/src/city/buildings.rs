@@ -52,9 +52,10 @@ pub fn size_of(template: &Template) -> Option<[i32; 3]> {
     (size.x > 0).then_some([size.x, size.y, size.z])
 }
 
-/// Whether something `width` by `depth` fits a plot `blocks` across with its margin.
-pub fn fits([width, _, depth]: [i32; 3], blocks: i32) -> bool {
-    width + 2 * MARGIN <= blocks && depth + 2 * MARGIN <= blocks
+/// Whether something `width` by `height` by `depth` fits a plot `blocks` across with its
+/// margin, and under the height a build saves for its undo.
+pub fn fits([width, height, depth]: [i32; 3], blocks: i32) -> bool {
+    width + 2 * MARGIN <= blocks && depth + 2 * MARGIN <= blocks && height <= super::place::ABOVE
 }
 
 #[cfg(test)]
@@ -81,5 +82,6 @@ mod tests {
         assert!(!fits([21, 30, 18], 16), "a town hall is too big for 16");
         assert!(fits([21, 30, 18], 32), "but fits 32");
         assert!(!fits([15, 5, 15], 16), "no room for the margin");
+        assert!(!fits([9, 40, 7], 32), "taller than undo saves");
     }
 }

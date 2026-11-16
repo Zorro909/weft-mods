@@ -8,12 +8,12 @@ in by taking a listed player's name. Only admins (level 3) use `/whitelist`.
 
 | Command | What it does |
 |---|---|
-| `/whitelist on` | Turns it on. The first time, every player Plotty has seen join is listed, so nobody already playing is shut out. Says which file it turned on |
+| `/whitelist on` | Turns it on. The first time, every player Plotty has seen join is listed, so nobody already playing is shut out, and so is the admin turning it on. It refuses to turn on a list that would let nobody in. Says which file it turned on |
 | `/whitelist off` | Sets the file aside as `whitelist.txt.off`, which the engine doesn't read. Its list is kept for when it goes back on |
 | `/whitelist list` | The listed players, by name where Plotty knows it, else the start of the key |
 | `/whitelist add <players>` | Adds players who are online, chosen as any command chooses players: a name, `@a` |
 | `/whitelist key <key>` | Adds a key as the server log printed it for a player it turned away |
-| `/whitelist remove <name>` | Takes a player off. One who is online stays until they leave |
+| `/whitelist remove <name>` | Takes a player off, by name or by the key the list shows. One who is online stays until they leave |
 
 While the whitelist is off, `add`, `key` and `remove` change the list set aside, so adding a
 player never turns it on.
