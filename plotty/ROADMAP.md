@@ -4,12 +4,8 @@ What Plotty is still to get, in the order it comes.
 
 ## Next
 
-### Market places
+### Market stalls, still to come
 
-- On a market square the six places are rented for 1, 7 or 30 real days (`rent_woof` in the
-  settings); the rent leaves the game. When it ends the stall closes, and after
-  `rent_grace_days` moderators may clear it. `/market rent`, `/market places`, a rent post at
-  each place.
 - Looking at a stall shows its owner and offers in base's crosshair panel.
 - At join, a note of what your stalls sold while you were away.
 

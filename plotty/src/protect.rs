@@ -145,6 +145,7 @@ fn refusal(zone: Zone) -> &'static str {
         Zone::Public => "plotty.protected.public",
         Zone::FreePlot => "plotty.protected.free_plot",
         Zone::OwnPlot | Zone::OthersPlot => "plotty.protected.plot",
+        Zone::OwnPlace => "plotty.protected.place",
     }
 }
 

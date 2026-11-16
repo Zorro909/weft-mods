@@ -178,6 +178,7 @@ fn take_cells(plan: &Plan, build: Option<u32>) -> Option<(u32, Option<u32>)> {
             Cell {
                 city,
                 kind: kind_of_cells,
+                corner: plan.footprint.corner,
                 plot,
                 builds,
             },

@@ -104,6 +104,9 @@ pub fn undo_at(world: &World, dim: u64, cell: CellXZ) -> Result<(), &'static str
     {
         return Err("plotty.city.undo_plaza_last");
     }
+    if market_rented(dim, &build) {
+        return Err("plotty.city.undo_rented");
+    }
     if build
         .area
         .blocks()
@@ -114,6 +117,14 @@ pub fn undo_at(world: &World, dim: u64, cell: CellXZ) -> Result<(), &'static str
     restore(world, build.area, &build.before);
     forget(dim, id, &build, here.plot);
     Ok(())
+}
+
+/// Whether build `build` made a market square with a place still rented.
+fn market_rented(dim: u64, build: &Build) -> bool {
+    build
+        .cells
+        .first()
+        .is_some_and(|corner| crate::market::any_rented(dim, *corner))
 }
 
 /// Removes what build `id` wrote down: its own cells, or its number on the plot it stood on.
@@ -134,6 +145,9 @@ fn forget(dim: u64, id: u32, build: &Build, plot_under: Option<u32>) {
         .iter()
         .for_each(|cell| CELLS.remove(&(dim, *cell)));
     build.plot.iter().for_each(|plot| PLOTS.remove(plot));
+    if let Some(corner) = build.cells.first() {
+        crate::market::forget_rents(dim, *corner);
+    }
     build.founded.iter().for_each(|city| CITIES.remove(city));
     BUILDS.remove(&id);
 }

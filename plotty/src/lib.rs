@@ -98,7 +98,7 @@ mod tests {
             ["register", "counter", "crate", "post", "awning"]
                 .map(|part| format!("{wood}_stall_{part}"))
         });
-        let blocks = ["plot_post".to_string(), "city_stone".to_string()];
+        let blocks = ["plot_post", "city_stone", "rent_post"].map(String::from);
         for block in blocks.into_iter().chain(stall) {
             assert!(
                 translated(&format!("block.plotty.{block}")),

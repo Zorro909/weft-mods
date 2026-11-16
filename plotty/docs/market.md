@@ -4,7 +4,7 @@
 
 A stall is sixteen blocks, all of one wood or mixed: oak with a red and white awning, spruce
 with blue and white, birch with green and yellow. They go only on a plot you own or are trusted
-on.
+on, or on a market place you rent.
 
 ```text
    awning   A A A          posts   P . P          ground   C C C   crates, behind
@@ -15,9 +15,27 @@ on.
 Place the register last, facing you: it faces the customers, and the rest of the stall is built
 around it as above. Right-click any block of it. While a part is missing, its screen says which,
 and the stall doesn't trade. A stall that ends up off its owner's plot, for a plot taken back or
-given up, closes too.
+given up, closes too, and so does one whose market place's rent has ended.
 
 The register holds everything: breaking it drops the samples, the stock and the till.
+
+## Market places
+
+A market square has six places outlined in stone bricks, each with a rent post at its corner
+toward the middle. Right-click a post, or stand on a place and type `/market info`, to see who
+rents it or what it costs.
+
+| Command | What it does |
+|---|---|
+| `/market rent 1`, `7` or `30` | Rents the place you stand on for that many real days, or adds them to your rent. 10, 50 or 150 Golden Woof by default (`rent_woof`) |
+| `/market info` | Who rents the place you stand on, and for how long |
+| `/market places` | The places you rent, and the time left |
+
+The rent leaves the game: nobody gets it. On a place you rent you may build a stall and nothing
+else. When the time is up the stall closes, but you can still open it, empty it, break it, or
+renew. After `rent_grace_days` (3) more days the place is free for anyone; a stall still on it
+has to be cleared by a moderator before someone else can rent it. A market square with a place
+rented can't be undone.
 
 ## Setting it up
 

@@ -16,6 +16,7 @@ use weftkit::{PlayerKey, Pos, TypedWorld};
 use super::blocks::{self, REGISTERS};
 use super::offer::{OFFERS, Offer};
 use super::pattern::{self, Part};
+use super::rent::{self, Term};
 use super::screens::{SETUP, SHOP};
 
 /// Blocks from a stall a player may change its prices or trade.
@@ -71,12 +72,19 @@ pub enum Status {
     Open,
     /// A part is missing (`Stall::missing`).
     Missing,
-    /// It stands where its owner may not have one: not their plot.
+    /// It stands where its owner may not have one: not their plot, nor a place they rent.
     Misplaced,
+    /// Its owner's rent of its market place has ended.
+    RentEnded,
 }
 
 impl Status {
-    pub const ALL: [Status; 3] = [Status::Open, Status::Missing, Status::Misplaced];
+    pub const ALL: [Status; 4] = [
+        Status::Open,
+        Status::Missing,
+        Status::Misplaced,
+        Status::RentEnded,
+    ];
 
     pub fn of(stall: &Stall) -> Status {
         Status::ALL
@@ -91,6 +99,7 @@ impl Status {
             Status::Open => "plotty.stall.open",
             Status::Missing => "plotty.stall.missing",
             Status::Misplaced => "plotty.stall.misplaced",
+            Status::RentEnded => "plotty.stall.rent_ended",
         }
     }
 }
@@ -239,8 +248,7 @@ fn status_of(world: &World, pos: Pos, owner: Option<&PlayerKey>, stall: &mut Sta
             stall.missing = PARTS.iter().position(|p| *p == part).unwrap_or(0) as u32;
             Status::Missing
         }
-        Ok(()) if !may_stand(world, pos, owner) => Status::Misplaced,
-        Ok(()) => Status::Open,
+        Ok(()) => standing(world, pos, owner),
     }
 }
 
@@ -287,11 +295,21 @@ pub fn slots(inventory: &weft_sdk::Inventory, group: &str) -> Vec<ItemStack> {
     (0..group.len()).map(|slot| group.get(slot)).collect()
 }
 
-/// Whether a stall at `pos` of `owner` may trade: on a plot they own or are trusted on.
-fn may_stand(world: &World, pos: Pos, owner: Option<&PlayerKey>) -> bool {
-    owner.is_some_and(|owner| {
-        city::zone(dims::key_of(world), pos, Some(owner)) == Some(Zone::OwnPlot)
-    })
+/// Whether a whole stall at `pos` of `owner` may trade: on a plot they own or are trusted on,
+/// or on a market place while their rent runs.
+fn standing(world: &World, pos: Pos, owner: Option<&PlayerKey>) -> Status {
+    let Some(owner) = owner else {
+        return Status::Misplaced;
+    };
+    let dim = dims::key_of(world);
+    if city::zone(dim, pos, Some(owner)) == Some(Zone::OwnPlot) {
+        return Status::Open;
+    }
+    match rent::owners_term(dim, pos, owner) {
+        Some(Term::Running(_)) => Status::Open,
+        Some(_) => Status::RentEnded,
+        None => Status::Misplaced,
+    }
 }
 
 #[cfg(test)]
