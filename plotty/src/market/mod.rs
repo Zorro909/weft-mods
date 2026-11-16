@@ -21,6 +21,7 @@ mod trade;
 pub use blocks::part_of;
 pub use rent::{Rent, any_rented, forget as forget_rents, owners_term};
 pub use stall::StallEntry;
+pub use trade::tell_sales;
 
 pub fn register(r: &mut weft_sdk::Registry) {
     blocks::register(r);

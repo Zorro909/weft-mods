@@ -172,3 +172,4 @@ plotty.rent.free = Place {0} is free. Rent it for a stall: 1 day for {1}, 7 days
 plotty.rent.running = {0} rents this place for {1} days and {2} hours more.
 plotty.rent.ended = {0}'s rent here has ended. The place is free in {1} days and {2} hours.
 plotty.rent.free_now = This place is free.
+plotty.trade.since_join = Your stalls traded {0} times since you last joined.

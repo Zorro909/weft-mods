@@ -67,4 +67,5 @@ customer pays theirs, from their inventory or balance. If something falls short,
 the hotbar says what: the stall's stock or till, its owner's Woof, or the customer's items,
 room or Woof. An offer its owner changed while the shop was open asks the customer to look again.
 
-Customers trade from within eight blocks.
+Customers trade from within eight blocks. When the owner next joins, a line says how often their
+stalls traded since they last did.

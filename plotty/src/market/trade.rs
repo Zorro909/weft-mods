@@ -3,12 +3,13 @@
 //! and till, and both balances change together or not at all. The answer comes above the
 //! hotbar.
 
-use weft_sdk::{Channel, Inventory, ItemStack, Output, Packet, Registry, World, value};
+use weft_sdk::{Arg, Channel, Inventory, ItemStack, Output, Packet, Registry, World, value};
 use weftkit::{PlayerKey, Pos};
 
 use super::offer::{Goods, Holdings, OFFERS, Offer};
 use super::stacks;
 use super::stall::{self, STALL, Status};
+use crate::tables::SALES;
 use crate::woof::{self, Account, Refused};
 
 value! {
@@ -40,6 +41,17 @@ fn answer(packet: &Packet, trade: Trade) {
     world.hint(key, &[]).to(player);
 }
 
+/// Tells a player who just joined how often their stalls traded since they last did.
+pub fn tell_sales(world: &World, player: u64, key: &PlayerKey) {
+    let sales = SALES.get(key).unwrap_or(0);
+    if sales > 0 {
+        world
+            .chat("plotty.trade.since_join", &[Arg::Int(sales.into())])
+            .to(player);
+        SALES.remove(key);
+    }
+}
+
 /// Trades once, or says why not.
 fn attempt(world: &World, player: u64, trade: Trade) -> Result<(), &'static str> {
     let gone = "plotty.trade.gone";
@@ -66,6 +78,7 @@ fn attempt(world: &World, player: u64, trade: Trade) -> Result<(), &'static str>
         return Err("plotty.trade.own_stall");
     }
     exchange(world, trade.register, player, offer, [owner, customer])?;
+    SALES.update(&owner, |sales| *sales = sales.saturating_add(1));
     stall::look(world, trade.register, pos, stall);
     Ok(())
 }

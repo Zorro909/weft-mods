@@ -38,6 +38,7 @@ pub fn register(r: &mut Registry) {
                 continue;
             };
             let name = world.player_name(joined.player).unwrap_or_default();
+            crate::market::tell_sales(&world, joined.player, &key);
             if remember(key, name) {
                 crate::woof::start(&key);
                 crate::admin::spawn::welcome(&world, joined.player);
