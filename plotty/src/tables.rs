@@ -40,3 +40,6 @@ pub static STALLS: Table<(u64, Pos), StallEntry> = Table::named("stalls");
 
 /// Who rents each market place, by dimension key, market square corner cell and place number.
 pub static RENTS: Table<(u64, CellXZ, u8), Rent> = Table::named("rents");
+
+/// Trades each player's stalls made since they last joined.
+pub static SALES: Table<PlayerKey, u32> = Table::write_optimized("sales");

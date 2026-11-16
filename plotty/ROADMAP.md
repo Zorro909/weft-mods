@@ -7,7 +7,6 @@ What Plotty is still to get, in the order it comes.
 ### Market stalls, still to come
 
 - Looking at a stall shows its owner and offers in base's crosshair panel.
-- At join, a note of what your stalls sold while you were away.
 
 ### A film
 
