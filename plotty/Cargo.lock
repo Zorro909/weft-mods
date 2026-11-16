@@ -142,6 +142,7 @@ dependencies = [
  "base_api",
  "png",
  "serde",
+ "showcase_api",
  "toml",
  "weft_sdk",
  "weftkit",
@@ -227,6 +228,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c187e0a369471c550af028cba56d4f4fa2a489ad28151ae95a4d340a2a8b782"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "showcase_api"
+version = "0.1.1"
+dependencies = [
+ "weft_sdk",
+ "weftkit",
 ]
 
 [[package]]

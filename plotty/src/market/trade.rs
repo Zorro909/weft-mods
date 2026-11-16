@@ -34,8 +34,8 @@ pub fn register(r: &mut Registry) {
 }
 
 /// Why a trade didn't happen: a lang key, and the part a closed stall lacks for its argument.
-struct Refusal {
-    key: &'static str,
+pub struct Refusal {
+    pub key: &'static str,
     part: Option<Part>,
 }
 
@@ -68,7 +68,7 @@ pub fn tell_sales(world: &World, player: u64, key: &PlayerKey) {
 }
 
 /// Trades once, or says why not.
-fn attempt(world: &World, player: u64, trade: Trade) -> Result<(), Refusal> {
+pub fn attempt(world: &World, player: u64, trade: Trade) -> Result<(), Refusal> {
     let gone = "plotty.trade.gone";
     let register = world.entity(trade.register).ok_or(gone)?;
     let you = world.entity(player).ok_or(gone)?;

@@ -4,6 +4,8 @@
 mod commands;
 pub mod post;
 
+#[cfg(feature = "showcase")]
+pub use commands::show;
 use weft_sdk::Registry;
 use weftkit::{PlayerKey, Pos};
 

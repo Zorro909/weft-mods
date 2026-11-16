@@ -81,6 +81,15 @@ From the repository root, with the engine checked out by `./init.sh`:
 tools/install-mods.sh plotty
 ```
 
+## Showcase film
+
+With the `showcase` feature, Plotty brings a film for the [showcase](../showcase) mod: a town
+founded and grown on a plateau of seed 42, its plots claimed, a trade at a market stall for
+Golden Woof, and a stall of the camera's own put together and set up. It takes about 1:45.
+Record it with `tools/showcase.sh --with structgen plotty:showcase -- --view 32`; structgen
+brings its houses. Without the feature none of it is compiled in, and showcase is not a
+dependency.
+
 ## Code
 
 | File | What |
@@ -105,4 +114,6 @@ tools/install-mods.sh plotty
 | `src/plot/` | Claim rules, `/plot`, the plot post and city stone |
 | `src/woof/` | Balances and the one way they change, `/woof`, the panel beside the inventory |
 | `src/market/` | Stalls: their blocks and pattern, state, offers, screens and trades; renting market places |
+| `src/outlines.rs` | Boxes outlined for one player, drawn by their client |
+| `src/films/` | The showcase film, built only with `--features showcase` |
 | `src/art.rs` | Draws the textures (`WRITE_ASSETS=1 cargo test --release art`) |
