@@ -20,31 +20,41 @@ pub const ABOVE: i32 = 32;
 
 /// Builds `plan`; whether it was built.
 pub fn build(cmd: &mut ServerCommand, plan: &Plan) -> bool {
-    let world = cmd.world();
-    if dims::key_of(&world) != plan.dim {
-        cmd.reply("plotty.city.other_dimension", &[]);
-        return false;
+    match put(&cmd.world(), plan) {
+        Ok(()) => cmd.reply("plotty.city.built", &[]),
+        Err((key, pos)) => {
+            let args = pos.map(|pos| [pos.x, pos.y, pos.z].map(|at| Arg::Int(at.into())));
+            cmd.reply(key, args.as_ref().map_or(&[], |args| args.as_slice()));
+            return false;
+        }
+    }
+    true
+}
+
+/// Builds `plan` in `world` and writes it down; else why not: a lang key, and the block it
+/// names where it names one.
+pub fn put(world: &World, plan: &Plan) -> Result<(), (&'static str, Option<Pos>)> {
+    if dims::key_of(world) != plan.dim {
+        return Err(("plotty.city.other_dimension", None));
     }
     let area = plan
         .footprint
         .area(plan.ground_y - BELOW, plan.ground_y + ABOVE);
-    let before = match undo::save(&world, area) {
+    let before = match undo::save(world, area) {
         Ok(before) => before,
-        Err(Unsaveable::NotLoaded(pos)) => return refuse(cmd, "plotty.city.not_loaded", pos),
-        Err(Unsaveable::Holds(pos)) => return refuse(cmd, "plotty.city.holds", pos),
+        Err(Unsaveable::NotLoaded(pos)) => return Err(("plotty.city.not_loaded", Some(pos))),
+        Err(Unsaveable::Holds(pos)) => return Err(("plotty.city.holds", Some(pos))),
     };
     let built = match &plan.what {
-        What::Kind(kind) => put_kind(&world, plan, *kind),
-        What::Building { template, plot } => put_building(&world, plan, template, *plot),
+        What::Kind(kind) => put_kind(world, plan, *kind),
+        What::Building { template, plot } => put_building(world, plan, template, *plot),
     };
     if !built {
-        undo::restore(&world, area, &before);
-        cmd.reply("plotty.city.not_placed", &[]);
-        return false;
+        undo::restore(world, area, &before);
+        return Err(("plotty.city.not_placed", None));
     }
-    record(&world, plan, area, before);
-    cmd.reply("plotty.city.built", &[]);
-    true
+    record(world, plan, area, before);
+    Ok(())
 }
 
 /// Registers `plan`'s cells as they stand, changing no block: for a town that is already there.
@@ -185,16 +195,4 @@ fn take_cells(plan: &Plan, build: Option<u32>) -> Option<(u32, Option<u32>)> {
         );
     }
     Some((city, plot))
-}
-
-fn refuse(cmd: &mut ServerCommand, key: &str, pos: Pos) -> bool {
-    cmd.reply(
-        key,
-        &[
-            Arg::Int(pos.x.into()),
-            Arg::Int(pos.y.into()),
-            Arg::Int(pos.z.into()),
-        ],
-    );
-    false
 }

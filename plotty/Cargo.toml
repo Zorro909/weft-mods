@@ -16,6 +16,11 @@ base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.5" }
 # Player keys, positions, the settings file and the tables Plotty keeps its data in.
 weftkit = { path = "../weftkit", features = ["config", "store"] }
 serde = { version = "1", features = ["derive"] }
+showcase_api = { path = "../showcase/api", optional = true }
+
+[features]
+# Builds the film (`src/films/`), played by the showcase mod: `--features showcase`.
+showcase = ["dep:showcase_api"]
 
 [dev-dependencies]
 # Reads a settings text in tests, as `ConfigFile` does.

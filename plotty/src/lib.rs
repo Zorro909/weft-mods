@@ -8,7 +8,10 @@ mod admin;
 mod art;
 mod city;
 mod dims;
+#[cfg(feature = "showcase")]
+mod films;
 mod market;
+mod outlines;
 mod players;
 mod plot;
 mod protect;
@@ -19,7 +22,10 @@ mod woof;
 
 use weft_sdk::{CreativeTab, Item, Registry, declare_mod};
 
+#[cfg(not(feature = "showcase"))]
 declare_mod!(deps: ["base"], init: init);
+#[cfg(feature = "showcase")]
+declare_mod!(deps: ["base", "showcase"], init: init);
 
 pub static TAB: CreativeTab = CreativeTab::named("plotty");
 
@@ -33,6 +39,9 @@ fn init(r: &mut Registry) {
     city::register(r);
     woof::register(r);
     market::register(r);
+    outlines::register(r);
+    #[cfg(feature = "showcase")]
+    films::register(r);
 }
 
 /// Whether every language file of the mod has `key`.

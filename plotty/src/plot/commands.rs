@@ -1,6 +1,6 @@
 //! `/plot`: claiming, sharing and giving up plots, seeing them, and what moderators do with them.
 
-use weft_sdk::{Arg, Output, ServerCommand, World, permission};
+use weft_sdk::{Arg, ServerCommand, World, permission};
 use weftkit::{PlayerKey, Pos};
 
 use super::{allowance_of, at, may_claim, owned_by, post};
@@ -51,7 +51,7 @@ fn run(cmd: &mut ServerCommand) {
     } else if cmd.given("trust") || cmd.given("untrust") {
         trust(cmd, &here, cmd.given("trust"));
     } else if cmd.given("show") {
-        show(&here);
+        show(&here.world, here.player, &here.key, here.pos);
     } else if cmd.given("list") {
         list(cmd, &here);
     } else if cmd.given("give") {
@@ -157,15 +157,17 @@ fn trust(cmd: &mut ServerCommand, here: &Here, add: bool) {
 }
 
 /// Outlines the plots around the player for a while, in the color of whose they are.
-fn show(here: &Here) {
-    let centre = CellXZ::of(here.pos);
+/// Outlines the plots around `pos` for `player` (`key`): theirs, others', free.
+pub fn show(world: &World, player: u64, key: &PlayerKey, pos: Pos) {
+    let dim = dims::key_of(world);
+    let centre = CellXZ::of(pos);
     let near = Footprint {
         corner: CellXZ::new(centre.x - SHOW_REACH, centre.z - SHOW_REACH),
         side: 2 * SHOW_REACH + 1,
     };
     let mut shown: Vec<u32> = Vec::new();
     for cell in near.cells() {
-        let Some((id, plot)) = at(here.dim, cell.corner(here.pos.y)) else {
+        let Some((id, plot)) = at(dim, cell.corner(pos.y)) else {
             continue;
         };
         if shown.contains(&id) {
@@ -173,16 +175,12 @@ fn show(here: &Here) {
         }
         shown.push(id);
         let color = match &plot.owner {
-            Some(owner) if plot.lets_build(&here.key) || *owner == here.key => COLORS[0],
+            Some(owner) if plot.lets_build(key) || owner == key => COLORS[0],
             Some(_) => COLORS[1],
             None => COLORS[2],
         };
-        let area = plot.footprint.area(here.pos.y - 2, here.pos.y + 6);
-        let high = area.hi.add_x(1).add_y(1).add_z(1);
-        here.world
-            .draw_box(None, area.lo, high, color)
-            .to(here.player)
-            .ticks(SHOW_TICKS);
+        let area = plot.footprint.area(pos.y - 2, pos.y + 6);
+        crate::outlines::show(world, player, area, color, SHOW_TICKS);
     }
 }
 

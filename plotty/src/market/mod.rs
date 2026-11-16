@@ -11,12 +11,12 @@
 mod blocks;
 mod offer;
 mod owner;
-mod pattern;
+pub mod pattern;
 mod rent;
 mod screens;
 mod stacks;
-mod stall;
-mod trade;
+pub mod stall;
+pub mod trade;
 
 pub use blocks::part_of;
 pub use owner::{StallEntry, may_break, owner_in};

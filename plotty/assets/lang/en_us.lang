@@ -177,3 +177,18 @@ plotty.refused.not_your_stall = Only its owner can break a stall's register.
 plotty.city.under_preview = Someone is previewing a build there.
 plotty.city.undo_holds = Something here holds items now, a chest or a stall: take it away first, then undo.
 plotty.whitelist.empty = The whitelist would let nobody in. Add a player first, or turn it on as a player.
+
+# Film titles (the film itself is only built with the showcase feature)
+plotty.film.title = Plotty: a town on your server
+plotty.film.found = A game master founds a city: first its plaza, with a well and the city stone
+plotty.film.grow = Then streets, a market square and plots, on a grid of 16-block cells
+plotty.film.undo = One build at a time, and every build can be undone
+plotty.film.houses = Houses from structgen go up on free plots
+plotty.film.claim = Every player claims a small plot for free; moderators give out bigger ones
+plotty.film.show = Your plots in green, others' in blue, free ones in white
+plotty.film.stall = A market stall: crates, counters, posts, an awning and its register
+plotty.film.setup = Its owner sets up to eight offers, in items or Golden Woof
+plotty.film.market = On the market square, places for stalls are rented for 1, 7 or 30 days
+plotty.film.trade = Anyone can trade at a stall, even while its owner is away
+plotty.film.woof = Golden Woof is no item: your balance shows beside your inventory
+plotty.film.end = Plotty: a whitelist, a safe spawn, cities, plots and markets

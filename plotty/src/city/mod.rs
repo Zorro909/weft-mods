@@ -3,12 +3,12 @@
 //! belongs to is one table read. Building, with its undo, is `build.rs`; the commands are
 //! `commands.rs`.
 
-mod build;
+pub mod build;
 pub mod buildings;
 mod commands;
 pub mod grid;
 mod notice;
-mod place;
+pub mod place;
 pub mod structures;
 pub mod undo;
 

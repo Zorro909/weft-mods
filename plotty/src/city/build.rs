@@ -4,7 +4,7 @@
 
 use std::sync::{Mutex, MutexGuard};
 
-use weft_sdk::{Arg, Output, ServerCommand, World, permission};
+use weft_sdk::{Arg, ServerCommand, World, permission};
 use weftkit::{PlayerKey, Pos};
 
 use super::grid::{CellXZ, Footprint};
@@ -77,7 +77,7 @@ pub fn propose(cmd: &mut ServerCommand, holder: PlayerKey, plan: Plan) {
         );
         return;
     }
-    outline(&world, cmd.player(), &plan);
+    outline(&world, cmd.player(), &plan, OUTLINE_TICKS);
     let corner = plan.footprint.corner.corner(plan.ground_y);
     let word = match &plan.what {
         What::Kind(kind) => kind.word().to_string(),
@@ -214,16 +214,12 @@ pub fn ground_of(city: u32) -> Option<i32> {
     CITIES.get(&city).map(|city| city.ground_y)
 }
 
-/// Shows `plan`'s outline to `player`.
-fn outline(world: &World, player: u64, plan: &Plan) {
+/// Shows `plan`'s outline to `player` for `ticks`.
+pub fn outline(world: &World, player: u64, plan: &Plan, ticks: u32) {
     let area = plan
         .footprint
         .area(plan.ground_y, plan.ground_y + OUTLINE_HEIGHT);
-    let high = area.hi.add_x(1).add_y(1).add_z(1);
-    world
-        .draw_box(None, area.lo, high, OUTLINE_COLOR)
-        .to(player)
-        .ticks(OUTLINE_TICKS);
+    crate::outlines::show(world, player, area, OUTLINE_COLOR, ticks);
 }
 
 /// Whether a preview still holds the slot.

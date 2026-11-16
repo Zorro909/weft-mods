@@ -23,3 +23,5 @@
 - Market places to rent for a stall, 1, 7 or 30 days for Golden Woof: `/market rent`,
   `/market info` and `/market places`, and a rent post at each place.
 - At join, a note of how often your stalls traded since you last joined.
+- A showcase film, built with `--features showcase`: a town founded, a trade at a market stall,
+  and a stall put together on its owner's plot.

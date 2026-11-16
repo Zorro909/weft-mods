@@ -8,10 +8,6 @@ What Plotty is still to get, in the order it comes.
 
 - Looking at a stall shows its owner and offers in base's crosshair panel.
 
-### A film
-
-A showcase film of a town being founded, built, claimed and traded in.
-
 ## Later
 
 ### `plotty_api`, a crate for other mods
@@ -37,6 +33,9 @@ These need a change to the SDK first, agreed with the upstream project.
 - **Big blocks under a build:** the SDK reads a big block (a door, a bed) as itself in each of
   its cells and doesn't say which is its own. A build over one saves it in every cell, and
   `/city undo` may then put back more than was there. Build cities on open land until it does.
+- **Outlines from the server:** the engine draws a mod's `World::draw_box` only while the player
+  shows some gizmo group with `/gizmo`, even with no group named. Plotty sends its outlines to the
+  client and draws them there (`src/outlines.rs`) until the engine draws them as it says.
 - **Hosted games:** only a dedicated server reads the whitelist; a game hosted from the client
   ignores it, and the SDK can't tell a mod which one it runs in.
 
