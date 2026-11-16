@@ -8,6 +8,7 @@ mod admin;
 mod art;
 mod city;
 mod dims;
+mod market;
 mod players;
 mod plot;
 mod protect;
@@ -31,6 +32,7 @@ fn init(r: &mut Registry) {
     plot::register(r);
     city::register(r);
     woof::register(r);
+    market::register(r);
 }
 
 /// Whether every language file of the mod has `key`.
@@ -92,7 +94,12 @@ mod tests {
 
     #[test]
     fn every_block_has_a_name() {
-        for block in ["plot_post", "city_stone"] {
+        let stall = ["oak", "spruce", "birch"].iter().flat_map(|wood| {
+            ["register", "counter", "crate", "post", "awning"]
+                .map(|part| format!("{wood}_stall_{part}"))
+        });
+        let blocks = ["plot_post".to_string(), "city_stone".to_string()];
+        for block in blocks.into_iter().chain(stall) {
             assert!(
                 translated(&format!("block.plotty.{block}")),
                 "{block} has a name"

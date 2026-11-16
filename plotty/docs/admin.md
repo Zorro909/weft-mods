@@ -44,7 +44,8 @@ before a creature spawns by itself. Where a block lies decides:
 | A free plot, someone else's plot | no | no | no | no | no |
 | Your plot, or one you're trusted on | yes | yes | no | yes | no |
 
-Plot posts and city stones answer anyone who right-clicks them.
+Plot posts and city stones answer anyone who right-clicks them, and anyone trades at a stall
+wherever it stands. Stall blocks go only on your own plot, or one you're trusted on.
 
 `/plot bypass` lets a moderator change, use and hurt anything until they type it again; it never
 lets them fight where fighting is off. It ends when they lose the moderator level.

@@ -12,7 +12,7 @@ use weftkit::{BlockState, PlayerKey, Pos};
 
 use crate::plot::post;
 use crate::rules::{self, Action, Zone};
-use crate::{admin::spawn, city, dims, settings};
+use crate::{admin::spawn, city, dims, market, settings};
 
 /// Moderators who switched protection off for themselves, until they switch it back or the
 /// server stops.
@@ -51,15 +51,30 @@ fn by_player(ask: &Ask, action: Action) -> Verdict {
     if action == Action::Use && for_everyone(ask.state()) {
         return Verdict::Abstain;
     }
+    let action = on_stalls(action, ask.state());
     let pos = Pos::from(ask.pos());
     let zone = zone_at(&world, pos, Some(&key));
     if decide(&world, zone, action, player, &key) {
         return Verdict::Abstain;
     }
-    if action == Action::Change {
-        world.hint(refusal(zone), &[]).to(player);
+    let said = match action {
+        Action::Change => Some(refusal(zone)),
+        Action::BuildStall => Some("plotty.refused.stall"),
+        _ => None,
+    };
+    if let Some(key) = said {
+        world.hint(key, &[]).to(player);
     }
     Verdict::Deny
+}
+
+/// `action` as it is on the block `state`: building or trading where it is part of a stall.
+fn on_stalls(action: Action, state: u32) -> Action {
+    match (action, market::part_of(state).is_some()) {
+        (Action::Change, true) => Action::BuildStall,
+        (Action::Use, true) => Action::UseStall,
+        (action, _) => action,
+    }
 }
 
 /// Whether the block `state` is one of Plotty's that everyone may use: posts and stones say
