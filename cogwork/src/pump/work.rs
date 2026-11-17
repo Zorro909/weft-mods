@@ -38,6 +38,7 @@ pub fn tick(batch: &mut SystemBatch<Pump>) {
         if !world.block_typed(pos).is(&PUMP) {
             continue;
         }
+        machine::start_meter(&world, id);
         crate::store::eject(&world, pos);
         match pump.stage() {
             Stage::Bore => bore(&world, id, pos, pump),

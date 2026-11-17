@@ -55,6 +55,7 @@ pub static TAB: CreativeTab = CreativeTab::named("cogwork");
 fn init(r: &mut Registry) {
     r.creative_tab(&TAB, &Item::named("iron_cog"));
     owned::register(r);
+    machine::register(r);
     sounds::register(r);
     cogs::register(r);
     tube::register(r);
