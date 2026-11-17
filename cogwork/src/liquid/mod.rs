@@ -17,7 +17,7 @@ mod vessel;
 
 pub use bucket::{hand_over, use_bucket};
 pub use flow::{Level, flow};
-pub use pipe::{draw, pour, pour_apart};
+pub use pipe::{draw, pour};
 pub use vessel::{Holders, Vessel, is_vessel, reaches};
 use weft_sdk::{Component, Registry, World, component_flags, item_name, liquid_of, value};
 
@@ -42,7 +42,7 @@ pub fn is_full(amount: u32, capacity: u32) -> bool {
 
 /// A holder with less than this left takes another liquid, the rest of the old one lost: so a
 /// little left behind never blocks a line. A big holder may keep more (`dribble`). Steam and
-/// another liquid are the exception (`Held::takes`).
+/// sulfuric acid are the exception (`Held::takes`).
 pub const DRIBBLE: u32 = 10;
 
 /// The head of a holder that has told none for what it holds now: no push to anyone.
@@ -77,11 +77,11 @@ impl Held {
     }
 
     /// Whether `liquid` may go into a holder of `capacity` holding this: the same liquid, or
-    /// it is as good as empty there. Steam never takes the place of another liquid, nor another
-    /// liquid that of steam, while a millibucket of the one is left: it would be lost unseen.
+    /// it is as good as empty there. A liquid `kept_apart` never takes the place of another, nor
+    /// another liquid its place, while a millibucket of the one is left: it would be lost unseen.
     pub fn takes(&self, liquid: LiquidKey, capacity: u32) -> bool {
-        let kept_apart = self.amount > 0 && rises(self.liquid) != rises(liquid);
-        self.liquid == liquid || self.is_empty_in(capacity) && !kept_apart
+        let apart = self.amount > 0 && (kept_apart(self.liquid) || kept_apart(liquid));
+        self.liquid == liquid || self.is_empty_in(capacity) && !apart
     }
 
     /// Puts `amount` of `liquid` in, which `takes` allowed, and wakes it.
@@ -139,6 +139,12 @@ pub fn is_water(liquid: LiquidKey) -> bool {
 /// (`flow::pressure`).
 pub fn rises(liquid: LiquidKey) -> bool {
     liquid == crate::steam::key()
+}
+
+/// Whether `liquid` is kept apart from every other liquid in a holder (`Held::takes`): steam and
+/// sulfuric acid. Water, oil and the rest give way to each other as before.
+fn kept_apart(liquid: LiquidKey) -> bool {
+    rises(liquid) || liquid == crate::acid::key()
 }
 
 /// The liquid the block `block_state` is, and whether it is a source of it.
@@ -216,6 +222,22 @@ mod tests {
             holding(OIL, 9).takes(WATER, tube),
             "oil gives way as before"
         );
+    }
+
+    #[test]
+    fn acid_never_takes_the_place_of_another_liquid_nor_it_of_acid() {
+        let tube = crate::liquid_tube::CAPACITY;
+        let (acid, steam) = (crate::acid::key(), crate::steam::key());
+        assert!(!holding(acid, 5).takes(WATER, tube), "5 mB of acid stays");
+        assert!(!holding(acid, 1).takes(OIL, tube), "1 mB of acid stays");
+        assert!(!holding(WATER, 1).takes(acid, tube), "1 mB of water stays");
+        assert!(
+            !holding(acid, 1).takes(steam, tube),
+            "nor steam in its place"
+        );
+        assert!(holding(acid, 0).takes(WATER, tube), "none left");
+        assert!(holding(acid, 400).takes(acid, tube), "more acid");
+        assert!(holding(NO_LIQUID, 0).takes(acid, tube), "an empty tube");
     }
 
     #[test]

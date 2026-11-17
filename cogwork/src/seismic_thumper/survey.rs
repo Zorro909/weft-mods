@@ -1,7 +1,7 @@
 //! A thumper's survey, with no world: the area it counts, which block it counts next, and its
 //! tally of ore by kind and band. It counts the columns of its area layer by layer, from the one
-//! under it down to `BANDS` bands of 16 layers or the world's lowest layer, whichever comes
-//! first.
+//! under it down to `BANDS` bands of 16 layers; where the world ends sooner, a layer that never
+//! loads ends the count (`work`). Depths are worked out in `i64`, so no height overflows.
 
 use super::Survey;
 use crate::lib::{Area, Pos};
@@ -37,10 +37,11 @@ pub fn columns(marked: Option<Area>, pos: Pos) -> Area {
     Area::between(Pos::new(lo_x, pos.y, lo_z), Pos::new(hi_x, pos.y, hi_z))
 }
 
-/// Layers a thumper at height `y` counts, down to `lowest_y` at most.
-pub fn layers(y: i32, lowest_y: i32) -> u32 {
-    let deepest = BAND * BANDS as i32;
-    (y - lowest_y).clamp(0, deepest) as u32
+/// Layers a thumper at height `y` counts: `BANDS` bands, or as many as there are heights below it.
+pub fn layers(y: i32) -> u32 {
+    let deepest = i64::from(BAND) * BANDS as i64;
+    let below = i64::from(y) - i64::from(i32::MIN);
+    below.min(deepest) as u32
 }
 
 impl Survey {
@@ -74,6 +75,21 @@ impl Survey {
         let size = self.layer_size().max(1);
         let first = index - index % size;
         (self.cell(first), self.cell(first + size - 1))
+    }
+
+    /// The height of the layer just under it, where it counts first.
+    pub fn top(&self) -> i64 {
+        i64::from(self.lo.y) - 1
+    }
+
+    /// The height of the last layer it counts.
+    pub fn bottom(&self) -> i64 {
+        self.top() - i64::from(self.layers) + 1
+    }
+
+    /// The height of the first layer of `band`.
+    pub fn band_top(&self, band: usize) -> i64 {
+        self.top() - band as i64 * i64::from(BAND)
     }
 
     /// The band its `index`th count lies in.
@@ -168,10 +184,29 @@ mod tests {
     }
 
     #[test]
-    fn it_counts_down_to_the_lowest_layer_or_its_last_band() {
-        assert_eq!(layers(64, -32), 96, "to the floor");
-        assert_eq!(layers(200, -64), 160, "ten bands at most");
-        assert_eq!(layers(-40, -32), 0, "nothing under the floor");
+    fn it_counts_ten_bands_whatever_the_quarries_lowest_layer() {
+        assert_eq!(layers(64), 160, "below 0 too");
+        assert_eq!(layers(-2_000), 160, "deep down");
+        assert_eq!(layers(i32::MAX), 160, "at the top of the world");
+    }
+
+    #[test]
+    fn it_counts_no_deeper_than_the_lowest_height_there_is() {
+        assert_eq!(layers(i32::MIN), 0, "nothing under the lowest");
+        assert_eq!(layers(i32::MIN + 5), 5, "to the lowest");
+        let lo = Pos::new(0, i32::MIN + 5, 0);
+        let area = survey(lo, lo, layers(lo.y));
+        assert_eq!(area.cell(area.total() - 1).y, i32::MIN, "its last block");
+        assert_eq!(area.bottom(), i64::from(i32::MIN), "as its screen says");
+        assert_eq!(area.band_top(0), i64::from(i32::MIN) + 4, "its one band");
+    }
+
+    #[test]
+    fn its_screen_tells_its_layers_by_height() {
+        let lo = Pos::new(0, 64, 0);
+        let area = survey(lo, lo, layers(lo.y));
+        assert_eq!((area.top(), area.bottom()), (63, -96), "160 layers");
+        assert_eq!(area.band_top(1), 47, "the second band");
     }
 
     #[test]

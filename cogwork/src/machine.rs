@@ -155,6 +155,15 @@ pub fn pay(world: &World, id: u64, spent: &mut i64, cost: i64, rate: i64) -> Pay
     Payment::after(*spent, cost, drawn)
 }
 
+/// Whether a call at game time `now` is the first of its tick, noting it in `last`. The engine
+/// makes missed ticks up in up to twenty more calls at the same time (`Weft/docs/block_entities.md`,
+/// "Catching up"), so work with a budget a tick does its share only in the first.
+pub fn first_call_at(last: &mut u64, now: u64) -> bool {
+    let first = *last != now;
+    *last = now;
+    first
+}
+
 /// The energy of the machine whose menu is open: a bar and the numbers.
 pub fn power_bar(ui: &mut Ui) {
     ui.progress_bind("cogwork:power", S::default().size(80.0, 8.0), |view| {
@@ -270,6 +279,17 @@ mod tests {
         let readout = ("cogwork.meter.short", [90, 30]);
         assert_eq!(starved.readout(), readout, "short 30");
         assert_eq!(Meter::default().readout().0, "cogwork.meter.using", "idle");
+    }
+
+    #[test]
+    fn work_budgeted_a_tick_is_done_once_a_game_time() {
+        let mut last = 0;
+        assert!(first_call_at(&mut last, 500), "the first call at 500");
+        for _ in 0..20 {
+            assert!(!first_call_at(&mut last, 500), "catch-up calls at 500");
+        }
+        assert!(first_call_at(&mut last, 501), "the next tick");
+        assert!(first_call_at(&mut last, 400), "after the time was set back");
     }
 
     #[test]

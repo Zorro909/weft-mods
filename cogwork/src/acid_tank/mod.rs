@@ -2,7 +2,7 @@
 //! the coke oven and the refinery), water and engine energy (`brew`). Sulfur comes in by tube or
 //! by hand. Water it draws itself out of a liquid tube or a tank on any side but its front, and
 //! its acid it lets out of its front into a liquid tube or a tank there, never in place of a
-//! leftover of another liquid (`liquid::pour_apart`). It keeps both liquids in its own state,
+//! leftover of another liquid (`liquid::Held::takes`). It keeps both liquids in its own state,
 //! which its item carries when it is broken, by hand or by a machine.
 //!
 //! Its shape is the Blockbench model `assets/models/block/acid_tank.json`: a cream composite tank

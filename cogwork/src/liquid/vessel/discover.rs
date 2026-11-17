@@ -122,7 +122,7 @@ pub fn is_vessel(world: &World, pos: Pos) -> bool {
 /// intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
 /// engine, a trip hammer, a flotation cell, a clarifier, a refinery's part that holds liquid, a
 /// quarry or a polymerizer; or one that draws its liquid in and lets it out itself, keeping it in
-/// its own state (`liquid::draw`, `liquid::pour_apart`) and so no holder: an acid tank or a
+/// its own state (`liquid::draw`, `liquid::pour`) and so no holder: an acid tank or a
 /// leaching vat.
 fn is_machine(block: BlockState) -> bool {
     let machines: [&weft_sdk::Block; 12] = [

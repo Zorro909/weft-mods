@@ -30,7 +30,8 @@ value! {
     /// `turns` it has had, the blocks below it `counted`, the player who turned it last
     /// (`driller`) and whether it has `reported` to them. Of each kind of ore it found, the key of
     /// its `ores/<m>` name (`kinds`), the key of the name of the first block of it found
-    /// (`shown`), and its `counts` by band, kind after kind.
+    /// (`shown`), and its `counts` by band, kind after kind. The game time it last `counted_at`,
+    /// so it counts once a tick (`machine::first_call_at`).
     pub struct Core {
         pub rod: u64,
         pub turned_at: u64,
@@ -42,6 +43,7 @@ value! {
         pub kinds: [u64; KINDS],
         pub shown: [ItemKey; KINDS],
         pub counts: [u32; KINDS * BANDS],
+        pub counted_at: u64,
     }
 }
 static CORE: Component<Core> = Component::named("cogwork:core");
@@ -59,6 +61,7 @@ impl Default for Core {
             kinds: [0; KINDS],
             shown: [0; KINDS],
             counts: [0; KINDS * BANDS],
+            counted_at: 0,
         }
     }
 }
@@ -177,6 +180,7 @@ mod tests {
         assert_eq!(offset_of!(Core, kinds), 40, "the kinds of ore");
         assert_eq!(offset_of!(Core, shown), 104, "their names");
         assert_eq!(offset_of!(Core, counts), 168, "their counts");
+        assert_eq!(offset_of!(Core, counted_at), 424, "when it last counted");
     }
 
     #[test]

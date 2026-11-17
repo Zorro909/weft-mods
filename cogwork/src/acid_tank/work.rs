@@ -66,7 +66,7 @@ fn draw_water(world: &World, pos: Pos, front: Dir, brew: &mut Brew, ticks: u32) 
 fn let_out_acid(world: &World, pos: Pos, front: Dir, brew: &mut Brew, ticks: u32) {
     let most = brew.acid.min(ACID_OUT.saturating_mul(ticks));
     let acid = crate::acid::key();
-    brew.acid -= crate::liquid::pour_apart(world, pos, front, acid, most);
+    brew.acid -= crate::liquid::pour(world, pos, front, acid, most);
 }
 
 /// Works on the batch of the tank `id` once it has what that takes, and finishes it once it is
