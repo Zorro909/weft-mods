@@ -20,7 +20,7 @@ use weft_sdk::{
     Tag, Toward, Ui, World, component_flags, tool_tier, value,
 };
 
-use crate::liquid::{HELD, LiquidKey};
+use crate::liquid::HELD;
 use crate::rubble::{ORE_RUBBLE, ore_of};
 
 pub static GRINDING_MILL: Block = Block::named("grinding_mill");
@@ -78,11 +78,6 @@ impl Grinder {
     pub fn set_status(&mut self, status: Status) {
         self.status = status as u32;
     }
-}
-
-/// Whether a grinding mill takes `liquid`: water, and nothing else.
-pub fn grinds_with(liquid: LiquidKey) -> bool {
-    liquid == crate::liquid::key_named("base:water")
 }
 
 pub fn register(r: &mut Registry) {

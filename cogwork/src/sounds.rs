@@ -33,11 +33,12 @@ pub static SHAKER_SCREEN: Sound = Sound::named("shaker_screen.rattle");
 pub static GRINDING_MILL: Sound = Sound::named("grinding_mill.grind");
 pub static HAND_BELLOWS: Sound = Sound::named("hand_bellows.pump");
 pub static DRIVEN_BELLOWS: Sound = Sound::named("driven_bellows.pump");
+pub static WASHER: Sound = Sound::named("washer.slosh");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
 /// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
 /// carry (fading out on the way there): heavy machinery far, small parts close.
-static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 30] = [
+static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 31] = [
     (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
     (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
     (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
@@ -82,6 +83,7 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 30] = [
     (&GRINDING_MILL, "grinding_mill/grind", 1.0, 0.9, 1.05, 40.0),
     (&HAND_BELLOWS, "bellows/whoosh", 0.7, 0.9, 1.1, 16.0),
     (&DRIVEN_BELLOWS, "bellows/whoosh", 0.8, 0.75, 0.85, 24.0),
+    (&WASHER, "washer/slosh", 0.9, 0.9, 1.1, 24.0),
 ];
 
 pub fn register(r: &mut Registry) {

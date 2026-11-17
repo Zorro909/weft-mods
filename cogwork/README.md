@@ -50,8 +50,9 @@ turning.
 - **Quarries.** Build a frame around an area and lower a drill that mines everything inside,
   layer by layer. The Timber Quarry is the first: it lashes its frame of logs and string, digs
   a small pit 16 deep with a stone or iron drill bit, and leaves standing what its bit can't
-  break. The Gantry Excavator digs areas up to 256 by 256 as deep as the world's settings
-  allow. More engines make them dig faster.
+  break. The Iron Quarry builds its frame of iron bars and digs a wider pit 64 deep. The Gantry
+  Excavator digs areas up to 256 by 256 as deep as the world's settings allow. More engines
+  make them dig faster.
 - **Assembly bench.** Lay out a crafting recipe with ghost items; tubes bring the ingredients
   and it crafts again and again with engine power.
 - **Leveler.** Clears the ground above its height and fills the holes below it, leaving the
@@ -61,8 +62,10 @@ turning.
 ### Rubble and ore
 
 Quarries bring stone up as Rubble and ore as Ore Rubble, of any mod's metal: one for each ore
-block from a Timber Quarry, two from a Gantry Excavator. Ore Rubble comes in grades, Poor to Pure; every quarry brings it up Poor, and the
-richer the grade, the more raw ore it grinds into. The millstone grinds it into raw ore by hand,
+block from a Timber Quarry, a quarter more from an Iron Quarry, two from a Gantry Excavator. Ore
+Rubble comes in grades, Poor to Pure; every quarry brings it up Poor, and the richer the grade,
+the more raw ore it grinds into. The washer, a trough with a paddle wheel, washes Poor Ore Rubble
+into Common with water and engine energy. The millstone grinds it into raw ore by hand,
 with water and sand, its runner turning with each turn of its handle; the sieve sifts Rubble
 into sand and gravel and, now and then, something better. Their driven counterparts, the shaker
 screen and the grinding mill, do the same with engine energy, fed by tubes and the mill's water
@@ -94,7 +97,9 @@ engines and directing tubes.
 3. Place a Timber Quarry with a chest beside it, put logs and string in its frame slots and a
    stone drill bit in its bit slot, and drive it with a water wheel over a stream or a wound
    spring engine. It lashes a frame round the 5 by 5 area behind it and digs it out 16 deep.
-4. Later, a Gantry Excavator with ember engines on it digs much bigger areas all the way down.
+4. Later, an Iron Quarry with ember engines on it digs wider and deeper, and a washer between it
+   and the grinding mill makes its Ore Rubble grind into more raw ore. A Gantry Excavator digs
+   much bigger areas all the way down.
 
 Everything is in the Cogwork tab of the creative inventory, and crafted on the crafting table.
 
@@ -105,7 +110,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Cogs and the tuning wrench](docs/items.md)
 - [Item tubes](docs/tubes.md)
 - [Power](docs/power.md): engines, the water wheel, the torque shaft and the wooden axle
-- [Quarries](docs/excavator.md): the Timber Quarry and the Gantry Excavator
+- [Quarries](docs/excavator.md): the Timber Quarry, the Iron Quarry and the Gantry Excavator
 - [Assembly bench](docs/assembly-bench.md)
 - [Leveler](docs/leveler.md)
 - [Survey markers](docs/survey-markers.md)
@@ -113,7 +118,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Oil and the pump](docs/oil.md)
 - [Liquid tubes and tanks](docs/liquids.md)
 - [Oil engine](docs/oil-engine.md)
-- [Rubble, ore grades, sifting and grinding](docs/processing.md)
+- [Rubble, ore grades, sifting, washing and grinding](docs/processing.md)
 - [Working with other mods](docs/other-mods.md)
 
 What changed in each version is in the [changelog](CHANGELOG.md).

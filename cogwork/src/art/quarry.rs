@@ -1,6 +1,7 @@
 //! Pictures of the Timber Quarry: its block of planks on a cobblestone footing between log posts,
 //! its lashed frame of log poles bound with string, its rig in the same wood, and the stone and
-//! iron drill bits, as items and as the rig shows them.
+//! iron drill bits, as items and as the rig shows them. The rig's painters take a `RigPaint`, so
+//! the Iron Quarry's rig (`iron`) is the same pieces in iron.
 
 use super::{CLEAR, IRON, Picture, Rgba, Unwrap, noise};
 
@@ -41,7 +42,29 @@ const SHAFT: Unwrap = Unwrap::new((0, 0), (4, 64, 4));
 const BEAM: Unwrap = Unwrap::new((0, 0), (64, 4, 4));
 const BIT: Unwrap = Unwrap::new((0, 0), (8, 12, 8));
 const TIP: Unwrap = Unwrap::new((32, 0), (4, 4, 4));
-/// Texels between the string bands round a pole, and how wide a band is.
+/// What a rig is painted with, by where a pixel is: the carriage's faces and their rims, the
+/// poles of its shaft and beams and the bands round them once a block, and the cut ends of the
+/// poles and their rims.
+pub struct RigPaint {
+    pub plate: fn(usize, usize) -> Rgba,
+    pub rim: fn(usize, usize) -> Rgba,
+    pub pole: fn(usize, usize) -> Rgba,
+    pub band: fn(usize, usize) -> Rgba,
+    pub cut: Rgba,
+    pub cut_rim: Rgba,
+}
+
+/// The Timber Quarry's rig: planks rimmed in bark, log poles bound with string.
+const TIMBER: RigPaint = RigPaint {
+    plate: plank,
+    rim: bark,
+    pole: bark,
+    band: twine,
+    cut: PLANK[2],
+    cut_rim: BARK[0],
+};
+
+/// Texels between the bands round a pole, and how wide a band is.
 const BAND_EVERY: usize = 16;
 const BAND: usize = 3;
 
@@ -56,9 +79,9 @@ pub fn all() -> Vec<(&'static str, Picture)> {
         ("block/lashed_frame_end", log_end()),
         ("item/stone_bit", bit_icon(&FLINT)),
         ("item/iron_bit", bit_icon(&IRON)),
-        ("entity/timber_carriage", carriage()),
-        ("entity/timber_shaft", shaft()),
-        ("entity/timber_beam", beam()),
+        ("entity/timber_carriage", carriage(&TIMBER)),
+        ("entity/timber_shaft", shaft(&TIMBER)),
+        ("entity/timber_beam", beam(&TIMBER)),
         ("entity/stone_drill_bit", drill_bit(&FLINT)),
         ("entity/iron_drill_bit", drill_bit(&IRON)),
     ]
@@ -101,10 +124,10 @@ fn side(cog: Option<bool>) -> Picture {
 }
 
 /// A wooden cog, 8 by 8, and the same a tooth further round.
-const COG: [&str; 8] = [
+pub const COG: [&str; 8] = [
     "...ll...", ".d.dd.d.", "..dddd..", "ldddhddl", "ldhdddl.", "..dddd..", ".d.dd.d.", "...ll...",
 ];
-const COG_TURNED: [&str; 8] = [
+pub const COG_TURNED: [&str; 8] = [
     ".l....l.", "..dddd..", ".ddddddl", ".ddhdddd", "dddhddd.", "lddddd..", "..dddd..", ".l....l.",
 ];
 
@@ -183,51 +206,55 @@ fn bit_icon(metal: &[Rgba; 4]) -> Picture {
     Picture::drawn(&ROWS, &key)
 }
 
-/// The carriage in wood: planks, each face rimmed in bark.
-fn carriage() -> Picture {
+/// The carriage: plates, each face rimmed.
+pub fn carriage(paint: &RigPaint) -> Picture {
     let mut picture = Picture::sized(64, 32, CLEAR);
-    CARRIAGE.paint(&mut picture, plank);
-    let rim = |x, y, edge| if edge { bark(x, y) } else { plank(x, y) };
+    CARRIAGE.paint(&mut picture, paint.plate);
+    let rim = |x, y, edge| {
+        if edge {
+            (paint.rim)(x, y)
+        } else {
+            (paint.plate)(x, y)
+        }
+    };
     CARRIAGE.paint_caps(&mut picture, rim);
     CARRIAGE.paint_ends(&mut picture, rim);
     picture
 }
 
-/// A shaft piece: a log pole, banded with string every block.
-fn shaft() -> Picture {
+/// A shaft piece: a pole, banded every block.
+pub fn shaft(paint: &RigPaint) -> Picture {
     let mut picture = Picture::sized(32, 80, CLEAR);
-    let (_, top_rows) = (SHAFT.at.0, SHAFT.size.2);
+    let top_rows = SHAFT.size.2;
     SHAFT.paint(&mut picture, |x, y| {
         let along = y.saturating_sub(top_rows);
         if y >= top_rows && along % BAND_EVERY < BAND {
-            twine(x, y)
+            (paint.band)(x, y)
         } else {
-            bark(x, y)
+            (paint.pole)(x, y)
         }
     });
-    SHAFT.paint_caps(
-        &mut picture,
-        |_, _, edge| if edge { BARK[0] } else { PLANK[2] },
-    );
+    let cut = |_, _, edge| if edge { paint.cut_rim } else { paint.cut };
+    SHAFT.paint_caps(&mut picture, cut);
     picture
 }
 
-/// A beam piece: a log lying along the gantry, banded with string every block.
-fn beam() -> Picture {
+/// A beam piece: a pole lying along the gantry, banded every block.
+pub fn beam(paint: &RigPaint) -> Picture {
     let mut picture = Picture::sized(144, 16, CLEAR);
     let (w, d) = (BEAM.size.0, BEAM.size.2);
     BEAM.paint(&mut picture, |x, y| {
         let along = match (y < d, x) {
             (true, _) => (x - d) % w,
-            (false, x) if x < d => return PLANK[2],
+            (false, x) if x < d => return paint.cut,
             (false, x) if x < d + w => x - d,
-            (false, x) if x < 2 * d + w => return PLANK[2],
+            (false, x) if x < 2 * d + w => return paint.cut,
             (false, x) => x - 2 * d - w,
         };
         if (along + BAND_EVERY / 2) % BAND_EVERY < BAND {
-            twine(x, y)
+            (paint.band)(x, y)
         } else {
-            bark(x, y)
+            (paint.pole)(x, y)
         }
     });
     picture
@@ -253,18 +280,18 @@ mod tests {
 
     #[test]
     fn the_rig_pieces_fill_their_unwraps() {
-        let carriage = carriage();
+        let carriage = carriage(&TIMBER);
         assert_ne!(carriage.get(14, 0)[3], 0, "the carriage's top");
-        let beam = beam();
+        let beam = beam(&TIMBER);
         assert_ne!(beam.get(4, 0)[3], 0, "the beam's top");
         assert_ne!(beam.get(135, 7)[3], 0, "its far side");
-        let shaft = shaft();
+        let shaft = shaft(&TIMBER);
         assert_ne!(shaft.get(15, 67)[3], 0, "the shaft's last row");
     }
 
     #[test]
     fn poles_are_banded_with_string_once_a_block() {
-        let shaft = shaft();
+        let shaft = shaft(&TIMBER);
         let banded = (4..68)
             .filter(|&y| STRING.contains(&shaft.get(1, y)))
             .count();

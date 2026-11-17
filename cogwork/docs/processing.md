@@ -1,4 +1,4 @@
-# Rubble, ore grades, sifting and grinding
+# Rubble, ore grades, sifting, washing and grinding
 
 A [quarry](excavator.md) doesn't bring stone and ore up clean: stone comes up as Rubble,
 and ore as Ore Rubble. The quarry sets how much comes up; working it by hand or by machine
@@ -6,7 +6,8 @@ sets what it is worth. Two hand machines start the work: the sieve sifts Rubble,
 millstone grinds Ore Rubble into raw ore. Their driven counterparts, the
 [shaker screen](#shaker-screen) and the [grinding mill](#grinding-mill), do the same work with
 engine energy and tubes, by the same table and the same yields. Neither replaces the other: the
-hand machines need no power, and the millstone never takes a tube.
+hand machines need no power, and the millstone never takes a tube. The [washer](#washer) raises
+Ore Rubble a grade before it is ground.
 
 ## Rubble
 
@@ -43,6 +44,7 @@ An ore with no raw ore (coal, diamond, redstone) comes up as its usual drops ins
 | Quarry | Per ore block |
 |---|---|
 | Timber Quarry | 1 Ore Rubble, or an ore's usual drops |
+| Iron Quarry | 1.25 Ore Rubble, or 1.25 times an ore's usual drops |
 | Gantry Excavator | 2 Ore Rubble, or twice an ore's usual drops |
 
 A fraction of an amount is a chance of one more. The [leveler](leveler.md) and the
@@ -63,7 +65,11 @@ Grinding gives the same in the millstone and the grinding mill:
 | Rich | 2 |
 | Pure | 2.5 |
 
-No machine of this version raises a grade yet.
+| Step | Machine | Grade |
+|---|---|---|
+| Washing | [Washer](#washer) | Poor → Common |
+
+Later steps raise Common further.
 
 ## Millstone
 
@@ -168,7 +174,35 @@ turns while it grinds. It grinds Ore Rubble into raw ore with the millstone's yi
 Its screen shows the energy bar, the energy readout, what it is doing or lacks (Ore Rubble,
 water, sand, energy, room), the water it holds, its raw ore, its Ore Rubble and its sand.
 
-Like the other machines, the shaker screen and the grinding mill don't catch up: time their area
+## Washer
+
+```
+i i       i = #ingots/iron, P = #planks
+PcP       c = #cogs/stone
+LPL       L = #logs
+```
+
+A wooden trough rimmed in iron, with a paddle wheel of oak blades on an iron axle. It washes
+Poor Ore Rubble into Common, the paddle churning the water while it works.
+
+- **Ore Rubble in.** Tubes put Ore Rubble, and nothing else, into its three input slots; so can
+  you. Stacks of different metals wait side by side and are washed in turn. Ore Rubble already
+  Common or better goes straight on to the output, so a washer anywhere in a line does no harm.
+- **Water in.** It holds 1,000 mB of water, filled by liquid tube or from a tank or pump
+  touching it, as the grinding mill is, and a wash takes 250: a bucket lasts four washes. It
+  takes only water, hands none on, and shows it in its trough while it has some.
+- **Energy.** A wash takes 400 energy, put in at up to 30 a tick: about two thirds of a second
+  an Ore Rubble at full speed. An ember engine runs it at full speed.
+- **Out by its front**, the side with the iron sluice gate, the side that faced you when you
+  placed it, into a tube or a machine there; a timber tube can pull it out too.
+- An Ore Rubble stays in its input, and the water in its trough, until a wash is done and its
+  Common Ore Rubble is in the output; with no room there it waits, "Output full". Breaking it
+  spills its slots and loses only the water it holds and the energy put in.
+
+Its screen shows the energy bar, the energy readout, what it is doing or lacks (Ore Rubble,
+water, energy, room), the water it holds, what it washed and its Ore Rubble.
+
+Like the other machines, the shaker screen, the grinding mill and the washer don't catch up: time their area
 spends unloaded, or skipped by sleeping or `/time`, is lost to their work.
 
 ## A processing line
@@ -180,8 +214,11 @@ chest: the mill takes the sand it needs, and the chest the gravel, flint and the
 the mill's front gathers the raw ore. Keep the two tube lines apart, or the chest takes Rubble
 too.
 
+A washer goes between the quarry and the mill: run the quarry's tube to the washer, and the
+washer's front on to the mill. Common Ore Rubble grinds into half as much raw ore again.
+
 ## Their sounds
 
 The runner grinds stone on stone with each turn, and the tray rattles its gravel with each
 shake. The shaker screen rattles and thumps while it sifts, and the grinding mill rumbles while
-it grinds; both carry far.
+it grinds; both carry far. The washer's paddle sloshes and churns its water while it washes.

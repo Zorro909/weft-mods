@@ -51,6 +51,7 @@ mod store;
 mod tank;
 mod timber_liquid_tube;
 mod tube;
+mod washer;
 mod water_wheel;
 
 use weft_sdk::{CreativeTab, Item, Registry, declare_mod};
@@ -90,6 +91,7 @@ fn init(r: &mut Registry) {
     sieve::register(r);
     shaker_screen::register(r);
     grinding_mill::register(r);
+    washer::register(r);
     bellows::register(r);
     water_wheel::register(r);
     recipes::register(r);

@@ -8,8 +8,8 @@ use weft_sdk::{Block, Item, ItemStack, Menu, Sound, Tag};
 
 use super::bit::{Bit, IRON_BIT, STONE_BIT};
 use super::depth::Floor;
-use super::rig::{GANTRY_RIG, RigLook, TIMBER_RIG};
-use super::{EXCAVATOR, Frame, GANTRY_FRAME, LASHED_FRAME, TIMBER_QUARRY};
+use super::rig::{GANTRY_RIG, IRON_RIG, RigLook, TIMBER_RIG};
+use super::{EXCAVATOR, Frame, GANTRY_FRAME, IRON_FRAME, IRON_QUARRY, LASHED_FRAME, TIMBER_QUARRY};
 use crate::lib::BlockState;
 use crate::sounds;
 
@@ -95,7 +95,9 @@ pub struct Drill {
 
 static LOGS: Tag = Tag::named("logs");
 static STRING: Item = Item::named("base:string");
+static IRON_INGOTS: Tag = Tag::named("ingots/iron");
 static TIMBER_MENU: Menu = Menu::named("timber_quarry");
+static IRON_MENU: Menu = Menu::named("iron_quarry");
 static EXCAVATOR_MENU: Menu = Menu::named("excavator");
 
 pub static TIMBER: Kind = Kind {
@@ -137,6 +139,35 @@ pub static TIMBER: Kind = Kind {
     frame_sound: &sounds::TIMBER_FRAME,
 };
 
+/// The quarry after the Timber Quarry: a frame of iron bars, wider and four times as deep, and
+/// a quarter more Ore Rubble. Each bit it takes is a row of `bits`.
+pub static IRON: Kind = Kind {
+    block: &IRON_QUARRY,
+    hardness: 3.0,
+    sound_group: "base:block.stone",
+    menu: &IRON_MENU,
+    frame: &IRON_FRAME,
+    frame_cost: &[Cost {
+        material: Material::Tagged(&IRON_INGOTS),
+        count: 1,
+    }],
+    standby: Standby::BySides,
+    inside: Inside {
+        default: 9,
+        largest: Some(17),
+    },
+    depth: Depth::Below(64),
+    bits: &[Fit {
+        bit: &IRON_BIT,
+        draw: 60,
+    }],
+    bare: None,
+    rubble_per_ore: 1.25,
+    rig: &IRON_RIG,
+    dig_sound: &sounds::DRILL,
+    frame_sound: &sounds::FRAME_PLACE,
+};
+
 /// Today's excavator, the Gantry: it digs as it always has with no bit.
 pub static GANTRY: Kind = Kind {
     block: &EXCAVATOR,
@@ -159,7 +190,7 @@ pub static GANTRY: Kind = Kind {
     frame_sound: &sounds::FRAME_PLACE,
 };
 
-pub static KINDS: [&Kind; 2] = [&TIMBER, &GANTRY];
+pub static KINDS: [&Kind; 3] = [&TIMBER, &IRON, &GANTRY];
 
 impl Kind {
     /// The kind of quarry `block_state` is, if it is one.
@@ -295,6 +326,30 @@ mod tests {
     fn frames_go_up_at_the_best_drill_s_pace() {
         assert_eq!(GANTRY.build_draw(), 120, "as today");
         assert_eq!(TIMBER.build_draw(), 18, "an iron bit's, bit or none");
+        assert_eq!(IRON.build_draw(), 60, "an iron bit's in an iron quarry");
+    }
+
+    #[test]
+    fn the_iron_quarry_digs_with_an_iron_bit_only() {
+        assert!(IRON.drill(None).is_none(), "no bit, no digging");
+        assert!(
+            IRON.drill(Some(&STONE_BIT)).is_none(),
+            "a stone bit is too weak"
+        );
+        let iron = IRON.drill(Some(&IRON_BIT)).expect("an iron bit fits");
+        assert_eq!(iron.draw, 60, "it works an iron bit harder");
+        assert_eq!(iron.tier, IRON_BIT.tier, "and breaks what it breaks");
+    }
+
+    #[test]
+    fn the_iron_quarry_is_wider_deeper_and_richer() {
+        let frame = Frame::from(([0, 10, 0], [18, 14, 18]));
+        let floor = IRON.floor(&frame, Floor::at(-64));
+        assert!(!floor.is_above(-54), "64 below its layer of 10");
+        assert!(floor.is_above(-55), "and no further");
+        assert_eq!(IRON.standby(&frame), 12 + 17 + 17, "by its sides");
+        assert_eq!((IRON.inside.default, IRON.inside.largest), (9, Some(17)));
+        assert_eq!(IRON.rubble_per_ore, 1.25, "a quarter more Ore Rubble");
     }
 
     #[test]
@@ -322,6 +377,7 @@ mod tests {
     #[test]
     fn the_slot_rules_name_what_goes_in() {
         assert_eq!(TIMBER.material_rule(), "#logs base:string");
+        assert_eq!(IRON.material_rule(), "#ingots/iron");
         // Outside the game an item's mod is not known: only the names after it.
         let rule = TIMBER.bit_rule();
         let bits: Vec<&str> = rule.split(' ').collect();

@@ -1,4 +1,4 @@
-# The hand machines that work what quarries bring up.
+# The machines that work what quarries bring up, by hand and driven.
 
 [[shaped]]
 result = "millstone"
@@ -19,3 +19,8 @@ key = { i = "#ingots/iron", S = "sieve", c = "#cogs/stone", P = "#planks" }
 result = "grinding_mill"
 pattern = ["LcL", "iMi", "SSS"]
 key = { L = "#logs", c = "#cogs/stone", i = "#ingots/iron", M = "millstone", S = "#smooth_stone" }
+
+[[shaped]]
+result = "washer"
+pattern = ["i i", "PcP", "LPL"]
+key = { i = "#ingots/iron", P = "#planks", c = "#cogs/stone", L = "#logs" }

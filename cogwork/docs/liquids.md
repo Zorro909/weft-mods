@@ -20,7 +20,8 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
   once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
 
 An oil engine's intake takes only oil or water, one at a time, and hands nothing on. A
-[grinding mill](processing.md#grinding-mill) takes only water, and hands nothing on either.
+[grinding mill](processing.md#grinding-mill) or a [washer](processing.md#washer) takes only
+water, and hands nothing on either.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.

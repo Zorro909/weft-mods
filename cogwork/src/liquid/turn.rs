@@ -245,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn a_grinding_mill_takes_only_water_and_keeps_it() {
+    fn a_grinding_mill_or_washer_takes_only_water_and_keeps_it() {
         let mill = Vessel::One {
             id: 1,
             pos: at(0),

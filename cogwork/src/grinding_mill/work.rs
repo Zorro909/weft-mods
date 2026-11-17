@@ -5,7 +5,7 @@
 use weft_sdk::{ItemStack, SlotGroup, StackData, SystemBatch, World};
 
 use super::supply::Supplies;
-use super::{GRINDING_MILL, Grinder, Status, grinds_with, runner};
+use super::{GRINDING_MILL, Grinder, Status, runner};
 use crate::lib::{Pos, TypedWorld};
 use crate::liquid::HELD;
 use crate::machine::{self, Payment};
@@ -90,7 +90,7 @@ fn use_water(world: &World, id: u64) {
 /// Millibuckets of water the grinding mill `id` holds.
 fn water(world: &World, id: u64) -> u32 {
     let held = world.component(id, &HELD).unwrap_or_default();
-    if grinds_with(held.liquid) {
+    if crate::liquid::is_water(held.liquid) {
         held.amount
     } else {
         0
