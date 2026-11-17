@@ -32,6 +32,7 @@ pub static IRON_QUARRY: Block = Block::named("iron_quarry");
 pub static STEEL_EXCAVATOR: Block = Block::named("steel_excavator");
 pub use area::Frame;
 use depth::Floor;
+pub use depth::lowest_y;
 pub use frames::{COMPOSITE_FRAME, GANTRY_FRAME, IRON_FRAME, LASHED_FRAME, STEEL_FRAME};
 use kind::{KINDS, Kind};
 pub use lube::CAPACITY as LUBRICANT_CAPACITY;

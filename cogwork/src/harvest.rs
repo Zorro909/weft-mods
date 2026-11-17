@@ -1,8 +1,8 @@
 //! Breaking a block by machine: what it drops, as if mined with a diamond pickaxe, goes into the
 //! machine's output. Shared by the excavator, the leveler and the pump: the leveler and the pump
 //! keep the drops as they are, a quarry brings stone and ore up as rubble (`rubble::quarried`).
-//! A block that keeps what it holds on its item (a loaded millstone, sieve or forge anvil) keeps
-//! it here too.
+//! A block that keeps what it holds on its item (a loaded millstone, sieve or forge anvil, an acid
+//! tank or a leaching vat with its liquids) keeps it here too.
 
 use weft_sdk::{Component, Item, ItemStack, LootCtx, LootSource, StackData, Value, World};
 
@@ -103,11 +103,14 @@ fn carry_onto(
 
 /// `stack` with what the block entity `entity` carries. The engine does this only for the drops
 /// `break_block` makes, which a machine goes without, and the SDK reads a component only by its
-/// handle: so these are cogwork's own, the millstone's, the sieve's and the forge anvil's.
+/// handle: so these are cogwork's own, the millstone's, the sieve's, the forge anvil's, the acid
+/// tank's and the leaching vat's.
 fn with_carried(world: &World, entity: u64, stack: ItemStack) -> ItemStack {
     let stack = with_component(world, entity, stack, &crate::millstone::MILL);
     let stack = with_component(world, entity, stack, &crate::sieve::SIFT);
-    with_component(world, entity, stack, &crate::forge_anvil::FORGING)
+    let stack = with_component(world, entity, stack, &crate::forge_anvil::FORGING);
+    let stack = with_component(world, entity, stack, &crate::acid_tank::BREW);
+    with_component(world, entity, stack, &crate::leaching_vat::LEACH)
 }
 
 /// `stack` with `entity`'s value of `component`, if it has one.

@@ -17,7 +17,7 @@ mod vessel;
 
 pub use bucket::{hand_over, use_bucket};
 pub use flow::{Level, flow};
-pub use pipe::{draw, pour};
+pub use pipe::{draw, pour, pour_apart};
 pub use vessel::{Holders, Vessel, is_vessel, reaches};
 use weft_sdk::{Component, Registry, World, component_flags, item_name, liquid_of, value};
 

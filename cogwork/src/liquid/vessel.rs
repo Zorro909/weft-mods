@@ -38,7 +38,7 @@ pub enum Kind {
     /// A sealed liquid tube: as a tube, but a pump or a driven timber liquid tube pushes into it
     /// `SEALED_LIFT` blocks up instead of `LIFT`.
     Sealed,
-    /// A pressure tube: as a tube, for steam only, and twice as much a turn.
+    /// A pressure tube: as a tube, for steam and sulfuric acid only, and twice as much a turn.
     Pressure,
     /// The pump: it pushes what it holds `LIFT` blocks up and never takes liquid.
     Pump,
@@ -120,7 +120,7 @@ impl Kind {
             Kind::Still => liquid == super::key_named("cogwork:oil"),
             Kind::Lubed => liquid == crate::refinery::products::Product::Lubricant.key(),
             Kind::Polymer => liquid == crate::refinery::products::Product::Gas.key(),
-            Kind::Pressure => super::rises(liquid),
+            Kind::Pressure => super::rises(liquid) || liquid == crate::acid::key(),
             Kind::Tube | Kind::Sealed | Kind::Pump | Kind::Driven => true,
         }
     }
@@ -165,8 +165,8 @@ impl Vessel {
 
     /// Whether `liquid` may go into it at all: an intake takes only what an engine burns, a
     /// grinding mill, a washer, a boiler, a flotation cell or a condenser only water, a firebox
-    /// only lava, a steam machine, a heater or a pressure tube only steam, a clarifier only muddy
-    /// water, a refinery's controller only crude, a quarry only lubricant, a polymerizer only gas,
+    /// only lava, a steam machine or a heater only steam, a pressure tube only steam or sulfuric
+    /// acid, a clarifier only muddy water, a refinery's controller only crude, a quarry only lubricant, a polymerizer only gas,
     /// a drain or a tap nothing.
     pub fn admits(&self, liquid: LiquidKey) -> bool {
         self.kind().admits(liquid)

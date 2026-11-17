@@ -13,6 +13,7 @@ mod count;
 mod rod;
 mod survey;
 
+pub use count::{OreKind, ore_kind};
 use survey::{BANDS, KINDS, TURNS};
 use weft_sdk::{
     Arg, Block, Component, Facings, Output, Registry, Toward, Use, World, component_flags,

@@ -11,7 +11,9 @@ A coke oven, a blast furnace and a forge anvil make steel, and a boiler on a fir
 for a steam engine and a trip hammer. Steel builds a bigger quarry and a flotation cell that makes
 its ore richer, and a core drill tells what ore lies below before you dig. A refinery column
 distils crude oil into diesel for the oil engine, lubricant for the quarries and tar for roads,
-and its gas becomes plastic in a polymerizer, pressed into the parts of the last quarry.
+and its gas becomes plastic in a polymerizer, pressed into the parts of the last quarry. Sulfur
+and water become sulfuric acid, which leaches Ore Rubble to its purest grade, and a seismic
+thumper surveys the ore below a whole area and the oil fields round it.
 
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
@@ -45,7 +47,7 @@ carry any liquid, of any mod, between pumps and tanks, and tanks next to each ot
 bigger tank, up to 3 by 3 and 6 high. You can see how full every tube and tank is. A timber
 liquid tube driven by an engine pumps liquid out of a tank and up the tubes, its paddle wheel
 turning. Sealed liquid tubes, sleeved in plastic, let a pump lift twice as high, and pressure
-tubes carry steam twice as fast.
+tubes carry steam and sulfuric acid twice as fast.
 
 ### Machines
 
@@ -60,11 +62,14 @@ tubes carry steam twice as fast.
   faster, and a Bit Magazine beside a quarry swaps in a fresh bit as the old one wears out.
 - **Core drill.** Crank it sixteen times and it reports how much of each ore lies in the 16 by
   16 below it, band by band down to 128 below.
+- **Seismic thumper.** Its weight booms onto the ground while engines pay for a survey; then it
+  counts each ore below the area its survey markers mark out, up to 64 by 64, band by band down
+  to 160 below, and lists the oil fields within 256 blocks: which way, how far and how deep.
 - **Assembly bench.** Lay out a crafting recipe with ghost items; tubes bring the ingredients
   and it crafts again and again with engine power.
 - **Leveler.** Clears the ground above its height and fills the holes below it, leaving the
   area flat.
-- **Survey markers** mark out the area a quarry or the leveler works.
+- **Survey markers** mark out the area a quarry, the leveler or the seismic thumper works.
 
 ### Rubble and ore
 
@@ -75,7 +80,9 @@ Rubble comes in grades, Poor to Pure; every quarry brings it up Poor, and the ri
 the more raw ore it grinds into. The washer, a trough with a paddle wheel, washes Poor Ore Rubble
 into Common with water and engine energy, and the flotation cell, a steel tank with a stirring
 rotor, floats Common into Rich with water and creosote, leaving muddy water that a clarifier
-settles back into water, and now and then a clay ball. The millstone grinds it into raw ore by hand,
+settles back into water, and now and then a clay ball. The leaching vat, lined with plastic,
+leaches Rich into Pure with sulfuric acid, which an acid tank makes of sulfur and water. The
+millstone grinds it into raw ore by hand,
 with water and sand, its runner turning with each turn of its handle; the sieve sifts Rubble
 into sand and gravel and, now and then, something better. Their driven counterparts, the shaker
 screen and the grinding mill, do the same with engine energy, fed by tubes and the mill's water
@@ -144,6 +151,8 @@ engines and directing tubes.
 5. With steel, a core drill finds where the ore is, a Steel Excavator digs it out, and a
    flotation cell after the washer makes it Rich. A Gantry Excavator digs much bigger areas
    all the way down.
+6. With plastic, an acid tank and a leaching vat after the flotation cell make the Ore Rubble
+   Pure, and a seismic thumper surveys a marked area, and the oil fields round it, at once.
 
 Everything is in the Cogwork tab of the creative inventory, and crafted on the crafting table.
 
@@ -156,7 +165,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Power](docs/power.md): engines, the water wheel, the torque shaft and the wooden axle
 - [Quarries](docs/excavator.md): the Timber Quarry, the Iron Quarry, the Steel Excavator and the
   Gantry Excavator
-- [Prospecting](docs/prospecting.md): the core drill
+- [Prospecting](docs/prospecting.md): the core drill and the seismic thumper
 - [Refinery](docs/refinery.md): the column, its products and asphalt
 - [Plastics](docs/plastics.md): the polymerizer, the molding press and its molds, and the parts
 - [Assembly bench](docs/assembly-bench.md)
@@ -166,7 +175,8 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Oil and the pump](docs/oil.md)
 - [Liquid tubes and tanks](docs/liquids.md)
 - [Oil engine](docs/oil-engine.md)
-- [Rubble, ore grades, sifting, washing, flotation and grinding](docs/processing.md)
+- [Rubble, ore grades, sifting, washing, flotation, leaching and grinding](docs/processing.md)
+- [Sulfuric acid and leaching](docs/acid.md): the acid tank and the leaching vat
 - [Working with other mods](docs/other-mods.md)
 
 What changed in each version is in the [changelog](CHANGELOG.md).
@@ -202,7 +212,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `engines/` | Spring and ember engines: their block, tick, heat and piston, and winding a spring engine (`wind.rs`) |
 | `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen; the quarries' kinds (`excavator/kind/`, their rows in `rows.rs`), their frame blocks (`frames.rs`), drill bits (`bit.rs`) and frame materials (`materials.rs`) |
 | `water_wheel/` | The water wheel: its tick, where water flows under it (`flow.rs`) and its turning wheel (`wheel.rs`) |
-| `oil/` | Oil, the oil-soaked ground of a seep, and where fields lie (`oil/fields.rs`) |
+| `oil/` | Oil, the oil-soaked ground of a seep, where fields lie (`oil/fields.rs`), how deep each lies (`known.rs`) and finding them near a point (`search.rs`) |
 | `oil_engine/` | The oil engine: its parts (`parts.rs`), whether they make the engine (`pattern.rs`), what it burns and makes (`fuel.rs`), its tick (`run.rs`), its rig (`rig.rs`) and how the rig's crank moves its rods (`stroke.rs`, which writes the rig's clip) |
 | `pump/` | The pump: its block and screen, boring and pumping (`work.rs`), finding the next source (`drain.rs`) |
 | `liquid/` | What holds liquid (`Held`); how it flows by height and pressure (`flow.rs`), the holders (`vessel.rs`) and their turns, which sleep once settled (`turn.rs`); buckets on them; a machine's own pipes for liquid it keeps apart (`pipe.rs`) |
@@ -218,6 +228,8 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `flotation/`, `clarifier/`, `muddy_water.rs` | The flotation cell: what a float takes and leaves (`cell.rs`), its tick (`work.rs`) and its rotor (`rotor.rs`); the clarifier: its settling (`settle.rs`), its tick (`work.rs`) and its rake (`rake.rs`); muddy water |
 | `plastics.rs`, `polymerizer/`, `molding_press/`, `bit_magazine/` | Plastic and its parts; the polymerizer and its batches (`work.rs`); the molding press, its molds (`molds.rs`), its presses (`work.rs`) and ram (`ram.rs`); the Bit Magazine, when it swaps a bit (`swap.rs`) and its tick (`work.rs`) |
 | `core_drill/` | The core drill: what it counts and its tally (`survey.rs`), counting a little every tick (`count.rs`) and its rod (`rod.rs`) |
+| `seismic_thumper/` | The seismic thumper: its area and tally (`survey.rs`), its tick (`work.rs`), listening for oil fields (`oil.rs`), its weight (`weight.rs`) and its screen (`screen.rs`) |
+| `acid.rs`, `acid_tank/`, `leaching_vat/` | Sulfuric acid; the acid tank, its batches (`brew.rs`) and its tick (`work.rs`); the leaching vat and its tick (`work.rs`) |
 | `chance.rs` | Fractions of an item as chances of one more |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
@@ -235,14 +247,15 @@ Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/
 quarries' rigs and drill bits, the engines' pistons with the spring engine's crank, the water
 wheel, the timber liquid tube's wheel, the oil engine's rig, the millstone's runner, the
 sieve's tray, the shaker screen's tray, the grinding mill's runner, the flotation cell's rotor,
-the clarifier's rake and the core drill's rod) are
+the clarifier's rake, the core drill's rod and the seismic thumper's weight) are
 "Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
 are "Java Block/Item" models in `block/`: the survey marker, the engine, the water wheel's axle, the pump and its hose,
 the oil engine's controller, the millstone's bed and the sieve's frame, with and without Rubble
 on it, the shaker screen's frame, the grinding mill's vat and frame, the flotation cell with and
-without froth, the clarifier with and without water, and the core drill's tripod; `item/` has
-the millstone, the sieve, the shaker screen, the grinding mill, the flotation cell, the
-clarifier and the core drill whole. A formed oil engine's casing joins into one panel a face by
+without froth, the clarifier with and without water, the core drill's tripod, the acid tank, the
+leaching vat with and without acid and the seismic thumper's frame; `item/` has the millstone,
+the sieve, the shaker screen, the grinding mill, the flotation cell, the clarifier, the core
+drill, the acid tank, the leaching vat and the seismic thumper whole. A formed oil engine's casing joins into one panel a face by
 connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
 skirt at the bottom, and one for its top and bottom. Its intakes and drives show that panel with
 their port drawn on top as a layer, so the face stays one.
@@ -261,7 +274,8 @@ in `fill.rs`, in the colors of whatever liquid it is.
 The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks, the pump, the
 oil engine, Rubble and Ore Rubble, the millstone's runner and the sieve's tray and mesh, the
 shaker screen's tray and the grinding mill's runner, the
-Timber Quarry, its lashed frame, rig and drill bits, the water wheel and the wooden axle are
+Timber Quarry, its lashed frame, rig and drill bits, the water wheel, the wooden axle, sulfuric
+acid, the acid tank's sight glass and the seismic thumper's plate, gearbox and weight are
 drawn pixel by pixel in `src/art/`.
 Change them there, then run `WRITE_ASSETS=1 cargo test --release art` in `cogwork/`. Without the
 variable the same test fails when a file differs from what it would draw, so a texture changed
