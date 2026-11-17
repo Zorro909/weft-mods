@@ -3,7 +3,7 @@
 //! drops. Of an ore it brings up as much as its multiplier says, the fraction a chance of one
 //! more. Dirt, gravel, sand and everything else come up as they drop.
 
-use weft_sdk::{Item, ItemStack, Tag, World, item_block};
+use weft_sdk::{Item, ItemStack, Tag, item_block};
 
 use super::metal::{Vein, vein};
 use super::{Grade, Ore, ore_rubble};
@@ -14,24 +14,25 @@ static RUBBLE: Item = Item::named("rubble");
 static STONE: Tag = Tag::named("stone");
 static COBBLESTONE: Tag = Tag::named("cobblestone");
 
-/// What a quarry with `multiplier` brings up of `block_state`, which drops `drops`.
+/// What a quarry with `multiplier` brings up of `block_state`, which drops `drops`, its chances
+/// decided by `roll` (`chance::roll`, or `chance::LUCKIEST` for the most it can bring up).
 pub fn quarried(
-    world: &World,
     block_state: BlockState,
     drops: Vec<ItemStack>,
     multiplier: f64,
+    mut roll: impl FnMut() -> f64,
 ) -> Vec<ItemStack> {
     let quarried: Vec<ItemStack> = match vein(block_state) {
         Vein::Metal(metal) => match Ore::of(metal) {
             Some(ore) => {
-                let count = chance::count(multiplier, chance::roll(world));
+                let count = chance::count(multiplier, roll());
                 vec![ore_rubble(ore, Grade::Poor, count)]
             }
             None => drops,
         },
         Vein::Gem => drops
             .into_iter()
-            .map(|stack| more(stack, multiplier, chance::roll(world)))
+            .map(|stack| more(stack, multiplier, roll()))
             .collect(),
         Vein::Rock => drops.into_iter().map(as_rubble).collect(),
     };
@@ -74,5 +75,10 @@ mod tests {
         assert_eq!(more(coal, 1.25, 0.5).count, 1, "missed");
         let redstone = ItemStack::new(8, 4);
         assert_eq!(more(redstone, 1.5, 0.9).count, 6, "each of several");
+        assert_eq!(
+            more(coal, 1.25, chance::LUCKIEST).count,
+            2,
+            "the most it brings up"
+        );
     }
 }
