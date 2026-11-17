@@ -10,87 +10,33 @@ use super::{CLEAR, IRON, Picture, Rgba, Unwrap, noise};
 /// rims, the mesh, and the heap's two layers.
 const TRAY_SIZE: (usize, usize) = (64, 64);
 const TRAY_RIMS: [Unwrap; 4] = [
-    Unwrap {
-        at: (0, 0),
-        size: (14, 3, 1),
-    },
-    Unwrap {
-        at: (0, 4),
-        size: (14, 1, 1),
-    },
-    Unwrap {
-        at: (32, 0),
-        size: (1, 3, 12),
-    },
-    Unwrap {
-        at: (32, 16),
-        size: (1, 3, 12),
-    },
+    Unwrap::new((0, 0), (14, 3, 1)),
+    Unwrap::new((0, 4), (14, 1, 1)),
+    Unwrap::new((32, 0), (1, 3, 12)),
+    Unwrap::new((32, 16), (1, 3, 12)),
 ];
-const TRAY_MESH: Unwrap = Unwrap {
-    at: (0, 32),
-    size: (12, 1, 12),
-};
+const TRAY_MESH: Unwrap = Unwrap::new((0, 32), (12, 1, 12));
 const HEAP: [Unwrap; 2] = [
-    Unwrap {
-        at: (0, 48),
-        size: (9, 1, 7),
-    },
-    Unwrap {
-        at: (34, 48),
-        size: (5, 1, 4),
-    },
+    Unwrap::new((0, 48), (9, 1, 7)),
+    Unwrap::new((34, 48), (5, 1, 4)),
 ];
 /// The runner's texture and its unwrap: the stone's core and four sides, the spindle, the crown
 /// wheel and its four teeth.
 const RUNNER_SIZE: (usize, usize) = (64, 32);
 const STONE_BOXES: [Unwrap; 5] = [
-    Unwrap {
-        at: (0, 0),
-        size: (8, 4, 8),
-    },
-    Unwrap {
-        at: (0, 12),
-        size: (1, 4, 6),
-    },
-    Unwrap {
-        at: (14, 12),
-        size: (1, 4, 6),
-    },
-    Unwrap {
-        at: (28, 12),
-        size: (6, 4, 1),
-    },
-    Unwrap {
-        at: (28, 17),
-        size: (6, 4, 1),
-    },
+    Unwrap::new((0, 0), (8, 4, 8)),
+    Unwrap::new((0, 12), (1, 4, 6)),
+    Unwrap::new((14, 12), (1, 4, 6)),
+    Unwrap::new((28, 12), (6, 4, 1)),
+    Unwrap::new((28, 17), (6, 4, 1)),
 ];
-const SPINDLE: Unwrap = Unwrap {
-    at: (32, 0),
-    size: (2, 7, 2),
-};
+const SPINDLE: Unwrap = Unwrap::new((32, 0), (2, 7, 2));
 const CROWN: [Unwrap; 5] = [
-    Unwrap {
-        at: (40, 0),
-        size: (6, 1, 6),
-    },
-    Unwrap {
-        at: (44, 8),
-        size: (2, 1, 1),
-    },
-    Unwrap {
-        at: (50, 8),
-        size: (2, 1, 1),
-    },
-    Unwrap {
-        at: (44, 10),
-        size: (1, 1, 2),
-    },
-    Unwrap {
-        at: (50, 10),
-        size: (1, 1, 2),
-    },
+    Unwrap::new((40, 0), (6, 1, 6)),
+    Unwrap::new((44, 8), (2, 1, 1)),
+    Unwrap::new((50, 8), (2, 1, 1)),
+    Unwrap::new((44, 10), (1, 1, 2)),
+    Unwrap::new((50, 10), (1, 1, 2)),
 ];
 
 pub fn all() -> Vec<(&'static str, Picture)> {

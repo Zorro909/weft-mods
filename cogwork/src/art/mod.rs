@@ -202,6 +202,11 @@ pub struct Unwrap {
 }
 
 impl Unwrap {
+    /// The box of `size` (width, height, depth) whose unwrap starts at `at` in the texture.
+    pub const fn new(at: (usize, usize), size: (usize, usize, usize)) -> Unwrap {
+        Unwrap { at, size }
+    }
+
     /// Paints every face of the box with `color` of where a pixel is.
     pub fn paint(self, picture: &mut Picture, color: impl Fn(usize, usize) -> Rgba) {
         let ((u, v), (w, h, d)) = (self.at, self.size);

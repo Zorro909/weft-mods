@@ -6,22 +6,10 @@ use super::{CLEAR, IRON, Picture, Rgba, Unwrap, noise};
 
 /// The wheel's texture, and where its model's unwrap puts each box.
 const WHEEL_SIZE: (usize, usize) = (64, 48);
-const SPOKE: Unwrap = Unwrap {
-    at: (0, 0),
-    size: (2, 36, 2),
-};
-const HUB: Unwrap = Unwrap {
-    at: (8, 0),
-    size: (8, 8, 6),
-};
-const PADDLE: Unwrap = Unwrap {
-    at: (36, 0),
-    size: (2, 6, 8),
-};
-const RIM: Unwrap = Unwrap {
-    at: (8, 14),
-    size: (14, 2, 4),
-};
+const SPOKE: Unwrap = Unwrap::new((0, 0), (2, 36, 2));
+const HUB: Unwrap = Unwrap::new((8, 0), (8, 8, 6));
+const PADDLE: Unwrap = Unwrap::new((36, 0), (2, 6, 8));
+const RIM: Unwrap = Unwrap::new((8, 14), (14, 2, 4));
 
 pub fn all() -> Vec<(&'static str, Picture)> {
     vec![
