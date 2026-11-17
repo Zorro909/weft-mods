@@ -63,7 +63,8 @@ which carries it over a short gap. Without crude it takes no heat, so a column w
 cools; with heat but nothing to take it away, it would only climb.
 
 A product whose taps have no room stops the column, which then takes no heat nor cooling, and
-its screen says which. Its sulfur goes into its output and leaves by its front into a tube or a
+its screen says which. A tap holding any of another liquid has no room for this one, so a tap two
+columns share fills with one column's product while the other waits. Its sulfur goes into its output and leaves by its front into a tube or a
 chest there; with no room for it, the column stops too. No crude leaves the controller and no
 heat or water is drawn until a tick's products are sure of their place, so nothing it makes is
 lost, save the gas it vents.

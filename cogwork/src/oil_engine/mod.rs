@@ -53,6 +53,10 @@ value! {
         pub fault_z: i32,
         pub checked: u32,
         pub ran: u32,
+        // The padding of the 64 bytes oil engines were saved in until `diesel` came: never
+        // read, as those saves may hold anything there.
+        saved_padding: u32,
+        // Past the old 64 bytes, so engines saved before it load with none.
         pub diesel: u32,
     }
 }
@@ -263,6 +267,10 @@ mod tests {
         assert_eq!(offset_of!(OilEngine, fault_x), 40, "the fault's place");
         assert_eq!(offset_of!(OilEngine, checked), 52, "whether checked");
         assert_eq!(offset_of!(OilEngine, ran), 56, "whether it ran this stroke");
-        assert_eq!(offset_of!(OilEngine, diesel), 60, "its diesel, last");
+        assert_eq!(
+            offset_of!(OilEngine, diesel),
+            64,
+            "its diesel past the 64 bytes saved before, not in their padding"
+        );
     }
 }

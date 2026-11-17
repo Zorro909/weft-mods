@@ -83,8 +83,8 @@ by liquid tube.
 A steel column 3 by 3 and 6 high distils crude oil, heated by steam or engine energy at its foot
 and cooled by water at its top. Keep its temperature in its band and every bucket gives gas,
 diesel, lubricant, tar and a sulfur, each out of the taps on its own layer; too cold and it all
-goes to tar, too hot and the gas vents in pale puffs. Diesel runs an oil engine two and a half
-times as long as oil, lubricant led into a quarry saves a fifth of its energy and half its bit's
+goes to tar, too hot and the gas vents in pale puffs. A bucket of diesel runs an oil engine two and a
+half times as long as one of oil, lubricant led into a quarry saves a fifth of its energy and half its bit's
 wear, and tar with gravel and sand lays asphalt, a road you walk a fifth faster on.
 
 ### Bellows

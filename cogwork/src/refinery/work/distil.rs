@@ -14,7 +14,7 @@ use super::super::heat::{self, Band};
 use super::super::products::{self, CRUDE_A_SULFUR, CRUDE_A_TICK, Cut, Product};
 use super::super::{Heating, Refinery, Status};
 use crate::lib::Pos;
-use crate::liquid::{HELD, Holders, LiquidKey, Vessel};
+use crate::liquid::{HELD, Held, Holders, LiquidKey, Vessel};
 
 /// Millibuckets of steam a tick heats it, or energy its burners give instead.
 const STEAM_A_TICK: u32 = 40;
@@ -127,19 +127,22 @@ fn room(world: &World, taps: &[Pos], liquid: LiquidKey) -> u32 {
     let holders = Holders::outside(*world);
     taps.iter()
         .filter_map(|&tap| Vessel::at(world, tap))
-        .map(|tap| {
-            let held = tap.held(&holders);
-            if !held.takes(liquid, tap.capacity()) {
-                return 0;
-            }
-            let had = if held.liquid == liquid {
-                held.amount
-            } else {
-                0
-            };
-            tap.capacity().saturating_sub(had)
-        })
+        .map(|tap| room_in(&tap.held(&holders), liquid, tap.capacity()))
         .sum()
+}
+
+/// Millibuckets of `liquid` a tap of `capacity` holding `held` has room for. A tap takes only
+/// the liquid it holds, or any once it is empty: never in place of a leftover of another, as
+/// liquids otherwise may, because a tap two columns share can be one's diesel and the other's
+/// lubricant, and each would wash the other's away.
+fn room_in(held: &Held, liquid: LiquidKey, capacity: u32) -> u32 {
+    if held.liquid == liquid {
+        capacity.saturating_sub(held.amount)
+    } else if held.amount == 0 {
+        capacity
+    } else {
+        0
+    }
 }
 
 /// Puts `amount` of `liquid` into the taps at `taps`, as far as `room` said they have room.
@@ -149,16 +152,7 @@ fn fill(world: &World, taps: &[Pos], liquid: LiquidKey, mut amount: u32) {
         let Some(tap) = Vessel::at(world, tap).filter(|_| amount > 0) else {
             continue;
         };
-        let held = tap.held(&holders);
-        if !held.takes(liquid, tap.capacity()) {
-            continue;
-        }
-        let had = if held.liquid == liquid {
-            held.amount
-        } else {
-            0
-        };
-        let put = amount.min(tap.capacity().saturating_sub(had));
+        let put = amount.min(room_in(&tap.held(&holders), liquid, tap.capacity()));
         if put > 0 {
             tap.put(&mut holders, liquid, put);
             amount -= put;
@@ -255,6 +249,44 @@ fn water() -> LiquidKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const DIESEL: LiquidKey = 7;
+    const LUBRICANT: LiquidKey = 8;
+    const TAP: u32 = 1_000;
+
+    #[test]
+    fn a_tap_takes_its_own_liquid_or_any_once_empty() {
+        let empty = Held::default();
+        assert_eq!(room_in(&empty, DIESEL, TAP), TAP, "empty");
+        let mut diesel = Held::default();
+        diesel.add(DIESEL, 600);
+        assert_eq!(room_in(&diesel, DIESEL, TAP), 400, "the rest");
+        assert_eq!(room_in(&diesel, LUBRICANT, TAP), 0, "not another");
+    }
+
+    #[test]
+    fn a_tap_two_columns_share_loses_nothing() {
+        // One column's diesel and the other's lubricant, in turns, into the same tap.
+        let mut tap = Held::default();
+        let mut made = 0;
+        for turn in 0..150 {
+            let (liquid, amount) = if turn % 2 == 0 {
+                (DIESEL, 4)
+            } else {
+                (LUBRICANT, 2)
+            };
+            let put = amount.min(room_in(&tap, liquid, TAP));
+            if put > 0 {
+                tap.add(liquid, put);
+                made += put;
+            }
+        }
+        assert_eq!(tap.amount, made, "all it was given is still there");
+        assert_eq!(
+            tap.liquid, DIESEL,
+            "the first one's, the other column waits"
+        );
+    }
 
     #[test]
     fn a_running_column_says_where_its_temperature_stands() {
