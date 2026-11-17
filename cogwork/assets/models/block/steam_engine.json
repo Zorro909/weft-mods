@@ -1,0 +1,169 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"particle": "block/forge_anvil",
+		"bed": "block/forge_anvil",
+		"plate": "block/boiler_plate",
+		"band": "block/boiler_band",
+		"iron": "base:block/iron_block"
+	},
+	"elements": [
+		{
+			"name": "bed",
+			"from": [0, 0, 0],
+			"to": [16, 2, 16],
+			"faces": {
+				"north": {"uv": [0, 14, 16, 16], "texture": "#bed"},
+				"east": {"uv": [0, 14, 16, 16], "texture": "#bed"},
+				"south": {"uv": [0, 14, 16, 16], "texture": "#bed"},
+				"west": {"uv": [0, 14, 16, 16], "texture": "#bed"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#bed"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#bed"}
+			}
+		},
+		{
+			"name": "saddle",
+			"from": [5, 2, 1],
+			"to": [11, 5, 4],
+			"faces": {
+				"north": {"uv": [5, 11, 11, 14], "texture": "#bed"},
+				"east": {"uv": [12, 11, 15, 14], "texture": "#bed"},
+				"south": {"uv": [5, 11, 11, 14], "texture": "#bed"},
+				"west": {"uv": [1, 11, 4, 14], "texture": "#bed"},
+				"up": {"uv": [5, 1, 11, 4], "texture": "#bed"},
+				"down": {"uv": [5, 12, 11, 15], "texture": "#bed"}
+			}
+		},
+		{
+			"name": "cylinder",
+			"from": [4, 5, 1],
+			"to": [12, 13, 4],
+			"faces": {
+				"north": {"uv": [4, 3, 12, 11], "texture": "#plate"},
+				"east": {"uv": [12, 3, 15, 11], "texture": "#plate"},
+				"south": {"uv": [4, 3, 12, 11], "texture": "#plate"},
+				"west": {"uv": [1, 3, 4, 11], "texture": "#plate"},
+				"up": {"uv": [4, 1, 12, 4], "texture": "#plate"},
+				"down": {"uv": [4, 12, 12, 15], "texture": "#plate"}
+			}
+		},
+		{
+			"name": "cover",
+			"from": [3, 4, 0],
+			"to": [13, 14, 1],
+			"faces": {
+				"north": {"uv": [3, 2, 13, 12], "texture": "#band"},
+				"east": {"uv": [15, 2, 16, 12], "texture": "#band"},
+				"south": {"uv": [3, 2, 13, 12], "texture": "#band"},
+				"west": {"uv": [0, 2, 1, 12], "texture": "#band"},
+				"up": {"uv": [3, 0, 13, 1], "texture": "#band"},
+				"down": {"uv": [3, 15, 13, 16], "texture": "#band"}
+			}
+		},
+		{
+			"name": "valve_chest",
+			"from": [6, 13, 1],
+			"to": [10, 15, 4],
+			"faces": {
+				"north": {"uv": [6, 1, 10, 3], "texture": "#band"},
+				"east": {"uv": [12, 1, 15, 3], "texture": "#band"},
+				"south": {"uv": [6, 1, 10, 3], "texture": "#band"},
+				"west": {"uv": [1, 1, 4, 3], "texture": "#band"},
+				"up": {"uv": [6, 1, 10, 4], "texture": "#band"},
+				"down": {"uv": [6, 12, 10, 15], "texture": "#band"}
+			}
+		},
+		{
+			"name": "inlet",
+			"from": [7, 15, 2],
+			"to": [9, 16, 3],
+			"faces": {
+				"north": {"uv": [7, 0, 9, 1], "texture": "#iron"},
+				"east": {"uv": [13, 0, 14, 1], "texture": "#iron"},
+				"south": {"uv": [7, 0, 9, 1], "texture": "#iron"},
+				"west": {"uv": [2, 0, 3, 1], "texture": "#iron"},
+				"up": {"uv": [7, 2, 9, 3], "texture": "#iron"},
+				"down": {"uv": [7, 13, 9, 14], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "guide",
+			"from": [6, 7, 4],
+			"to": [10, 8, 8],
+			"faces": {
+				"north": {"uv": [6, 8, 10, 9], "texture": "#iron"},
+				"east": {"uv": [8, 8, 12, 9], "texture": "#iron"},
+				"south": {"uv": [6, 8, 10, 9], "texture": "#iron"},
+				"west": {"uv": [4, 8, 8, 9], "texture": "#iron"},
+				"up": {"uv": [6, 4, 10, 8], "texture": "#iron"},
+				"down": {"uv": [6, 8, 10, 12], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "guide_post",
+			"from": [7, 2, 5],
+			"to": [9, 7, 7],
+			"faces": {
+				"north": {"uv": [7, 9, 9, 14], "texture": "#bed"},
+				"east": {"uv": [9, 9, 11, 14], "texture": "#bed"},
+				"south": {"uv": [7, 9, 9, 14], "texture": "#bed"},
+				"west": {"uv": [5, 9, 7, 14], "texture": "#bed"},
+				"up": {"uv": [7, 5, 9, 7], "texture": "#bed"},
+				"down": {"uv": [7, 9, 9, 11], "texture": "#bed"}
+			}
+		},
+		{
+			"name": "bearing_west",
+			"from": [0, 2, 9],
+			"to": [2, 10, 13],
+			"faces": {
+				"north": {"uv": [14, 6, 16, 14], "texture": "#bed"},
+				"east": {"uv": [3, 6, 7, 14], "texture": "#bed"},
+				"south": {"uv": [0, 6, 2, 14], "texture": "#bed"},
+				"west": {"uv": [9, 6, 13, 14], "texture": "#bed"},
+				"up": {"uv": [0, 9, 2, 13], "texture": "#bed"},
+				"down": {"uv": [0, 3, 2, 7], "texture": "#bed"}
+			}
+		},
+		{
+			"name": "bearing_east",
+			"from": [14, 2, 9],
+			"to": [16, 10, 13],
+			"faces": {
+				"north": {"uv": [0, 6, 2, 14], "texture": "#bed"},
+				"east": {"uv": [3, 6, 7, 14], "texture": "#bed"},
+				"south": {"uv": [14, 6, 16, 14], "texture": "#bed"},
+				"west": {"uv": [9, 6, 13, 14], "texture": "#bed"},
+				"up": {"uv": [14, 9, 16, 13], "texture": "#bed"},
+				"down": {"uv": [14, 3, 16, 7], "texture": "#bed"}
+			}
+		},
+		{
+			"name": "cap_west",
+			"from": [0, 10, 10],
+			"to": [2, 11, 12],
+			"faces": {
+				"north": {"uv": [14, 5, 16, 6], "texture": "#band"},
+				"east": {"uv": [4, 5, 6, 6], "texture": "#band"},
+				"south": {"uv": [0, 5, 2, 6], "texture": "#band"},
+				"west": {"uv": [10, 5, 12, 6], "texture": "#band"},
+				"up": {"uv": [0, 10, 2, 12], "texture": "#band"},
+				"down": {"uv": [0, 4, 2, 6], "texture": "#band"}
+			}
+		},
+		{
+			"name": "cap_east",
+			"from": [14, 10, 10],
+			"to": [16, 11, 12],
+			"faces": {
+				"north": {"uv": [0, 5, 2, 6], "texture": "#band"},
+				"east": {"uv": [4, 5, 6, 6], "texture": "#band"},
+				"south": {"uv": [14, 5, 16, 6], "texture": "#band"},
+				"west": {"uv": [10, 5, 12, 6], "texture": "#band"},
+				"up": {"uv": [14, 10, 16, 12], "texture": "#band"},
+				"down": {"uv": [14, 4, 16, 6], "texture": "#band"}
+			}
+		}
+	]
+}

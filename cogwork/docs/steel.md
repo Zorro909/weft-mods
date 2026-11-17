@@ -143,6 +143,8 @@ A dark iron anvil on a log stump, worked by hand:
    throws sparks; after the third the bloom is drawn out flat.
 3. The fifth strike forges it, and a steel ingot pops out on top.
 
+A [trip hammer](steam.md#trip-hammer) does the same on steam, by itself.
+
 An empty hand takes the bloom back off, its strikes lost. Broken, by hand or by a machine, the
 anvil keeps the bloom it holds on its item.
 

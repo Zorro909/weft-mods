@@ -1,6 +1,6 @@
 //! The blocks that hold liquid: a liquid tube, a timber liquid tube, a pump, an oil engine's
-//! intake, a grinding mill, a washer, or a coke oven's door or drain, one block each, or a tank,
-//! one holder however many blocks it has.
+//! intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
+//! engine or a trip hammer, one block each, or a tank, one holder however many blocks it has.
 //! `turn` passes liquid between them. What each holder keeps is read and written through `Holders`.
 
 mod holders;
@@ -9,21 +9,24 @@ pub use holders::Holders;
 use weft_sdk::{Dir, World};
 
 use super::flow::{LIFT, UNIT};
-use super::{DRIBBLE, Held, LiquidKey, flow, is_full};
+use super::{DRIBBLE, Held, Level, LiquidKey, flow, is_full};
 use crate::coke_oven;
+use crate::firebox::{self, BOILER, FIREBOX};
 use crate::grinding_mill::{self, GRINDING_MILL};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid_tube::is_liquid_tube;
 use crate::oil_engine::OIL_INTAKE;
 use crate::pump::PUMP;
+use crate::steam_engine::{self, STEAM_ENGINE};
 use crate::tank::{LIQUID_TANK, Tank};
 use crate::timber_liquid_tube::{self, TIMBER_LIQUID_TUBE};
+use crate::trip_hammer::{self, TRIP_HAMMER};
 use crate::washer::{self, WASHER};
 
 /// A holder of liquid: one block, or a tank of several.
 pub enum Vessel {
-    /// A liquid tube, a pump, an intake, a grinding mill, a washer or a coke oven's door or
-    /// drain: its block entity, where it is, how much it holds, and how it passes liquid on.
+    /// A liquid tube, a pump, an intake, a machine or a coke oven's door or drain: its block
+    /// entity, where it is, how much it holds, and how it passes liquid on.
     One {
         id: u64,
         pos: Pos,
@@ -45,11 +48,15 @@ pub enum Kind {
     Driven,
     /// An oil engine's intake: it takes oil and water for the engine and hands nothing on.
     Intake,
-    /// A grinding mill or a washer: it takes water for its work and hands nothing on.
+    /// A grinding mill, a washer or a boiler: it takes water for its work and hands nothing on.
     Mill,
     /// A coke oven's door or drain: it hands on the creosote the oven makes, by height as a tube
     /// does, and takes nothing.
     Drain,
+    /// A firebox: it takes lava to burn and hands nothing on.
+    Firebox,
+    /// A steam engine or a trip hammer: it takes steam for its work and hands nothing on.
+    Steam,
 }
 
 impl Kind {
@@ -60,7 +67,10 @@ impl Kind {
 
     /// Whether it keeps what it takes for a machine, and hands nothing on.
     pub fn keeps(self) -> bool {
-        matches!(self, Kind::Intake | Kind::Mill)
+        matches!(
+            self,
+            Kind::Intake | Kind::Mill | Kind::Firebox | Kind::Steam
+        )
     }
 
     /// Whether `liquid` may go into a holder of this kind at all.
@@ -69,6 +79,8 @@ impl Kind {
             Kind::Intake => crate::oil_engine::burns(liquid),
             Kind::Mill => super::is_water(liquid),
             Kind::Drain => false,
+            Kind::Firebox => liquid == super::key_named("base:lava"),
+            Kind::Steam => super::rises(liquid),
             Kind::Tube | Kind::Pump | Kind::Driven => true,
         }
     }
@@ -95,6 +107,14 @@ impl Vessel {
             (washer::WATER_CAPACITY, Kind::Mill)
         } else if let Some(capacity) = coke_oven::creosote_capacity(block) {
             (capacity, Kind::Drain)
+        } else if block.is(&BOILER) {
+            (firebox::WATER_CAPACITY, Kind::Mill)
+        } else if block.is(&FIREBOX) {
+            (firebox::LAVA_CAPACITY, Kind::Firebox)
+        } else if block.is(&STEAM_ENGINE) {
+            (steam_engine::STEAM_CAPACITY, Kind::Steam)
+        } else if block.is(&TRIP_HAMMER) {
+            (trip_hammer::STEAM_CAPACITY, Kind::Steam)
         } else if block.is(&LIQUID_TANK) {
             return Tank::at(world, pos).map(Vessel::Tank);
         } else {
@@ -145,7 +165,8 @@ impl Vessel {
     }
 
     /// Whether `liquid` may go into it at all: an intake takes only what an engine burns, a
-    /// grinding mill only water, a coke oven's drain nothing.
+    /// grinding mill, a washer or a boiler only water, a firebox only lava, a steam machine only
+    /// steam, a coke oven's drain nothing.
     pub fn admits(&self, liquid: LiquidKey) -> bool {
         self.kind().admits(liquid)
     }
@@ -158,18 +179,38 @@ impl Vessel {
         }
     }
 
-    /// The head of `amount` in it, with `pushed` the push coming into it from beside: a holder
-    /// that pushes (`Kind::pushes`) pushes what it holds `LIFT` blocks up; another holder takes
-    /// on the push when it is full (`is_full`); otherwise its liquid stands where its surface is.
-    pub(super) fn head(&self, amount: u32, pushed: i64) -> i64 {
+    /// Where `amount` of `liquid` stands in it, with `pushed` the push coming into it from beside:
+    /// a holder that pushes (`Kind::pushes`) pushes what it holds `LIFT` blocks up; another holder
+    /// takes on the push when it is full (`is_full`); otherwise its liquid stands where its
+    /// surface is. Steam has no height to it: it stands by how full the holder is
+    /// (`flow::pressure`), and a millibucket of it raises a holder by one of its capacity.
+    pub(super) fn level(&self, liquid: LiquidKey, amount: u32, pushed: i64) -> Level {
+        let rises = super::rises(liquid);
+        let per_block = if rises {
+            self.capacity()
+        } else {
+            self.per_block()
+        };
+        Level {
+            head: self.head(rises, amount, pushed),
+            per_block,
+        }
+    }
+
+    fn head(&self, rises: bool, amount: u32, pushed: i64) -> i64 {
         let (floor, per_block) = match self {
             Vessel::One { pos, kind, .. } if kind.pushes() && amount >= DRIBBLE => {
-                return (pos.y as i64 + LIFT) * UNIT;
+                let floor = if rises { 0 } else { pos.y as i64 };
+                return (floor + LIFT) * UNIT;
             }
             Vessel::One { pos, capacity, .. } => (pos.y, *capacity),
             Vessel::Tank(tank) => (tank.floor(), tank.per_block()),
         };
-        let surface = flow::surface(floor, amount, per_block);
+        let surface = if rises {
+            flow::pressure(amount, self.capacity())
+        } else {
+            flow::surface(floor, amount, per_block)
+        };
         if is_full(amount, self.capacity()) {
             surface.max(pushed)
         } else {
@@ -178,7 +219,7 @@ impl Vessel {
     }
 
     /// Millibuckets that raise its liquid a block.
-    pub(super) fn per_block(&self) -> u32 {
+    fn per_block(&self) -> u32 {
         match self {
             Vessel::One { capacity, .. } => *capacity,
             Vessel::Tank(tank) => tank.per_block(),
@@ -188,7 +229,9 @@ impl Vessel {
     /// The head it stands at now, as a neighbour sees it at its block `id`, which keeps the head
     /// it last told there.
     pub(super) fn head_now(&self, holders: &Holders, id: u64) -> i64 {
-        self.head(self.held(holders).amount, holders.get(id).head)
+        let held = self.held(holders);
+        self.level(held.liquid, held.amount, holders.get(id).head)
+            .head
     }
 
     /// Tells its neighbours its head is `head`.
@@ -240,11 +283,19 @@ pub fn is_vessel(world: &World, pos: Pos) -> bool {
 }
 
 /// Whether `block` is a machine that holds liquid for its work and reaches it on every side: an
-/// intake, a grinding mill, a washer, or a coke oven's door or drain.
+/// intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
+/// engine or a trip hammer.
 fn is_machine(block: BlockState) -> bool {
-    block.is(&OIL_INTAKE)
-        || block.is(&GRINDING_MILL)
-        || block.is(&WASHER)
+    let machines: [&weft_sdk::Block; 7] = [
+        &OIL_INTAKE,
+        &GRINDING_MILL,
+        &WASHER,
+        &FIREBOX,
+        &BOILER,
+        &STEAM_ENGINE,
+        &TRIP_HAMMER,
+    ];
+    machines.iter().any(|machine| block.is(machine))
         || coke_oven::creosote_capacity(block).is_some()
 }
 

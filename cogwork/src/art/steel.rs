@@ -15,13 +15,13 @@ const OVEN_BRICK: [Rgba; 4] = [
 ];
 const OVEN_MORTAR: Rgba = [0x2a, 0x24, 0x22, 255];
 /// Fire bricks, pale buff, dark to light, and their mortar.
-const FIRE_BRICK: [Rgba; 4] = [
+pub const FIRE_BRICK: [Rgba; 4] = [
     [0xb0, 0x98, 0x70, 255],
     [0xc4, 0xac, 0x80, 255],
     [0xd2, 0xbc, 0x90, 255],
     [0xde, 0xca, 0xa0, 255],
 ];
-const FIRE_MORTAR: Rgba = [0x8a, 0x80, 0x74, 255];
+pub const FIRE_MORTAR: Rgba = [0x8a, 0x80, 0x74, 255];
 /// Fire, from deep red to white-hot.
 pub const FIRE: [Rgba; 5] = [
     [0x8a, 0x1c, 0x08, 255],
@@ -71,7 +71,7 @@ pub fn all() -> Vec<(&'static str, Picture)> {
 
 /// Bricks of `brick` laid in `mortar`: courses four texels high, each brick eight long, every
 /// other course shifted half a brick, each brick its own shade with flecks.
-fn bricks(brick: &[Rgba; 4], mortar: Rgba, salt: u32) -> Picture {
+pub fn bricks(brick: &[Rgba; 4], mortar: Rgba, salt: u32) -> Picture {
     let mut picture = Picture::filled(mortar);
     picture.each(|x, y, _| {
         let course = y / 4;
@@ -113,13 +113,13 @@ fn drain() -> Picture {
 }
 
 /// `frames` frames of a picture `frame` draws, one under the other: a flickering fire.
-fn flickering(frame: impl Fn(usize) -> Picture) -> Picture {
+pub fn flickering(frame: impl Fn(usize) -> Picture) -> Picture {
     let frames: Vec<Picture> = (0..FIRE_FRAMES).map(frame).collect();
     Picture::stacked(&frames)
 }
 
 /// The fire's color at a texel of frame `frame`: hotter low down, flickering.
-fn fire(x: usize, y: usize, frame: usize) -> Rgba {
+pub fn fire(x: usize, y: usize, frame: usize) -> Rgba {
     let flicker = (noise(x, y + frame * 16, 419) % 3) as usize;
     let heat = (16 - y.min(15)) / 5;
     FIRE[(heat + flicker).clamp(1, 4)]
@@ -201,14 +201,14 @@ fn tap_hole(lit: Option<usize>) -> Picture {
 }
 
 /// The glow mask of `picture`: full where it shows fire, none elsewhere.
-fn glow_of(picture: &Picture) -> Picture {
+pub fn glow_of(picture: &Picture) -> Picture {
     let mut mask = picture.clone();
     mask.each(|_, _, color| if FIRE.contains(&color) { GLOWS } else { DARK });
     mask
 }
 
 /// A block of steel: four riveted plates of dark steel.
-fn steel_block() -> Picture {
+pub fn steel_block() -> Picture {
     let mut picture = Picture::surface(&STEEL[2..], 433);
     picture.each(|x, y, color| {
         let seam = x % 8 == 7 || y % 8 == 7;

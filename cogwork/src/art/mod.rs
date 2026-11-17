@@ -1,8 +1,9 @@
 //! Cogwork's pictures of oil, liquid tubes, tanks, the pumps, the oil engine, the liquid bars on
 //! the screens, rubble and the hand and driven machines that work it, the Timber and Iron
 //! Quarries, their bits, the water wheel and the wooden axle, the bellows' moving parts, the
-//! washer's paddle, and the steel works: coke oven, blast furnace, forge anvil and their items,
-//! drawn here pixel by pixel so they can be changed and drawn again:
+//! washer's paddle, the steel works: coke oven, blast furnace, forge anvil and their items, and
+//! the steam works: steam, the firebox, the boiler and the steam machines' moving parts, drawn
+//! here pixel by pixel so they can be changed and drawn again:
 //! `WRITE_ASSETS=1 cargo test --release art` writes them (`generated`). Each family is a file of
 //! its own; the colors they share are below.
 //!
@@ -18,6 +19,7 @@ mod oil_engine;
 mod processing;
 mod pump;
 mod quarry;
+mod steam;
 mod steel;
 mod steel_items;
 mod tank;
@@ -289,6 +291,7 @@ fn the_pictures_are_what_is_drawn_here() {
         .chain(wheel::all())
         .chain(washer::all())
         .chain(steel::all())
+        .chain(steam::all())
         .chain(steel_items::all())
         .chain(gui::all());
     for (path, picture) in all {

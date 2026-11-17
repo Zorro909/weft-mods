@@ -1,0 +1,22 @@
+# Steam: the firebox and the boiler on it, the steam engine and the trip hammer. They come after
+# steel: the boiler is steel plate, and the trip hammer has a block of steel for a head.
+
+[[shaped]]
+result = "firebox"
+pattern = ["FFF", "FuF", "FiF"]
+key = { F = "fire_bricks", u = "base:furnace", i = "#ingots/iron" }
+
+[[shaped]]
+result = "boiler"
+pattern = ["sbs", "s s", "sss"]
+key = { s = "#ingots/steel", b = "base:bucket" }
+
+[[shaped]]
+result = "steam_engine"
+pattern = ["sps", "cic", "sss"]
+key = { s = "#ingots/steel", p = "base:piston", c = "#cogs/iron", i = "#ingots/iron" }
+
+[[shaped]]
+result = "trip_hammer"
+pattern = ["sSs", "pac", "sss"]
+key = { s = "#ingots/steel", S = "#ore_blocks/steel", p = "base:piston", a = "forge_anvil", c = "#cogs/iron" }

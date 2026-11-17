@@ -3,6 +3,9 @@
 //! the height its liquid reaches, in millionths of a block (`UNIT`): its surface, or, when it is
 //! full, the head of what pushes into it from beside, less `LOSS`. A pump holding liquid pushes
 //! `LIFT` blocks above itself.
+//!
+//! Steam rises instead: its head is how full its holder is, wherever that stands (`pressure`), so
+//! it spreads to where holders are emptier, up as well as down, and never settles at the bottom.
 
 /// Millionths of a block: what heads are measured in.
 pub const UNIT: i64 = 1_000_000;
@@ -23,6 +26,12 @@ pub struct Level {
 /// of them to a block of height.
 pub fn surface(floor: i32, amount: u32, per_block: u32) -> i64 {
     floor as i64 * UNIT + amount as i64 * UNIT / per_block.max(1) as i64
+}
+
+/// The head of `amount` millibuckets of steam in a holder of `capacity`: how full it is, with no
+/// height to it. A holder full of steam stands at a block's head, however big it is.
+pub fn pressure(amount: u32, capacity: u32) -> i64 {
+    amount as i64 * UNIT / capacity.max(1) as i64
 }
 
 /// Millibuckets that go from `from` to `to` in one turn: as many as leave their heads even,
@@ -79,6 +88,35 @@ mod tests {
     fn a_last_millibucket_stays_put() {
         assert_eq!(flow(tube(1000), tube(0), 1000), 0, "no to and fro");
         assert_eq!(flow(tube(2000), tube(0), 1000), 1, "two even out");
+    }
+
+    #[test]
+    fn steam_rises_to_an_emptier_holder_above() {
+        let below = Level {
+            head: pressure(800, 1000),
+            per_block: 1000,
+        };
+        let above = Level {
+            head: pressure(200, 1000),
+            per_block: 1000,
+        };
+        assert_eq!(flow(below, above, 1000), 300, "up, by how full each is");
+        let water_below = tube(surface(0, 800, 1000));
+        let water_above = tube(surface(1, 200, 1000));
+        assert_eq!(flow(water_below, water_above, 1000), 0, "water stays down");
+    }
+
+    #[test]
+    fn steam_fills_a_bigger_holder_as_full_as_a_small_one() {
+        let tube = Level {
+            head: pressure(1000, 1000),
+            per_block: 1000,
+        };
+        let tank = Level {
+            head: pressure(0, 3000),
+            per_block: 3000,
+        };
+        assert_eq!(flow(tube, tank, 1000), 750, "both a quarter full after");
     }
 
     #[test]

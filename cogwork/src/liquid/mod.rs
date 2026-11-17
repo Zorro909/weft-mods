@@ -2,7 +2,8 @@
 //! liquid and how many millibuckets of it, and liquid moves between holders that touch, from
 //! where it stands or pushes higher to where it stands lower (`flow`). A full holder passes on
 //! the push of what fills it, so liquid stands in a tube before it rises, and a pump pushes it
-//! up. Holders that have settled sleep until a neighbour changes (`turn`).
+//! up. Steam rises instead: it spreads to where holders are emptier, whatever their height.
+//! Holders that have settled sleep until a neighbour changes (`turn`).
 //!
 //! A liquid is kept by the key of its name, as ghosts keep items: a liquid's item is named like
 //! it, so `ghost::item_of` finds that item again.
@@ -123,6 +124,12 @@ pub fn key_named(name: &str) -> LiquidKey {
 /// Whether `liquid` is water, all the grinding mill and the washer take.
 pub fn is_water(liquid: LiquidKey) -> bool {
     liquid == key_named("base:water")
+}
+
+/// Whether `liquid` rises: steam, which stands in a holder by how full it is, not how high
+/// (`flow::pressure`).
+pub fn rises(liquid: LiquidKey) -> bool {
+    liquid == crate::steam::key()
 }
 
 /// The liquid the block `block_state` is, and whether it is a source of it.
