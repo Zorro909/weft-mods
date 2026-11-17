@@ -86,7 +86,8 @@ applies:
    end nearest to it.
 2. **A standing frame.** Placed against the bottom of its own kind of frame that is still
    standing, it takes up that frame's area again. This is how a quarry that was broken and put
-   back carries on where it was. One block may be missing from the frame's ring.
+   back carries on where it was. One block may be missing from the frame's ring. A Gantry
+   Excavator takes the [old lattice](#composite-frame) for its own frame too.
 3. **Otherwise** an area right behind it: 5 by 5 for a Timber Quarry, 9 by 9 for the
    others.
 
@@ -139,7 +140,8 @@ and the block that took a panel gives it back when broken.
 The plain lattice that Gantry Excavators put up for energy alone before this stays in worlds
 that have it: it holds up the frames already built, a quarry passes over it, and it drops
 nothing when broken. A Gantry that was building its frame when the world was saved finishes it
-of composite panels.
+of composite panels. A Gantry broken and put back beside such a frame takes up its area again,
+whether the frame is all lattice or finished with composite blocks.
 
 ## Drill bits
 
@@ -188,8 +190,12 @@ into its four bit slots by tube or by hand, only bits with more than one use lef
 quarry's slot is empty, or its bit is down to its last use, the magazine puts in the first of its
 bits that this quarry takes: a stone bit never goes into an Iron Quarry, nor a steel one into a
 Gantry. The worn bit goes into its four worn-bit slots, where a [timber tube](tubes.md) or you
-take it out; while those are full, it leaves the worn bit where it is. Its drum turns a quarter
-with a clack at each swap.
+take it out. Its drum turns a quarter with a clack at each swap.
+
+The quarry never uses up the last use of a bit while a magazine points into it. Until the
+magazine can swap that bit out, when its worn-bit slots are full or it has no bit this quarry
+takes, the quarry waits for a bit, and a Gantry Excavator digs on with its own drill. So every
+bit comes back worn, none used up.
 
 ```
 sgs       s = #ingots/steel    g = #gears/plastic
@@ -202,7 +208,7 @@ sgs
 | Place it against a quarry | Its feed, the side away from you when you placed it, faces no quarry. |
 | Keeping the quarry's bit slot filled | The quarry has a bit, or gets one now. |
 | None of its bits fits this quarry | It has no bit that quarry takes with uses to spare. |
-| Worn bits full | The worn bit waits until you take some out. |
+| Worn bits full | The worn bit waits fitted, unused, until you take some out. |
 
 ## Mining
 

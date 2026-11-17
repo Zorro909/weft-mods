@@ -1,7 +1,9 @@
 //! The Bit Magazine: placed against a quarry of any kind, it keeps the quarry's bit slot filled
 //! from its own bits, which come in by tube or by hand. When the fitted bit is down to its last
 //! use, or the slot is empty, it puts in the first of its bits that the quarry takes (`swap`), and
-//! the worn bit goes into its output, where a timber tube or the player takes it out.
+//! the worn bit goes into its output, where a timber tube or the player takes it out. A quarry it
+//! points into never uses a bit's last use (`holds_back`), so a bit waiting for room in the
+//! output comes back worn rather than not at all.
 //!
 //! Its shape is the Blockbench model `assets/models/block/bit_magazine.json`, a steel housing
 //! with a feed toward the quarry; the drum of bits inside is an owned entity that turns a quarter
@@ -12,11 +14,12 @@ mod work;
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::{
-    Arg, Block, Component, EntityKind, Facings, Holder, Holds, ItemStack, Menu, Registry, S, Slots,
-    StackData, Toward, Ui, World, component_flags, tool_tier, value,
+    Arg, Block, Component, Dir, EntityKind, Facings, Holder, Holds, ItemStack, Menu, Registry, S,
+    Slots, StackData, Toward, Ui, World, component_flags, tool_tier, value,
 };
 
 use crate::excavator::bit;
+use crate::lib::{Pos, TypedWorld};
 
 pub static BIT_MAGAZINE: Block = Block::named("bit_magazine");
 static BIT_MAGAZINE_MENU: Menu = Menu::named("bit_magazine");
@@ -27,6 +30,8 @@ const DRUM_MODEL: &str = "bit_magazine_drum";
 /// Its slots: fresh bits, then the worn ones it took out.
 const BITS: u32 = 4;
 const OUTPUT: u32 = 4;
+/// The sides a magazine can stand on against a quarry: its feed faces sideways.
+const SIDES: [Dir; 4] = [Dir::West, Dir::East, Dir::North, Dir::South];
 
 value! {
     /// A Bit Magazine's state: its `drum` (an entity) and its `status`.
@@ -104,12 +109,29 @@ pub fn register(r: &mut Registry) {
 /// magazine.
 pub fn insert(world: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
     world.component(at, &MAGAZINE)?;
-    let spare = bit::of(stack).is_some_and(|bit| uses_left(bit, stack) > swap::SWAP_AT);
+    let spare = bit::of(stack).is_some_and(|bit| !swap::held(uses_left(bit, stack)));
     if !spare {
         return Some(stack);
     }
     let slots = world.inventory(at).find_group("bits")?;
     Some(crate::store::insert_into(slots, stack, simulate))
+}
+
+/// Whether the quarry at `pos` must leave `fitted`, the bit in its slot, unused: a bit at its last
+/// use with a Bit Magazine pointing into the quarry, which takes it out once it can.
+pub fn holds_back(world: &World, pos: Pos, fitted: ItemStack) -> bool {
+    let Some(bit) = bit::of(fitted) else {
+        return false;
+    };
+    swap::held(uses_left(bit, fitted)) && fed(world, pos)
+}
+
+/// Whether a Bit Magazine beside `pos` points into it.
+fn fed(world: &World, pos: Pos) -> bool {
+    SIDES.into_iter().any(|dir| {
+        let beside = world.block_typed(pos.toward(dir));
+        beside.is(&BIT_MAGAZINE) && crate::machine::front_of(beside) == dir.opposite()
+    })
 }
 
 /// Uses `stack`, a `bit`, has left.

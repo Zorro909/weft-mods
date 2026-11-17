@@ -6,8 +6,8 @@ use weft_sdk::{Item, Menu, Tag};
 use super::super::bit::{DIAMOND_BIT, IRON_BIT, STEEL_BIT, STONE_BIT};
 use super::super::rig::{GANTRY_RIG, IRON_RIG, STEEL_RIG, TIMBER_RIG};
 use super::super::{
-    COMPOSITE_FRAME, EXCAVATOR, IRON_FRAME, IRON_QUARRY, LASHED_FRAME, STEEL_EXCAVATOR,
-    STEEL_FRAME, TIMBER_QUARRY,
+    COMPOSITE_FRAME, EXCAVATOR, GANTRY_FRAME, IRON_FRAME, IRON_QUARRY, LASHED_FRAME,
+    STEEL_EXCAVATOR, STEEL_FRAME, TIMBER_QUARRY,
 };
 use super::{Cost, Depth, Fit, Inside, Kind, Material, Standby};
 use crate::plastics::COMPOSITE_PANEL;
@@ -28,6 +28,7 @@ pub static TIMBER: Kind = Kind {
     sound_group: "base:block.wood",
     menu: &TIMBER_MENU,
     frame: &LASHED_FRAME,
+    old_frame: None,
     frame_cost: &[
         Cost {
             material: Material::Tagged(&LOGS),
@@ -70,6 +71,7 @@ pub static IRON: Kind = Kind {
     sound_group: "base:block.stone",
     menu: &IRON_MENU,
     frame: &IRON_FRAME,
+    old_frame: None,
     frame_cost: &[Cost {
         material: Material::Tagged(&IRON_INGOTS),
         count: 1,
@@ -107,6 +109,7 @@ pub static STEEL: Kind = Kind {
     sound_group: "base:block.stone",
     menu: &STEEL_MENU,
     frame: &STEEL_FRAME,
+    old_frame: None,
     frame_cost: &[Cost {
         material: Material::Tagged(&STEEL_INGOTS),
         count: 1,
@@ -136,15 +139,16 @@ pub static STEEL: Kind = Kind {
 };
 
 /// The last quarry, the Gantry Excavator: a frame of composite panels on steel, a composite panel
-/// for every four of its blocks, as large and deep as the world's settings let it, and twice the
-/// Ore Rubble. With no bit it digs as excavators always have; a diamond-tipped bit digs twice as
-/// hard.
+/// for every four of its blocks (the plain lattice it built before stays its own), as large and
+/// deep as the world's settings let it, and twice the Ore Rubble. With no bit it digs as
+/// excavators always have; a diamond-tipped bit digs twice as hard.
 pub static GANTRY: Kind = Kind {
     block: &EXCAVATOR,
     hardness: 4.0,
     sound_group: "base:block.stone",
     menu: &EXCAVATOR_MENU,
     frame: &COMPOSITE_FRAME,
+    old_frame: Some(&GANTRY_FRAME),
     frame_cost: &[Cost {
         material: Material::Item(&COMPOSITE_PANEL),
         count: 1,

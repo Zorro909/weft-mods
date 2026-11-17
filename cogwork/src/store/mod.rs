@@ -12,7 +12,7 @@ mod span;
 
 use fill::{fill_all, fill_slots};
 use span::{Span, gives, takes};
-use weft_sdk::*;
+use weft_sdk::{Dir, Holder, ItemStack, SlotGroup, StackData, World, max_stack};
 
 use crate::lib::Pos;
 
