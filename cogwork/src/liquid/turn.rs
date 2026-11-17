@@ -16,7 +16,7 @@ use weft_sdk::{SystemBatch, World};
 
 use super::flow::LOSS;
 use super::vessel::{Holders, Kind, Vessel};
-use super::{Held, Level, MOST_A_TURN, NO_LIQUID, flow};
+use super::{Held, MOST_A_TURN, NO_LIQUID, flow};
 use crate::lib::{Pos, TypedWorld};
 use crate::liquid_tube::LIQUID_TUBE;
 
@@ -120,15 +120,16 @@ fn turn(holders: &mut Holders, found: &mut Found, id: u64, pos: Pos) {
         return;
     }
     let neighbours = || sides.iter().filter_map(|side| side.beside.as_ref());
-    let pushed = neighbours()
-        .map(|met| met.vessel.head_now(holders, met.id) - LOSS)
-        .max()
-        .unwrap_or(i64::MIN);
+    let rises = |vessel: &Vessel| super::rises(vessel.held(holders).liquid);
+    let mine = rises(&me);
+    let heads = neighbours().map(|met| (rises(&met.vessel), met.vessel.head_now(holders, met.id)));
+    let pushed = push_on(mine, heads);
     let mut moved = false;
     for to in own.filter_map(|side| side.beside.as_ref()) {
         moved |= pass(holders, &me, pushed, to);
     }
-    let head = me.head(me.held(holders).amount, pushed);
+    let held = me.held(holders);
+    let head = me.level(held.liquid, held.amount, pushed).head;
     let changed = head != holders.get(id).head;
     if changed {
         me.tell(holders, head);
@@ -140,6 +141,17 @@ fn turn(holders: &mut Holders, found: &mut Found, id: u64, pos: Pos) {
     } else {
         sleep(holders, id);
     }
+}
+
+/// The push coming into a holder from beside: the highest head of its `neighbours`, each with
+/// whether it holds steam, less `LOSS`. Steam's heads have no height to them (`flow::pressure`),
+/// so only neighbours on the same side of that, steam or not as the holder's own liquid, push it.
+fn push_on(rises: bool, neighbours: impl Iterator<Item = (bool, i64)>) -> i64 {
+    neighbours
+        .filter(|&(theirs, _)| theirs == rises)
+        .map(|(_, head)| head - LOSS)
+        .max()
+        .unwrap_or(i64::MIN)
 }
 
 fn sleep(holders: &mut Holders, id: u64) {
@@ -169,14 +181,8 @@ fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
     } else {
         0
     };
-    let higher = Level {
-        head: from.head(giving.amount, pushed),
-        per_block: from.per_block(),
-    };
-    let lower = Level {
-        head: to.head(had, told),
-        per_block: to.per_block(),
-    };
+    let higher = from.level(giving.liquid, giving.amount, pushed);
+    let lower = to.level(giving.liquid, had, told);
     let room = to.capacity().saturating_sub(had);
     let amount = flow(higher, lower, MOST_A_TURN)
         .min(room)
@@ -218,8 +224,12 @@ mod tests {
             kind: Kind::Driven,
         };
         let lift = (10 + super::super::flow::LIFT) * super::super::flow::UNIT;
-        assert_eq!(driven.head(500, 0), lift, "half full, it pushes");
-        assert!(tube(1, pos).head(500, 0) < lift, "undriven, it doesn't");
+        let oil = super::super::key_named("cogwork:oil");
+        assert_eq!(driven.level(oil, 500, 0).head, lift, "half full, it pushes");
+        assert!(
+            tube(1, pos).level(oil, 500, 0).head < lift,
+            "undriven, it doesn't"
+        );
         assert!(
             Kind::Driven.pushes() && !Kind::Tube.pushes(),
             "nor takes when it does"
@@ -279,6 +289,86 @@ mod tests {
         assert!(
             !Kind::Drain.keeps() && !Kind::Drain.pushes(),
             "it hands on by height, as a tube"
+        );
+    }
+
+    #[test]
+    fn water_oil_and_creosote_stand_as_they_did_before_steam() {
+        let named = super::super::key_named;
+        let liquids = ["base:water", "cogwork:oil", "cogwork:creosote", "base:lava"];
+        let high = Pos { x: 0, y: 37, z: 0 };
+        for liquid in liquids.map(named) {
+            for amount in [0, 1, 250, 999, 1000] {
+                let level = tube(1, high).level(liquid, amount, 0);
+                let surface = flow::surface(high.y, amount, 1000);
+                let before = if amount + MOST_A_TURN >= 1000 {
+                    surface.max(0)
+                } else {
+                    surface
+                };
+                assert_eq!(level.head, before, "{amount} mB by its height");
+                assert_eq!(level.per_block, 1000, "a tube's block");
+            }
+            let pushed = tube(1, high).level(liquid, 1000, 99 * flow::UNIT).head;
+            assert_eq!(pushed, 99 * flow::UNIT, "a full tube passes on the push");
+        }
+    }
+
+    #[test]
+    fn steam_stands_by_how_full_its_holder_is_wherever_that_is() {
+        let steam = crate::steam::key();
+        let low = tube(1, at(0)).level(steam, 500, 0);
+        let high = tube(2, Pos { x: 0, y: 40, z: 0 }).level(steam, 500, 0);
+        assert_eq!(low, high, "half full is half full");
+        assert_eq!(low.head, flow::UNIT / 2, "half a block's head");
+    }
+
+    #[test]
+    fn steam_and_other_liquids_push_only_their_own() {
+        let water_line = [(false, 40 * flow::UNIT), (true, flow::UNIT)];
+        assert_eq!(
+            push_on(false, water_line.into_iter()),
+            40 * flow::UNIT - LOSS,
+            "water, by the water beside it"
+        );
+        assert_eq!(
+            push_on(true, water_line.into_iter()),
+            flow::UNIT - LOSS,
+            "steam, by the steam beside it"
+        );
+        let only_steam = [(true, 5 * flow::UNIT)];
+        assert_eq!(
+            push_on(false, only_steam.into_iter()),
+            i64::MIN,
+            "steam never pushes water"
+        );
+    }
+
+    #[test]
+    fn a_firebox_takes_only_lava_and_a_steam_machine_only_steam() {
+        let named = super::super::key_named;
+        let holder = |kind| Vessel::One {
+            id: 1,
+            pos: at(0),
+            capacity: 1000,
+            kind,
+        };
+        assert!(
+            holder(Kind::Firebox).admits(named("base:lava")),
+            "lava to burn"
+        );
+        assert!(
+            !holder(Kind::Firebox).admits(named("base:water")),
+            "not water"
+        );
+        assert!(holder(Kind::Steam).admits(crate::steam::key()), "steam");
+        assert!(
+            !holder(Kind::Steam).admits(named("base:water")),
+            "not water"
+        );
+        assert!(
+            Kind::Firebox.keeps() && Kind::Steam.keeps(),
+            "both hand nothing on"
         );
     }
 

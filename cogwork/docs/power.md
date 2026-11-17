@@ -5,8 +5,9 @@ Engines make energy and push it into the block their trunk points at: a
 [timber liquid tube](liquids.md#timber-liquid-tube), a machine of this mod, or any mod's machine
 that takes `core:energy`. They also offer it to energy networks, so [torque shafts](#torque-shaft)
 and [wooden axles](#wooden-axle) carry it further. A [water wheel](#water-wheel) on a stream
-makes energy from the water. The [oil engine](oil-engine.md), a cube of 27 blocks, burns oil for fifteen
-times an ember engine's energy.
+makes energy from the water. The [steam engine](steam.md#steam-engine) runs on steam from a boiler for
+four times an ember engine's energy, and the [oil engine](oil-engine.md), a cube of 27 blocks, burns oil for
+fifteen times as much.
 
 ## Engines
 
@@ -97,9 +98,10 @@ for blocks to fill with) uses nothing, except an excavator: it pays its standby 
 it works, also while its output is full.
 
 The [oil engine](oil-engine.md)'s screen says how much it sent into its drives in the last tick:
-"Sending 600 energy a tick into its drives". Once the drives are full, that is what they passed
-on since the tick before; less than the 600 it makes means what it drives takes less. An engine
-with nothing on its drives sends 600 a tick only until they are full, then nothing.
+"Sending out 600 energy a tick". Once the drives are full, that is what they passed on since the
+tick before; less than the 600 it makes means what it drives takes less. An engine with nothing
+on its drives sends 600 a tick only until they are full, then nothing. The
+[steam engine](steam.md#steam-engine)'s screen says the same of what left its axle.
 
 ## Torque Shaft
 

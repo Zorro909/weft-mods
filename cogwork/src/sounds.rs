@@ -36,11 +36,14 @@ pub static DRIVEN_BELLOWS: Sound = Sound::named("driven_bellows.pump");
 pub static WASHER: Sound = Sound::named("washer.slosh");
 pub static BLAST_FURNACE: Sound = Sound::named("blast_furnace.roar");
 pub static ANVIL_CLANG: Sound = Sound::named("forge_anvil.clang");
+pub static STEAM_CHUFF: Sound = Sound::named("steam_engine.chuff");
+pub static TRIP_HAMMER: Sound = Sound::named("trip_hammer.strike");
+pub static BOILER_HISS: Sound = Sound::named("boiler.hiss");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
 /// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
 /// carry (fading out on the way there): heavy machinery far, small parts close.
-static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 33] = [
+static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 36] = [
     (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
     (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
     (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
@@ -88,6 +91,9 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 33] = [
     (&WASHER, "washer/slosh", 0.9, 0.9, 1.1, 24.0),
     (&BLAST_FURNACE, "blast_furnace/roar", 1.0, 0.9, 1.05, 48.0),
     (&ANVIL_CLANG, "forge_anvil/clang", 1.0, 0.92, 1.08, 40.0),
+    (&STEAM_CHUFF, "steam_engine/chuff", 1.0, 0.92, 1.05, 48.0),
+    (&TRIP_HAMMER, "trip_hammer/strike", 1.0, 0.92, 1.05, 48.0),
+    (&BOILER_HISS, "boiler/hiss", 0.6, 0.9, 1.1, 24.0),
 ];
 
 pub fn register(r: &mut Registry) {
