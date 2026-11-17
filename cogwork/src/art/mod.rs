@@ -1,8 +1,9 @@
 //! Cogwork's pictures of oil, liquid tubes, tanks, the pumps, the oil engine, the liquid bars on
-//! the screens, rubble and the hand and driven machines that work it, the Timber Quarry, its
-//! bits, the water wheel and the wooden axle, and the bellows' moving parts, drawn here pixel by
-//! pixel so they can be changed and drawn again: `WRITE_ASSETS=1 cargo test --release art`
-//! writes them (`generated`). Each family is a file of its own; the colors they share are below.
+//! the screens, rubble and the hand and driven machines that work it, the Timber and Iron
+//! Quarries, their bits, the water wheel and the wooden axle, the bellows' moving parts and the
+//! washer's paddle, drawn here pixel by pixel so they can be changed and drawn again:
+//! `WRITE_ASSETS=1 cargo test --release art` writes them (`generated`). Each family is a file of
+//! its own; the colors they share are below.
 //!
 //! The pictures are small and few-colored like the rest of the mod's: a grid of letters with a
 //! key for anything drawn by hand, and `noise` for a surface of one material.
@@ -10,6 +11,7 @@
 mod bellows;
 mod driven;
 mod gui;
+mod iron;
 mod liquids;
 mod oil_engine;
 mod processing;
@@ -17,6 +19,7 @@ mod pump;
 mod quarry;
 mod tank;
 mod timber;
+mod washer;
 mod wheel;
 
 /// A color, red, green, blue and alpha.
@@ -279,7 +282,9 @@ fn the_pictures_are_what_is_drawn_here() {
         .chain(driven::all())
         .chain(bellows::all())
         .chain(quarry::all())
+        .chain(iron::all())
         .chain(wheel::all())
+        .chain(washer::all())
         .chain(gui::all());
     for (path, picture) in all {
         let path = crate::generated::asset(&format!("textures/{path}.png"));

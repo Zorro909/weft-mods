@@ -42,7 +42,8 @@ pub fn cost(block_state: BlockState, base: f32, per_hardness: f32) -> i64 {
 }
 
 /// Breaks `block_state` at `cell` into the `output` group of the machine `id`, keeping of its
-/// drops what `keep` says, only when all of that fits there.
+/// drops what `keep` says, only when the most that could be fits there: a quarry's chance of one
+/// more is rolled only then, so a full output can't wait out a lucky roll and take a poor one.
 pub fn harvest(world: &World, id: u64, cell: Pos, block_state: BlockState, keep: Keep) -> Harvest {
     let output = || world.inventory(id).group("output");
     let tool = ItemStack::new(TOOL.id(), 1);
@@ -54,23 +55,26 @@ pub fn harvest(world: &World, id: u64, cell: Pos, block_state: BlockState, keep:
         ..LootCtx::default()
     };
     let drops = world.roll_loot(&TableOf(name), &context);
-    let drops = match keep {
-        Keep::Clean => drops,
-        Keep::Quarry { multiplier } => {
-            crate::rubble::quarried(world, block_state, drops, multiplier)
-        }
-    };
     let is_own =
         |item| BlockState::placed_by(item).is_some_and(|placed| placed.block_name() == name);
-    let drops = carry_onto(drops, is_own, |stack| {
-        with_carried(world, world.block_entity(cell), stack)
-    });
-    if drops
+    let kept = |roll: &mut dyn FnMut() -> f64| {
+        let kept = match keep {
+            Keep::Clean => drops.clone(),
+            Keep::Quarry { multiplier } => {
+                crate::rubble::quarried(block_state, drops.clone(), multiplier, roll)
+            }
+        };
+        carry_onto(kept, is_own, |stack| {
+            with_carried(world, world.block_entity(cell), stack)
+        })
+    };
+    if kept(&mut || crate::chance::LUCKIEST)
         .iter()
         .any(|stack| !crate::store::insert_into(output(), *stack, true).is_empty())
     {
         return Harvest::Full;
     }
+    let drops = kept(&mut || crate::chance::roll(world));
     if !world.break_block(cell, tool, 0, false) {
         return Harvest::Refused;
     }

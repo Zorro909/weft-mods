@@ -120,6 +120,11 @@ pub fn key_named(name: &str) -> LiquidKey {
     ghost::key_of_name(name)
 }
 
+/// Whether `liquid` is water, all the grinding mill and the washer take.
+pub fn is_water(liquid: LiquidKey) -> bool {
+    liquid == key_named("base:water")
+}
+
 /// The liquid the block `block_state` is, and whether it is a source of it.
 pub fn in_world(block_state: BlockState) -> Option<(LiquidKey, bool)> {
     liquid_of(block_state.id())?;

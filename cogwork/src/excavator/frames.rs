@@ -1,6 +1,7 @@
 //! The blocks quarries build their frames of. The Gantry's is a plain lattice cube that drops
-//! nothing. The others are poles joined toward the frame blocks beside them, drawn from a
-//! hub-and-arm model (`arms`), and give back what they were built of when broken.
+//! nothing. The others, the Timber Quarry's lashed logs and the Iron Quarry's bars, are poles
+//! joined toward the frame blocks beside them, drawn from a hub-and-arm model (`arms`), and give
+//! back what they were built of when broken.
 
 use std::sync::LazyLock;
 
@@ -11,20 +12,35 @@ use crate::lib::{BlockState, Pos, TypedWorld};
 
 pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 pub static LASHED_FRAME: Block = Block::named("lashed_frame");
+pub static IRON_FRAME: Block = Block::named("iron_frame");
 
 /// A frame block of poles: the block, its model, and the item it drops when broken.
 struct Poles {
     block: &'static Block,
     model: &'static LazyLock<HubAndArms>,
     drops: &'static str,
+    sound_group: &'static str,
+    mined_by: &'static str,
 }
 
-/// Log poles lashed with string: the log comes back, the string is lost.
-static POLES: [Poles; 1] = [Poles {
-    block: &LASHED_FRAME,
-    model: &crate::arms::LASHED_FRAME,
-    drops: "base:oak_log",
-}];
+/// Log poles lashed with string: the log comes back, the string is lost. Iron bars riveted
+/// together: the ingot comes back.
+static POLES: [Poles; 2] = [
+    Poles {
+        block: &LASHED_FRAME,
+        model: &crate::arms::LASHED_FRAME,
+        drops: "base:oak_log",
+        sound_group: "base:block.wood",
+        mined_by: "axe",
+    },
+    Poles {
+        block: &IRON_FRAME,
+        model: &crate::arms::IRON_FRAME,
+        drops: "base:iron_ingot",
+        sound_group: "base:block.stone",
+        mined_by: "pickaxe",
+    },
+];
 
 pub fn register(r: &mut Registry) {
     r.block(&GANTRY_FRAME)
@@ -48,14 +64,15 @@ fn register_poles(r: &mut Registry, poles: &'static Poles) {
         .states(move |props, state| model(props, state, poles.model))
         .on_neighbor(move |event| refresh(&event.world(), event.pos().into(), poles.block))
         .hardness(1.0)
-        .mined_by("axe", tool_tier::HAND)
-        .sound_group("base:block.wood")
+        .mined_by(poles.mined_by, tool_tier::HAND)
+        .sound_group(poles.sound_group)
         .drops(poles.drops, 1)
         .no_item();
 }
 
-/// The hub with a pole toward every side it joins, lashed where poles meet at an angle or end;
-/// a pole running straight through shows bark. Its boxes are what it collides with, too.
+/// The hub with a pole toward every side it joins, lashed or riveted where poles meet at an
+/// angle or end; a pole running straight through shows the plain pole. Its boxes are what it
+/// collides with, too.
 fn model<'s>(props: &Props, state: State<'s>, model: &HubAndArms) -> State<'s> {
     let joins = |dir: Dir| props.is(dir.name(), "true");
     let arm = |dir: Dir| joins(dir).then_some(Arm::Closed);
@@ -68,7 +85,7 @@ fn model<'s>(props: &Props, state: State<'s>, model: &HubAndArms) -> State<'s> {
     crate::boxes::draw(state.texture(model.texture("particle")), &pieces)
 }
 
-/// The model's names for the bark and for the lashing.
+/// The model's names for the plain pole and for the joint.
 const POLE: &str = "pole";
 const KNOT: &str = "knot";
 

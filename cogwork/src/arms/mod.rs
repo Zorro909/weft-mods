@@ -1,5 +1,5 @@
 //! Hubs with arms toward some of their six sides, as tubes, liquid tubes, torque shafts, wooden
-//! axles and lashed frames are.
+//! axles and the poles of quarry frames are.
 //! Each kind is drawn from one Blockbench model, `assets/models/block/<block>/hub_and_arm.json`:
 //! its elements named `hub` stay in the middle of the block, and those named `arm` point north
 //! and are turned toward every side the block has an arm. A face whose texture is named after
@@ -43,6 +43,10 @@ pub static WOODEN_AXLE: LazyLock<HubAndArms> = LazyLock::new(|| {
 pub static LASHED_FRAME: LazyLock<HubAndArms> = LazyLock::new(|| {
     let file = include_str!("../../assets/models/block/lashed_frame/hub_and_arm.json");
     HubAndArms::read("lashed_frame", file)
+});
+pub static IRON_FRAME: LazyLock<HubAndArms> = LazyLock::new(|| {
+    let file = include_str!("../../assets/models/block/iron_frame/hub_and_arm.json");
+    HubAndArms::read("iron_frame", file)
 });
 
 /// The side the arms of a hub-and-arm model point to.
@@ -313,6 +317,7 @@ mod tests {
             &TORQUE_SHAFT,
             &WOODEN_AXLE,
             &LASHED_FRAME,
+            &IRON_FRAME,
         ];
         for model in models {
             assert!(!model.hub.is_empty() && !model.arm.is_empty(), "both");
