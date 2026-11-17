@@ -28,12 +28,14 @@ const STORES: i64 = 2_000;
 
 value! {
     /// A shaker screen's state: its `tray` (an entity), the energy `spent` on the Rubble it
-    /// sifts, which stays in its input until it is sifted, and its `status`.
+    /// sifts, which stays in its input until it is sifted, its `status`, and what that Rubble
+    /// turned up once paid for (`sifted`, see `work`), kept until it has room in the output.
     #[derive(Default)]
     pub struct Shaker {
         pub tray: u64,
         pub spent: i64,
         pub status: u32,
+        pub sifted: u32,
     }
 }
 static SHAKER: Component<Shaker> = Component::named("cogwork:shaker");
@@ -170,6 +172,7 @@ mod tests {
         assert_eq!(offset_of!(Shaker, tray), 0, "its tray");
         assert_eq!(offset_of!(Shaker, spent), 8, "the energy spent");
         assert_eq!(offset_of!(Shaker, status), 16, "its status");
+        assert_eq!(offset_of!(Shaker, sifted), 20, "what it turned up");
     }
 
     #[test]

@@ -129,7 +129,7 @@ that shakes back and forth while it works. It sifts Rubble by the table above.
   output out too.
 - A Rubble stays in its input until it is sifted, so breaking the screen loses nothing but the
   energy put in. When what a Rubble sifts into has no room in the output, it waits, "Output
-  full", until there is.
+  full", until there is, and keeps what it turned up: a find is never sifted away.
 
 Its screen shows the energy bar, the [energy readout](power.md#energy-readouts), what it is doing
 (waiting for Rubble, sifting, short of energy, output full), its output and its input.
@@ -159,11 +159,17 @@ turns while it grinds. It grinds Ore Rubble into raw ore with the millstone's yi
 - **Raw ore out by its front**, the side with the spout, the side that faced you when you placed
   it, into a tube or a machine there; a timber tube can pull it out too. It grinds only when
   its three output slots have room for the most that grind can give.
-- An Ore Rubble stays in its input until it is ground. Ore Rubble of a metal no loaded mod has a
-  raw ore of waits, "No mod has a raw ore of this metal"; take it out by hand.
+- An Ore Rubble stays in its input until it is ground, and a sand stays in its slot until a
+  grind finishes with no grinds of the last sand left. Breaking the mill loses the water it
+  holds, the energy put in, and the grinds left of a sand it has started. Ore Rubble of a metal
+  no loaded mod has a raw ore of waits, "No mod has a raw ore of this metal"; take it out by
+  hand.
 
 Its screen shows the energy bar, the energy readout, what it is doing or lacks (Ore Rubble,
 water, sand, energy, room), the water it holds, its raw ore, its Ore Rubble and its sand.
+
+Like the other machines, the shaker screen and the grinding mill don't catch up: time their area
+spends unloaded, or skipped by sleeping or `/time`, is lost to their work.
 
 ## A processing line
 
