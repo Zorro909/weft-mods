@@ -89,7 +89,7 @@ fn creosote_still() -> Picture {
 }
 
 /// An iron bucket full of `liquid`, as the oil bucket is drawn.
-fn bucket_of(liquid: &[Rgba; 5]) -> Picture {
+pub(super) fn bucket_of(liquid: &[Rgba; 5]) -> Picture {
     let mut picture = super::liquids::oil_bucket();
     picture.each(|_, _, color| {
         if color == OIL[0] {

@@ -110,14 +110,23 @@ pub fn vein_of<'a>(
 
 /// What the block `block_state` is to a quarry, asked of the game's tags.
 pub fn vein(block_state: BlockState) -> Vein<'static> {
-    let tags = components_of(abi::entry_kind::BLOCK, block_state.id())
+    vein_of(tags(block_state), |metal| {
+        Ore::of(metal).is_some_and(|ore| ore.raw_ore().is_some())
+    })
+}
+
+/// What the block `block_state` is an ore of, metal or gem: the `<m>` of its `ores/<m>` tag.
+pub fn ore_name(block_state: BlockState) -> Option<&'static str> {
+    tags(block_state).find_map(|tag| tag.strip_prefix("ores/"))
+}
+
+/// The tags of the block `block_state`, asked of the game.
+fn tags(block_state: BlockState) -> impl Iterator<Item = &'static str> {
+    components_of(abi::entry_kind::BLOCK, block_state.id())
         .into_iter()
         // A tag has no schema; a component with a value is no tag.
         .filter(|(_, schema)| schema.is_empty())
-        .map(|(name, _)| name);
-    vein_of(tags, |metal| {
-        Ore::of(metal).is_some_and(|ore| ore.raw_ore().is_some())
-    })
+        .map(|(name, _)| name)
 }
 
 #[cfg(test)]

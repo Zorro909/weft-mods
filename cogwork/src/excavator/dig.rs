@@ -3,7 +3,7 @@
 
 use weft_sdk::{Output, SystemBatch, World};
 
-use super::depth::Floor;
+use super::depth::{Floor, lowest_y};
 use super::framing::build_frame;
 use super::kind::{Drill, Kind};
 use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
@@ -28,7 +28,7 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
             continue;
         };
         crate::machine::start_meter(&world, id);
-        let floor = kind.floor(&dig.frame, Floor::now());
+        let floor = kind.floor(&dig.frame, Floor::now(), lowest_y());
         let drill = kind.drill(bit::fitted(&world, id));
         work(&world, Quarry { id, pos, kind }, dig, drill, floor);
         super::keep_loaded(&world, pos, dig, floor);

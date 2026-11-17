@@ -26,6 +26,11 @@ pub fn register(r: &mut Registry) {
         .world();
 }
 
+/// The world's lowest layer for excavators, whether or not they may dig on past it.
+pub fn lowest_y() -> i32 {
+    LOWEST_Y.get()
+}
+
 /// The lowest layer an excavator mines; none when it digs on until a layer never loads.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Floor(Option<i32>);
@@ -34,10 +39,15 @@ impl Floor {
     /// The world's floor as its settings have it now.
     pub fn now() -> Floor {
         if UNLIMITED.get() {
-            Floor(None)
+            Floor::unlimited()
         } else {
             Floor::at(LOWEST_Y.get())
         }
+    }
+
+    /// No floor: the excavator digs on until a layer never loads.
+    pub fn unlimited() -> Floor {
+        Floor(None)
     }
 
     pub fn at(lowest_y: i32) -> Floor {

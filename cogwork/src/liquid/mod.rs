@@ -3,18 +3,21 @@
 //! where it stands or pushes higher to where it stands lower (`flow`). A full holder passes on
 //! the push of what fills it, so liquid stands in a tube before it rises, and a pump pushes it
 //! up. Steam rises instead: it spreads to where holders are emptier, whatever their height.
-//! Holders that have settled sleep until a neighbour changes (`turn`).
+//! Holders that have settled sleep until a neighbour changes (`turn`). A machine may also hand
+//! liquid it keeps apart straight into the holder beside it, or draw it out of one (`pipe`).
 //!
 //! A liquid is kept by the key of its name, as ghosts keep items: a liquid's item is named like
 //! it, so `ghost::item_of` finds that item again.
 
 mod bucket;
 mod flow;
+mod pipe;
 mod turn;
 mod vessel;
 
 pub use bucket::{hand_over, use_bucket};
 pub use flow::{Level, flow};
+pub use pipe::{draw, pour};
 pub use vessel::{Holders, Vessel, is_vessel, reaches};
 use weft_sdk::{Component, Registry, World, component_flags, item_name, liquid_of, value};
 

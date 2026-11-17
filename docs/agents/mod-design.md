@@ -23,7 +23,7 @@ Where each part of a mod goes, and the habits that keep saves and worlds stable.
 
 A `SAVE` component is written to disk as its bytes, so its layout is a file format:
 
-- New fields go last. A changed layout takes a new component name, which resets what was saved: say so in the changelog.
+- New fields go last, past the old size: an older save may hold anything in the old layout's padding, so a field there takes a placeholder that is never read (`Dig::saved_padding` in `cogwork/src/excavator/mod.rs`). A changed layout takes a new component name, which resets what was saved: say so in the changelog.
 - An enum is kept as a `u32` field with a getter that falls back to the default (`Level::stage`) and a setter. Its doc says the order is part of the save format, and new variants go last.
 - No ids of blocks, items or dimensions: they shift when a mod comes or goes. Keep a slot group, which saves items by name, or a hash of the name (`cogwork/src/ghost.rs`).
 - Tests pin it: `offset_of!` for the layout and "an unknown saved number reads as the default" for each enum, both in `cogwork/src/leveler/mod.rs`.

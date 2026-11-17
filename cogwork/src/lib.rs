@@ -4,7 +4,8 @@
 //! tubes, kept in tanks and burnt in the oil engine, and the rubble quarries bring up, sifted and
 //! ground by hand at the sieve and the millstone, bellows that blow a furnace's fire, and steel:
 //! coke from the coke oven, blooms from the blast furnace, forged into ingots on the anvil, and
-//! steam: boiled over a firebox, run through a steam engine and a steam-lifted trip hammer.
+//! steam: boiled over a firebox, run through a steam engine and a steam-lifted trip hammer, and
+//! the steel age's ore work: the flotation cell, the clarifier and the hand core drill.
 //! Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
@@ -16,14 +17,17 @@ mod blast_furnace;
 mod boxes;
 mod brickwork;
 mod chance;
+mod clarifier;
 mod cogs;
 mod coke_oven;
+mod core_drill;
 mod engines;
 mod excavator;
 mod fill;
 #[cfg(feature = "showcase")]
 mod films;
 mod firebox;
+mod flotation;
 mod forge_anvil;
 #[cfg(test)]
 mod generated;
@@ -44,6 +48,7 @@ mod loading;
 mod machine;
 mod markers;
 mod millstone;
+mod muddy_water;
 mod oil;
 mod oil_engine;
 mod owned;
@@ -112,6 +117,10 @@ fn init(r: &mut Registry) {
     firebox::register(r);
     steam_engine::register(r);
     trip_hammer::register(r);
+    muddy_water::register(r);
+    flotation::register(r);
+    clarifier::register(r);
+    core_drill::register(r);
     water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

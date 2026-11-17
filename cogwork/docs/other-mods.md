@@ -16,13 +16,13 @@ of its slot groups:
 | `output` | | results |
 | `chest` | anything | anything |
 | `bit` | Cogwork's drill bits, into a quarry that takes them | |
-| `materials` | what a quarry builds its frame of (logs and string, iron ingots) | |
+| `materials` | what a quarry builds its frame of (logs and string, iron or steel ingots) | |
 
 The base game's furnace has `input`, `fuel` and `output`, and its chest has `chest`, so tubes
 fill and empty both. An inventory that names none of these groups, such as a dispenser's, counts
 as one big chest. An assembly bench takes only what its pattern asks for, a shaker screen only
 Rubble and slag, a grinding mill only Ore Rubble (into `input`) and sand (into its `sand` group),
-a washer only Ore Rubble (into `input`), a coke oven only `#gems/coal` (into `input`), a
+a washer or a flotation cell only Ore Rubble (into `input`), a coke oven only `#gems/coal` (into `input`), a
 blast furnace only `#ingots/iron` (into `input`) and `#coke` (into `fuel`), a firebox only what
 burns (into `fuel`), and a trip hammer only steel blooms (into `input`).
 

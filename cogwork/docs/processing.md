@@ -1,4 +1,4 @@
-# Rubble, ore grades, sifting, washing and grinding
+# Rubble, ore grades, sifting, washing, flotation and grinding
 
 A [quarry](excavator.md) doesn't bring stone and ore up clean: stone comes up as Rubble,
 and ore as Ore Rubble. The quarry sets how much comes up; working it by hand or by machine
@@ -6,8 +6,9 @@ sets what it is worth. Two hand machines start the work: the sieve sifts Rubble,
 millstone grinds Ore Rubble into raw ore. Their driven counterparts, the
 [shaker screen](#shaker-screen) and the [grinding mill](#grinding-mill), do the same work with
 engine energy and tubes, by the same table and the same yields. Neither replaces the other: the
-hand machines need no power, and the millstone never takes a tube. The [washer](#washer) raises
-Ore Rubble a grade before it is ground.
+hand machines need no power, and the millstone never takes a tube. The [washer](#washer) and the
+[flotation cell](#flotation-cell) raise Ore Rubble a grade each before it is ground, and the
+[clarifier](#clarifier) gives the flotation cell's water back.
 
 ## Rubble
 
@@ -45,6 +46,7 @@ An ore with no raw ore (coal, diamond, redstone) comes up as its usual drops ins
 |---|---|
 | Timber Quarry | 1 Ore Rubble, or an ore's usual drops |
 | Iron Quarry | 1.25 Ore Rubble, or 1.25 times an ore's usual drops |
+| Steel Excavator | 1.5 Ore Rubble, or 1.5 times an ore's usual drops |
 | Gantry Excavator | 2 Ore Rubble, or twice an ore's usual drops |
 
 A fraction of an amount is a chance of one more. The [leveler](leveler.md) and the
@@ -68,8 +70,9 @@ Grinding gives the same in the millstone and the grinding mill:
 | Step | Machine | Grade |
 |---|---|---|
 | Washing | [Washer](#washer) | Poor → Common |
+| Flotation | [Flotation cell](#flotation-cell) | Common → Rich |
 
-Later steps raise Common further.
+A later step raises Rich to Pure.
 
 ## Millstone
 
@@ -206,8 +209,81 @@ Poor Ore Rubble into Common, the paddle churning the water while it works.
 Its screen shows the energy bar, the energy readout, what it is doing or lacks (Ore Rubble,
 water, energy, room), the water it holds, what it washed and its Ore Rubble.
 
-Like the other machines, the shaker screen, the grinding mill and the washer don't catch up: time their area
-spends unloaded, or skipped by sleeping or `/time`, is lost to their work.
+## Flotation Cell
+
+```
+s s       s = #ingots/steel, W = cogwork:washer
+sWs       c = #cogs/iron
+scs
+```
+
+A riveted steel tank with a rotor of four steel blades on a shaft from a gearbox above, and a
+froth lip at its front. It floats Common Ore Rubble into Rich: the rotor stirs water and a little
+creosote into a froth that carries the ore up and over the lip, and the rock stays behind as
+[muddy water](#muddy-water). While it floats, froth bubbles on top and the tank gurgles.
+
+- **Ore Rubble in.** Tubes put Ore Rubble, and nothing else, into its three input slots; so can
+  you. Ore Rubble of any grade but Common goes straight on to the output: Poor to be washed
+  first, Rich and Pure floated already.
+- **Water in.** It holds 2,000 mB of water, filled by liquid tube or from a tank or pump on any
+  side, as the washer is, and a float takes 500: a bucket lasts two floats.
+- **Creosote in.** It draws [creosote](steel.md#creosote) itself, up to 50 mB a tick, out of a
+  liquid tube, a tank or a coke oven drain on any side but its back, and keeps up to 500 mB of
+  it. A float takes 50: a bucket lasts twenty floats.
+- **Energy.** A float takes 1,200 energy, put in at up to 40 a tick: an Ore Rubble every
+  second and a half at full speed. It stores 2,400.
+- **Muddy water out of its back**, 250 mB a float, into a liquid tube, a tank or a
+  [clarifier](#clarifier) there, up to 100 mB a tick. It keeps up to 1,000 mB of it; with no room
+  for a float's, it waits, "Full of muddy water".
+- **Rich Ore Rubble out by its front**, the side with the froth lip, the side that faced you when
+  you placed it, into a tube or a machine there; a timber tube can pull it out too.
+- An Ore Rubble stays in its input, and the water and creosote in the cell, until a float is
+  done and its Rich Ore Rubble is in the output; it starts only with all a float takes there, and
+  room for the Rich Ore Rubble and the muddy water. Breaking it spills its slots and loses the
+  liquids it holds and the energy put in.
+
+Its screen shows the energy bar, the energy readout, what it is doing or lacks (Ore Rubble,
+energy, water, creosote, room for muddy water, room in the output), its water, creosote and muddy
+water, what it floated and its Ore Rubble.
+
+## Muddy Water
+
+What a flotation cell leaves of its water: brown and murky, with fine rock and a film of
+creosote in it. It is a liquid like any other: liquid tubes carry it, tanks hold it, an empty
+bucket picks it up and a Muddy Water Bucket pours it out. Poured out, it spreads slowly, a short
+way, and slows a swimmer more than water does. A clarifier settles it back into water.
+
+## Clarifier
+
+```
+ici       i = #ingots/iron, c = #cogs/iron
+S S       S = #smooth_stone
+SSS
+```
+
+A low round settling tank: a riveted stone ring round a sloped floor, with an iron rake turning
+slowly over it on a post from a small gearbox. It settles muddy water back into clear water, with
+no energy, and now and then leaves a clay ball.
+
+- **Muddy water in.** It holds 4,000 mB of muddy water, filled by liquid tube on any side, from a
+  flotation cell's back or a tank. It takes nothing else.
+- **Settling.** It settles 5 mB a tick, a tenth of it lost as mud: 900 mB of water from every
+  1,000 mB, a bucket every 10 seconds. One flotation cell at full speed leaves about 8 mB a tick,
+  so it wants two clarifiers to keep up, or a tank between them to wait in.
+- **Water out of its front**, the side that faced you when you placed it, up to 100 mB a tick,
+  into a liquid tube or a machine there; lead it back to the flotation cell. It keeps up to
+  1,000 mB, and stops, "Full of water", until that goes.
+- **Clay out of its other sides.** Every bucket it settles has a one in ten chance of a clay
+  ball, which goes into its three output slots and from there to a tube or a chest on any side
+  but its front. The last of a bucket settles only with room there for the clay, so none is
+  rolled away: with none, it waits, "No room for clay".
+- Broken, it spills its clay and loses the water it holds.
+
+Its screen shows what it is doing, its muddy water, the water it settled and its clay.
+
+Like the other machines, the shaker screen, the grinding mill, the washer and the flotation cell
+don't catch up: time their area spends unloaded, or skipped by sleeping or `/time`, is lost to
+their work. The clarifier makes up at most what is left of the bucket it settles.
 
 ## A processing line
 
@@ -221,8 +297,15 @@ too.
 A washer goes between the quarry and the mill: run the quarry's tube to the washer, and the
 washer's front on to the mill. Common Ore Rubble grinds into half as much raw ore again.
 
+A flotation cell goes after the washer: the washer's front into the cell, the cell's front on to
+the mill. Rich Ore Rubble grinds into twice what Poor does. Feed the cell water by liquid tube,
+and creosote from the coke oven's drain by a second tube line touching it on another side. Put a
+clarifier, or a tube to one, at its back, and run the clarifier's front back into the cell's
+water line: about half of each float's water comes back, and the rest has to be topped up.
+
 ## Their sounds
 
 The runner grinds stone on stone with each turn, and the tray rattles its gravel with each
 shake. The shaker screen rattles and thumps while it sifts, and the grinding mill rumbles while
-it grinds; both carry far. The washer's paddle sloshes and churns its water while it washes.
+it grinds; both carry far. The washer's paddle sloshes and churns its water while it washes, and
+the flotation cell's froth bubbles and gurgles while it floats. The clarifier is silent.
