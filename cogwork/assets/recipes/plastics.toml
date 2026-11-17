@@ -1,0 +1,61 @@
+# Plastics: the polymerizer and its catalyst, the molding press and its molds, the tubes and the
+# Bit Magazine made of plastic parts, and the Gantry Excavator, whose frame is composite panels.
+# Pellets come out of the polymerizer, and sheets, gears, pipes and composite panels out of the
+# molding press.
+
+[[shaped]]
+result = "catalyst"
+pattern = [" r ", "cgc", " r "]
+key = { r = "base:redstone", c = "base:clay_ball", g = "#ingots/gold" }
+
+[[shaped]]
+result = "polymerizer"
+pattern = ["sGs", "sbs", "scs"]
+key = { s = "#ingots/steel", G = "base:glass", b = "base:bucket", c = "#cogs/iron" }
+
+[[shaped]]
+result = "molding_press"
+pattern = ["sps", "s s", "sSs"]
+key = { s = "#ingots/steel", p = "base:piston", S = "#ore_blocks/steel" }
+
+[[shaped]]
+result = "sheet_mold"
+pattern = ["sss", "sps", "sss"]
+key = { s = "#ingots/steel", p = "base:paper" }
+
+[[shaped]]
+result = "gear_mold"
+pattern = ["sss", "scs", "sss"]
+key = { s = "#ingots/steel", c = "#cogs/iron" }
+
+[[shaped]]
+result = "pipe_mold"
+pattern = ["sss", "sts", "sss"]
+key = { s = "#ingots/steel", t = "liquid_tube" }
+
+[[shaped]]
+result = "panel_mold"
+pattern = ["sss", "sPs", "sss"]
+key = { s = "#ingots/steel", P = "#plates/plastic" }
+
+[[shaped]]
+result = "sealed_liquid_tube"
+count = 8
+pattern = ["ttt", "tPt", "ttt"]
+key = { t = "liquid_tube", P = "#plates/plastic" }
+
+[[shaped]]
+result = "pressure_tube"
+count = 3
+pattern = ["pGp"]
+key = { p = "#pipes/plastic", G = "base:glass" }
+
+[[shaped]]
+result = "bit_magazine"
+pattern = ["sgs", "gcg", "sgs"]
+key = { s = "#ingots/steel", g = "#gears/plastic", c = "base:chest" }
+
+[[shaped]]
+result = "excavator"
+pattern = ["PdP", "gSg", "PPP"]
+key = { P = "#plates/composite", d = "#cogs/diamond", g = "#gears/plastic", S = "steel_excavator" }

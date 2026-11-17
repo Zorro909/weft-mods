@@ -1,8 +1,9 @@
-//! The blocks that hold liquid: a liquid tube, a timber liquid tube, a pump, an oil engine's
+//! The blocks that hold liquid: a liquid tube, a sealed liquid tube, a pressure tube, a timber
+//! liquid tube, a pump, an oil engine's
 //! intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
 //! engine, a trip hammer, a flotation cell, a clarifier, a refinery's controller, heater,
-//! condenser or tap, or a quarry, one block each, or a tank, one holder however many blocks it
-//! has.
+//! condenser or tap, a quarry or a polymerizer, one block each, or a tank, one holder however
+//! many blocks it has.
 //! `turn` passes liquid between them. What each holder keeps is read and written through `Holders`.
 
 mod discover;
@@ -11,8 +12,8 @@ mod holders;
 pub use discover::{is_vessel, reaches};
 pub use holders::Holders;
 
-use super::flow::{LIFT, UNIT};
-use super::{DRIBBLE, Held, Level, LiquidKey, flow, is_full};
+use super::flow::{LIFT, SEALED_LIFT, UNIT};
+use super::{DRIBBLE, Held, Level, LiquidKey, MOST_A_TURN, flow};
 use crate::lib::Pos;
 use crate::tank::Tank;
 
@@ -34,6 +35,11 @@ pub enum Vessel {
 pub enum Kind {
     /// A liquid tube, or a timber liquid tube no engine drives: by height and pressure.
     Tube,
+    /// A sealed liquid tube: as a tube, but a pump or a driven timber liquid tube pushes into it
+    /// `SEALED_LIFT` blocks up instead of `LIFT`.
+    Sealed,
+    /// A pressure tube: as a tube, for steam only, and twice as much a turn.
+    Pressure,
     /// The pump: it pushes what it holds `LIFT` blocks up and never takes liquid.
     Pump,
     /// A timber liquid tube an engine drives: it pushes as the pump does, and hands nothing to a
@@ -58,6 +64,8 @@ pub enum Kind {
     Still,
     /// A quarry: it takes lubricant for its drill and hands nothing on.
     Lubed,
+    /// A polymerizer: it takes gas to make plastic of and hands nothing on.
+    Polymer,
 }
 
 impl Kind {
@@ -77,7 +85,27 @@ impl Kind {
                 | Kind::Settler
                 | Kind::Still
                 | Kind::Lubed
+                | Kind::Polymer
         )
+    }
+
+    /// Blocks above itself a holder that pushes (`pushes`) lifts liquid into a holder of this
+    /// kind.
+    pub fn lift(self) -> i64 {
+        if self == Kind::Sealed {
+            SEALED_LIFT
+        } else {
+            LIFT
+        }
+    }
+
+    /// The most millibuckets it hands one neighbour, or takes from one, a turn.
+    pub fn most_a_turn(self) -> u32 {
+        if self == Kind::Pressure {
+            2 * MOST_A_TURN
+        } else {
+            MOST_A_TURN
+        }
     }
 
     /// Whether `liquid` may go into a holder of this kind at all.
@@ -91,7 +119,9 @@ impl Kind {
             Kind::Settler => liquid == crate::muddy_water::key(),
             Kind::Still => liquid == super::key_named("cogwork:oil"),
             Kind::Lubed => liquid == crate::refinery::products::Product::Lubricant.key(),
-            Kind::Tube | Kind::Pump | Kind::Driven => true,
+            Kind::Polymer => liquid == crate::refinery::products::Product::Gas.key(),
+            Kind::Pressure => super::rises(liquid),
+            Kind::Tube | Kind::Sealed | Kind::Pump | Kind::Driven => true,
         }
     }
 }
@@ -135,8 +165,9 @@ impl Vessel {
 
     /// Whether `liquid` may go into it at all: an intake takes only what an engine burns, a
     /// grinding mill, a washer, a boiler, a flotation cell or a condenser only water, a firebox
-    /// only lava, a steam machine or a heater only steam, a clarifier only muddy water, a
-    /// refinery's controller only crude, a quarry only lubricant, a drain or a tap nothing.
+    /// only lava, a steam machine, a heater or a pressure tube only steam, a clarifier only muddy
+    /// water, a refinery's controller only crude, a quarry only lubricant, a polymerizer only gas,
+    /// a drain or a tap nothing.
     pub fn admits(&self, liquid: LiquidKey) -> bool {
         self.kind().admits(liquid)
     }
@@ -151,10 +182,22 @@ impl Vessel {
 
     /// Where `amount` of `liquid` stands in it, with `pushed` the push coming into it from beside:
     /// a holder that pushes (`Kind::pushes`) pushes what it holds `LIFT` blocks up; another holder
-    /// takes on the push when it is full (`is_full`); otherwise its liquid stands where its
-    /// surface is. Steam has no height to it: it stands by how full the holder is
+    /// takes on the push when it is full (no more than a turn short); otherwise its liquid stands
+    /// where its surface is. Steam has no height to it: it stands by how full the holder is
     /// (`flow::pressure`), and a millibucket of it raises a holder by one of its capacity.
     pub(super) fn level(&self, liquid: LiquidKey, amount: u32, pushed: i64) -> Level {
+        self.level_into(liquid, amount, pushed, Kind::Tube)
+    }
+
+    /// Its `level` as a holder of kind `into` meets it: a holder that pushes lifts liquid
+    /// `into.lift()` blocks up into it.
+    pub(super) fn level_into(
+        &self,
+        liquid: LiquidKey,
+        amount: u32,
+        pushed: i64,
+        into: Kind,
+    ) -> Level {
         let rises = super::rises(liquid);
         let per_block = if rises {
             self.capacity()
@@ -162,16 +205,16 @@ impl Vessel {
             self.per_block()
         };
         Level {
-            head: self.head(rises, amount, pushed),
+            head: self.head(rises, amount, pushed, into.lift()),
             per_block,
         }
     }
 
-    fn head(&self, rises: bool, amount: u32, pushed: i64) -> i64 {
+    fn head(&self, rises: bool, amount: u32, pushed: i64, lift: i64) -> i64 {
         let (floor, per_block) = match self {
             Vessel::One { pos, kind, .. } if kind.pushes() && amount >= DRIBBLE => {
                 let floor = if rises { 0 } else { pos.y as i64 };
-                return (floor + LIFT) * UNIT;
+                return (floor + lift) * UNIT;
             }
             Vessel::One { pos, capacity, .. } => (pos.y, *capacity),
             Vessel::Tank(tank) => (tank.floor(), tank.per_block()),
@@ -181,7 +224,7 @@ impl Vessel {
         } else {
             flow::surface(floor, amount, per_block)
         };
-        if is_full(amount, self.capacity()) {
+        if amount + self.kind().most_a_turn() >= self.capacity() {
             surface.max(pushed)
         } else {
             surface
@@ -196,11 +239,11 @@ impl Vessel {
         }
     }
 
-    /// The head it stands at now, as a neighbour sees it at its block `id`, which keeps the head
-    /// it last told there.
-    pub(super) fn head_now(&self, holders: &Holders, id: u64) -> i64 {
+    /// The head it stands at now, as a neighbour of kind `viewer` sees it at its block `id`,
+    /// which keeps the head it last told there.
+    pub(super) fn head_now(&self, holders: &Holders, id: u64, viewer: Kind) -> i64 {
         let held = self.held(holders);
-        self.level(held.liquid, held.amount, holders.get(id).head)
+        self.level_into(held.liquid, held.amount, holders.get(id).head, viewer)
             .head
     }
 

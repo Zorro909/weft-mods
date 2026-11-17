@@ -28,6 +28,14 @@ pub static LIQUID_TUBE: LazyLock<HubAndArms> = LazyLock::new(|| {
     let file = include_str!("../../assets/models/block/liquid_tube/hub_and_arm.json");
     HubAndArms::read("liquid_tube", file)
 });
+pub static SEALED_LIQUID_TUBE: LazyLock<HubAndArms> = LazyLock::new(|| {
+    let file = include_str!("../../assets/models/block/sealed_liquid_tube/hub_and_arm.json");
+    HubAndArms::read("sealed_liquid_tube", file)
+});
+pub static PRESSURE_TUBE: LazyLock<HubAndArms> = LazyLock::new(|| {
+    let file = include_str!("../../assets/models/block/pressure_tube/hub_and_arm.json");
+    HubAndArms::read("pressure_tube", file)
+});
 pub static TIMBER_LIQUID_TUBE: LazyLock<HubAndArms> = LazyLock::new(|| {
     let file = include_str!("../../assets/models/block/timber_liquid_tube/hub_and_arm.json");
     HubAndArms::read("timber_liquid_tube", file)
@@ -313,6 +321,8 @@ mod tests {
         let models = [
             &TUBE,
             &LIQUID_TUBE,
+            &SEALED_LIQUID_TUBE,
+            &PRESSURE_TUBE,
             &TIMBER_LIQUID_TUBE,
             &TORQUE_SHAFT,
             &WOODEN_AXLE,

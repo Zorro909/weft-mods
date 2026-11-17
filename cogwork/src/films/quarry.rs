@@ -11,7 +11,7 @@ use weft_sdk::{Dir, Item, Shape};
 use super::parts::{CHEST, area, engine, fuel, shafts, tubes};
 use super::site::{SITE, WORKS_DOWN};
 use crate::excavator::kind::rows::GANTRY;
-use crate::excavator::{DIG, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status};
+use crate::excavator::{COMPOSITE_FRAME, DIG, EXCAVATOR, Frame, Stage, Status};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
 
@@ -66,7 +66,7 @@ fn frame_and_pit(set: &Set) {
     let pos = set.at(DIGGER);
     let frame = Frame::plan(&world, pos, Dir::South, &GANTRY);
     for cell in frame.cells() {
-        world.set_block_typed(cell, BlockState::of(&GANTRY_FRAME));
+        world.set_block_typed(cell, BlockState::of(&COMPOSITE_FRAME));
     }
     let lowest = frame.lo.add_x(1).add_z(1).with_y(pos.y - PIT_DEPTH);
     // The far corner of the box: blocks whose middles lie inside it are cleared.
