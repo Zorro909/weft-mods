@@ -62,8 +62,8 @@
 - The Steel Excavator, the quarry after the Iron Quarry: it builds a frame of steel lattice, a
   steel ingot every four blocks, around a 9 by 9 area (up to 63 by 63 with markers) and digs it
   down to the world's `excavator_lowest_y` with a steel or diamond-tipped drill bit at up to 120
-  or 160 energy a tick, bringing up 1.5 Ore Rubble an ore block. A broken steel frame block gives
-  a steel ingot back one time in four.
+  or 160 energy a tick, bringing up 1.5 Ore Rubble an ore block. The frame block that took an
+  ingot gives it back when broken.
 - The diamond-tipped drill bit, a steel bit set with diamonds, for the Steel Excavator: 40,000
   blocks.
 - The flotation cell floats Common Ore Rubble into Rich with engine energy, water and creosote,

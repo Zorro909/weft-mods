@@ -6,7 +6,7 @@
 
 pub mod rows;
 
-pub use rows::{KINDS, STEEL};
+pub use rows::KINDS;
 use weft_sdk::{Block, Item, ItemStack, Menu, Sound, Tag};
 
 use super::Frame;
@@ -25,8 +25,11 @@ pub struct Kind {
     /// that has them.
     pub menu: &'static Menu,
     pub frame: &'static Block,
-    /// What each frame block takes from the `materials` group, beside its energy.
+    /// What each batch of frame blocks takes from the `materials` group, beside its energy.
     pub frame_cost: &'static [Cost],
+    /// The frame blocks one `frame_cost` pays for. It is taken as the first of them goes up,
+    /// and that block gives it back when broken (`frames`).
+    pub frame_batch: u32,
     pub standby: Standby,
     pub inside: Inside,
     pub depth: Depth,
@@ -50,12 +53,10 @@ pub struct Fit {
     pub draw: i64,
 }
 
-/// Some of an item, or of any item with a tag, that frame blocks take: `count` of it for every
-/// `blocks` frame blocks, taken for the first of them.
+/// Some of an item, or of any item with a tag, that a batch of frame blocks takes.
 pub struct Cost {
     pub material: Material,
     pub count: u32,
-    pub blocks: u32,
 }
 
 pub enum Material {
@@ -178,13 +179,6 @@ impl Kind {
     pub fn material_rule(&self) -> String {
         let names = self.frame_cost.iter().map(|cost| cost.material.rule());
         names.collect::<Vec<_>>().join(" ")
-    }
-}
-
-impl Cost {
-    /// Whether the frame block at `step` of the frame takes it: the first of each `blocks`.
-    pub fn is_due(&self, step: u32) -> bool {
-        step.is_multiple_of(self.blocks.max(1))
     }
 }
 

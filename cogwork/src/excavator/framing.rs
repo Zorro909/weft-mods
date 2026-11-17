@@ -76,21 +76,24 @@ fn leave(dig: &mut Dig) {
     dig.step += 1;
 }
 
-/// Puts up the frame block at `cell`, which is clear: paid for, its materials taken.
+/// Puts up the frame block at `cell`, which is clear: paid for, and its batch's materials taken
+/// if nothing is paid ahead.
 fn put_up(world: &World, quarry: Quarry, dig: &mut Dig, cell: Pos) {
     dig.refused = 0;
-    if !materials::take(world, quarry, dig.step, true) {
+    let takes_batch = materials::takes_batch(dig.paid_ahead);
+    if takes_batch && !materials::take(world, quarry, true) {
         dig.set_status(Status::NeedsMaterials);
         return;
     }
     dig.set_status(Status::Frame);
     let draw = quarry.kind.build_draw();
     if !pay(world, quarry.id, dig, cell, FRAME_COST, draw)
-        || !materials::take(world, quarry, dig.step, false)
+        || (takes_batch && !materials::take(world, quarry, false))
     {
         return;
     }
-    frames::put(world, cell, quarry.kind.frame);
+    frames::put(world, cell, quarry.kind.frame, takes_batch);
+    dig.paid_ahead = materials::after_putting_up(dig.paid_ahead, quarry.kind.frame_batch);
     if dig.step.is_multiple_of(FRAME_SOUND_EVERY) {
         world.play_sound(quarry.kind.frame_sound, cell.center(), 1.0);
     }

@@ -40,7 +40,8 @@ value! {
     /// blocks put up, `cursor` is the next block to mine, `spent` the energy put into the job
     /// under way, and `waited` the ticks the cursor's block has been unloaded. `head` is where
     /// the drill's tip is, in the world. `refused` counts the tries running at breaking what
-    /// stands where the next frame block goes that were refused.
+    /// stands where the next frame block goes that were refused. `paid_ahead` counts the frame
+    /// blocks the materials already taken pay for (`materials`).
     #[derive(Default)]
     pub struct Dig {
         pub stage: u32,
@@ -55,6 +56,8 @@ value! {
         pub waited: u32,
         // Last, so excavators saved before it load with it 0.
         pub refused: u32,
+        // After `refused`, so excavators saved before it load with it 0.
+        pub paid_ahead: u32,
     }
 }
 pub static DIG: Component<Dig> = Component::named("cogwork:dig");
@@ -321,6 +324,11 @@ mod tests {
             "after stage and status, as `lo` was"
         );
         assert_eq!(offset_of!(Dig, cursor), 32, "after `lo` and `hi`");
+        assert_eq!(
+            offset_of!(Dig, paid_ahead),
+            offset_of!(Dig, refused) + 4,
+            "the newest last"
+        );
     }
 
     #[test]
