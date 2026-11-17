@@ -4,8 +4,10 @@
 use weft_sdk::{Dir, World};
 
 use super::{Kind, Vessel};
+use crate::clarifier::{self, CLARIFIER};
 use crate::coke_oven;
 use crate::firebox::{self, BOILER, FIREBOX};
+use crate::flotation::{self, FLOTATION_CELL};
 use crate::grinding_mill::{self, GRINDING_MILL};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid_tube::is_liquid_tube;
@@ -46,6 +48,10 @@ impl Vessel {
             (steam_engine::STEAM_CAPACITY, Kind::Steam)
         } else if block.is(&TRIP_HAMMER) {
             (trip_hammer::STEAM_CAPACITY, Kind::Steam)
+        } else if block.is(&FLOTATION_CELL) {
+            (flotation::WATER_CAPACITY, Kind::Mill)
+        } else if block.is(&CLARIFIER) {
+            (clarifier::MUDDY_CAPACITY, Kind::Settler)
         } else if block.is(&LIQUID_TANK) {
             return Tank::at(world, pos).map(Vessel::Tank);
         } else {
@@ -80,9 +86,9 @@ pub fn is_vessel(world: &World, pos: Pos) -> bool {
 
 /// Whether `block` is a machine that holds liquid for its work and reaches it on every side: an
 /// intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
-/// engine or a trip hammer.
+/// engine, a trip hammer, a flotation cell or a clarifier.
 fn is_machine(block: BlockState) -> bool {
-    let machines: [&weft_sdk::Block; 7] = [
+    let machines: [&weft_sdk::Block; 9] = [
         &OIL_INTAKE,
         &GRINDING_MILL,
         &WASHER,
@@ -90,6 +96,8 @@ fn is_machine(block: BlockState) -> bool {
         &BOILER,
         &STEAM_ENGINE,
         &TRIP_HAMMER,
+        &FLOTATION_CELL,
+        &CLARIFIER,
     ];
     machines.iter().any(|machine| block.is(machine))
         || coke_oven::creosote_capacity(block).is_some()

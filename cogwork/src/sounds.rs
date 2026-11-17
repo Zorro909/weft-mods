@@ -39,11 +39,13 @@ pub static ANVIL_CLANG: Sound = Sound::named("forge_anvil.clang");
 pub static STEAM_CHUFF: Sound = Sound::named("steam_engine.chuff");
 pub static TRIP_HAMMER: Sound = Sound::named("trip_hammer.strike");
 pub static BOILER_HISS: Sound = Sound::named("boiler.hiss");
+pub static FLOTATION: Sound = Sound::named("flotation_cell.bubble");
+pub static CORE_DRILL: Sound = Sound::named("core_drill.grind");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
 /// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
 /// carry (fading out on the way there): heavy machinery far, small parts close.
-static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 36] = [
+static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 38] = [
     (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
     (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
     (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
@@ -94,6 +96,8 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 36] = [
     (&STEAM_CHUFF, "steam_engine/chuff", 1.0, 0.92, 1.05, 48.0),
     (&TRIP_HAMMER, "trip_hammer/strike", 1.0, 0.92, 1.05, 48.0),
     (&BOILER_HISS, "boiler/hiss", 0.6, 0.9, 1.1, 24.0),
+    (&FLOTATION, "flotation_cell/bubble", 0.9, 0.9, 1.1, 32.0),
+    (&CORE_DRILL, "core_drill/grind", 0.8, 0.92, 1.08, 24.0),
 ];
 
 pub fn register(r: &mut Registry) {

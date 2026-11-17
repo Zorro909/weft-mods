@@ -3,8 +3,8 @@
 //! what went through it last tick and the liquid it holds.
 
 use weft_sdk::{
-    Arg, BlockBuilder, Component, Dir, ENERGY, Energy, Facings, Registry, S, Toward, Ui, World,
-    component_flags, tool_tier, value,
+    Arg, BlockBuilder, ClientView, Component, Dir, ENERGY, Energy, Facings, Registry, S, Toward,
+    Ui, World, component_flags, tool_tier, value,
 };
 
 use crate::lib::{BlockState, Pos, TypedWorld};
@@ -197,6 +197,24 @@ pub fn tank_bar(ui: &mut Ui, capacity: u32) {
             }
             None => out.set("cogwork.liquid.empty", &[most]),
         }
+    });
+}
+
+/// A liquid the machine whose menu is open keeps apart from its `HELD`, `amount` of it read from
+/// its state, in a store of `capacity`: a bar, and how much of the liquid named `liquid`.
+pub fn kept_bar(
+    ui: &mut Ui,
+    capacity: u32,
+    liquid: &'static str,
+    amount: impl Fn(&ClientView) -> u32 + Copy + Send + Sync + 'static,
+) {
+    ui.progress_bind("cogwork:tank", S::default().size(80.0, 8.0), move |view| {
+        amount(view) as f32 / capacity as f32
+    });
+    ui.text_bind(move |view, out| {
+        let (held, most) = (Arg::Int(amount(view) as i64), Arg::Int(capacity as i64));
+        let name = format!("item:{liquid}");
+        out.set("cogwork.liquid.held", &[held, most, Arg::Name(&name)]);
     });
 }
 

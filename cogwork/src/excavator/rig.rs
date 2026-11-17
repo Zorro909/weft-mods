@@ -45,6 +45,13 @@ pub static IRON_RIG: RigLook = RigLook {
     beam_end: EntityKind::named("iron_beam_end"),
     bare_bit: None,
 };
+pub static STEEL_RIG: RigLook = RigLook {
+    carriage: EntityKind::named("steel_carriage"),
+    shaft: EntityKind::named("steel_shaft"),
+    beam: EntityKind::named("steel_beam"),
+    beam_end: EntityKind::named("steel_beam_end"),
+    bare_bit: None,
+};
 
 /// The Gantry's pieces, whose models every kind's pieces take.
 const CARRIAGE_MODEL: &str = "drill_carriage";

@@ -1,6 +1,7 @@
 //! The blocks that hold liquid: a liquid tube, a timber liquid tube, a pump, an oil engine's
 //! intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
-//! engine or a trip hammer, one block each, or a tank, one holder however many blocks it has.
+//! engine, a trip hammer, a flotation cell or a clarifier, one block each, or a tank, one holder
+//! however many blocks it has.
 //! `turn` passes liquid between them. What each holder keeps is read and written through `Holders`.
 
 mod discover;
@@ -39,7 +40,8 @@ pub enum Kind {
     Driven,
     /// An oil engine's intake: it takes oil and water for the engine and hands nothing on.
     Intake,
-    /// A grinding mill, a washer or a boiler: it takes water for its work and hands nothing on.
+    /// A grinding mill, a washer, a boiler or a flotation cell: it takes water for its work and
+    /// hands nothing on.
     Mill,
     /// A coke oven's door or drain: it hands on the creosote the oven makes, by height as a tube
     /// does, and takes nothing.
@@ -48,6 +50,8 @@ pub enum Kind {
     Firebox,
     /// A steam engine or a trip hammer: it takes steam for its work and hands nothing on.
     Steam,
+    /// A clarifier: it takes muddy water to settle and hands nothing on.
+    Settler,
 }
 
 impl Kind {
@@ -60,7 +64,7 @@ impl Kind {
     pub fn keeps(self) -> bool {
         matches!(
             self,
-            Kind::Intake | Kind::Mill | Kind::Firebox | Kind::Steam
+            Kind::Intake | Kind::Mill | Kind::Firebox | Kind::Steam | Kind::Settler
         )
     }
 
@@ -72,6 +76,7 @@ impl Kind {
             Kind::Drain => false,
             Kind::Firebox => liquid == super::key_named("base:lava"),
             Kind::Steam => super::rises(liquid),
+            Kind::Settler => liquid == crate::muddy_water::key(),
             Kind::Tube | Kind::Pump | Kind::Driven => true,
         }
     }
@@ -115,8 +120,8 @@ impl Vessel {
     }
 
     /// Whether `liquid` may go into it at all: an intake takes only what an engine burns, a
-    /// grinding mill, a washer or a boiler only water, a firebox only lava, a steam machine only
-    /// steam, a coke oven's drain nothing.
+    /// grinding mill, a washer, a boiler or a flotation cell only water, a firebox only lava, a
+    /// steam machine only steam, a clarifier only muddy water, a coke oven's drain nothing.
     pub fn admits(&self, liquid: LiquidKey) -> bool {
         self.kind().admits(liquid)
     }

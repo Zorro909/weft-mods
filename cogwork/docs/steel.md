@@ -2,8 +2,9 @@
 
 Steel takes three steps. A coke oven bakes coal into coke; a blast furnace, blown by a driven
 bellows, smelts an iron ingot with a coke into a steel bloom; and the bloom is beaten into a steel
-ingot on a forge anvil. Steel goes into the [steel drill bit](excavator.md#drill-bits) and the
-machines that come after.
+ingot on a forge anvil. Steel goes into the [steel drill bit](excavator.md#drill-bits), the
+[Steel Excavator](excavator.md) and its frame, the [flotation cell](processing.md#flotation-cell),
+the [core drill](prospecting.md) and the machines that come after.
 
 Both furnaces are built of bricks around a hollow, with a controller in their front:
 
@@ -53,7 +54,8 @@ other (see [Liquid tubes and tanks](liquids.md)). It lies in the oven's door unt
   empty bucket used on it fills with creosote.
 
 Creosote runs from the door or a drain into tubes by height, as from a tank: lead the tubes
-down, or to a pump, to drain it all.
+down, or to a pump, to drain it all. A [flotation cell](processing.md#flotation-cell) draws it out
+of a drain, tube or tank beside it.
 
 ### Coke and sulfur
 
@@ -164,7 +166,8 @@ isi       → Forge Hammer
 
 Steel ingots are tagged `ingots/steel` and `materials/steel`, as any mod's ingots are, so base's
 recipes pack nine into a block of steel and back, and other mods' recipes that ask for steel take
-them. The steel drill bit is made of them (see [Quarries](excavator.md#drill-bits)).
+them. The steel drill bit, the Steel Excavator and its frame are made of them (see
+[Quarries](excavator.md)).
 
 ## Their sounds
 

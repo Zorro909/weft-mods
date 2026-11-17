@@ -59,6 +59,22 @@
   flywheel's axle; its piston and flywheel turn and it puffs steam while it runs.
 - The trip hammer forges steel blooms from tubes into steel ingots on steam, five strikes a
   bloom, the automatic counterpart of the forge anvil.
+- The Steel Excavator, the quarry after the Iron Quarry: it builds a frame of steel lattice, a
+  steel ingot every four blocks, around a 9 by 9 area (up to 63 by 63 with markers) and digs it
+  down to the world's `excavator_lowest_y` with a steel or diamond-tipped drill bit at up to 120
+  or 160 energy a tick, bringing up 1.5 Ore Rubble an ore block. A broken steel frame block gives
+  a steel ingot back one time in four.
+- The diamond-tipped drill bit, a steel bit set with diamonds, for the Steel Excavator: 40,000
+  blocks.
+- The flotation cell floats Common Ore Rubble into Rich with engine energy, water and creosote,
+  its rotor stirring up a froth on top: tubes bring the Ore Rubble, liquid tubes the water, and
+  it draws creosote from a tube, tank or coke oven drain beside it. Rich Ore Rubble leaves by its
+  front and muddy water by its back.
+- Muddy water, a new liquid, with its bucket.
+- The clarifier settles muddy water back into water, slowly and with no energy, its rake turning
+  over its floor: 900 mB of water from every 1,000, and a one in ten chance of a clay ball.
+- The core drill, for prospecting: crank it sixteen times and it reports in chat how many blocks
+  of each ore lie in the 16 by 16 below it, in bands of 16 layers down to 128 below.
 
 ### Changed
 
@@ -69,6 +85,7 @@
 - Spring engines no longer run from redstone alone: they run on their wound spring, and a
   redstone signal now holds it like a brake. Their recipe takes an iron ingot instead of a
   piston.
+- The steel drill bit also fits the Steel Excavator.
 - Ember engines no longer burn lava: their fuel slot refuses lava buckets. A lava bucket already
   in one stays in its slot unburnt until taken out. Lava burns in the firebox instead.
 

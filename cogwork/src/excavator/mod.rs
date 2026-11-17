@@ -1,9 +1,9 @@
 //! Quarries: each builds a frame around its area, then a drill on a gantry across the frame
 //! mines the area out layer by layer from the top of the frame down as deep as its kind and the
 //! world's settings let it (`kind`, `depth`), handing everything it mines to the tubes and chests
-//! beside it. The Timber and Iron Quarries dig with a drill bit (`bit`) and build their frames of
-//! logs and string, or of iron ingots; the Gantry Excavator, block `excavator`, digs with no bit
-//! and builds with energy alone.
+//! beside it. The Timber and Iron Quarries and the Steel Excavator dig with a drill bit (`bit`)
+//! and build their frames of logs and string, of iron ingots or of steel ingots; the Gantry
+//! Excavator, block `excavator`, digs with no bit and builds with energy alone.
 
 mod area;
 mod bit;
@@ -26,9 +26,10 @@ use weft_sdk::{
 pub static EXCAVATOR: Block = Block::named("excavator");
 pub static TIMBER_QUARRY: Block = Block::named("timber_quarry");
 pub static IRON_QUARRY: Block = Block::named("iron_quarry");
+pub static STEEL_EXCAVATOR: Block = Block::named("steel_excavator");
 pub use area::Frame;
 use depth::Floor;
-pub use frames::{GANTRY_FRAME, IRON_FRAME, LASHED_FRAME};
+pub use frames::{GANTRY_FRAME, IRON_FRAME, LASHED_FRAME, STEEL_FRAME};
 use kind::{KINDS, Kind};
 
 use crate::lib::{Pos, TypedWorld};

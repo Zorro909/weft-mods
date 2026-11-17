@@ -1,0 +1,154 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"particle": "block/steel_plate",
+		"plate": "block/steel_plate",
+		"iron": "base:block/iron_block"
+	},
+	"elements": [
+		{
+			"name": "leg_nw",
+			"from": [1, 0, 1],
+			"to": [3, 10, 3],
+			"faces": {
+				"north": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"east": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"south": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"west": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"up": {"uv": [1, 1, 3, 3], "texture": "#iron"},
+				"down": {"uv": [1, 13, 3, 15], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "leg_ne",
+			"from": [13, 0, 1],
+			"to": [15, 10, 3],
+			"faces": {
+				"north": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"east": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"south": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"west": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"up": {"uv": [13, 1, 15, 3], "texture": "#iron"},
+				"down": {"uv": [13, 13, 15, 15], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "leg_sw",
+			"from": [1, 0, 13],
+			"to": [3, 10, 15],
+			"faces": {
+				"north": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"east": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"south": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"west": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"up": {"uv": [1, 13, 3, 15], "texture": "#iron"},
+				"down": {"uv": [1, 1, 3, 3], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "leg_se",
+			"from": [13, 0, 13],
+			"to": [15, 10, 15],
+			"faces": {
+				"north": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"east": {"uv": [1, 6, 3, 16], "texture": "#iron"},
+				"south": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"west": {"uv": [13, 6, 15, 16], "texture": "#iron"},
+				"up": {"uv": [13, 13, 15, 15], "texture": "#iron"},
+				"down": {"uv": [13, 1, 15, 3], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "frame_north",
+			"from": [1, 10, 1],
+			"to": [15, 12, 3],
+			"faces": {
+				"north": {"uv": [1, 4, 15, 6], "texture": "#plate"},
+				"east": {"uv": [13, 4, 15, 6], "texture": "#plate"},
+				"south": {"uv": [1, 4, 15, 6], "texture": "#plate"},
+				"west": {"uv": [1, 4, 3, 6], "texture": "#plate"},
+				"up": {"uv": [1, 1, 15, 3], "texture": "#plate"},
+				"down": {"uv": [1, 13, 15, 15], "texture": "#plate"}
+			}
+		},
+		{
+			"name": "frame_south",
+			"from": [1, 10, 13],
+			"to": [15, 12, 15],
+			"faces": {
+				"north": {"uv": [1, 4, 15, 6], "texture": "#plate"},
+				"east": {"uv": [1, 4, 3, 6], "texture": "#plate"},
+				"south": {"uv": [1, 4, 15, 6], "texture": "#plate"},
+				"west": {"uv": [13, 4, 15, 6], "texture": "#plate"},
+				"up": {"uv": [1, 13, 15, 15], "texture": "#plate"},
+				"down": {"uv": [1, 1, 15, 3], "texture": "#plate"}
+			}
+		},
+		{
+			"name": "frame_west",
+			"from": [1, 10, 3],
+			"to": [3, 12, 13],
+			"faces": {
+				"north": {"uv": [13, 4, 15, 6], "texture": "#plate"},
+				"east": {"uv": [3, 4, 13, 6], "texture": "#plate"},
+				"south": {"uv": [1, 4, 3, 6], "texture": "#plate"},
+				"west": {"uv": [3, 4, 13, 6], "texture": "#plate"},
+				"up": {"uv": [1, 3, 3, 13], "texture": "#plate"},
+				"down": {"uv": [1, 3, 3, 13], "texture": "#plate"}
+			}
+		},
+		{
+			"name": "frame_east",
+			"from": [13, 10, 3],
+			"to": [15, 12, 13],
+			"faces": {
+				"north": {"uv": [1, 4, 3, 6], "texture": "#plate"},
+				"east": {"uv": [3, 4, 13, 6], "texture": "#plate"},
+				"south": {"uv": [13, 4, 15, 6], "texture": "#plate"},
+				"west": {"uv": [3, 4, 13, 6], "texture": "#plate"},
+				"up": {"uv": [13, 3, 15, 13], "texture": "#plate"},
+				"down": {"uv": [13, 3, 15, 13], "texture": "#plate"}
+			}
+		},
+		{
+			"name": "strut_west",
+			"from": [3, 11, 7],
+			"to": [5, 12, 9],
+			"faces": {
+				"north": {"uv": [11, 4, 13, 5], "texture": "#iron"},
+				"east": {"uv": [7, 4, 9, 5], "texture": "#iron"},
+				"south": {"uv": [3, 4, 5, 5], "texture": "#iron"},
+				"west": {"uv": [7, 4, 9, 5], "texture": "#iron"},
+				"up": {"uv": [3, 7, 5, 9], "texture": "#iron"},
+				"down": {"uv": [3, 7, 5, 9], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "strut_east",
+			"from": [11, 11, 7],
+			"to": [13, 12, 9],
+			"faces": {
+				"north": {"uv": [3, 4, 5, 5], "texture": "#iron"},
+				"east": {"uv": [7, 4, 9, 5], "texture": "#iron"},
+				"south": {"uv": [11, 4, 13, 5], "texture": "#iron"},
+				"west": {"uv": [7, 4, 9, 5], "texture": "#iron"},
+				"up": {"uv": [11, 7, 13, 9], "texture": "#iron"},
+				"down": {"uv": [11, 7, 13, 9], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "gearbox",
+			"from": [5, 10, 5],
+			"to": [11, 15, 11],
+			"faces": {
+				"north": {"uv": [5, 1, 11, 6], "texture": "#plate"},
+				"east": {"uv": [5, 1, 11, 6], "texture": "#plate"},
+				"south": {"uv": [5, 1, 11, 6], "texture": "#plate"},
+				"west": {"uv": [5, 1, 11, 6], "texture": "#plate"},
+				"up": {"uv": [5, 5, 11, 11], "texture": "#plate"},
+				"down": {"uv": [5, 5, 11, 11], "texture": "#plate"}
+			}
+		}
+	]
+}
