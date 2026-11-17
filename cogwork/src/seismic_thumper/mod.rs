@@ -46,6 +46,7 @@ value! {
     /// of the first block of it found (`shown`) and its `counts` by band, kind after kind. Of each
     /// oil field it found, `fields` of them, where its seep lies from the thumper (`field_at`, x
     /// then z) and its oil's highest and lowest layer (`field_depth`, `i32::MIN` when unknown).
+    /// The game time it last `worked_at`, so it works once a tick (`machine::first_call_at`).
     pub struct Survey {
         pub weight: u64,
         pub spent: i64,
@@ -62,6 +63,7 @@ value! {
         pub counts: [u32; KINDS * BANDS],
         pub field_at: [i32; FIELDS * 2],
         pub field_depth: [i32; FIELDS * 2],
+        pub worked_at: u64,
     }
 }
 static SURVEY: Component<Survey> = Component::named("cogwork:survey");
@@ -84,6 +86,7 @@ impl Default for Survey {
             counts: [0; KINDS * BANDS],
             field_at: [0; FIELDS * 2],
             field_depth: [0; FIELDS * 2],
+            worked_at: 0,
         }
     }
 }
@@ -197,8 +200,7 @@ fn start(packet: &Packet, start: Start) {
     }
     let marked = crate::markers::take_area(&world, pos);
     let area = survey::columns(marked, pos);
-    let lowest = crate::excavator::lowest_y();
-    survey.set_area(area, survey::layers(pos.y, lowest));
+    survey.set_area(area, survey::layers(pos.y));
     survey.set_status(Status::Thumping);
 }
 
@@ -232,6 +234,7 @@ mod tests {
         assert_eq!(offset_of!(Survey, counts), 192, "their counts");
         assert_eq!(offset_of!(Survey, field_at), 512, "where the fields are");
         assert_eq!(offset_of!(Survey, field_depth), 544, "how deep");
+        assert_eq!(offset_of!(Survey, worked_at), 576, "when it last worked");
     }
 
     #[test]

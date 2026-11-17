@@ -1,7 +1,8 @@
 //! Every core drill's tick: keep its rod in place, count up to `BUDGET` of the blocks its turns
 //! have drilled to, keeping the layer it counts loaded meanwhile, and report to the player who
 //! turned it last once it has counted everything. A block that stays unloaded for `FLOOR_WAIT`
-//! is taken for the floor of the world: the count ends there.
+//! is taken for the floor of the world: the count ends there. It counts in the first call of a
+//! tick only, so making up missed ticks reads no more blocks and waits no faster.
 
 use std::collections::HashMap;
 
@@ -34,7 +35,9 @@ pub fn tick(batch: &mut SystemBatch<Core>) {
             continue;
         }
         core.rod = rod::place(&world, id, pos, core.rod);
-        count(&world, pos, core, &mut kinds);
+        if crate::machine::first_call_at(&mut core.counted_at, world.game_time()) {
+            count(&world, pos, core, &mut kinds);
+        }
         if core.is_done() && core.reported == 0 && world.entity(core.driller).is_some() {
             report(&world, core.driller, core);
             core.reported = 1;

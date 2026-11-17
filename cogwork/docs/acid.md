@@ -29,8 +29,9 @@ the acid in it, a water inlet on its side and an acid outlet low on its front.
   side but its front, and keeps up to 4,000 mB.
 - **Acid out of its front**, the side with the outlet, the side that faced you when you placed
   it, up to 100 mB a tick into a liquid tube or tank there. It keeps up to 4,000 mB of acid; with
-  no room for a batch's, it waits, "Full of acid". It never pours acid into a tube that still
-  holds a little of another liquid.
+  no room for a batch's, it waits, "Full of acid". As everywhere, acid never takes the place of
+  even a little of another liquid, nor another liquid that of acid
+  ([two liquids](liquids.md)).
 - It fizzes while it works. It stores 4,000 energy and takes in up to 200 a tick.
 - Broken, by hand or by a machine, it keeps its water and acid in its item, and placed again it
   has them back; its sulfur spills.

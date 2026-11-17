@@ -79,6 +79,7 @@ The controller's front lights while it distils, and the column rumbles.
 | Its temperature | "352 degrees (distils at 320 to 380)" |
 | Its status | What it does, or what stops it |
 | Heated by | Steam, its burner, or not heated, in the last tick |
+| Energy | What its heaters' burners used in the last tick, 300 or none, and how far short they fell when steam ran out ([readouts](power.md#energy-readouts)) |
 | Cooled | Whether its condensers cooled it in the last tick |
 | Oil | The crude its controller holds, of 4,000 mB |
 | Sulfur | Its output |

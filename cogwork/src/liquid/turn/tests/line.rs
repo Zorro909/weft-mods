@@ -208,6 +208,19 @@ fn a_pressure_line_keeps_steam_and_acid_apart_and_loses_neither() {
 }
 
 #[test]
+fn water_flowing_onto_a_leftover_of_acid_never_washes_it_away() {
+    let (water, acid) = (key_named("base:water"), crate::acid::key());
+    let vessels = vec![holder(Kind::Tube, 1), holder(Kind::Tube, 0)];
+    let held = vec![holding(water, 1000), holding(acid, 5)];
+    let mut line = Line::new(vessels, held);
+    for _ in 0..50 {
+        line.turn();
+        assert_eq!(line.total(acid), 5, "the 5 mB of acid stay");
+        assert_eq!(line.total(water), 1000, "the water stays above");
+    }
+}
+
+#[test]
 fn a_mixed_line_makes_and_loses_nothing_and_keeps_steam_and_water_apart() {
     let (steam, water) = (crate::steam::key(), key_named("base:water"));
     let kinds = [

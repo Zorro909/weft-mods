@@ -4,7 +4,7 @@
 use weft_sdk::{Arg, ClientView, S, TextOut, Ui, item_name};
 
 use super::oil::REACH;
-use super::survey::{BAND, BANDS, KINDS};
+use super::survey::{BANDS, KINDS};
 use super::{FIELDS, START, SURVEY, Start, Status, Survey};
 use crate::ghost::item_of;
 
@@ -89,9 +89,8 @@ fn area_line(survey: &Survey, out: &mut TextOut) {
         return;
     }
     let [across, _, along] = survey.area().size();
-    let top = survey.lo.y - 1;
-    let bottom = top - survey.layers as i32 + 1;
-    let args = [across, along, top, bottom].map(|number| Arg::Int(number.into()));
+    let [across, along] = [across, along].map(i64::from);
+    let args = [across, along, survey.top(), survey.bottom()].map(Arg::Int);
     out.set("cogwork.seismic_thumper.area", &args);
 }
 
@@ -106,8 +105,8 @@ fn table(ui: &mut Ui) {
                 if band >= survey.bands() {
                     return blank(out);
                 }
-                let top = survey.lo.y - 1 - band as i32 * BAND;
-                out.set("cogwork.seismic_thumper.band", &[Arg::Int(top.into())]);
+                let top = Arg::Int(survey.band_top(band));
+                out.set("cogwork.seismic_thumper.band", &[top]);
             });
         }
     });

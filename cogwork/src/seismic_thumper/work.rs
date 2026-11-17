@@ -2,7 +2,9 @@
 //! survey is paid for, the weight drops every `THUMP_EVERY` ticks; then it counts up to `BUDGET`
 //! blocks a tick, keeping the layer it counts loaded meanwhile; then it listens for oil fields
 //! (`oil`). A block that stays unloaded for `FLOOR_WAIT` is taken for the floor of the world: the
-//! count ends there. Energy goes in one tick's worth a call, so missed ticks pay for nothing.
+//! count ends there. Energy goes in one tick's worth a call, so missed ticks pay for nothing; the
+//! rest happens in the first call of a tick only, so making up missed ticks reads no more blocks,
+//! listens to no more squares and drops the weight no more often.
 
 use std::collections::HashMap;
 
@@ -38,24 +40,25 @@ pub fn tick(batch: &mut SystemBatch<Survey>) {
         machine::start_meter(&world, id);
         let front = machine::front(&world, pos);
         survey.weight = weight::place(&world, id, pos, front, survey.weight);
+        let first = machine::first_call_at(&mut survey.worked_at, world.game_time());
         match survey.status() {
-            Status::Thumping | Status::NoPower => thump(&world, id, pos, survey),
-            Status::Counting => count(&world, pos, survey, &mut kinds),
-            Status::Listening => oil::listen(&world, pos, survey),
-            Status::Idle | Status::Done => {}
+            Status::Thumping | Status::NoPower => thump(&world, id, pos, survey, first),
+            Status::Counting if first => count(&world, pos, survey, &mut kinds),
+            Status::Listening if first => oil::listen(&world, pos, survey),
+            _ => {}
         }
     }
 }
 
-/// Puts energy into the survey of the thumper `id` at `pos`, the weight dropping now and then,
-/// and starts counting once it is paid for.
-fn thump(world: &World, id: u64, pos: Pos, survey: &mut Survey) {
+/// Puts energy into the survey of the thumper `id` at `pos`, the weight dropping now and then in
+/// the `first` call of a tick, and starts counting once it is paid for.
+fn thump(world: &World, id: u64, pos: Pos, survey: &mut Survey, first: bool) {
     let status = match machine::pay(world, id, &mut survey.spent, SURVEY_COST, DRAW) {
         Payment::Paid => Status::Counting,
         Payment::Paying => Status::Thumping,
         Payment::NoPower => Status::NoPower,
     };
-    if status == Status::Thumping && world.game_time().is_multiple_of(THUMP_EVERY) {
+    if first && status == Status::Thumping && world.game_time().is_multiple_of(THUMP_EVERY) {
         weight::drop_on(world, survey.weight, pos);
     }
     survey.set_status(status);

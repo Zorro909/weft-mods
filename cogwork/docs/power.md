@@ -92,8 +92,9 @@ The screen of every machine that runs on energy (the [quarries](excavator.md), t
 [leveler](leveler.md), the [assembly bench](assembly-bench.md), the [pump](oil.md#pump), the
 [shaker screen, grinding mill, washer and flotation cell](processing.md), the
 [driven bellows](bellows.md#driven-bellows), the [polymerizer and molding press](plastics.md),
-the [acid tank and leaching vat](acid.md) and the
-[seismic thumper](prospecting.md#seismic-thumper)) shows, under its stored energy, what it used in the last tick: "Using 120 energy a tick". When
+the [acid tank and leaching vat](acid.md), the
+[seismic thumper](prospecting.md#seismic-thumper), and the [refinery](refinery.md) for its
+heaters' burners) shows, under its stored energy, what it used in the last tick: "Using 120 energy a tick". When
 it wanted more than its store held, it says by how much, "Using 90 energy a tick, short 30": add
 an engine or a faster one until the shortfall goes. A machine waiting (for its output to empty,
 for blocks to fill with) uses nothing, except a quarry: it pays its standby for as long as

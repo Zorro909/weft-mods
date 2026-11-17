@@ -285,6 +285,21 @@ mod tests {
     }
 
     #[test]
+    fn acid_and_another_liquid_never_join_while_any_of_either_is_left() {
+        let acid = crate::acid::key();
+        assert!(
+            !may_join(&[held(WATER, 8000), held(acid, 3)]),
+            "3 mB of acid"
+        );
+        assert!(!may_join(&[held(acid, 8000), held(OIL, 3)]), "3 mB of oil");
+        assert!(may_join(&[held(acid, 8000), held(acid, 3)]), "all acid");
+        assert!(
+            may_join(&[held(acid, 8000), held(NO_LIQUID, 0)]),
+            "an empty block"
+        );
+    }
+
+    #[test]
     fn a_share_of_a_new_liquid_forgets_the_head_told_of_the_old() {
         let told = Held {
             head: 40,

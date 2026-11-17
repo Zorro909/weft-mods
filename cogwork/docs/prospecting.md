@@ -49,7 +49,8 @@ seconds, the count ends there, and what lies deeper reads as none.
 
 ## On the server
 
-The drill counts at most 1,024 blocks a tick, so a whole core, 32,768 blocks, takes 32 ticks,
+The drill counts at most 1,024 blocks a tick, also while it makes up time it spent unloaded, so
+a whole core, 32,768 blocks, takes 32 ticks,
 spread over the turns as they come. While it counts, it keeps the cube it counts in loaded, and
 lets it go when done or broken.
 
@@ -73,8 +74,9 @@ sss       S = #ore_blocks/steel
    across, from the end nearest the thumper.
 3. **Thumping.** A survey takes 50,000 energy, at up to 500 a tick: 100 ticks at full power,
    longer with less. The weight drops all the while.
-4. **Counting.** It counts every ore block in its area, from the layer under it down 160 layers
-   or to the world's lowest layer, whichever comes first, in bands of 16 layers.
+4. **Counting.** It counts every ore block in its area, from the layer under it down 160 layers,
+   in bands of 16 layers. Where the world's bottom comes first, the count ends there. How deep
+   quarries may dig has no say in it.
 5. **Listening.** It looks for oil fields within 256 blocks of it, a moment later.
 
 Its screen then shows the survey until the next one: for each ore, its blocks in each band, the
@@ -105,8 +107,8 @@ It stores 10,000 energy and takes in up to 1,000 a tick.
 
 ### On the server
 
-The thumper counts at most 2,048 blocks a tick: a 32 by 32 area 160 layers deep, 163,840
-blocks, takes 80 ticks, a 64 by 64 one 320. While it counts, it keeps the cubes of the layer it
+The thumper counts at most 2,048 blocks a tick, also while it makes up time it spent unloaded:
+a 32 by 32 area 160 layers deep, 163,840 blocks, takes 80 ticks, a 64 by 64 one 320. While it counts, it keeps the cubes of the layer it
 counts loaded, and lets them go when done or broken; a layer that stays unloaded for ten seconds
 is taken for the world's bottom, and the count ends there. It hears oil fields by asking the
 world where each 96 by 96 square's field starts, one square a tick, without loading or scanning
