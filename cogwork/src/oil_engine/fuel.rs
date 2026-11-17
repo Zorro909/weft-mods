@@ -1,7 +1,9 @@
 //! What an oil engine burns and makes: 2.5 millibuckets of oil and 5 of water a tick for 600
 //! energy, so a bucket of oil gives 240,000 and lasts 20 seconds, and a medium oil field (739
-//! buckets) keeps one engine running a little over 4 hours. It runs a tick only when it has all
-//! it needs and room for what it makes, so it never burns oil for nothing.
+//! buckets) keeps one engine running a little over 4 hours. Diesel from a refinery goes further:
+//! 1 millibucket a tick for the same, so a bucket lasts 50 seconds; it burns diesel while it has
+//! any, and oil otherwise. It runs a tick only when it has all it needs and room for what it
+//! makes, so it never burns fuel for nothing.
 
 use super::OilEngine;
 use crate::liquid::{self, LiquidKey};
@@ -10,11 +12,13 @@ use crate::liquid::{self, LiquidKey};
 pub const MAKES: i64 = 600;
 /// Oil it burns a tick, in half millibuckets: 2.5 millibuckets.
 const OIL_HALVES: u32 = 5;
+/// Diesel it burns a tick instead, in millibuckets.
+const DIESEL: u32 = 1;
 /// Water it turns to vapor a tick, in millibuckets.
 const WATER: u32 = 5;
 /// Energy it holds: 100 ticks of what it makes.
 pub const ENERGY_STORED: i64 = 100 * MAKES;
-/// Millibuckets of oil, and of water, it holds: 16 buckets each.
+/// Millibuckets of oil, of diesel and of water it holds: 16 buckets each.
 pub const LIQUID_STORED: u32 = 16_000;
 /// Steps the gauges on its controller show, besides empty.
 pub const GAUGE_STEPS: u32 = 4;
@@ -28,16 +32,20 @@ pub enum Lack {
 }
 
 impl OilEngine {
-    /// Runs it up to `ticks` ticks, as long as it has oil, water and room for the energy. Returns
+    /// Runs it up to `ticks` ticks, as long as it has fuel, water and room for the energy. Returns
     /// the ticks it ran and, when it stopped short, what it lacked.
     pub fn burn(&mut self, ticks: u32) -> (u32, Option<Lack>) {
         for ran in 0..ticks {
             if let Some(lack) = self.lack() {
                 return (ran, Some(lack));
             }
-            let taken = OIL_HALVES.saturating_sub(self.carry).div_ceil(2);
-            self.oil -= taken;
-            self.carry = self.carry + 2 * taken - OIL_HALVES;
+            if self.diesel >= DIESEL {
+                self.diesel -= DIESEL;
+            } else {
+                let taken = OIL_HALVES.saturating_sub(self.carry).div_ceil(2);
+                self.oil -= taken;
+                self.carry = self.carry + 2 * taken - OIL_HALVES;
+            }
             self.water -= WATER;
             self.energy += MAKES;
         }
@@ -49,7 +57,7 @@ impl OilEngine {
         let oil_needed = OIL_HALVES.saturating_sub(self.carry).div_ceil(2);
         if self.energy + MAKES > ENERGY_STORED {
             Some(Lack::Room)
-        } else if self.oil < oil_needed {
+        } else if self.diesel < DIESEL && self.oil < oil_needed {
             Some(Lack::Oil)
         } else if self.water < WATER {
             Some(Lack::Water)
@@ -65,11 +73,20 @@ impl OilEngine {
             LIQUID_STORED - self.water.min(LIQUID_STORED),
         )
     }
+
+    /// Millibuckets more of diesel it has room for.
+    pub fn diesel_room(&self) -> u32 {
+        LIQUID_STORED - self.diesel.min(LIQUID_STORED)
+    }
 }
 
-/// The liquids it burns: oil, and water for vapor.
+/// The liquids it burns: oil or diesel, and water for vapor.
 pub fn oil() -> LiquidKey {
     liquid::key_named("cogwork:oil")
+}
+
+pub fn diesel() -> LiquidKey {
+    crate::refinery::products::Product::Diesel.key()
 }
 
 pub fn water() -> LiquidKey {
@@ -136,6 +153,39 @@ mod tests {
         engine.energy = ENERGY_STORED - MAKES;
         assert_eq!(engine.burn(10), (1, Some(Lack::Room)), "room for one tick");
         assert_eq!(engine.energy, ENERGY_STORED, "full");
+    }
+
+    #[test]
+    fn a_bucket_of_diesel_lasts_fifty_seconds() {
+        let mut engine = OilEngine {
+            diesel: 1000,
+            water: LIQUID_STORED,
+            ..OilEngine::default()
+        };
+        let mut ran = 0;
+        loop {
+            engine.energy = 0;
+            let (ticks, lack) = engine.burn(50);
+            ran += ticks;
+            if lack.is_some() {
+                assert_eq!(lack, Some(Lack::Oil), "it ran out of fuel");
+                break;
+            }
+        }
+        assert_eq!(ran, 1000, "a tick a millibucket");
+        assert_eq!(ran as i64 * MAKES, 600_000, "for 600,000 energy");
+    }
+
+    #[test]
+    fn it_burns_diesel_first_then_oil() {
+        let mut engine = OilEngine {
+            diesel: 2,
+            ..stocked()
+        };
+        assert_eq!(engine.burn(4), (4, None), "four ticks");
+        assert_eq!(engine.diesel, 0, "two of diesel");
+        assert_eq!(engine.oil, 995, "then two of oil");
+        assert_eq!(engine.energy, 4 * MAKES, "all at 600 a tick");
     }
 
     #[test]

@@ -1,9 +1,9 @@
-//! The oil engine: a 3 by 3 by 3 cube of parts that burns oil, with water for vapor, for 600
-//! energy a tick, fifteen times an ember engine. Its controller, in the middle of its front, checks
+//! The oil engine: a 3 by 3 by 3 cube of parts that burns oil or a refinery's diesel, with water
+//! for vapor, for 600 energy a tick, fifteen times an ember engine. Its controller, in the middle of its front, checks
 //! the cube behind it every tick (`pattern`) and runs it once it is built (`run`): liquid tubes
-//! fill its intakes with oil and water, and its drives give the energy to the block they face and
+//! fill its intakes with oil, diesel and water, and its drives give the energy to the block they face and
 //! to torque shafts. Built, its casing shows one framed panel a face and a rig of two cylinders
-//! turns on top (`rig`). It has no heat: it runs while it has oil, water and room for what it
+//! turns on top (`rig`). It has no heat: it runs while it has fuel, water and room for what it
 //! makes, so no oil goes to waste.
 
 pub mod fuel;
@@ -37,7 +37,7 @@ value! {
     /// its status, `stroke` (anything but 0 while its rig makes a stroke), while it is not
     /// built its fault and the block where (`fault_x`, `fault_y`, `fault_z`), `checked`, 1
     /// once its first tick has shown its casing as it is (`run`), and `ran`, 1 once it has run
-    /// since its rig's last stroke began.
+    /// since its rig's last stroke began, and its `diesel` in millibuckets, last as it came last.
     #[derive(Default)]
     pub struct OilEngine {
         pub rig: u64,
@@ -53,6 +53,7 @@ value! {
         pub fault_z: i32,
         pub checked: u32,
         pub ran: u32,
+        pub diesel: u32,
     }
 }
 static OIL_ENGINE: Component<OilEngine> = Component::named("cogwork:oil_engine");
@@ -108,9 +109,10 @@ impl OilEngine {
     }
 }
 
-/// Whether an engine burns `liquid`: oil, and water for vapor. Its intakes take nothing else.
+/// Whether an engine burns `liquid`: oil or diesel, and water for vapor. Its intakes take
+/// nothing else.
 pub fn burns(liquid: LiquidKey) -> bool {
-    liquid == fuel::oil() || liquid == fuel::water()
+    liquid == fuel::oil() || liquid == fuel::diesel() || liquid == fuel::water()
 }
 
 pub fn register(r: &mut Registry) {
@@ -145,6 +147,7 @@ pub fn register(r: &mut Registry) {
 /// +------------------------------------------------+
 /// | Oil Engine Controller                          |
 /// | [#####.....]  12000 / 16000 mB of Oil          |
+/// | [##........]  4000 / 16000 mB of Diesel        |
 /// | [###.......]  8000 / 16000 mB of Water         |
 /// | [#######...]  42000 / 60000 energy             |
 /// | Running: 600 energy a tick                     |  or what keeps it from running
@@ -157,6 +160,12 @@ fn screen(ui: &mut Ui) {
         store_bar(ui, "cogwork:oil_engine_oil", "item:cogwork:oil", |engine| {
             engine.oil
         });
+        store_bar(
+            ui,
+            "cogwork:oil_engine_diesel",
+            "item:cogwork:diesel",
+            |engine| engine.diesel,
+        );
         store_bar(
             ui,
             "cogwork:oil_engine_water",
@@ -253,10 +262,7 @@ mod tests {
         assert_eq!(offset_of!(OilEngine, status), 28, "after the carry");
         assert_eq!(offset_of!(OilEngine, fault_x), 40, "the fault's place");
         assert_eq!(offset_of!(OilEngine, checked), 52, "whether checked");
-        assert_eq!(
-            offset_of!(OilEngine, ran),
-            56,
-            "whether it ran this stroke, last"
-        );
+        assert_eq!(offset_of!(OilEngine, ran), 56, "whether it ran this stroke");
+        assert_eq!(offset_of!(OilEngine, diesel), 60, "its diesel, last");
     }
 }

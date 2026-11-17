@@ -1,6 +1,7 @@
-//! Mining one block: the drill travels to it, energy is paid by how hard it is, and what it drops
-//! goes into the quarry's output, stone and ore as rubble (`rubble::quarried`), as much Ore
-//! Rubble as its kind brings up.
+//! Mining one block: the drill travels to it, energy is paid by how hard it is, a fifth less with
+//! lubricant (`lube`), and what it drops goes into the quarry's output, stone and ore as rubble
+//! (`rubble::quarried`), as much Ore Rubble as its kind brings up. A block mined wears the bit
+//! and uses its lubricant.
 
 use weft_sdk::{Vec3, World};
 
@@ -8,7 +9,7 @@ use super::depth::at_depth;
 use super::dig::Quarry;
 use super::kind::Kind;
 use super::power::{pay, travel};
-use super::{Dig, Frame, Status};
+use super::{Dig, Frame, Status, bit, lube};
 use crate::harvest::{Harvest, Keep, cost, harvest};
 use crate::lib::{BlockState, Pos, point};
 
@@ -32,10 +33,22 @@ pub fn worth_mining(block_state: BlockState) -> bool {
 }
 
 /// Energy to mine `block_state` at `cell` inside `frame`: dearer the deeper it lies below the
-/// excavator, which stands at the bottom of its frame.
-pub fn block_cost(frame: &Frame, cell: Pos, block_state: BlockState) -> i64 {
+/// excavator, which stands at the bottom of its frame, and a fifth less `lubed`.
+pub fn block_cost(frame: &Frame, cell: Pos, block_state: BlockState, lubed: bool) -> i64 {
     let plain = cost(block_state, BASE_COST, COST_PER_HARDNESS);
-    at_depth(plain, frame.below(cell))
+    let deep = at_depth(plain, frame.below(cell));
+    if lubed { lube::eased(deep) } else { deep }
+}
+
+/// What a block mined by `quarry` costs it besides energy: wear on its bit, half as often with
+/// lubricant, and the lubricant.
+pub fn wear_down(world: &World, quarry: Quarry, dig: &mut Dig) {
+    if lube::wears(quarry.lubed, &mut dig.lube_skipped) {
+        bit::wear(world, quarry.id);
+    }
+    if quarry.lubed {
+        lube::use_up(world, quarry.id);
+    }
 }
 
 /// Where the drill is while it mines the block `cell` inside `frame`, `done` of the way through (0
@@ -84,7 +97,12 @@ pub fn mine_block(
     }
     dig.set_status(Status::Mining);
     let id = quarry.id;
-    let cost = block_cost(&dig.frame, cell, block_state);
+    let cost = block_cost(&dig.frame, cell, block_state, quarry.lubed);
+    let draw = if quarry.lubed {
+        lube::eased(draw)
+    } else {
+        draw
+    };
     if !pay(world, id, dig, cell, cost, draw) {
         return Mined::Waiting(dig.status());
     }

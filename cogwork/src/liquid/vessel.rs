@@ -1,7 +1,8 @@
 //! The blocks that hold liquid: a liquid tube, a timber liquid tube, a pump, an oil engine's
 //! intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
-//! engine, a trip hammer, a flotation cell or a clarifier, one block each, or a tank, one holder
-//! however many blocks it has.
+//! engine, a trip hammer, a flotation cell, a clarifier, a refinery's controller, heater,
+//! condenser or tap, or a quarry, one block each, or a tank, one holder however many blocks it
+//! has.
 //! `turn` passes liquid between them. What each holder keeps is read and written through `Holders`.
 
 mod discover;
@@ -40,18 +41,23 @@ pub enum Kind {
     Driven,
     /// An oil engine's intake: it takes oil and water for the engine and hands nothing on.
     Intake,
-    /// A grinding mill, a washer, a boiler or a flotation cell: it takes water for its work and
-    /// hands nothing on.
+    /// A grinding mill, a washer, a boiler, a flotation cell or a refinery's condenser: it takes
+    /// water for its work and hands nothing on.
     Mill,
-    /// A coke oven's door or drain: it hands on the creosote the oven makes, by height as a tube
-    /// does, and takes nothing.
+    /// A coke oven's door or drain, or a refinery's tap: it hands on what the machine makes, by
+    /// height as a tube does, and takes nothing.
     Drain,
     /// A firebox: it takes lava to burn and hands nothing on.
     Firebox,
-    /// A steam engine or a trip hammer: it takes steam for its work and hands nothing on.
+    /// A steam engine, a trip hammer or a refinery's heater: it takes steam for its work and
+    /// hands nothing on.
     Steam,
     /// A clarifier: it takes muddy water to settle and hands nothing on.
     Settler,
+    /// A refinery's controller: it takes crude oil to distil and hands nothing on.
+    Still,
+    /// A quarry: it takes lubricant for its drill and hands nothing on.
+    Lubed,
 }
 
 impl Kind {
@@ -64,7 +70,13 @@ impl Kind {
     pub fn keeps(self) -> bool {
         matches!(
             self,
-            Kind::Intake | Kind::Mill | Kind::Firebox | Kind::Steam | Kind::Settler
+            Kind::Intake
+                | Kind::Mill
+                | Kind::Firebox
+                | Kind::Steam
+                | Kind::Settler
+                | Kind::Still
+                | Kind::Lubed
         )
     }
 
@@ -77,6 +89,8 @@ impl Kind {
             Kind::Firebox => liquid == super::key_named("base:lava"),
             Kind::Steam => super::rises(liquid),
             Kind::Settler => liquid == crate::muddy_water::key(),
+            Kind::Still => liquid == super::key_named("cogwork:oil"),
+            Kind::Lubed => liquid == crate::refinery::products::Product::Lubricant.key(),
             Kind::Tube | Kind::Pump | Kind::Driven => true,
         }
     }
@@ -120,8 +134,9 @@ impl Vessel {
     }
 
     /// Whether `liquid` may go into it at all: an intake takes only what an engine burns, a
-    /// grinding mill, a washer, a boiler or a flotation cell only water, a firebox only lava, a
-    /// steam machine only steam, a clarifier only muddy water, a coke oven's drain nothing.
+    /// grinding mill, a washer, a boiler, a flotation cell or a condenser only water, a firebox
+    /// only lava, a steam machine or a heater only steam, a clarifier only muddy water, a
+    /// refinery's controller only crude, a quarry only lubricant, a drain or a tap nothing.
     pub fn admits(&self, liquid: LiquidKey) -> bool {
         self.kind().admits(liquid)
     }

@@ -25,7 +25,7 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
   millibucket, so a tube or tank that held water takes steam only once it is empty, or broken
   and placed again, and the other way round.
 
-An oil engine's intake takes only oil or water, one at a time, and hands nothing on. A
+An oil engine's intake takes only oil, diesel or water, one at a time, and hands nothing on. A
 [grinding mill](processing.md#grinding-mill) or a [washer](processing.md#washer) takes only
 water, and hands nothing on either. A [coke oven's](steel.md#creosote) door and drains hand on
 the creosote the oven makes, and take nothing. A [firebox](steam.md#firebox) takes only lava, a
@@ -34,7 +34,11 @@ the creosote the oven makes, and take nothing. A [firebox](steam.md#firebox) tak
 its steam out of its top. A [flotation cell](processing.md#flotation-cell) takes only water, and
 draws creosote itself out of a tube, tank or coke oven drain beside it; it lets its
 [muddy water](processing.md#muddy-water) out of its back. A [clarifier](processing.md#clarifier)
-takes only muddy water, and lets the clear water it settles out of its front.
+takes only muddy water, and lets the clear water it settles out of its front. A
+[refinery's](refinery.md) controller takes only crude oil, its heaters only steam and its
+condensers only water, and none hands anything on; its taps hand on what the column makes, by
+height as a tube does, and take nothing, and a bucket fills from them. A [quarry](excavator.md#lubricant)
+takes only lubricant, and hands nothing on.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.

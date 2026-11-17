@@ -1,7 +1,7 @@
 //! The liquid bars on the pump's and the oil engine's screens, drawn like the power bar beside
 //! them: a sunken track and a fill, the track marked at every bucket the machine holds. The
 //! pump's bar shows any liquid, so its fill is a neutral glassy blue rather than one liquid's
-//! color; the engine has a bar of oil and one of water.
+//! color; the engine has a bar of oil, one of diesel and one of water.
 
 use super::{CLEAR, OIL, Picture, Rgba};
 
@@ -28,6 +28,16 @@ const FILL: [Rgba; 6] = [
     [0x2c, 0x62, 0x9c, 255],
 ];
 
+/// Diesel in a bar: pale amber on top, darkening down.
+const DIESEL_FILL: [Rgba; 6] = [
+    [0xf0, 0xd8, 0x8a, 255],
+    [0xd2, 0xae, 0x52, 255],
+    [0xb4, 0x8e, 0x34, 255],
+    [0xa6, 0x82, 0x2c, 255],
+    [0x9a, 0x76, 0x26, 255],
+    [0x7a, 0x5a, 0x1a, 255],
+];
+
 /// Oil in a bar: its sheen on top, darkening down.
 const OIL_FILL: [Rgba; 6] = [OIL[4], OIL[3], OIL[2], OIL[2], OIL[1], OIL[0]];
 
@@ -37,6 +47,8 @@ pub fn all() -> Vec<(&'static str, Picture)> {
         ("gui/tank_fill", fill(&FILL)),
         ("gui/oil_engine_oil", track(ENGINE_BUCKETS)),
         ("gui/oil_engine_oil_fill", fill(&OIL_FILL)),
+        ("gui/oil_engine_diesel", track(ENGINE_BUCKETS)),
+        ("gui/oil_engine_diesel_fill", fill(&DIESEL_FILL)),
         ("gui/oil_engine_water", track(ENGINE_BUCKETS)),
         ("gui/oil_engine_water_fill", fill(&FILL)),
     ]

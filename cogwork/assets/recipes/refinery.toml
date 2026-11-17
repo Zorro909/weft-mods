@@ -1,0 +1,34 @@
+# The refinery: its column of steel and iron casing, the controller, heaters, condensers and taps,
+# and asphalt from the tar it makes. It comes after steam: its heater is a firebox in a steel jacket.
+# Asphalt takes a bucket of tar, which the crafting grid hands back empty.
+
+[[shaped]]
+result = "refinery_casing"
+count = 8
+pattern = ["isi", "s s", "isi"]
+key = { i = "#ingots/iron", s = "#ingots/steel" }
+
+[[shaped]]
+result = "refinery"
+pattern = ["cgc", "GtG", "ccc"]
+key = { c = "refinery_casing", g = "base:glass", G = "#cogs/gold", t = "liquid_tube" }
+
+[[shaped]]
+result = "refinery_heater"
+pattern = [" c ", "tFt", " c "]
+key = { c = "refinery_casing", t = "liquid_tube", F = "firebox" }
+
+[[shaped]]
+result = "refinery_condenser"
+pattern = [" i ", "tct", " i "]
+key = { i = "#ingots/iron", t = "liquid_tube", c = "refinery_casing" }
+
+[[shapeless]]
+result = "refinery_tap"
+inputs = ["refinery_casing", "liquid_tube", "#ingots/iron"]
+
+[[shaped]]
+result = "asphalt"
+count = 8
+pattern = ["GSG", "StS", "GSG"]
+key = { G = "base:gravel", S = "#sand", t = "tar_bucket" }

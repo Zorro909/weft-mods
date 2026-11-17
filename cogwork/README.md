@@ -9,7 +9,8 @@ leveler that makes land flat. A pump brings up oil from deep underground, liquid
 tanks carry and store it, and an oil engine burns it for far more energy than the small engines.
 A coke oven, a blast furnace and a forge anvil make steel, and a boiler on a firebox makes steam
 for a steam engine and a trip hammer. Steel builds a bigger quarry and a flotation cell that makes
-its ore richer, and a core drill tells what ore lies below before you dig.
+its ore richer, and a core drill tells what ore lies below before you dig. A refinery column
+distils crude oil into diesel for the oil engine, lubricant for the quarries and tar for roads.
 
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
@@ -30,7 +31,7 @@ it; the ember engine burns fuel, but not lava, for four times as much energy and
 nothing takes it. A water wheel over a stream turns for a little energy of its own. Engines push energy into
 the block their trunk points at, and wooden axles and torque shafts carry it further, joining
 any mod's cables. The oil engine, a cube of 27
-blocks built around a combustion chamber, burns oil with water for 600 energy a tick, its two
+blocks built around a combustion chamber, burns oil or diesel with water for 600 energy a tick, its two
 pistons and flywheel turning on top and its exhaust hazing the air round it: about 4 hours on a
 medium oil field. Every machine's screen shows what it used last tick and how short its supply
 fell; the oil engine's what it gave out.
@@ -76,6 +77,15 @@ with water and sand, its runner turning with each turn of its handle; the sieve 
 into sand and gravel and, now and then, something better. Their driven counterparts, the shaker
 screen and the grinding mill, do the same with engine energy, fed by tubes and the mill's water
 by liquid tube.
+
+### Refinery
+
+A steel column 3 by 3 and 6 high distils crude oil, heated by steam or engine energy at its foot
+and cooled by water at its top. Keep its temperature in its band and every bucket gives gas,
+diesel, lubricant, tar and a sulfur, each out of the taps on its own layer; too cold and it all
+goes to tar, too hot and the gas vents in pale puffs. Diesel runs an oil engine two and a half
+times as long as oil, lubricant led into a quarry saves a fifth of its energy and half its bit's
+wear, and tar with gravel and sand lays asphalt, a road you walk a fifth faster on.
 
 ### Bellows
 
@@ -137,6 +147,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Quarries](docs/excavator.md): the Timber Quarry, the Iron Quarry, the Steel Excavator and the
   Gantry Excavator
 - [Prospecting](docs/prospecting.md): the core drill
+- [Refinery](docs/refinery.md): the column, its products and asphalt
 - [Assembly bench](docs/assembly-bench.md)
 - [Leveler](docs/leveler.md)
 - [Survey markers](docs/survey-markers.md)

@@ -11,6 +11,9 @@ ticks), you can't see through it, and it slows whatever moves in it. Oil can't b
 it comes from the ground, by pump or with a bucket from a seep. An empty base bucket takes up a
 source of it as an Oil Bucket, which pours it out again.
 
+Oil is burnt as it is in the [oil engine](oil-engine.md), or distilled as crude in a
+[refinery](refinery.md) into diesel, lubricant, tar and gas. Every field holds the same crude.
+
 ## Oil fields
 
 Fields are rare. The overworld is divided into squares of 96 by 96 blocks, and one in 32 holds
