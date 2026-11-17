@@ -79,13 +79,14 @@ fn leave(dig: &mut Dig) {
 /// Puts up the frame block at `cell`, which is clear: paid for, its materials taken.
 fn put_up(world: &World, quarry: Quarry, dig: &mut Dig, cell: Pos) {
     dig.refused = 0;
-    if !materials::take(world, quarry, true) {
+    if !materials::take(world, quarry, dig.step, true) {
         dig.set_status(Status::NeedsMaterials);
         return;
     }
     dig.set_status(Status::Frame);
     let draw = quarry.kind.build_draw();
-    if !pay(world, quarry.id, dig, cell, FRAME_COST, draw) || !materials::take(world, quarry, false)
+    if !pay(world, quarry.id, dig, cell, FRAME_COST, draw)
+        || !materials::take(world, quarry, dig.step, false)
     {
         return;
     }
@@ -171,7 +172,7 @@ mod tests {
 
     use super::super::Frame;
     use super::super::bit::{IRON_BIT, STONE_BIT};
-    use super::super::kind::{GANTRY, TIMBER};
+    use super::super::kind::rows::{GANTRY, TIMBER};
     use super::*;
 
     #[test]

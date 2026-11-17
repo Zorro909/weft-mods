@@ -1,0 +1,18 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.clarifier_rake.turn": {
+			"loop": true,
+			"animation_length": 4,
+			"bones": {
+				"rake": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"2.0": [0, -90, 0],
+						"4.0": [0, -180, 0]
+					}
+				}
+			}
+		}
+	}
+}

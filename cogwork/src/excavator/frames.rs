@@ -1,11 +1,13 @@
 //! The blocks quarries build their frames of. The Gantry's is a plain lattice cube that drops
-//! nothing. The others, the Timber Quarry's lashed logs and the Iron Quarry's bars, are poles
-//! joined toward the frame blocks beside them, drawn from a hub-and-arm model (`arms`), and give
-//! back what they were built of when broken.
+//! nothing. The Steel Excavator's is a cube of riveted steel lattice, built of a steel ingot for
+//! every four blocks, so one in four gives an ingot back when broken. The others, the Timber
+//! Quarry's lashed logs and the Iron Quarry's bars, are poles joined toward the frame blocks
+//! beside them, drawn from a hub-and-arm model (`arms`), and give back what they were built of
+//! when broken.
 
 use std::sync::LazyLock;
 
-use weft_sdk::{Block, Dir, Props, Registry, State, World, tool_tier};
+use weft_sdk::{Block, Cond, Dir, Pool, Props, Registry, State, World, tool_tier};
 
 use crate::arms::{Arm, HubAndArms};
 use crate::lib::{BlockState, Pos, TypedWorld};
@@ -13,6 +15,7 @@ use crate::lib::{BlockState, Pos, TypedWorld};
 pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 pub static LASHED_FRAME: Block = Block::named("lashed_frame");
 pub static IRON_FRAME: Block = Block::named("iron_frame");
+pub static STEEL_FRAME: Block = Block::named("steel_frame");
 
 /// A frame block of poles: the block, its model, and the item it drops when broken.
 struct Poles {
@@ -50,9 +53,37 @@ pub fn register(r: &mut Registry) {
         .mined_by("pickaxe", tool_tier::HAND)
         .drops_nothing()
         .no_item();
+    register_steel(r);
     for poles in &POLES {
         register_poles(r, poles);
     }
+}
+
+/// The steel lattice, which gives back an ingot as often as the frame took one.
+fn register_steel(r: &mut Registry) {
+    r.block(&STEEL_FRAME)
+        .texture("steel_frame")
+        .cutout()
+        .hardness(1.5)
+        .mined_by("pickaxe", tool_tier::HAND)
+        .sound_group("base:block.stone")
+        .no_item();
+    r.loot(&STEEL_FRAME).pool(
+        Pool::new()
+            .when(Cond::harvested())
+            .when(Cond::chance(steel_given_back()))
+            .item("steel_ingot"),
+    );
+}
+
+/// The share of steel frame blocks that give an ingot back: one for the blocks an ingot built.
+fn steel_given_back() -> f32 {
+    let blocks = super::kind::STEEL
+        .frame_cost
+        .iter()
+        .map(|cost| cost.blocks)
+        .max();
+    1.0 / blocks.unwrap_or(1) as f32
 }
 
 fn register_poles(r: &mut Registry, poles: &'static Poles) {
@@ -133,6 +164,15 @@ mod tests {
             "a post's foot"
         );
         assert!(!runs_straight(along(&[Dir::East])), "an end");
+    }
+
+    #[test]
+    fn a_steel_frame_gives_back_what_it_took() {
+        assert_eq!(steel_given_back(), 0.25, "an ingot built four");
+        assert!(
+            crate::has_asset("textures/block/steel_frame.png"),
+            "its look"
+        );
     }
 
     #[test]

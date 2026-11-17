@@ -1,16 +1,18 @@
 //! What quarries bring up and the hand machines work: Rubble, broken stone that falls like gravel
 //! and sifts into sand, gravel and now and then something better (`sifting`); and Ore Rubble, an
 //! item of one metal (`metal`) at one grade (`grade`), which grinds into that metal's raw ore
-//! (`grinding`). Quarries bring up both (`quarry`); every Ore Rubble starts Poor.
+//! (`grinding`). Quarries bring up both (`quarry`); every Ore Rubble starts Poor, and machines
+//! raise its grade a step at a time (`raise`).
 
 mod grade;
 pub mod grinding;
 mod metal;
 mod quarry;
+pub mod raise;
 pub mod sifting;
 
 pub use grade::Grade;
-pub use metal::Ore;
+pub use metal::{Ore, ore_name};
 pub use quarry::quarried;
 use weft_sdk::{Block, Component, Item, ItemStack, Registry, StackData, abi, tool_tier};
 
