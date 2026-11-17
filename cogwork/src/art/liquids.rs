@@ -133,7 +133,7 @@ fn liquid_tube_hub() -> Picture {
 }
 
 /// A bucket of oil, seen a little from above.
-fn oil_bucket() -> Picture {
+pub(super) fn oil_bucket() -> Picture {
     Picture::drawn(
         &[
             "................",

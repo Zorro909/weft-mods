@@ -1,0 +1,45 @@
+# Steel: the coke oven, the blast furnace, the forge anvil and its hammer, and the steel bit.
+# Coke, sulfur, steel blooms, slag and steel ingots come out of the machines; base's recipes
+# pack steel ingots into a block of steel and back.
+
+[[shaped]]
+result = "coke_oven_bricks"
+count = 4
+pattern = ["cSc", "SBS", "cSc"]
+key = { c = "base:clay_ball", S = "#sand", B = "base:bricks" }
+
+[[shaped]]
+result = "coke_oven"
+pattern = ["BBB", "BiB", "BBB"]
+key = { B = "coke_oven_bricks", i = "#ingots/iron" }
+
+[[shaped]]
+result = "coke_oven_drain"
+pattern = [" B ", "BbB", " B "]
+key = { B = "coke_oven_bricks", b = "base:bucket" }
+
+[[shaped]]
+result = "fire_bricks"
+count = 4
+pattern = ["BcB", "cCc", "BcB"]
+key = { B = "coke_oven_bricks", c = "base:clay_ball", C = "#coke" }
+
+[[shaped]]
+result = "blast_furnace"
+pattern = ["FiF", "iui", "FiF"]
+key = { F = "fire_bricks", i = "#ingots/iron", u = "base:furnace" }
+
+[[shaped]]
+result = "forge_anvil"
+pattern = ["III", " i ", "iii"]
+key = { I = "#ore_blocks/iron", i = "#ingots/iron" }
+
+[[shaped]]
+result = "forge_hammer"
+pattern = ["iii", "isi", " s "]
+key = { i = "#ingots/iron", s = "#stick" }
+
+[[shaped]]
+result = "steel_bit"
+pattern = [" c ", "sss", " s "]
+key = { c = "#cogs/iron", s = "#ingots/steel" }

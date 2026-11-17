@@ -176,7 +176,7 @@ fn log_end() -> Picture {
 }
 
 /// A drill bit in the hand: a spiralled cone of `metal` on a wooden shank bound with string.
-fn bit_icon(metal: &[Rgba; 4]) -> Picture {
+pub(super) fn bit_icon(metal: &[Rgba; 4]) -> Picture {
     const ROWS: [&str; 16] = [
         "................",
         "...........ws...",
@@ -261,7 +261,7 @@ pub fn beam(paint: &RigPaint) -> Picture {
 }
 
 /// A bit on the rig: a spiral of `metal`, dark grooves winding round a lighter edge, and its tip.
-fn drill_bit(metal: &[Rgba; 4]) -> Picture {
+pub(super) fn drill_bit(metal: &[Rgba; 4]) -> Picture {
     let mut picture = Picture::sized(64, 32, CLEAR);
     let spiral = |x: usize, y: usize| match (x + y) % 8 {
         0 => metal[3],

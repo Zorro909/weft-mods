@@ -40,6 +40,16 @@
 - The washer washes Poor Ore Rubble into Common with engine energy and water, its paddle wheel
   churning the trough: tubes bring the Ore Rubble, a liquid tube the water, and the washed
   rubble leaves by its front.
+- The coke oven, a 3 by 3 by 3 box of coke oven bricks round a hollow, cooks coal into coke
+  eight at a time with no energy, with creosote, a new liquid, and a sulfur every eight coal.
+  Coke burns twice as long as coal. A drain in its wall lets the creosote out into liquid tubes.
+- The blast furnace, of fire bricks 3 by 3 and 4 high, smelts an iron ingot and a coke into a
+  steel bloom and slag while a driven bellows blows into it at 80 energy a tick.
+- The forge anvil and forge hammer: five strikes beat a steel bloom into a steel ingot. Steel
+  ingots pack into a block of steel.
+- The steel drill bit, for the Iron Quarry: it breaks what a diamond pickaxe breaks, at up to 90
+  energy a tick, for 8,000 blocks.
+- The sieve and the shaker screen sift slag into gravel, and now and then a Poor iron Ore Rubble.
 
 ### Changed
 
