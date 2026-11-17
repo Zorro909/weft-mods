@@ -104,8 +104,8 @@ Use it with:
 Each use says above the hotbar what it did or what it lacks: "Turn 3 of 6", "Needs water". The
 ring round the runner shows what it holds: water, sand, both, or neither.
 
-Nothing reaches it by tube: it has no slots. Broken, by hand or by the leveler or the
-excavator, it keeps what it holds in its item, and placed again it has it all back.
+Nothing reaches it by tube: it has no slots. Broken, by hand or by the leveler or a
+quarry, it keeps what it holds in its item, and placed again it has it all back.
 
 ## Sieve
 

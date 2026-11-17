@@ -13,8 +13,8 @@ iCi       C = base:chest
 
 The moment it is placed, the leveler takes the rectangle of the
 [survey markers](survey-markers.md) next to it and takes the corner markers down, so put the
-markers down first. It works the whole rectangle, the markers' own rows included; unlike the
-excavator, it has no frame around the edge. Without markers, it works the 9 by 9 area right
+markers down first. It works the whole rectangle, the markers' own rows included; unlike a
+quarry, it has no frame around the edge. Without markers, it works the 9 by 9 area right
 behind it. The flat height is the leveler's own.
 
 ## What it does
@@ -30,7 +30,7 @@ Afterwards the ground in the area ends just below the leveler's layer, flat.
 
 While it works, it keeps its own cube and the eight around it loaded, and the cubes of the
 layer it clears or fills all the way across its area; see
-[cuboid loaders](loading.md#excavators-and-levelers).
+[cuboid loaders](loading.md#quarries-levelers-and-prospecting).
 
 ## The stock
 
@@ -43,7 +43,7 @@ Each tick the leveler hands a stack from its output to a tube, chest or machine 
 ## Energy
 
 It puts up to 100 energy a tick into its work, and stores up to 10,000, taking in up to 1,000 a
-tick. Unlike the excavator it has no standby: a weak supply only makes it slower.
+tick. Unlike a quarry it has no standby: a weak supply only makes it slower.
 
 ## Its screen
 

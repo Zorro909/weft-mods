@@ -1,7 +1,7 @@
 # Survey markers
 
-Survey markers mark out a rectangle for an [excavator](excavator.md), a
-[leveler](leveler.md) or a [seismic thumper](prospecting.md#seismic-thumper). They are small
+Survey markers mark out a rectangle for a [quarry](excavator.md), a [leveler](leveler.md) or a
+[seismic thumper](prospecting.md#seismic-thumper). They are small
 posts that give off a little light and need a block under them.
 
 ```
@@ -22,12 +22,14 @@ seconds. A marker that isn't the corner of a rectangle puffs instead.
 
 ## Using the area
 
-Place the excavator or leveler next to the corner marker, outside the rectangle and at the same
+Place the quarry or leveler next to the corner marker, outside the rectangle and at the same
 height. The moment it is placed, it takes the rectangle as its area and the corner markers drop
 as items; markers put down after the machine are ignored.
 
-The excavator stands its frame on the rectangle's edge and mines the inside; the leveler works
-the whole rectangle. Without markers, either machine works a 9 by 9 area behind it.
+A quarry stands its frame on the rectangle's edge and mines the inside, up to its
+[largest area](excavator.md#its-area); the leveler works the whole rectangle. Without markers, a
+quarry works an area behind it, 5 by 5 for a Timber Quarry and 9 by 9 for the others, and the
+leveler the 9 by 9 behind it.
 
 A seismic thumper takes the rectangle when a survey starts, not when it is placed, and surveys
 the whole of it, up to 64 by 64; without markers it surveys the 32 by 32 square around itself.
