@@ -10,7 +10,8 @@ tanks carry and store it, and an oil engine burns it for far more energy than th
 A coke oven, a blast furnace and a forge anvil make steel, and a boiler on a firebox makes steam
 for a steam engine and a trip hammer. Steel builds a bigger quarry and a flotation cell that makes
 its ore richer, and a core drill tells what ore lies below before you dig. A refinery column
-distils crude oil into diesel for the oil engine, lubricant for the quarries and tar for roads.
+distils crude oil into diesel for the oil engine, lubricant for the quarries and tar for roads,
+and its gas becomes plastic in a polymerizer, pressed into the parts of the last quarry.
 
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
@@ -43,7 +44,8 @@ pump set on the seep bores down to the field with engine power and pumps it up. 
 carry any liquid, of any mod, between pumps and tanks, and tanks next to each other become one
 bigger tank, up to 3 by 3 and 6 high. You can see how full every tube and tank is. A timber
 liquid tube driven by an engine pumps liquid out of a tank and up the tubes, its paddle wheel
-turning.
+turning. Sealed liquid tubes, sleeved in plastic, let a pump lift twice as high, and pressure
+tubes carry steam twice as fast.
 
 ### Machines
 
@@ -53,8 +55,9 @@ turning.
   break. The Iron Quarry builds its frame of iron bars and digs a wider pit 64 deep, with an iron
   or steel bit. The Steel Excavator builds a frame of steel lattice up to 63 by 63 and digs
   down to the world's lowest layer with a steel or diamond-tipped bit. The Gantry
-  Excavator digs areas up to 256 by 256 as deep as the world's settings allow. More engines
-  make them dig faster.
+  Excavator builds a frame of composite panels and digs areas up to 256 by 256 as deep as the
+  world's settings allow, twice as hard with a diamond-tipped bit. More engines make them dig
+  faster, and a Bit Magazine beside a quarry swaps in a fresh bit as the old one wears out.
 - **Core drill.** Crank it sixteen times and it reports how much of each ore lies in the 16 by
   16 below it, band by band down to 128 below.
 - **Assembly bench.** Lay out a crafting recipe with ghost items; tubes bring the ingredients
@@ -86,6 +89,13 @@ diesel, lubricant, tar and a sulfur, each out of the taps on its own layer; too 
 goes to tar, too hot and the gas vents in pale puffs. A bucket of diesel runs an oil engine two and a
 half times as long as one of oil, lubricant led into a quarry saves a fifth of its energy and half its bit's
 wear, and tar with gravel and sand lays asphalt, a road you walk a fifth faster on.
+
+### Plastics
+
+The polymerizer turns the refinery's gas into plastic pellets with a catalyst and engine energy,
+bubbling as it works. A hydraulic molding press, its ram coming down with a thump, shapes them
+in steel molds into sheets, gears and pipes, and presses a sheet onto a steel ingot as a
+composite panel: the Gantry Excavator's frame, the Bit Magazine's gears and the plastic tubes.
 
 ### Bellows
 
@@ -148,6 +158,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
   Gantry Excavator
 - [Prospecting](docs/prospecting.md): the core drill
 - [Refinery](docs/refinery.md): the column, its products and asphalt
+- [Plastics](docs/plastics.md): the polymerizer, the molding press and its molds, and the parts
 - [Assembly bench](docs/assembly-bench.md)
 - [Leveler](docs/leveler.md)
 - [Survey markers](docs/survey-markers.md)
@@ -205,13 +216,14 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `millstone/`, `sieve.rs` | The hand machines: the millstone's grinding (`grind.rs`) and its runner (`runner.rs`); the sieve and its tray |
 | `shaker_screen/`, `grinding_mill/` | The driven machines: the screen's sifting (`work.rs`) and tray (`tray.rs`); the mill's grinding (`work.rs`), what it needs for a grind (`supply.rs`) and its runner (`runner.rs`) |
 | `flotation/`, `clarifier/`, `muddy_water.rs` | The flotation cell: what a float takes and leaves (`cell.rs`), its tick (`work.rs`) and its rotor (`rotor.rs`); the clarifier: its settling (`settle.rs`), its tick (`work.rs`) and its rake (`rake.rs`); muddy water |
+| `plastics.rs`, `polymerizer/`, `molding_press/`, `bit_magazine/` | Plastic and its parts; the polymerizer and its batches (`work.rs`); the molding press, its molds (`molds.rs`), its presses (`work.rs`) and ram (`ram.rs`); the Bit Magazine, when it swaps a bit (`swap.rs`) and its tick (`work.rs`) |
 | `core_drill/` | The core drill: what it counts and its tally (`survey.rs`), counting a little every tick (`count.rs`) and its rod (`rod.rs`) |
 | `chance.rs` | Fractions of an item as chances of one more |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
 | `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft and the wooden axle |
 | `sounds.rs` | The sound events, whose files are under `assets/sounds/` |
-| `arms/`, `boxes.rs` | Hubs with arms (tubes, liquid tubes of both kinds, torque shafts, wooden axles and lashed frames) put together from one Blockbench model each; drawing a block from boxes in code |
+| `arms/`, `boxes.rs` | Hubs with arms (tubes, liquid tubes of every kind, torque shafts, wooden axles and lashed frames) put together from one Blockbench model each; drawing a block from boxes in code |
 | `recipes.rs` | Registers the crafting recipes, which are written in `assets/recipes/*.toml` and checked by `build.rs` when the mod is built |
 | `films/` | The showcase film, only with `--features showcase` |
 | `art/`, `generated.rs` | Only in tests: the drawn textures, and keeping them as they would be drawn |

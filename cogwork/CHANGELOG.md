@@ -85,9 +85,26 @@
 - Lubricant led into a quarry by liquid tube makes each block cost a fifth less energy and wears
   its bit half as fast, at 1 mB a block.
 - Asphalt, a road block of tar, gravel and sand that you walk on a fifth faster.
+- The polymerizer turns gas into plastic pellets: 250 mB of gas by liquid tube, a use of a
+  catalyst (64 uses, of gold, redstone and clay) and 20,000 energy make 4 pellets.
+- The molding press presses pellets in steel molds into plastic sheets, gears and pipes, and a
+  sheet onto a steel ingot as a composite panel, 400 energy a press; a mold lasts 64 presses.
+  The parts are tagged by their form for other mods.
+- The sealed liquid tube, sleeved in plastic: a pump lifts liquid 32 blocks into it, twice what
+  it lifts into a liquid tube.
+- The pressure tube, a plastic pipe that carries steam twice as fast as a liquid tube.
+- The Bit Magazine: placed against a quarry, it swaps a fresh bit that quarry takes into its bit
+  slot when the bit is down to its last use, and keeps the worn one. The quarry never uses that
+  last use, so the worn bit waits fitted while the magazine's worn-bit slots are full.
+- The Gantry Excavator takes a diamond-tipped drill bit, which digs twice as hard.
 
 ### Changed
 
+- The Gantry Excavator is made of composite panels and plastic gears around a Steel Excavator,
+  and builds its frame of composite panels on steel, a panel every four blocks, from new frame
+  slots; the block that took a panel gives it back when broken. Its frames already standing in a
+  world keep their old lattice and are never charged for, and a Gantry broken and put back beside
+  one takes up its area again.
 - The excavator brings stone up as Rubble and metal ore as Poor Ore Rubble, two for each ore
   block; coal, diamond and redstone ore bring up twice their drops. The leveler and the pump
   keep the drops as they are.

@@ -7,7 +7,7 @@ use weft_sdk::{Vec3, World};
 
 use super::depth::at_depth;
 use super::dig::Quarry;
-use super::kind::Kind;
+use super::kind::{Drill, Kind};
 use super::power::{pay, travel};
 use super::{Dig, Frame, Status, bit, lube};
 use crate::harvest::{Harvest, Keep, cost, harvest};
@@ -40,10 +40,11 @@ pub fn block_cost(frame: &Frame, cell: Pos, block_state: BlockState, lubed: bool
     if lubed { lube::eased(deep) } else { deep }
 }
 
-/// What a block mined by `quarry` costs it besides energy: wear on its bit, half as often with
-/// lubricant, and the lubricant.
-pub fn wear_down(world: &World, quarry: Quarry, dig: &mut Dig) {
-    if lube::wears(quarry.lubed, &mut dig.lube_skipped) {
+/// What a block mined by `quarry` with `drill` costs it besides energy: wear on the drill's bit,
+/// half as often with lubricant, and the lubricant. A bit in the slot the drill doesn't dig with
+/// (one the Gantry doesn't take, or one held back for a swap) wears nothing.
+pub fn wear_down(world: &World, quarry: Quarry, dig: &mut Dig, drill: Drill) {
+    if lube::wears(quarry.lubed, &mut dig.lube_skipped) && drill.bit.is_some() {
         bit::wear(world, quarry.id);
     }
     if quarry.lubed {

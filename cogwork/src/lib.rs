@@ -7,7 +7,8 @@
 //! steam: boiled over a firebox, run through a steam engine and a steam-lifted trip hammer, and
 //! the steel age's ore work: the flotation cell, the clarifier and the hand core drill, and the
 //! refinery that distils crude into diesel for the oil engine, lubricant for the quarries, tar
-//! for asphalt roads, and gas.
+//! for asphalt roads, and gas, which the polymerizer turns into plastic for the molding press:
+//! sealed and pressure tubes, the Bit Magazine and the Gantry Excavator's composite frame.
 //! Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
@@ -16,6 +17,7 @@ mod art;
 mod asphalt;
 mod bellows;
 mod bench;
+mod bit_magazine;
 mod blast_furnace;
 mod boxes;
 mod brickwork;
@@ -51,10 +53,13 @@ mod loading;
 mod machine;
 mod markers;
 mod millstone;
+mod molding_press;
 mod muddy_water;
 mod oil;
 mod oil_engine;
 mod owned;
+mod plastics;
+mod polymerizer;
 mod pump;
 mod recipes;
 mod refinery;
@@ -127,6 +132,10 @@ fn init(r: &mut Registry) {
     core_drill::register(r);
     refinery::register(r);
     asphalt::register(r);
+    plastics::register(r);
+    polymerizer::register(r);
+    molding_press::register(r);
+    bit_magazine::register(r);
     water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

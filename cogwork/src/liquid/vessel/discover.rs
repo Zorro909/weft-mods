@@ -11,8 +11,9 @@ use crate::firebox::{self, BOILER, FIREBOX};
 use crate::flotation::{self, FLOTATION_CELL};
 use crate::grinding_mill::{self, GRINDING_MILL};
 use crate::lib::{BlockState, Pos, TypedWorld};
-use crate::liquid_tube::is_liquid_tube;
+use crate::liquid_tube::{PRESSURE_TUBE, SEALED_LIQUID_TUBE, is_liquid_tube};
 use crate::oil_engine::OIL_INTAKE;
+use crate::polymerizer::POLYMERIZER;
 use crate::pump::PUMP;
 use crate::refinery::{self, REFINERY, REFINERY_CONDENSER, REFINERY_HEATER, REFINERY_TAP};
 use crate::steam_engine::{self, STEAM_ENGINE};
@@ -31,7 +32,7 @@ impl Vessel {
             let kind = if driven { Kind::Driven } else { Kind::Tube };
             (crate::liquid_tube::CAPACITY, kind)
         } else if is_liquid_tube(block) {
-            (crate::liquid_tube::CAPACITY, Kind::Tube)
+            (crate::liquid_tube::CAPACITY, tube_kind(block))
         } else if block.is(&PUMP) {
             (crate::pump::CAPACITY, Kind::Pump)
         } else if block.is(&OIL_INTAKE) {
@@ -54,6 +55,8 @@ impl Vessel {
             (flotation::WATER_CAPACITY, Kind::Mill)
         } else if block.is(&CLARIFIER) {
             (clarifier::MUDDY_CAPACITY, Kind::Settler)
+        } else if block.is(&POLYMERIZER) {
+            (crate::polymerizer::GAS_CAPACITY, Kind::Polymer)
         } else if let Some(found) = refinery_part(block) {
             found
         } else if Quarry::of(block).is_some() {
@@ -84,6 +87,17 @@ impl Vessel {
     }
 }
 
+/// How the liquid tube `block`, not a timber one, passes liquid on.
+fn tube_kind(block: BlockState) -> Kind {
+    if block.is(&SEALED_LIQUID_TUBE) {
+        Kind::Sealed
+    } else if block.is(&PRESSURE_TUBE) {
+        Kind::Pressure
+    } else {
+        Kind::Tube
+    }
+}
+
 /// The capacity and kind of the part of a refinery `block` is, if it holds liquid.
 fn refinery_part(block: BlockState) -> Option<(u32, Kind)> {
     let parts = [
@@ -104,10 +118,10 @@ pub fn is_vessel(world: &World, pos: Pos) -> bool {
 
 /// Whether `block` is a machine that holds liquid for its work and reaches it on every side: an
 /// intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
-/// engine, a trip hammer, a flotation cell, a clarifier, a refinery's part that holds liquid or a
-/// quarry.
+/// engine, a trip hammer, a flotation cell, a clarifier, a refinery's part that holds liquid, a
+/// quarry or a polymerizer.
 fn is_machine(block: BlockState) -> bool {
-    let machines: [&weft_sdk::Block; 9] = [
+    let machines: [&weft_sdk::Block; 10] = [
         &OIL_INTAKE,
         &GRINDING_MILL,
         &WASHER,
@@ -117,6 +131,7 @@ fn is_machine(block: BlockState) -> bool {
         &TRIP_HAMMER,
         &FLOTATION_CELL,
         &CLARIFIER,
+        &POLYMERIZER,
     ];
     machines.iter().any(|machine| block.is(machine))
         || coke_oven::creosote_capacity(block).is_some()

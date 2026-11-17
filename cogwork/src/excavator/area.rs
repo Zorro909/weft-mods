@@ -27,13 +27,13 @@ value! {
 
 impl Frame {
     /// The frame for a quarry of `kind` at `pos` facing `front`: on the rectangle of the survey
-    /// markers next to it, else on a frame of its kind already standing beside it (one put back
-    /// by its old frame carries on there), else around its default square behind it. Each no
-    /// larger than its kind takes.
+    /// markers next to it, else on a frame of its kind already standing beside it, of its old
+    /// frame block too (one put back by its old frame carries on there), else around its default
+    /// square behind it. Each no larger than its kind takes.
     pub fn plan(world: &World, pos: Pos, front: Dir, kind: &Kind) -> Frame {
         let default = kind.inside.default;
         let ground = take_area(world, pos)
-            .or_else(|| standing_frame(world, pos, kind.frame))
+            .or_else(|| standing_frame(pos, kind, |at, frame| world.block_typed(at).is(frame)))
             .unwrap_or_else(|| square_behind(pos, front, default, 1));
         let ground = match kind.inside.largest {
             Some(largest) => cropped(ground, pos, largest),
@@ -132,10 +132,11 @@ impl From<([i32; 3], [i32; 3])> for Frame {
     }
 }
 
-/// The bottom ring of a frame of `frame` blocks beside `pos` at its height, with `pos` outside
-/// it.
-fn standing_frame(world: &World, pos: Pos, frame: &Block) -> Option<Area> {
-    let ring = ring_bounds(pos, |at| world.block_typed(at).is(frame))?;
+/// The bottom ring of a frame of `kind`'s frame blocks beside `pos` at its height, with `pos`
+/// outside it; `is` says whether the block at a place is the frame block given.
+fn standing_frame(pos: Pos, kind: &Kind, is: impl Fn(Pos, &Block) -> bool) -> Option<Area> {
+    let is_frame = |at| kind.frame_blocks().any(|frame| is(at, frame));
+    let ring = ring_bounds(pos, is_frame)?;
     (!ring.spans(pos)).then_some(ring)
 }
 
@@ -194,6 +195,8 @@ fn ring_bounds(pos: Pos, is_frame: impl Fn(Pos) -> bool) -> Option<Area> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::kind::rows::{GANTRY, STEEL};
+    use super::super::{COMPOSITE_FRAME, GANTRY_FRAME};
     use super::*;
 
     #[test]
@@ -241,6 +244,29 @@ mod tests {
         );
         let post = HashSet::from([Pos::new(0, 4, 0)]);
         assert_eq!(found([-1, 4, 0], &post), None, "a lone block");
+    }
+
+    #[test]
+    fn a_gantry_put_back_beside_its_old_lattice_keeps_its_area() {
+        let (lo, hi) = ([0, 4, 0], [34, 8, 34]);
+        let lattice = ring(lo, hi, &[[10, 4, 0]]);
+        // Finished with a composite block where the lattice had a gap.
+        let finished = Pos::new(10, 4, 0);
+        let is = |at: Pos, frame: &Block| {
+            let block = if at == finished {
+                &COMPOSITE_FRAME
+            } else if lattice.contains(&at) {
+                &GANTRY_FRAME
+            } else {
+                return false;
+            };
+            block.path() == frame.path()
+        };
+        let found = standing_frame(Pos::new(17, 4, 35), &GANTRY, is);
+        let bottom = Area::between(Pos::new(0, 4, 0), Pos::new(34, 4, 34));
+        assert_eq!(found, Some(bottom), "33 by 33, not its default 9 by 9");
+        let steel = standing_frame(Pos::new(17, 4, 35), &STEEL, is);
+        assert_eq!(steel, None, "nor any other kind's");
     }
 
     #[test]

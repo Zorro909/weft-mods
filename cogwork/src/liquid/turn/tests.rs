@@ -1,8 +1,11 @@
-//! Tests of how holders pass liquid and stand.
+//! Tests of how holders pass liquid and stand; `line` runs whole lines of them.
+
+mod line;
 
 use std::cell::Cell;
 
 use super::*;
+use crate::liquid::MOST_A_TURN;
 
 fn at(x: i32) -> Pos {
     Pos { x, y: 0, z: 0 }

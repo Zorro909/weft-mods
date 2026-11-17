@@ -90,7 +90,7 @@ The controller's front lights while it distils, and the column rumbles.
 | Diesel | Burns in the [oil engine](oil-engine.md#fuel): a bucket runs one two and a half times as long as a bucket of oil |
 | Lubricant | Led into a [quarry](excavator.md#lubricant), it saves a fifth of the energy of each block and half the wear on its bit |
 | Tar | [Asphalt](#asphalt), a road to walk on |
-| Gas | Nothing yet: store it in a tank, or let it vent by leaving out the gas taps |
+| Gas | The [polymerizer](plastics.md#polymerizer) makes plastic of it; or let it vent by leaving out the gas taps |
 | Sulfur | Like the coke oven's (`dusts/sulfur`) |
 
 Each liquid comes in a bucket, which fills from a tap or a tank. Gas, diesel, lubricant and tar

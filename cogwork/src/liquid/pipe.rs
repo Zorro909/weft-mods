@@ -54,7 +54,10 @@ pub fn draw(world: &World, into: Pos, side: Dir, liquid: LiquidKey, most: u32) -
 /// Whether a holder of `kind` lets a machine draw on it: one that hands its liquid on anyway, not
 /// a pump, which pushes, nor a machine keeping what it holds for its own work.
 fn gives_up(kind: Kind) -> bool {
-    matches!(kind, Kind::Tube | Kind::Drain)
+    matches!(
+        kind,
+        Kind::Tube | Kind::Sealed | Kind::Pressure | Kind::Drain
+    )
 }
 
 #[cfg(test)]
@@ -64,6 +67,10 @@ mod tests {
     #[test]
     fn only_what_hands_liquid_on_is_drawn_on() {
         assert!(gives_up(Kind::Tube), "a tube or a tank");
+        assert!(
+            gives_up(Kind::Sealed) && gives_up(Kind::Pressure),
+            "any tube"
+        );
         assert!(gives_up(Kind::Drain), "a coke oven's drain");
         for kind in [
             Kind::Pump,
@@ -75,6 +82,7 @@ mod tests {
             Kind::Settler,
             Kind::Still,
             Kind::Lubed,
+            Kind::Polymer,
         ] {
             assert!(!gives_up(kind), "{kind:?} keeps what it holds");
         }
