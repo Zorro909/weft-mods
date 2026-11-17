@@ -1,6 +1,6 @@
 # Rubble, ore grades, the millstone and the sieve
 
-The [excavator](excavator.md) doesn't bring stone and ore up clean: stone comes up as Rubble,
+A [quarry](excavator.md) doesn't bring stone and ore up clean: stone comes up as Rubble,
 and ore as Ore Rubble. The quarry sets how much comes up; working it by hand or by machine
 sets what it is worth. Two hand machines start the work: the sieve sifts Rubble, and the
 millstone grinds Ore Rubble into raw ore.
@@ -38,7 +38,8 @@ An ore with no raw ore (coal, diamond, redstone) comes up as its usual drops ins
 
 | Quarry | Per ore block |
 |---|---|
-| Excavator | 2 Ore Rubble, or twice an ore's usual drops |
+| Timber Quarry | 1 Ore Rubble, or an ore's usual drops |
+| Gantry Excavator | 2 Ore Rubble, or twice an ore's usual drops |
 
 A fraction of an amount is a chance of one more. The [leveler](leveler.md) and the
 [pump](oil.md) keep the drops a diamond pickaxe gets, unchanged.

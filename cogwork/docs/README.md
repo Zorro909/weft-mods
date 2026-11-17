@@ -9,8 +9,8 @@ short overview of the mod, see the [README](../README.md).
 |---|---|
 | [Cogs and the tuning wrench](items.md) | The crafting parts every machine is made of, and the tool that sets machines |
 | [Item tubes](tubes.md) | The six tubes, how items find their way, and what happens when a line jams |
-| [Power](power.md) | The spring and ember engines, heat, and the torque shaft |
-| [Excavator](excavator.md) | The frame, the drill, energy use, and what it mines |
+| [Power](power.md) | The spring and ember engines, winding, heat, the water wheel, the torque shaft and the wooden axle |
+| [Quarries](excavator.md) | The Timber Quarry and the Gantry Excavator: their frames, drill bits, energy use, and what they mine |
 | [Assembly bench](assembly-bench.md) | Setting a pattern, filling it and crafting by machine |
 | [Leveler](leveler.md) | Clearing and filling an area flat |
 | [Survey markers](survey-markers.md) | Marking out the area of an excavator or leveler |

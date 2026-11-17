@@ -1,0 +1,23 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"particle": "block/wooden_axle",
+		"axle": "block/wooden_axle"
+	},
+	"elements": [
+		{
+			"name": "axle",
+			"from": [6, 6, 0],
+			"to": [10, 10, 16],
+			"faces": {
+				"north": {"uv": [6, 6, 10, 10], "texture": "#axle"},
+				"east": {"uv": [0, 6, 16, 10], "texture": "#axle"},
+				"south": {"uv": [6, 6, 10, 10], "texture": "#axle"},
+				"west": {"uv": [0, 6, 16, 10], "texture": "#axle"},
+				"up": {"uv": [6, 0, 10, 16], "texture": "#axle"},
+				"down": {"uv": [6, 0, 10, 16], "texture": "#axle"}
+			}
+		}
+	]
+}

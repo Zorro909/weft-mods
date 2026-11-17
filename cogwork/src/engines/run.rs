@@ -2,14 +2,13 @@
 //! the piston's strokes while running.
 
 use base_api::components::FUEL;
-use weft_sdk::{ENERGY, ItemStack, Output, SystemBatch, World, consume_one};
+use weft_sdk::{Dir, ENERGY, ItemStack, Output, SystemBatch, World, consume_one};
 
-use super::{Engine, Kind, model, piston};
+use super::{Engine, Kind, model, piston, wind};
 use crate::lib::Pos;
 use crate::sounds;
 
-/// Energy per tick: a spring engine with a signal, an ember engine burning.
-const SPRING_MAKES: i64 = 10;
+/// Energy per tick an ember engine makes while burning.
 const EMBER_MAKES: i64 = 40;
 /// The most an engine pushes into the block at its trunk per tick.
 const PUSH: i64 = 200;
@@ -27,12 +26,18 @@ pub fn tick_engines(batch: &mut SystemBatch<Engine>) {
             continue;
         };
         let pos = Pos::from(entity.block_pos());
-        let running = match engine.kind() {
-            Kind::Spring => world.signal(pos) > 0,
-            Kind::Ember => burn(&world, id, pos, engine, ticks),
+        let (running, made) = match engine.kind() {
+            Kind::Spring => {
+                let released = unwind(&world, id, pos, engine, ticks);
+                (released > 0, released)
+            }
+            Kind::Ember => {
+                let burning = burn(&world, id, pos, engine, ticks);
+                let made = if burning { EMBER_MAKES } else { 0 };
+                (burning, made * i64::from(ticks))
+            }
         };
-        let made = if running { makes(engine.kind()) } else { 0 };
-        let full = store(&world, id, made * ticks as i64);
+        let full = store(&world, id, made);
         push(&world, id, pos);
         let was_overheated = engine.is_overheated();
         warm(engine, running, full, ticks);
@@ -44,12 +49,16 @@ pub fn tick_engines(batch: &mut SystemBatch<Engine>) {
     }
 }
 
-/// Energy per tick an engine of `kind` makes while it runs.
-fn makes(kind: Kind) -> i64 {
-    match kind {
-        Kind::Spring => SPRING_MAKES,
-        Kind::Ember => EMBER_MAKES,
-    }
+/// Lets a spring engine's spring run down into its store over `ticks`, as far as there is room
+/// and no redstone signal brakes it. Returns the energy it gave.
+fn unwind(world: &World, id: u64, pos: Pos, engine: &mut Engine, ticks: u32) -> i64 {
+    let room = world
+        .component(id, &ENERGY)
+        .map_or(0, |energy| energy.capacity - energy.stored);
+    let braked = world.signal(pos) > 0;
+    let released = wind::release(engine.wound, ticks, room, braked);
+    engine.wound -= released;
+    i64::from(released)
 }
 
 /// An ember engine's fire: lights the next fuel when out, unless it is cooling down. True while
@@ -89,9 +98,14 @@ fn store(world: &World, id: u64, made: i64) -> bool {
 
 /// Pushes stored energy into whatever block entity the trunk points at.
 fn push(world: &World, id: u64, pos: Pos) {
-    let Some(out) = model::output(world, pos) else {
-        return;
-    };
+    if let Some(out) = model::output(world, pos) {
+        push_into(world, id, pos, out);
+    }
+}
+
+/// Pushes up to `PUSH` of the energy stored in `id` at `pos` into the block entity on its side
+/// `out`: an engine's trunk, a water wheel's axle.
+pub fn push_into(world: &World, id: u64, pos: Pos, out: Dir) {
     let stored = world
         .component(id, &ENERGY)
         .map_or(0, |energy| energy.stored);

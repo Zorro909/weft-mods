@@ -1,29 +1,35 @@
-//! The excavator: it builds a gantry frame around its area, then a drill on the gantry mines the
-//! area out layer by layer from the top of the frame down as deep as the world's settings let it
-//! (`depth`), handing everything it mines to the tubes and chests beside it.
+//! Quarries: each builds a frame around its area, then a drill on a gantry across the frame
+//! mines the area out layer by layer from the top of the frame down as deep as its kind and the
+//! world's settings let it (`kind`, `depth`), handing everything it mines to the tubes and chests
+//! beside it. The Timber Quarry digs with a drill bit (`bit`) and builds its frame of logs and
+//! string; the Gantry Excavator, block `excavator`, digs with no bit and builds with energy alone.
 
 mod area;
+mod bit;
 mod depth;
 mod dig;
+mod frames;
 mod framing;
+pub mod kind;
+mod materials;
 mod mine;
 mod power;
 mod rig;
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::{
-    Arg, Block, Component, ENERGY, Holds, Menu, Registry, S, Slots, Ui, Vec3, World,
-    component_flags, tool_tier, value,
+    Arg, Block, Component, ENERGY, Holder, Holds, ItemStack, Registry, S, Slots, Ui, Vec3, World,
+    abi, component_flags, value,
 };
 
 pub static EXCAVATOR: Block = Block::named("excavator");
-pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
-static EXCAVATOR_MENU: Menu = Menu::named("excavator");
-
+pub static TIMBER_QUARRY: Block = Block::named("timber_quarry");
 pub use area::Frame;
 use depth::Floor;
+pub use frames::{GANTRY_FRAME, LASHED_FRAME};
+use kind::{KINDS, Kind};
 
-use crate::lib::Pos;
+use crate::lib::{Pos, TypedWorld};
 use crate::loading::Cubes;
 
 value! {
@@ -78,6 +84,10 @@ pub enum Status {
     Done,
     Blocked,
     Jammed,
+    /// Out of what its frame is built of.
+    NeedsMaterials,
+    /// It digs only with a bit, and has none that fits.
+    NeedsBit,
 }
 
 impl Status {
@@ -129,6 +139,10 @@ fn keep_loaded(world: &World, pos: Pos, dig: &Dig, floor: Floor) {
     }
 }
 
+/// Slots of the output, and of the frame materials of a kind that has them.
+const OUTPUT_SLOTS: (u32, u32) = (3, 3);
+const MATERIAL_SLOTS: (u32, u32) = (3, 2);
+
 pub fn register(r: &mut Registry) {
     r.entity_component(
         &DIG,
@@ -137,61 +151,112 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&DIG, dig::tick);
     depth::register(r);
-    crate::machine::block(r.block(&EXCAVATOR), "excavator")
-        .hardness(4.0)
+    bit::register(r);
+    for kind in KINDS {
+        quarry(r, kind);
+    }
+    frames::register(r);
+    rig::register(r);
+}
+
+/// The block of `kind` and its menu. Its slots are the output, then the bit and the materials
+/// where it has them: an excavator saved with only the output keeps it.
+fn quarry(r: &mut Registry, kind: &'static Kind) {
+    let slots = |(cols, rows): (u32, u32)| cols * rows;
+    let bit_slots = u32::from(!kind.bits.is_empty());
+    let material_slots = if kind.frame_cost.is_empty() {
+        0
+    } else {
+        slots(MATERIAL_SLOTS)
+    };
+    let inventory = slots(OUTPUT_SLOTS) + bit_slots + material_slots;
+    crate::machine::block(r.block(kind.block), kind.block.path())
+        .hardness(kind.hardness)
+        .sound_group(kind.sound_group)
         .on_break(crate::loading::let_go)
-        .entity(|entity| {
+        .entity(move |entity| {
             entity
                 .attach(&DIG)
                 .attach(&rig::RIG)
                 .attach_with(&ENERGY, power::smallest_store())
                 .attach(&crate::machine::METER)
-                .inventory(9)
+                .inventory(inventory)
         })
-        .opens(&EXCAVATOR_MENU);
-    r.menu(&EXCAVATOR_MENU)
-        .group("output", Slots::grid(3, 3).output().holder())
-        .player_inventory()
-        .screen(screen);
-    r.block(&GANTRY_FRAME)
-        .texture("gantry_frame")
-        .cutout()
-        .hardness(1.0)
-        .mined_by("pickaxe", tool_tier::HAND)
-        .drops_nothing()
-        .no_item();
-    rig::register(r);
+        .opens(kind.menu);
+    let (cols, rows) = OUTPUT_SLOTS;
+    let mut menu = r
+        .menu(kind.menu)
+        .group("output", Slots::grid(cols, rows).output().holder());
+    if bit_slots > 0 {
+        let rule = kind.bit_rule();
+        menu = menu.group(bit::GROUP, Slots::single().accepts(&rule).holder());
+    }
+    if material_slots > 0 {
+        let (cols, rows) = MATERIAL_SLOTS;
+        let rule = kind.material_rule();
+        let group = Slots::grid(cols, rows).accepts(&rule).holder();
+        menu = menu.group(materials::GROUP, group);
+    }
+    menu.player_inventory().screen(move |ui| screen(ui, kind));
 }
 
-/// The excavator's screen, above the player's inventory:
+/// Puts `stack` from a tube into the quarry `at`: a bit it takes into its `bit` group, what its
+/// frame is built of into `materials`, nothing else. None for what is no quarry, or a quarry
+/// that takes nothing in.
+pub fn insert(world: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
+    world.component(at, &DIG)?;
+    let kind = Kind::of(block_of(world, at)?)?;
+    let group = if kind.takes_bit(stack) {
+        bit::GROUP
+    } else if kind.takes_material(stack) {
+        materials::GROUP
+    } else {
+        return Some(stack);
+    };
+    let slots = world.inventory(at).find_group(group)?;
+    Some(crate::store::insert_into(slots, stack, simulate))
+}
+
+/// The block a block entity, or the block, `at` is.
+fn block_of(world: &World, at: Holder) -> Option<crate::lib::BlockState> {
+    let pos = match at.kind {
+        abi::holder::BLOCK => Pos::from(at.pos),
+        abi::holder::ENTITY => Pos::from(world.entity(at.entity)?.block_pos()),
+        _ => return None,
+    };
+    Some(world.block_typed(pos))
+}
+
+/// A quarry's screen, above the player's inventory; the bit and the materials only on a kind
+/// that has them:
 ///
 /// ```text
 /// +-----------------------------------------------------------------+
-/// | Excavator                                                       |
-/// | [#####.....]                              [ ][ ][ ]             |  stored energy, output
-/// | 12000 / 20000 energy                      [ ][ ][ ]             |
-/// | Using 150 energy a tick                   [ ][ ][ ]             |  drawn last tick, and how short
-/// | Mining layer 42                                                 |  status
-/// | Area 9 x 9, standby 30 energy per tick                          |
+/// | Timber Quarry                                                   |
+/// | [#####.....]                              [ ][ ][ ]   Bit       |  stored energy, output, bit
+/// | 12000 / 20000 energy                      [ ][ ][ ]   [ ]       |
+/// | Using 16 energy a tick                    [ ][ ][ ]   Frame     |  drawn last tick, and how short
+/// | Mining layer 42                                       [ ][ ][ ] |  status, frame materials
+/// | Area 5 x 5, standby 4 energy per tick                 [ ][ ][ ] |
 /// +-----------------------------------------------------------------+
 /// ```
-fn screen(ui: &mut Ui) {
+fn screen(ui: &mut Ui, kind: &'static Kind) {
     ui.panel("panel", S::column().pad(7.0).gap(4.0), |ui| {
         ui.title();
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
                 crate::machine::meter_line(ui);
-                ui.text_bind(|view, out| {
+                ui.text_bind(move |view, out| {
                     let dig = view.menu_component(&DIG).unwrap_or_default();
                     let status: &str = dig.status().into();
                     let layer = dig.cursor.y;
                     out.set(
                         &format!("cogwork.excavator.{status}"),
-                        &[Arg::Int(layer as i64), Arg::Int(dig.frame.standby())],
+                        &[Arg::Int(layer as i64), Arg::Int(kind.standby(&dig.frame))],
                     );
                 });
-                ui.text_bind(|view, out| {
+                ui.text_bind(move |view, out| {
                     let dig = view.menu_component(&DIG).unwrap_or_default();
                     let [x, z] = dig.frame.inside();
                     out.set(
@@ -199,15 +264,30 @@ fn screen(ui: &mut Ui) {
                         &[
                             Arg::Int(x as i64),
                             Arg::Int(z as i64),
-                            Arg::Int(dig.frame.standby()),
+                            Arg::Int(kind.standby(&dig.frame)),
                         ],
                     );
                 });
             });
             ui.group("output");
+            if !kind.bits.is_empty() || !kind.frame_cost.is_empty() {
+                ui.column(S::column().gap(3.0), |ui| supplies(ui, kind));
+            }
         });
         ui.player_inventory(true);
     });
+}
+
+/// The bit and the frame materials of `kind`, each under its label.
+fn supplies(ui: &mut Ui, kind: &Kind) {
+    if !kind.bits.is_empty() {
+        ui.text("cogwork.excavator.bit_slot");
+        ui.group(bit::GROUP);
+    }
+    if !kind.frame_cost.is_empty() {
+        ui.text("cogwork.excavator.materials_slots");
+        ui.group(materials::GROUP);
+    }
 }
 
 #[cfg(test)]

@@ -1,14 +1,34 @@
-# Engines, machines and the survey marker.
+# Engines, the water wheel, the quarries and their drill bits, machines and the survey marker.
 
 [[shaped]]
 result = "spring_engine"
-pattern = ["ppp", " g ", "cPc"]
-key = { p = "#planks", g = "base:glass", c = "#cogs/wood", P = "base:piston" }
+pattern = ["ppp", " g ", "cic"]
+key = { p = "#planks", g = "base:glass", c = "#cogs/wood", i = "#ingots/iron" }
+
+[[shaped]]
+result = "water_wheel"
+pattern = ["sps", "pcp", "sps"]
+key = { s = "#stick", p = "#planks", c = "#cogs/wood" }
 
 [[shaped]]
 result = "ember_engine"
 pattern = ["sss", " g ", "cPc"]
 key = { s = "#cobblestone", g = "base:glass", c = "#cogs/stone", P = "base:piston" }
+
+[[shaped]]
+result = "timber_quarry"
+pattern = ["ptp", "cpc", "sts"]
+key = { p = "#planks", t = "base:string", c = "#cogs/wood", s = "#cobblestone" }
+
+[[shaped]]
+result = "stone_bit"
+pattern = [" k ", "sts", " s "]
+key = { k = "#stick", t = "base:string", s = "#cobblestone" }
+
+[[shaped]]
+result = "iron_bit"
+pattern = [" c ", "iii", " i "]
+key = { c = "#cogs/wood", i = "#ingots/iron" }
 
 [[shaped]]
 result = "excavator"

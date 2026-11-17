@@ -14,12 +14,27 @@
   runner an Ore Rubble, one raw ore of Poor up to 2.5 of Pure.
 - The sieve sifts Rubble by hand into sand, gravel, flint and clay, and rarely coal, redstone,
   diamond or Poor iron or gold Ore Rubble.
+- The Timber Quarry, a small first quarry of wood and string: it lashes a frame of logs and
+  string from its frame slots around a 5 by 5 area (up to 7 by 7 with markers) and digs it 16
+  deep with a drill bit, bringing up one Ore Rubble an ore block. Its frame gives the logs back
+  when broken.
+- Stone and iron drill bits for the Timber Quarry. A bit breaks what its pickaxe breaks and
+  wears out; what it can't break, such as gold ore under a stone bit, is left standing.
+- The water wheel: over flowing water it turns and makes 12 energy a tick, pushed out of its
+  axle.
+- The wooden axle, a cheap wooden torque shaft.
+- Spring engines are wound by hand: use one with an empty hand to turn its crank, 200 energy a
+  turn, up to 10,000, which runs it down at 10 a tick.
 
 ### Changed
 
 - The excavator brings stone up as Rubble and metal ore as Poor Ore Rubble, two for each ore
   block; coal, diamond and redstone ore bring up twice their drops. The leveler and the pump
   keep the drops as they are.
+- The excavator is now called the Gantry Excavator. Excavators already built work as before.
+- Spring engines no longer run from redstone alone: they run on their wound spring, and a
+  redstone signal now holds it like a brake. Their recipe takes an iron ingot instead of a
+  piston.
 
 ## 0.4.3 - 2026-11-22
 

@@ -1,8 +1,8 @@
-//! Cogwork: item tubes that show what they carry, engines that drive them, machines for the big
-//! jobs (an excavator, an assembly bench and a leveler), cuboid loaders that keep them running
-//! with nobody near, oil: pumped up from fields underground, carried in liquid tubes, kept in
-//! tanks and burnt in the oil engine, and the rubble quarries bring up, sifted and ground by hand
-//! at the sieve and the millstone. Everything goes through `weft_sdk` and `base_api`.
+//! Cogwork: item tubes that show what they carry, engines and water wheels that drive them,
+//! machines for the big jobs (quarries, an assembly bench and a leveler), cuboid loaders that keep
+//! them running with nobody near, oil: pumped up from fields underground, carried in liquid
+//! tubes, kept in tanks and burnt in the oil engine, and the rubble quarries bring up, sifted and
+//! ground by hand at the sieve and the millstone. Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
 #[cfg(test)]
@@ -47,6 +47,7 @@ mod store;
 mod tank;
 mod timber_liquid_tube;
 mod tube;
+mod water_wheel;
 
 use weft_sdk::{CreativeTab, Item, Registry, declare_mod};
 
@@ -83,6 +84,7 @@ fn init(r: &mut Registry) {
     rubble::register(r);
     millstone::register(r);
     sieve::register(r);
+    water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]
     films::register(r);

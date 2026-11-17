@@ -1,11 +1,13 @@
 //! Engines: they make energy and push it into the block their trunk points at (a timber tube,
-//! the excavator, any mod's machine), and offer it to `conductor` networks too. The spring
-//! engine runs on a redstone signal and never overheats; the ember engine burns fuel, makes
-//! four times as much, and stops to cool down when its energy has nowhere to go.
+//! a quarry, any mod's machine), and offer it to `conductor` networks too. The spring engine is
+//! wound by hand (`wind`) and runs down while a redstone signal doesn't brake it; it never
+//! overheats. The ember engine burns fuel, makes four times as much, and stops to cool down when
+//! its energy has nowhere to go.
 
 mod model;
 mod piston;
 mod run;
+mod wind;
 
 pub use model::turn;
 use strum::FromRepr;
@@ -18,7 +20,8 @@ static EMBER_MENU: Menu = Menu::named("ember_engine");
 value! {
     /// An engine's state: its kind (`Kind`), `heat` 0..1000, `overheated` (1 while it cools
     /// down), the ticks of fuel left burning out of `burn_max`, `stroke` (anything but 0 while
-    /// the piston makes a stroke), and the piston entity.
+    /// the piston makes a stroke), the piston entity, and the energy `wound` into a spring
+    /// engine's spring.
     #[derive(Default)]
     pub struct Engine {
         pub kind: u32,
@@ -27,7 +30,9 @@ value! {
         pub burn: u32,
         pub burn_max: u32,
         pub stroke: u32,
-        pub piston: u64
+        pub piston: u64,
+        // Last, so engines saved before it load with their spring run down.
+        pub wound: u32,
     }
 }
 pub static ENGINE: Component<Engine> = Component::named("cogwork:engine");
@@ -37,7 +42,7 @@ pub static ENGINE: Component<Engine> = Component::named("cogwork:engine");
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, FromRepr)]
 #[repr(u32)]
 pub enum Kind {
-    /// Runs on a redstone signal.
+    /// Runs down a spring wound by hand.
     #[default]
     Spring,
     /// Burns fuel.
@@ -68,6 +73,8 @@ impl Engine {
     }
 }
 
+pub use run::push_into;
+
 pub fn register(r: &mut Registry) {
     r.entity_component(
         &ENGINE,
@@ -80,7 +87,7 @@ pub fn register(r: &mut Registry) {
     ember_engine(r);
 }
 
-/// A block entity without slots or a screen: there is nothing to put in it.
+/// A block entity without slots or a screen: it is wound with an empty hand.
 fn spring_engine(r: &mut Registry) {
     model::engine(r.block(&SPRING_ENGINE), "spring")
         .hardness(1.5)
@@ -164,4 +171,25 @@ fn ember_screen(ui: &mut Ui) {
         });
         ui.player_inventory(true);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_spring_is_saved_after_all_that_came_before_it() {
+        use std::mem::offset_of;
+        assert_eq!(offset_of!(Engine, piston), 24, "as it always was");
+        assert_eq!(offset_of!(Engine, wound), 32, "the spring after it");
+    }
+
+    #[test]
+    fn an_unknown_saved_kind_reads_as_the_default() {
+        let engine = Engine {
+            kind: 99,
+            ..Engine::default()
+        };
+        assert_eq!(engine.kind(), Kind::Spring, "a kind from a newer cogwork");
+    }
 }

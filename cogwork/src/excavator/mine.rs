@@ -1,11 +1,14 @@
 //! Mining one block: the drill travels to it, energy is paid by how hard it is, and what it drops
-//! goes into the excavator's output, stone and ore as rubble (`rubble::quarried`).
+//! goes into the quarry's output, stone and ore as rubble (`rubble::quarried`), as much Ore
+//! Rubble as its kind brings up.
 
 use weft_sdk::{Vec3, World};
 
 use super::depth::at_depth;
+use super::dig::Quarry;
+use super::kind::Kind;
 use super::power::{pay, travel};
-use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Status};
+use super::{Dig, Frame, Status};
 use crate::harvest::{Harvest, Keep, cost, harvest};
 use crate::lib::{BlockState, Pos, point};
 
@@ -14,9 +17,6 @@ const BASE_COST: f32 = 400.0;
 const COST_PER_HARDNESS: f32 = 400.0;
 /// Blocks per tick the drill moves.
 const DRILL_SPEED: f64 = 0.25;
-/// Ore Rubble it brings up for each block of metal ore, and how many times the drops of other
-/// ores: the gantry's, the most of any quarry.
-const ORE_MULTIPLIER: f64 = 2.0;
 
 pub enum Mined {
     Done,
@@ -26,9 +26,9 @@ pub enum Mined {
     Waiting(Status),
 }
 
-/// Whether the drill stops for a block: not air or liquid, breakable, and not its own frame.
+/// Whether the drill stops for a block: not air or liquid, breakable, and no quarry or frame.
 pub fn worth_mining(block_state: BlockState) -> bool {
-    block_state.can_break() && !block_state.is(&GANTRY_FRAME) && !block_state.is(&EXCAVATOR)
+    block_state.can_break() && !Kind::is_part(block_state)
 }
 
 /// Energy to mine `block_state` at `cell` inside `frame`: dearer the deeper it lies below the
@@ -69,29 +69,27 @@ pub fn drill_to(world: &World, id: u64, dig: &mut Dig, goal: Vec3) -> bool {
     false
 }
 
-/// Pays for and mines the block `state` at `cell` into the excavator `id`'s output.
+/// Pays for, at up to `draw` a tick, and mines the block `block_state` at `cell` into the
+/// output of `quarry`.
 pub fn mine_block(
     world: &World,
-    id: u64,
+    quarry: Quarry,
     dig: &mut Dig,
     cell: Pos,
     block_state: BlockState,
+    draw: i64,
 ) -> Mined {
     if !worth_mining(block_state) {
         return Mined::Skipped;
     }
     dig.set_status(Status::Mining);
-    if !pay(
-        world,
-        id,
-        dig,
-        cell,
-        block_cost(&dig.frame, cell, block_state),
-    ) {
+    let id = quarry.id;
+    let cost = block_cost(&dig.frame, cell, block_state);
+    if !pay(world, id, dig, cell, cost, draw) {
         return Mined::Waiting(dig.status());
     }
     let keep = Keep::Quarry {
-        multiplier: ORE_MULTIPLIER,
+        multiplier: quarry.kind.rubble_per_ore,
     };
     match harvest(world, id, cell, block_state, keep) {
         // Paid for already: it stays paid until there is room.
