@@ -2,7 +2,7 @@
 //! groups: `fuel` and `input` take, `output` gives, a chest's `chest` does both. An inventory
 //! without any of these names is one big chest. An assembly bench takes what its pattern asks
 //! for, a quarry its bits and frame materials, a shaker screen Rubble, a grinding mill Ore Rubble
-//! and sand. Liquid groups are left alone both ways: these are item tubes.
+//! and sand, and an ember engine any fuel but lava. Liquid groups are left alone both ways: these are item tubes.
 
 mod fill;
 mod span;
@@ -18,8 +18,9 @@ use crate::lib::Pos;
 type Inserts = fn(&World, Holder, ItemStack, bool) -> Option<ItemStack>;
 
 /// The machines that pick their own slots.
-const PICKY: [Inserts; 4] = [
+const PICKY: [Inserts; 5] = [
     crate::bench::insert,
+    crate::engines::insert,
     crate::excavator::insert,
     crate::shaker_screen::insert,
     crate::grinding_mill::insert,

@@ -29,6 +29,10 @@
   and what it sifts out leaves by its front.
 - The grinding mill grinds Ore Rubble into raw ore with engine energy, as the millstone does,
   with water by liquid tube and sand by tube; the raw ore leaves by its front.
+- The hand bellows: placed against a furnace and pumped with an empty hand, it makes the furnace
+  cook twice as fast for a minute.
+- The driven bellows does the same for as long as an engine feeds it 20 energy a tick, its cogs
+  pumping the bag.
 
 ### Changed
 
@@ -39,6 +43,8 @@
 - Spring engines no longer run from redstone alone: they run on their wound spring, and a
   redstone signal now holds it like a brake. Their recipe takes an iron ingot instead of a
   piston.
+- Ember engines no longer burn lava: their fuel slot refuses lava buckets. A lava bucket already
+  in one stays in its slot unburnt until taken out.
 
 ## 0.4.1 - 2026-11-15
 

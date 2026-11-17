@@ -1,12 +1,13 @@
 //! Cogwork's pictures of oil, liquid tubes, tanks, the pumps, the oil engine, the liquid bars on
-//! the screens, rubble and the hand and driven machines that work it, and the Timber Quarry, its
-//! bits, the water wheel and the wooden axle, drawn here pixel by pixel so they can be changed
-//! and drawn again: `WRITE_ASSETS=1 cargo test --release art` writes them (`generated`). Each
-//! family is a file of its own; the colors they share are below.
+//! the screens, rubble and the hand and driven machines that work it, the Timber Quarry, its
+//! bits, the water wheel and the wooden axle, and the bellows' moving parts, drawn here pixel by
+//! pixel so they can be changed and drawn again: `WRITE_ASSETS=1 cargo test --release art`
+//! writes them (`generated`). Each family is a file of its own; the colors they share are below.
 //!
 //! The pictures are small and few-colored like the rest of the mod's: a grid of letters with a
 //! key for anything drawn by hand, and `noise` for a surface of one material.
 
+mod bellows;
 mod driven;
 mod gui;
 mod liquids;
@@ -276,6 +277,7 @@ fn the_pictures_are_what_is_drawn_here() {
         .chain(oil_engine::all())
         .chain(processing::all())
         .chain(driven::all())
+        .chain(bellows::all())
         .chain(quarry::all())
         .chain(wheel::all())
         .chain(gui::all());

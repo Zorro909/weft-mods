@@ -1,0 +1,11 @@
+# The bellows that blow a furnace's fire.
+
+[[shaped]]
+result = "hand_bellows"
+pattern = ["PPP", "LLL", "PiP"]
+key = { P = "#planks", L = "#materials/leather", i = "#ingots/iron" }
+
+[[shaped]]
+result = "driven_bellows"
+pattern = ["iii", "lBl", "c c"]
+key = { i = "#ingots/iron", l = "#logs", B = "hand_bellows", c = "#cogs/stone" }

@@ -18,6 +18,7 @@ short overview of the mod, see the [README](../README.md).
 | [Oil and the pump](oil.md) | Oil, where its fields lie, and pumping them |
 | [Liquid tubes and tanks](liquids.md) | Carrying and storing any liquid, and tanks that grow |
 | [Rubble, ore grades, sifting and grinding](processing.md) | What quarries bring up, what each grade of Ore Rubble is worth, and sifting and grinding by hand (sieve, millstone) and with engines (shaker screen, grinding mill) |
+| [Bellows](bellows.md) | The hand and driven bellows that make a furnace cook twice as fast |
 | [Oil engine](oil-engine.md) | Building the big engine, feeding it oil and water, and taking its energy |
 | [Working with other mods](other-mods.md) | Slot groups, energy, tags: how Cogwork meets other mods' content |
 

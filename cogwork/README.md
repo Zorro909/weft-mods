@@ -23,8 +23,8 @@ send everything one way; void tubes destroy what reaches them. A line that jams 
 ### Power
 
 The spring engine runs on a spring you wind by hand with its crank, and a redstone signal holds
-it; the ember engine burns fuel for four times as much energy and overheats when nothing takes
-it. A water wheel over a stream turns for a little energy of its own. Engines push energy into
+it; the ember engine burns fuel, but not lava, for four times as much energy and overheats when
+nothing takes it. A water wheel over a stream turns for a little energy of its own. Engines push energy into
 the block their trunk points at, and wooden axles and torque shafts carry it further, joining
 any mod's cables. The oil engine, a cube of 27
 blocks built around a combustion chamber, burns oil with water for 600 energy a tick, its two
@@ -63,6 +63,12 @@ with water and sand, its runner turning with each turn of its handle; the sieve 
 into sand and gravel and, now and then, something better. Their driven counterparts, the shaker
 screen and the grinding mill, do the same with engine energy, fed by tubes and the mill's water
 by liquid tube.
+
+### Bellows
+
+A bellows placed against a furnace makes it cook twice as fast. Pump the hand bellows with an
+empty hand and the furnace roars for a minute; the driven bellows pumps steadily while an engine
+feeds it 20 energy a tick.
 
 ### Keeping the world loaded
 
