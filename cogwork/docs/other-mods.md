@@ -44,11 +44,18 @@ so tubes couldn't tell a liquid tank from an item slot.
 ## Energy
 
 Engines push into any block entity that takes `core:energy` (up to 200 a tick), and the
-quarries, leveler, assembly bench and timber tube take energy from any mod's engines,
-generators or cables in the same way.
+quarries, leveler, assembly bench, timber tube and driven bellows take energy from any mod's
+engines, generators or cables in the same way.
 
 The torque shaft and the wooden axle are tagged `conductor`, so the engine's energy networks join it with any mod's
 cables and machines.
+
+## Furnaces
+
+The [bellows](bellows.md) speed up a furnace through a step on base's `base:smelt_time` chain:
+when a furnace asks the chain with its block entity in the query, as base's furnace does, the
+step halves the time while a bellows beside that block points at it and blows. Any mod's
+furnace that asks the chain that way is blown too.
 
 ## Tags
 
@@ -56,6 +63,6 @@ cables and machines.
 |---|---|
 | `wrenches` | Items that work as a [tuning wrench](items.md#tuning-wrench). |
 | `cogs`, `cogs/<tier>` | Cogs; recipes ask for them by tier, so other mods' cogs count. |
-| `fuel` | What an ember engine burns (from the base game). |
+| `fuel` | What an ember engine burns (from the base game), lava buckets aside. |
 | `#planks`, `#ingots/iron`, ... | Recipe ingredients, so other mods' materials work too. |
 | `cogwork:tubes` | Every tube block. |

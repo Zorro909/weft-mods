@@ -28,17 +28,19 @@ pub fn register(r: &mut Registry) {
 }
 
 /// Keeps the looping `clip` of `owner`'s entity `id` going while `runs`, and stops it otherwise;
-/// the entity is told only when that changes.
-pub fn keep_looping(world: &World, owner: u64, id: u64, clip: &str, runs: bool) {
+/// the entity is told only when that changes. True when it was told: a clip that runs starts
+/// over from its beginning now.
+pub fn keep_looping(world: &World, owner: u64, id: u64, clip: &str, runs: bool) -> bool {
     let now = Looping {
         entity: id,
         runs: u32::from(runs),
     };
     if world.component(owner, &LOOPING).unwrap_or_default() == now {
-        return;
+        return false;
     }
     world.action_play(id, if runs { clip } else { "" }, runs);
     world.set_component(owner, &LOOPING, now);
+    true
 }
 
 /// The yaw, in degrees, that turns a model whose front is its north to face `front`: a quarter
