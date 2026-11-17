@@ -50,6 +50,15 @@
 - The steel drill bit, for the Iron Quarry: it breaks what a diamond pickaxe breaks, at up to 90
   energy a tick, for 8,000 blocks.
 - The sieve and the shaker screen sift slag into gravel, and now and then a Poor iron Ore Rubble.
+- The firebox and the boiler on it: the firebox burns any fuel, lava buckets and lava by liquid
+  tube too, while the boiler on it boils water from liquid tubes into steam, 20 mB a tick, let
+  out of its top. Its door glows while it burns.
+- Steam, a new liquid that spreads through liquid tubes and tanks from fuller to emptier,
+  whatever their height.
+- The steam engine runs on 20 mB of steam a tick for 160 energy, pushed out of both ends of its
+  flywheel's axle; its piston and flywheel turn and it puffs steam while it runs.
+- The trip hammer forges steel blooms from tubes into steel ingots on steam, five strikes a
+  bloom, the automatic counterpart of the forge anvil.
 
 ### Changed
 
@@ -61,7 +70,7 @@
   redstone signal now holds it like a brake. Their recipe takes an iron ingot instead of a
   piston.
 - Ember engines no longer burn lava: their fuel slot refuses lava buckets. A lava bucket already
-  in one stays in its slot unburnt until taken out.
+  in one stays in its slot unburnt until taken out. Lava burns in the firebox instead.
 
 ## 0.4.1 - 2026-11-15
 

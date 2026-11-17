@@ -200,7 +200,7 @@ pub fn tank_bar(ui: &mut Ui, capacity: u32) {
     });
 }
 
-/// The meter of the engine whose menu is open: "Sending 600 energy a tick into its drives".
+/// The meter of the engine whose menu is open: "Sending out 600 energy a tick".
 pub fn giving_line(ui: &mut Ui) {
     ui.text_bind(|view, out| {
         let meter = view.menu_component(&METER).unwrap_or_default();

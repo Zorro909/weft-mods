@@ -148,7 +148,7 @@ pub fn register(r: &mut Registry) {
 /// | [###.......]  8000 / 16000 mB of Water         |
 /// | [#######...]  42000 / 60000 energy             |
 /// | Running: 600 energy a tick                     |  or what keeps it from running
-/// | Sending 600 energy a tick into its drives      |  into its drives last tick
+/// | Sending out 600 energy a tick                  |  into its drives last tick
 /// +------------------------------------------------+
 /// ```
 fn screen(ui: &mut Ui) {

@@ -5,6 +5,9 @@ Liquid tubes carry liquid from a [pump](oil.md#pump) to tanks, an
 of any mod: water, lava, [oil](oil.md#oil) or another mod's. A tube or tank holds one liquid at a
 time, and you can see how full it is: the liquid stands in it at its level, in its own colors.
 
+[Steam](steam.md#steam) is the exception to what follows: it doesn't fall, but spreads from fuller
+holders to emptier ones, whatever their height.
+
 Liquid moves between the liquid tubes, tanks and pumps that touch, the way it would in pipes:
 from where it stands higher to where it stands lower, up to 100 mB a tick to each neighbour. It
 falls down a tube and levels out sideways, and a pipe into a lower tank drains into it.
@@ -18,11 +21,17 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
   into a pump. Without a pump, liquid rises no higher than where it stands.
 - **Two liquids** don't mix: one waits until the other has moved on. What is left of a liquid
   once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
+  Steam is the exception: steam and any other liquid wait for each other down to the last
+  millibucket, so a tube or tank that held water takes steam only once it is empty, or broken
+  and placed again, and the other way round.
 
 An oil engine's intake takes only oil or water, one at a time, and hands nothing on. A
 [grinding mill](processing.md#grinding-mill) or a [washer](processing.md#washer) takes only
 water, and hands nothing on either. A [coke oven's](steel.md#creosote) door and drains hand on
-the creosote the oven makes, and take nothing.
+the creosote the oven makes, and take nothing. A [firebox](steam.md#firebox) takes only lava, a
+[boiler](steam.md#boiler) only water, and a [steam engine](steam.md#steam-engine) or
+[trip hammer](steam.md#trip-hammer) only steam; none of them hands anything on, but a boiler lets
+its steam out of its top.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.
