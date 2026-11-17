@@ -31,14 +31,13 @@ pub static TIMBER: Kind = Kind {
         Cost {
             material: Material::Tagged(&LOGS),
             count: 1,
-            blocks: 1,
         },
         Cost {
             material: Material::Item(&STRING),
             count: 1,
-            blocks: 1,
         },
     ],
+    frame_batch: 1,
     standby: Standby::Flat(4),
     inside: Inside {
         default: 5,
@@ -73,8 +72,8 @@ pub static IRON: Kind = Kind {
     frame_cost: &[Cost {
         material: Material::Tagged(&IRON_INGOTS),
         count: 1,
-        blocks: 1,
     }],
+    frame_batch: 1,
     standby: Standby::BySides,
     inside: Inside {
         default: 9,
@@ -110,8 +109,8 @@ pub static STEEL: Kind = Kind {
     frame_cost: &[Cost {
         material: Material::Tagged(&STEEL_INGOTS),
         count: 1,
-        blocks: 4,
     }],
+    frame_batch: 4,
     standby: Standby::BySides,
     inside: Inside {
         default: 9,
@@ -143,6 +142,7 @@ pub static GANTRY: Kind = Kind {
     menu: &EXCAVATOR_MENU,
     frame: &GANTRY_FRAME,
     frame_cost: &[],
+    frame_batch: 1,
     standby: Standby::BySides,
     inside: Inside {
         default: 9,
@@ -256,14 +256,10 @@ mod tests {
     }
 
     #[test]
-    fn a_steel_frame_takes_an_ingot_for_every_fourth_block() {
-        let cost = &STEEL.frame_cost[0];
-        let due: Vec<u32> = (0..9).filter(|&step| cost.is_due(step)).collect();
-        assert_eq!(due, [0, 4, 8], "the first of every four");
-        assert!(
-            (0..5).all(|step| IRON.frame_cost[0].is_due(step)),
-            "iron: each"
-        );
+    fn a_steel_ingot_pays_for_four_frame_blocks() {
+        assert_eq!(STEEL.frame_batch, 4, "steel: four");
+        assert_eq!(IRON.frame_batch, 1, "iron: each");
+        assert_eq!(TIMBER.frame_batch, 1, "timber: each");
     }
 
     #[test]

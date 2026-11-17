@@ -118,10 +118,12 @@ An iron frame block broken gives its ingot back, so a quarry's frame is iron len
 ### Steel frame
 
 A Steel Excavator builds its frame of open steel lattice. One steel ingot (anything tagged
-`ingots/steel`) from its six frame slots pays for four frame blocks: it takes the ingot as it
-starts the first of them, and with none there it waits ("Needs what its frame is built of"). A
-9 by 9 inside takes 23 ingots, a 33 by 33 one 71, a 63 by 63 one 131. A steel frame block broken
-gives a steel ingot back one time in four, so a frame broken down gives back about what it took.
+`ingots/steel`) from its six frame slots pays for the next four frame blocks it puts up: it
+takes the ingot as it starts the first of them, and with none there it waits ("Needs what its
+frame is built of"). The four it pays for are counted as they go up, so blocks of the frame still
+standing are passed over and cost nothing. A 9 by 9 inside takes 23 ingots, a 33 by 33 one 71, a 63 by 63 one 131. The block that took an
+ingot gives it back when broken, by hand or by a leveler, and the other three give nothing: a
+frame broken down gives back exactly what it took.
 
 ## Drill bits
 

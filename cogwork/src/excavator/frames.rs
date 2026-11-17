@@ -1,6 +1,8 @@
 //! The blocks quarries build their frames of. The Gantry's is a plain lattice cube that drops
 //! nothing. The Steel Excavator's is a cube of riveted steel lattice, built of a steel ingot for
-//! every four blocks, so one in four gives an ingot back when broken. The others, the Timber
+//! every four blocks: the block that took the ingot is marked `paid` and gives it back when
+//! broken, the same on every try, so a machine with a full output can't break it for nothing.
+//! The others, the Timber
 //! Quarry's lashed logs and the Iron Quarry's bars, are poles joined toward the frame blocks
 //! beside them, drawn from a hub-and-arm model (`arms`), and give back what they were built of
 //! when broken.
@@ -16,6 +18,9 @@ pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 pub static LASHED_FRAME: Block = Block::named("lashed_frame");
 pub static IRON_FRAME: Block = Block::named("iron_frame");
 pub static STEEL_FRAME: Block = Block::named("steel_frame");
+
+/// The property of a frame block paid for in batches that marks the one that took its batch.
+const PAID: &str = "paid";
 
 /// A frame block of poles: the block, its model, and the item it drops when broken.
 struct Poles {
@@ -59,9 +64,10 @@ pub fn register(r: &mut Registry) {
     }
 }
 
-/// The steel lattice, which gives back an ingot as often as the frame took one.
+/// The steel lattice, whose block that took an ingot gives it back.
 fn register_steel(r: &mut Registry) {
     r.block(&STEEL_FRAME)
+        .prop(PAID, ["false", "true"])
         .texture("steel_frame")
         .cutout()
         .hardness(1.5)
@@ -71,19 +77,14 @@ fn register_steel(r: &mut Registry) {
     r.loot(&STEEL_FRAME).pool(
         Pool::new()
             .when(Cond::harvested())
-            .when(Cond::chance(steel_given_back()))
+            .when(paid())
             .item("steel_ingot"),
     );
 }
 
-/// The share of steel frame blocks that give an ingot back: one for the blocks an ingot built.
-fn steel_given_back() -> f32 {
-    let blocks = super::kind::STEEL
-        .frame_cost
-        .iter()
-        .map(|cost| cost.blocks)
-        .max();
-    1.0 / blocks.unwrap_or(1) as f32
+/// Whether the frame block broken is the one that took its batch.
+fn paid() -> Cond {
+    Cond::state(&format!("{PAID}=true"))
 }
 
 fn register_poles(r: &mut Registry, poles: &'static Poles) {
@@ -127,9 +128,11 @@ fn runs_straight(joins: impl Fn(Dir) -> bool) -> bool {
     matches!(arms[..], [a, b] if a.opposite() == b)
 }
 
-/// Puts a frame block of `frame` at `cell`, joined to the frame blocks beside it.
-pub fn put(world: &World, cell: Pos, frame: &Block) {
-    world.set_block_typed(cell, BlockState::of(frame));
+/// Puts a frame block of `frame` at `cell`, joined to the frame blocks beside it, and marked
+/// `paid` if it took its batch and its block is paid for in batches.
+pub fn put(world: &World, cell: Pos, frame: &Block, paid: bool) {
+    let block_state = BlockState::of(frame).with_flag(PAID, paid);
+    world.set_block_typed(cell, block_state);
     refresh(world, cell, frame);
 }
 
@@ -167,8 +170,12 @@ mod tests {
     }
 
     #[test]
-    fn a_steel_frame_gives_back_what_it_took() {
-        assert_eq!(steel_given_back(), 0.25, "an ingot built four");
+    fn a_steel_frame_block_gives_the_same_back_on_every_try() {
+        assert_eq!(
+            paid().text(),
+            "state(paid=true)",
+            "the block that took the ingot, never a roll a full output could wait out"
+        );
         assert!(
             crate::has_asset("textures/block/steel_frame.png"),
             "its look"
