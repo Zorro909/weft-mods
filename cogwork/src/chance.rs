@@ -9,6 +9,9 @@ pub fn roll(world: &World) -> f64 {
     (world.random() >> 11) as f64 / (1u64 << 53) as f64
 }
 
+/// The roll that gives the most of any amount: room for what it gives is room for any roll.
+pub const LUCKIEST: f64 = 0.0;
+
 /// `amount` as a whole count, with `roll` from 0 to 1: its whole part, and one more when `roll`
 /// falls inside its fraction.
 pub fn count(amount: f64, roll: f64) -> u32 {
@@ -31,6 +34,17 @@ mod tests {
         assert_eq!(count(1.5, 0.7), 1, "outside it");
         assert_eq!(count(2.0, 0.0), 2, "a whole number is always that");
         assert_eq!(count(1.25, 0.9999), 1, "a high roll misses a quarter");
+    }
+
+    #[test]
+    fn the_luckiest_roll_gives_the_most() {
+        for amount in [1.0, 1.25, 1.5, 2.0, 2.5] {
+            let most = count(amount, LUCKIEST);
+            assert_eq!(most, amount.ceil() as u32, "{amount}");
+            for roll in [0.1, 0.24, 0.5, 0.9999] {
+                assert!(count(amount, roll) <= most, "{amount} at {roll}");
+            }
+        }
     }
 
     #[test]
