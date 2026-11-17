@@ -1,0 +1,50 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"particle": "base:block/planks_oak",
+		"wood": "base:block/planks_oak",
+		"iron": "base:block/iron_block"
+	},
+	"elements": [
+		{
+			"name": "board",
+			"from": [2, 0, 3],
+			"to": [14, 2, 16],
+			"faces": {
+				"north": {"uv": [2, 14, 14, 16], "texture": "#wood"},
+				"east": {"uv": [0, 14, 13, 16], "texture": "#wood"},
+				"south": {"uv": [2, 14, 14, 16], "texture": "#wood"},
+				"west": {"uv": [3, 14, 16, 16], "texture": "#wood"},
+				"up": {"uv": [2, 3, 14, 16], "texture": "#wood"},
+				"down": {"uv": [2, 0, 14, 13], "texture": "#wood"}
+			}
+		},
+		{
+			"name": "head",
+			"from": [5, 2, 3],
+			"to": [11, 5, 5],
+			"faces": {
+				"north": {"uv": [5, 11, 11, 14], "texture": "#wood"},
+				"east": {"uv": [11, 11, 13, 14], "texture": "#wood"},
+				"south": {"uv": [5, 11, 11, 14], "texture": "#wood"},
+				"west": {"uv": [3, 11, 5, 14], "texture": "#wood"},
+				"up": {"uv": [5, 3, 11, 5], "texture": "#wood"},
+				"down": {"uv": [5, 11, 11, 13], "texture": "#wood"}
+			}
+		},
+		{
+			"name": "nozzle",
+			"from": [7, 2, 0],
+			"to": [9, 4, 3],
+			"faces": {
+				"north": {"uv": [7, 12, 9, 14], "texture": "#iron"},
+				"east": {"uv": [13, 12, 16, 14], "texture": "#iron"},
+				"south": {"uv": [7, 12, 9, 14], "texture": "#iron"},
+				"west": {"uv": [0, 12, 3, 14], "texture": "#iron"},
+				"up": {"uv": [7, 0, 9, 3], "texture": "#iron"},
+				"down": {"uv": [7, 13, 9, 16], "texture": "#iron"}
+			}
+		}
+	]
+}

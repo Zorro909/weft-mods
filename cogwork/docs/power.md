@@ -16,7 +16,7 @@ point the next way round. The piston moves while the engine runs.
 
 | | Spring Engine | Ember Engine |
 |---|---|---|
-| Runs on | its spring, wound by hand | anything that burns (`fuel`) |
+| Runs on | its spring, wound by hand | anything that burns (`fuel`) but lava |
 | Energy per tick | 10 | 40 |
 | Stores | 1,000 | 10,000 |
 | Overheats | never | when its energy has nowhere to go |
@@ -43,6 +43,10 @@ cic
 
 Burns one item from its fuel slot at a time, for as long as the base game's furnace would. Its
 screen shows the flame, the stored energy and its heat. Tubes can fill its fuel slot.
+
+It burns anything that burns except lava: its fuel slot refuses a lava bucket, and a tube with
+one finds no way in. A lava bucket already in the slot from an older world stays there and is
+never burnt; take it out by hand, and the engine burns the next fuel put in.
 
 ```
 sss       s = #cobblestone     c = #cogs/stone
@@ -84,7 +88,8 @@ sps
 ## Energy readouts
 
 The screen of every machine that runs on energy (the [excavator](excavator.md), the
-[leveler](leveler.md), the [assembly bench](assembly-bench.md) and the [pump](oil.md#pump))
+[leveler](leveler.md), the [assembly bench](assembly-bench.md), the [pump](oil.md#pump), the
+[shaker screen and grinding mill](processing.md) and the [driven bellows](bellows.md#driven-bellows))
 shows, under its stored energy, what it used in the last tick: "Using 120 energy a tick". When
 it wanted more than its store held, it says by how much, "Using 90 energy a tick, short 30": add
 an engine or a faster one until the shortfall goes. A machine waiting (for its output to empty,
