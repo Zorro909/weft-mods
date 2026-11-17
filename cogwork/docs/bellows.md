@@ -35,6 +35,10 @@ It needs the whole 20 every tick: fed less, it pumps in fits and starts but neve
 the energy can't buy most of the speed. A spring engine or a water wheel alone is not enough;
 two water wheels, or an ember engine, are.
 
+Time its area missed, unloaded or skipped, costs 20 a tick like any other. Its store holds 20
+ticks' worth, so after a longer gap it stops and winds up again; a furnace catching up on that
+time cooks at its own speed.
+
 It runs while it has energy, whether or not a furnace is at its nozzle. Its screen shows its
 stored energy, what it used last tick (see [energy readouts](power.md#energy-readouts)) and what
 it is doing:
