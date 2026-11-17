@@ -49,6 +49,16 @@ block.cogwork.ultra_cuboid_loader.tooltip = Keeps the 7 by 7 cubes around it loa
 item.cogwork.cuboid_lens = Cuboid Lens
 item.cogwork.cuboid_lens.tooltip = Held, outlines every cube Cogwork keeps loaded: cyan where a loader keeps machines running, green where it keeps everything, orange around a working excavator or leveler.
 
+block.cogwork.rubble = Rubble
+block.cogwork.rubble.tooltip = Broken stone, as quarries bring it up. Sifts into sand and gravel, and now and then something better.
+item.cogwork.ore_rubble = Ore Rubble
+item.cogwork.ore_rubble.tooltip = {if:cogwork:ore.named==1}{lang:cogwork.metal.iron}{/if}{if:cogwork:ore.named==2}{lang:cogwork.metal.gold}{/if}{if:cogwork:ore.named==3}{lang:cogwork.metal.copper}{/if}{if:cogwork:ore.named==4}{lang:cogwork.metal.tin}{/if}{if:cogwork:ore.named==5}{lang:cogwork.metal.silver}{/if}{if:cogwork:ore.named==6}{lang:cogwork.metal.lead}{/if}{if:cogwork:ore.named==7}{lang:cogwork.metal.zinc}{/if}{if:cogwork:ore.named==8}{lang:cogwork.metal.nickel}{/if}{if:cogwork:ore.named==9}{lang:cogwork.metal.aluminum}{/if}{if:cogwork:ore.named==10}{lang:cogwork.metal.uranium}{/if}{if:cogwork:ore.named==11}{lang:cogwork.metal.osmium}{/if}{if:cogwork:ore.named==12}{lang:cogwork.metal.platinum}{/if}{if:cogwork:ore.named==0}{lang:cogwork.metal.other}{/if}, {if:cogwork:grade==0}{lang:cogwork.grade.poor}{/if}{if:cogwork:grade==1}{lang:cogwork.grade.common}{/if}{if:cogwork:grade==2}{lang:cogwork.grade.rich}{/if}{if:cogwork:grade==3}{lang:cogwork.grade.pure}{/if}
+    {on_key:!core:sneak}{lang:tooltip.more}{/on_key}{on_key:core:sneak}Grinds into its metal's raw ore at a millstone: one of Poor, two of Rich. Processing raises the grade.{/on_key}
+block.cogwork.millstone = Millstone
+block.cogwork.millstone.tooltip = Grinds Ore Rubble into raw ore by hand. Use it with a water bucket, sand and Ore Rubble, then with an empty hand to turn it: six turns grind one. Sneak with an empty hand to take out what it holds.
+block.cogwork.sieve = Sieve
+block.cogwork.sieve.tooltip = Sifts Rubble by hand. Use it with Rubble to put one on its mesh, then shake it four times with an empty hand.
+
 block.cogwork.oil = Oil
 item.cogwork.oil_bucket = Oil Bucket
 block.cogwork.oily_dirt = Oil-Soaked Dirt
@@ -180,3 +190,35 @@ cogwork.oil_engine.no_intake = Not built: needs an intake on a side or underneat
 cogwork.oil_engine.no_drive = Not built: needs a drive on a side or underneath
 cogwork.liquid.held = {color:dim}{0} / {1} mB of {2}{/}
 cogwork.liquid.empty = {color:dim}Empty, holds {0} mB{/}
+
+cogwork.metal.iron = Iron
+cogwork.metal.gold = Gold
+cogwork.metal.copper = Copper
+cogwork.metal.tin = Tin
+cogwork.metal.silver = Silver
+cogwork.metal.lead = Lead
+cogwork.metal.zinc = Zinc
+cogwork.metal.nickel = Nickel
+cogwork.metal.aluminum = Aluminum
+cogwork.metal.uranium = Uranium
+cogwork.metal.osmium = Osmium
+cogwork.metal.platinum = Platinum
+cogwork.metal.other = Some metal
+cogwork.grade.poor = Poor
+cogwork.grade.common = Common
+cogwork.grade.rich = Rich
+cogwork.grade.pure = Pure
+cogwork.millstone.empty = Nothing to grind: use it with Ore Rubble
+cogwork.millstone.no_raw_ore = No mod has a raw ore of this metal: sneak to take it out
+cogwork.millstone.no_water = Needs water: use it with a water bucket
+cogwork.millstone.no_sand = Needs sand to grind with: use it with sand
+cogwork.millstone.full = Full: sneak with an empty hand to take out the raw ore
+cogwork.millstone.no_room = No room for that
+cogwork.millstone.ready = Ready: turn it with an empty hand
+cogwork.millstone.turning = Turn {0} of {1}
+cogwork.millstone.ground = Ground one: sneak with an empty hand to take out the raw ore
+cogwork.sieve.empty = Nothing on the mesh: use it with Rubble
+cogwork.sieve.loaded = Rubble on the mesh: shake it with an empty hand
+cogwork.sieve.busy = Rubble lies on the mesh already: shake it with an empty hand
+cogwork.sieve.shaking = Shake {0} of {1}
+cogwork.sieve.sifted = Sifted

@@ -1,12 +1,12 @@
 //! Mining one block: the drill travels to it, energy is paid by how hard it is, and what it drops
-//! goes into the excavator's output.
+//! goes into the excavator's output, stone and ore as rubble (`rubble::quarried`).
 
 use weft_sdk::{Vec3, World};
 
 use super::depth::at_depth;
 use super::power::{pay, travel};
 use super::{Dig, EXCAVATOR, Frame, GANTRY_FRAME, Status};
-use crate::harvest::{Harvest, cost, harvest};
+use crate::harvest::{Harvest, Keep, cost, harvest};
 use crate::lib::{BlockState, Pos, point};
 
 /// Energy per block: a base and as much again per point of hardness (stone 1.5: 1000).
@@ -14,6 +14,9 @@ const BASE_COST: f32 = 400.0;
 const COST_PER_HARDNESS: f32 = 400.0;
 /// Blocks per tick the drill moves.
 const DRILL_SPEED: f64 = 0.25;
+/// Ore Rubble it brings up for each block of metal ore, and how many times the drops of other
+/// ores: the gantry's, the most of any quarry.
+const ORE_MULTIPLIER: f64 = 2.0;
 
 pub enum Mined {
     Done,
@@ -87,7 +90,10 @@ pub fn mine_block(
     ) {
         return Mined::Waiting(dig.status());
     }
-    match harvest(world, id, cell, block_state) {
+    let keep = Keep::Quarry {
+        multiplier: ORE_MULTIPLIER,
+    };
+    match harvest(world, id, cell, block_state, keep) {
         // Paid for already: it stays paid until there is room.
         Harvest::Full => Mined::Waiting(Status::Full),
         Harvest::Refused => {
