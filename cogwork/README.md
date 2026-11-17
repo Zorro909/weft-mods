@@ -7,6 +7,7 @@ tubes you can see into, engines and water wheels drive the machines, and three m
 over the big jobs: quarries that mine out a whole area, an assembly bench that crafts on its own, and a
 leveler that makes land flat. A pump brings up oil from deep underground, liquid tubes and
 tanks carry and store it, and an oil engine burns it for far more energy than the small engines.
+A coke oven, a blast furnace and a forge anvil make steel.
 
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
@@ -50,7 +51,8 @@ turning.
 - **Quarries.** Build a frame around an area and lower a drill that mines everything inside,
   layer by layer. The Timber Quarry is the first: it lashes its frame of logs and string, digs
   a small pit 16 deep with a stone or iron drill bit, and leaves standing what its bit can't
-  break. The Iron Quarry builds its frame of iron bars and digs a wider pit 64 deep. The Gantry
+  break. The Iron Quarry builds its frame of iron bars and digs a wider pit 64 deep, with an iron
+  or steel bit. The Gantry
   Excavator digs areas up to 256 by 256 as deep as the world's settings allow. More engines
   make them dig faster.
 - **Assembly bench.** Lay out a crafting recipe with ghost items; tubes bring the ingredients
@@ -76,6 +78,15 @@ by liquid tube.
 A bellows placed against a furnace makes it cook twice as fast. Pump the hand bellows with an
 empty hand and the furnace roars for a minute; the driven bellows pumps steadily while an engine
 feeds it 20 energy a tick.
+
+### Steel
+
+The coke oven, a box of bricks round a hollow, bakes coal into coke with no energy, its door
+glowing and smoke rising from its top; the creosote it gives off drains into liquid tubes, and
+every eighth coal leaves a sulfur. The blast furnace, a tower of fire bricks, smelts iron with
+coke into steel blooms while a driven bellows blows into it, roaring and spitting sparks. On the
+forge anvil a hammer beats each glowing bloom into a steel ingot, for the steel drill bit and
+what comes after.
 
 ### Keeping the world loaded
 

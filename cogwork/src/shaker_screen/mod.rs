@@ -1,5 +1,5 @@
-//! The shaker screen: the sieve's driven counterpart. Rubble comes in by tube or by hand, and
-//! with engine energy its tray shakes each one through the sieve's own table
+//! The shaker screen: the sieve's driven counterpart. Rubble and slag come in by tube or by
+//! hand, and with engine energy its tray shakes each one through the sieve's own tables
 //! (`rubble::sifting`). What it sifts out leaves by its front, the side that faced the player
 //! who placed it, into a tube or a machine there; a timber tube can pull it out too.
 //!
@@ -15,6 +15,8 @@ use weft_sdk::{
     Slots, Toward, Ui, World, component_flags, tool_tier, value,
 };
 
+use crate::rubble::sifting::Pile;
+
 pub static SHAKER_SCREEN: Block = Block::named("shaker_screen");
 static SHAKER_MENU: Menu = Menu::named("shaker_screen");
 static RUBBLE: Item = Item::named("rubble");
@@ -27,8 +29,8 @@ const MAX_IN: i64 = 100;
 const STORES: i64 = 2_000;
 
 value! {
-    /// A shaker screen's state: its `tray` (an entity), the energy `spent` on the Rubble it
-    /// sifts, which stays in its input until it is sifted, its `status`, and what that Rubble
+    /// A shaker screen's state: its `tray` (an entity), the energy `spent` on the Rubble or slag
+    /// it sifts, which stays in its input until it is sifted, its `status`, and what that load
     /// turned up once paid for (`sifted`, see `work`), kept until it has room in the output.
     #[derive(Default)]
     pub struct Shaker {
@@ -95,7 +97,7 @@ pub fn register(r: &mut Registry) {
         .group(
             "input",
             Slots::grid(INPUT.0, INPUT.1)
-                .accepts(RUBBLE.name())
+                .accepts(&format!("{} {}", RUBBLE.name(), crate::steel::SLAG.name()))
                 .holder(),
         )
         .group("output", Slots::grid(OUTPUT.0, OUTPUT.1).output().holder())
@@ -104,11 +106,11 @@ pub fn register(r: &mut Registry) {
     tray::register(r);
 }
 
-/// Puts `stack` from a tube into the shaker screen `at`: Rubble into its input, nothing else.
-/// None for what is no shaker screen.
+/// Puts `stack` from a tube into the shaker screen `at`: Rubble and slag into its input, nothing
+/// else. None for what is no shaker screen.
 pub fn insert(world: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
     world.component(at, &SHAKER)?;
-    if stack.item != RUBBLE.id() {
+    if Pile::of(stack.item).is_none() {
         return Some(stack);
     }
     let input = world.inventory(at).find_group("input")?;

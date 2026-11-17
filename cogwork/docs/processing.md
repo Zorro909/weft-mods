@@ -109,10 +109,12 @@ PtP       t = base:string
 s s       s = #stick
 ```
 
-A wooden frame with a tray of string mesh. Use it with Rubble to put one on the mesh, then
-shake it four times with an empty hand; the fourth shake sifts it, and what it sifts into pops
-out on top. Rubble already on the mesh has to be sifted before the next goes on. Broken, by hand or by a
-machine, it keeps the Rubble on its mesh in its item.
+A wooden frame with a tray of string mesh. Use it with Rubble or [slag](steel.md#slag) to put one
+on the mesh, then shake it four times with an empty hand; the fourth shake sifts it, and what it
+sifts into pops out on top. What lies on the mesh has to be sifted before the next goes on.
+Broken, by hand or by a machine, it keeps what lies on its mesh in its item.
+
+Slag sifts into gravel, and one time in twenty a Poor iron Ore Rubble as well.
 
 ## Shaker Screen
 
@@ -123,9 +125,11 @@ PPP       c = #cogs/stone, P = #planks
 ```
 
 The sieve, driven: a frame of oak posts over a catch pan of sand, with an iron mesh tray on top
-that shakes back and forth while it works. It sifts Rubble by the table above.
+that shakes back and forth while it works. It sifts Rubble by the table above, and slag as the
+sieve does.
 
-- **Rubble in.** Tubes put Rubble, and nothing else, into its three input slots; so can you.
+- **Rubble in.** Tubes put Rubble and slag, and nothing else, into its three input slots; so can
+  you.
 - **Energy.** It sifts one Rubble with 800 energy, put in at up to 20 a tick: two seconds a
   Rubble at full speed. A spring engine or a water wheel can run it, slower.
 - **Out by its front.** Its front is the side with the chute, the side that faced you when you

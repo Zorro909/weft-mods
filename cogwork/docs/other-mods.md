@@ -21,8 +21,9 @@ of its slot groups:
 The base game's furnace has `input`, `fuel` and `output`, and its chest has `chest`, so tubes
 fill and empty both. An inventory that names none of these groups, such as a dispenser's, counts
 as one big chest. An assembly bench takes only what its pattern asks for, a shaker screen only
-Rubble, a grinding mill only Ore Rubble (into `input`) and sand (into its `sand` group), and a
-washer only Ore Rubble (into `input`).
+Rubble and slag, a grinding mill only Ore Rubble (into `input`) and sand (into its `sand` group),
+a washer only Ore Rubble (into `input`), a coke oven only `#gems/coal` (into `input`), and a
+blast furnace only `#ingots/iron` (into `input`) and `#coke` (into `fuel`).
 
 An item that burns always goes into a `fuel` group when the machine has one. Logs sent into a
 furnace by tube therefore end up as its fuel, never in its input.
@@ -64,6 +65,10 @@ furnace that asks the chain that way is blown too.
 |---|---|
 | `wrenches` | Items that work as a [tuning wrench](items.md#tuning-wrench). |
 | `cogs`, `cogs/<tier>` | Cogs; recipes ask for them by tier, so other mods' cogs count. |
-| `fuel` | What an ember engine burns (from the base game), lava buckets aside. |
+| `fuel` | What an ember engine burns (from the base game), lava buckets aside. Coke burns 3,200 ticks. |
+| `gems/coal` | What a coke oven cooks. |
+| `coke` | Cogwork's coke; what a blast furnace smelts with, so another mod's coke works too. |
+| `dusts/sulfur` | Cogwork's sulfur, from the coke oven, for other mods to use. |
+| `ingots/steel`, `materials/steel` | Cogwork's steel ingot; base packs it into a block of steel (`ore_blocks/steel`) and back. |
 | `#planks`, `#ingots/iron`, ... | Recipe ingredients, so other mods' materials work too. |
 | `cogwork:tubes` | Every tube block. |

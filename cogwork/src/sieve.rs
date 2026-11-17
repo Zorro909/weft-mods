@@ -1,6 +1,6 @@
-//! The sieve: a wooden frame with a string mesh tray, worked by hand. Using it with Rubble puts
-//! one on the mesh; four uses with an empty hand shake the tray (an owned entity with a clip),
-//! and the last sifts the Rubble by `rubble::sifting`, the finds popping out on top.
+//! The sieve: a wooden frame with a string mesh tray, worked by hand. Using it with Rubble or
+//! slag puts one on the mesh; four uses with an empty hand shake the tray (an owned entity with a
+//! clip), and the last sifts it by `rubble::sifting`, the finds popping out on top.
 //!
 //! Its shape is the Blockbench model `assets/models/block/sieve.json`, and
 //! `sieve_loaded.json` with a heap of Rubble on the mesh; the tray is
@@ -8,15 +8,15 @@
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::{
-    Arg, Block, Component, EntityKind, Item, Output, Registry, StackData, SystemBatch, Use, Vec3,
-    World, component_flags, tool_tier, value,
+    Arg, Block, Component, EntityKind, Output, Registry, StackData, SystemBatch, Use, Vec3, World,
+    component_flags, tool_tier, value,
 };
 
 use crate::lib::{Pos, TypedWorld};
+use crate::rubble::sifting::Pile;
 
 pub static SIEVE: Block = Block::named("sieve");
 static TRAY: EntityKind = EntityKind::named("sieve_tray");
-static RUBBLE: Item = Item::named("rubble");
 
 /// Shakes that sift one load.
 const SHAKES: u32 = 4;
@@ -49,6 +49,26 @@ pub enum Load {
     #[default]
     Nothing,
     Rubble,
+    Slag,
+}
+
+impl Load {
+    /// The load a stack of `item` makes, if it sifts.
+    fn of(item: u32) -> Option<Load> {
+        match Pile::of(item)? {
+            Pile::Rubble => Some(Load::Rubble),
+            Pile::Slag => Some(Load::Slag),
+        }
+    }
+
+    /// What it sifts as; none for nothing.
+    fn pile(self) -> Option<Pile> {
+        match self {
+            Load::Nothing => None,
+            Load::Rubble => Some(Pile::Rubble),
+            Load::Slag => Some(Pile::Slag),
+        }
+    }
 }
 
 /// What a use of the sieve did; shown above the hotbar as `cogwork.sieve.<name>`. Never saved.
@@ -167,8 +187,8 @@ fn use_sieve(click: &mut Use) -> bool {
     let held = world.inventory(player).get(slot);
     let status = if held.is_empty() {
         shake(&world, pos, &mut sift)
-    } else if held.item == RUBBLE.id() {
-        if !sift.put_on(Load::Rubble) {
+    } else if let Some(load) = Load::of(held.item) {
+        if !sift.put_on(load) {
             Status::Busy
         } else {
             if !world.creative(player) {
@@ -197,16 +217,18 @@ fn shake(world: &World, pos: Pos, sift: &mut Sift) -> Status {
     if now < sift.shaken_at + SHAKE_TICKS {
         return Status::Shaking;
     }
+    let pile = sift.load().pile();
     let status = sift.shake();
-    if status == Status::Empty {
+    let Some(pile) = pile.filter(|_| status != Status::Empty) else {
         return status;
-    }
+    };
     sift.shaken_at = now;
     world.action_play(sift.tray, SHAKE, false);
     world.play_sound(&crate::sounds::SHAKE, pos.center(), 1.0);
     if status == Status::Sifted {
         let top = pos.floor_middle() + Vec3::new(0.0, POP_HEIGHT, 0.0);
-        for stack in crate::rubble::sifting::roll_rubble(world).stacks() {
+        let sifted = crate::rubble::sifting::roll(world, pile);
+        for stack in sifted.stacks(pile.table()) {
             world.spawn_item(top, stack);
         }
     }
@@ -232,6 +254,14 @@ mod tests {
         ];
         assert_eq!(shaken, sifted, "the fourth sifts it");
         assert_eq!(sift.load(), Load::Nothing, "the mesh empty again");
+    }
+
+    #[test]
+    fn slag_sifts_as_slag() {
+        let mut sift = Sift::default();
+        assert!(sift.put_on(Load::Slag), "slag on");
+        assert_eq!(sift.load().pile(), Some(Pile::Slag), "by the slag's table");
+        assert_eq!(Load::Nothing.pile(), None, "nothing sifts nothing");
     }
 
     #[test]

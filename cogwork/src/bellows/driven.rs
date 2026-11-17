@@ -1,13 +1,14 @@
 //! The driven bellows: the hand bellows' driven counterpart, a separate machine. Fed 20 energy a
 //! tick by an engine, a shaft or an axle, a cog on its beam turns and pumps its bag (an owned
 //! entity looping the clip `pump`); after a second of feeding without a break it blows into the
-//! block its nozzle points at, and a furnace there cooks twice as fast. A feed short of 20 a
-//! tick never gets that far, so half the energy can't buy most of the speed.
+//! block its nozzle points at, and a furnace there cooks twice as fast. A feed short of its draw
+//! never gets that far, so half the energy can't buy most of the speed. Blowing into a blast
+//! furnace, it works four times as hard: 80 a tick.
 //!
 //! It runs whether or not something is there to blow into: `bellows::driven_into` is what a
 //! furnace that needs a draft asks.
 //!
-//! Time its area missed (unloaded, or the world's time jumped) is paid for at 20 a tick like any
+//! Time its area missed (unloaded, or the world's time jumped) is paid for at its draw like any
 //! other; short of that it stops and winds up again. A furnace catching up on that time before
 //! the bellows has paid for it gets no draft: the bellows blows only on a tick it was fed.
 
@@ -18,14 +19,15 @@ use weft_sdk::{
 };
 
 use super::DRIVEN_BELLOWS;
-use crate::lib::{Pos, TypedWorld};
+use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::machine;
 
 static BAG: EntityKind = EntityKind::named("driven_bellows_bag");
 static DRIVEN_MENU: Menu = Menu::named("driven_bellows");
 
-/// The energy it takes a tick while it runs.
+/// The energy it takes a tick while it runs, and while it blows into a blast furnace.
 const DRAW: i64 = 20;
+pub const BLAST_DRAW: i64 = 80;
 /// Ticks in a row it must be fed before it blows: a second to get the fire going.
 const WIND_UP: u32 = 20;
 /// The most energy it takes from engines a tick, and the most it stores.
@@ -143,27 +145,37 @@ fn tick(batch: &mut SystemBatch<Draft>) {
             continue;
         }
         machine::start_meter(&world, id);
-        let paid = feed(&world, id, ticks);
+        let paid = feed(&world, id, pos, ticks);
         draft.count_ticks(ticks, paid, world.game_time());
         show(&world, id, pos, draft);
     }
 }
 
-/// Takes the energy of `ticks` ticks from the store of the driven bellows `id`, a whole tick's
-/// or none of it each; the ticks it was paid for.
-fn feed(world: &World, id: u64, ticks: u32) -> u32 {
+/// Takes the energy of `ticks` ticks from the store of the driven bellows `id` at `pos`, a
+/// whole tick's or none of it each; the ticks it was paid for.
+fn feed(world: &World, id: u64, pos: Pos, ticks: u32) -> u32 {
+    let draw = draw(world.block_typed(super::target(world, pos)));
     let paid = world.component_mut(id, &ENERGY).map_or(0, |energy| {
-        let paid = ticks_paid(energy.stored, ticks);
-        energy.stored -= DRAW * i64::from(paid);
+        let paid = ticks_paid(energy.stored, ticks, draw);
+        energy.stored -= draw * i64::from(paid);
         paid
     });
-    machine::note_drawn(world, id, DRAW * i64::from(paid), DRAW * i64::from(ticks));
+    machine::note_drawn(world, id, draw * i64::from(paid), draw * i64::from(ticks));
     paid
 }
 
-/// The ticks, of `ticks`, that `stored` energy pays for.
-fn ticks_paid(stored: i64, ticks: u32) -> u32 {
-    u32::try_from(stored.max(0) / DRAW).map_or(ticks, |affordable| affordable.min(ticks))
+/// The energy a tick it takes blowing into `target`.
+fn draw(target: BlockState) -> i64 {
+    if crate::blast_furnace::is_part(target) {
+        BLAST_DRAW
+    } else {
+        DRAW
+    }
+}
+
+/// The ticks, of `ticks`, that `stored` energy pays for at `draw` a tick.
+fn ticks_paid(stored: i64, ticks: u32, draw: i64) -> u32 {
+    u32::try_from(stored.max(0) / draw).map_or(ticks, |affordable| affordable.min(ticks))
 }
 
 /// Keeps the bag of the driven bellows `id` at `pos` in place and pumping while it is fed, with
@@ -206,8 +218,13 @@ fn screen(ui: &mut Ui) {
         ui.text_bind(|view, out| {
             let draft = view.menu_component(&DRAFT).unwrap_or_default();
             let status: &str = draft.status().into();
-            let args = [Arg::Int(DRAW)];
-            out.set(&format!("cogwork.driven_bellows.{status}"), &args);
+            // What it wanted last tick is its draw, at the furnace it blows into.
+            let meter = view.menu_component(&machine::METER).unwrap_or_default();
+            let draw = if meter.wanted > 0 { meter.wanted } else { DRAW };
+            out.set(
+                &format!("cogwork.driven_bellows.{status}"),
+                &[Arg::Int(draw)],
+            );
         });
     });
 }
@@ -261,7 +278,7 @@ mod tests {
     #[test]
     fn missed_time_it_cannot_pay_for_stops_it() {
         // 6,000 ticks missed with a full store of 400: twenty ticks' worth.
-        let paid = ticks_paid(STORES, 6_000);
+        let paid = ticks_paid(STORES, 6_000, DRAW);
         assert_eq!(paid, 20, "a tick of 20 each");
         let mut draft = blowing_at(100);
         draft.count_ticks(6_000, paid, 6_100);
@@ -272,7 +289,7 @@ mod tests {
     #[test]
     fn missed_time_paid_for_keeps_it_blowing() {
         let mut draft = blowing_at(100);
-        draft.count_ticks(15, ticks_paid(STORES, 15), 115);
+        draft.count_ticks(15, ticks_paid(STORES, 15, DRAW), 115);
         assert!(draft.blows_at(115), "paid for all 15");
     }
 
@@ -289,9 +306,15 @@ mod tests {
 
     #[test]
     fn an_empty_store_pays_for_nothing() {
-        assert_eq!(ticks_paid(0, 1), 0);
-        assert_eq!(ticks_paid(DRAW - 1, 1), 0);
-        assert_eq!(ticks_paid(DRAW, 1), 1);
+        assert_eq!(ticks_paid(0, 1, DRAW), 0);
+        assert_eq!(ticks_paid(DRAW - 1, 1, DRAW), 0);
+        assert_eq!(ticks_paid(DRAW, 1, DRAW), 1);
+    }
+
+    #[test]
+    fn into_a_blast_furnace_its_store_pays_for_fewer_ticks() {
+        assert_eq!(ticks_paid(STORES, 6_000, BLAST_DRAW), 5, "five ticks of 80");
+        const { assert!(BLAST_DRAW <= MAX_IN, "an engine can keep it fed") };
     }
 
     #[test]

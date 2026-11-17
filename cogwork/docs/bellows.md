@@ -39,6 +39,10 @@ Time its area missed, unloaded or skipped, costs 20 a tick like any other. Its s
 ticks' worth, so after a longer gap it stops and winds up again; a furnace catching up on that
 time cooks at its own speed.
 
+Blowing into a [blast furnace](steel.md#blast-furnace), it gives the draft the furnace smelts
+by and works four times as hard: 80 energy a tick, and its screen asks for 80. Its store then
+holds five ticks' worth.
+
 It runs while it has energy, whether or not a furnace is at its nozzle. Its screen shows its
 stored energy, what it used last tick (see [energy readouts](power.md#energy-readouts)) and what
 it is doing:
@@ -51,7 +55,7 @@ it is doing:
 
 | | Driven Bellows |
 |---|---|
-| Uses | 20 energy a tick |
+| Uses | 20 energy a tick, 80 into a blast furnace |
 | Stores | 400 |
 | Takes in | up to 100 a tick |
 | Mined with | axe |

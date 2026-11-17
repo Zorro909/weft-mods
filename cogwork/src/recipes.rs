@@ -58,8 +58,9 @@ mod tests {
     #[test]
     fn every_item_and_block_with_a_name_can_be_crafted() {
         // Frames and the pump's hose are put up by machines and have no item; oil comes in
-        // buckets, the ground of a seep is found, and quarries bring up rubble.
-        const NOT_CRAFTED: [&str; 10] = [
+        // buckets, the ground of a seep is found, quarries bring up rubble, and the steel works
+        // make the rest. Base's recipes pack steel ingots into a block.
+        const NOT_CRAFTED: [&str; 18] = [
             "gantry_frame",
             "lashed_frame",
             "iron_frame",
@@ -70,6 +71,14 @@ mod tests {
             "oil_sand",
             "rubble",
             "ore_rubble",
+            "creosote",
+            "creosote_bucket",
+            "coke",
+            "sulfur",
+            "steel_bloom",
+            "slag",
+            "steel_ingot",
+            "steel_block",
         ];
         let lang = include_str!("../assets/lang/en_us.lang");
         let named = lang.lines().filter_map(|line| {

@@ -1,22 +1,24 @@
 //! A shaker screen's tick: hand on what it sifted out by its front, then put energy into the
-//! first Rubble of its input until that is paid for and sifted, the tray shaking meanwhile.
-//! What a paid-for Rubble turns up is rolled once and kept in `Shaker::sifted` until it all
-//! fits in the output, so a full output never rolls it away.
+//! first Rubble or slag of its input until that is paid for and sifted, the tray shaking
+//! meanwhile. What a paid-for load turns up is rolled once and kept in `Shaker::sifted` until it
+//! all fits in the output, so a full output never rolls it away.
 
 use weft_sdk::{StackData, SystemBatch, World};
 
-use super::{RUBBLE, SHAKER_SCREEN, Shaker, Status, tray};
+use super::{SHAKER_SCREEN, Shaker, Status, tray};
 use crate::lib::{Pos, TypedWorld};
 use crate::machine::{self, Payment};
-use crate::rubble::sifting::{self, Sifted};
+use crate::rubble::sifting::{self, Pile, Sifted};
 
 /// The most energy it puts into sifting a tick, and the ticks one Rubble takes at that.
 const DRAW: i64 = 20;
 const SIFT_TICKS: i64 = 40;
 /// Energy sifting one Rubble takes.
 const SIFT_COST: i64 = DRAW * SIFT_TICKS;
-/// The bit of `Shaker::sifted` set once its Rubble is rolled; the others are a `Sifted`.
+/// The bits of `Shaker::sifted` set once its load is rolled, and when that load is slag; the
+/// others are a `Sifted`.
 const ROLLED: u32 = 1 << 31;
+const SLAG_ROLLED: u32 = 1 << 30;
 
 pub fn tick(batch: &mut SystemBatch<Shaker>) {
     let world = batch.world();
@@ -37,19 +39,23 @@ pub fn tick(batch: &mut SystemBatch<Shaker>) {
     }
 }
 
-/// Puts this tick's energy into the first Rubble in the input of the shaker screen `id`, and
+/// Puts this tick's energy into the first load in the input of the shaker screen `id`, and
 /// sifts it into the output once it is paid for and what it gives has room there.
 fn sift(world: &World, id: u64, shaker: &mut Shaker) -> Status {
     let input = world.inventory(id).group("input");
-    let Some(slot) = (0..input.len()).find(|&i| input.get(i).item == RUBBLE.id()) else {
+    let piles = (0..input.len()).map(|slot| Pile::of(input.get(slot).item));
+    let Some((slot, pile)) = shaker.next_load(piles) else {
         return Status::Idle;
     };
     let payment = machine::pay(world, id, &mut shaker.spent, SIFT_COST, DRAW);
     if let Some(status) = still_paying(payment) {
         return status;
     }
-    let finds = shaker.finds(|| sifting::roll_rubble(world)).stacks();
-    if !crate::store::insert_all(world.inventory(id).group("output"), &finds) {
+    let finds = shaker.finds(pile, || sifting::roll(world, pile));
+    if !crate::store::insert_all(
+        world.inventory(id).group("output"),
+        &finds.stacks(pile.table()),
+    ) {
         // Paid for and rolled already: both wait until there is room.
         return Status::Full;
     }
@@ -59,16 +65,42 @@ fn sift(world: &World, id: u64, shaker: &mut Shaker) -> Status {
 }
 
 impl Shaker {
-    /// What its paid-for Rubble turns up: rolled by `roll` the first time, then the same until
-    /// it is `sifted_out`.
-    fn finds(&mut self, roll: impl FnOnce() -> Sifted) -> Sifted {
-        if self.sifted & ROLLED == 0 {
-            self.sifted = ROLLED | roll().0;
-        }
-        Sifted(self.sifted & !ROLLED)
+    /// The slot and pile of the load it sifts next, of the `piles` in its input slots: the one it
+    /// rolled for already if that is still there, else the first. With none it has nothing to
+    /// sift.
+    fn next_load(&self, piles: impl Iterator<Item = Option<Pile>>) -> Option<(u32, Pile)> {
+        let loads: Vec<(u32, Pile)> = (0..)
+            .zip(piles)
+            .filter_map(|(slot, pile)| Some((slot, pile?)))
+            .collect();
+        let rolled = self.rolled();
+        let pending = loads.iter().find(|&&(_, pile)| Some(pile) == rolled);
+        pending.or(loads.first()).copied()
     }
 
-    /// Its Rubble sifted into the output: the next starts unpaid and unrolled.
+    /// The pile its kept roll is for, if it has one.
+    fn rolled(&self) -> Option<Pile> {
+        if self.sifted & ROLLED == 0 {
+            None
+        } else if self.sifted & SLAG_ROLLED == 0 {
+            Some(Pile::Rubble)
+        } else {
+            Some(Pile::Slag)
+        }
+    }
+
+    /// What its paid-for load of `pile` turns up: rolled by `roll` the first time, then the same
+    /// until it is `sifted_out`. A roll kept for another pile, whose load was taken out, is
+    /// dropped.
+    fn finds(&mut self, pile: Pile, roll: impl FnOnce() -> Sifted) -> Sifted {
+        if self.rolled() != Some(pile) {
+            let kind = if pile == Pile::Slag { SLAG_ROLLED } else { 0 };
+            self.sifted = ROLLED | kind | roll().0;
+        }
+        Sifted(self.sifted & !(ROLLED | SLAG_ROLLED))
+    }
+
+    /// Its load sifted into the output: the next starts unpaid and unrolled.
     fn sifted_out(&mut self) {
         (self.spent, self.sifted) = (0, 0);
     }
@@ -97,19 +129,53 @@ mod tests {
     #[test]
     fn a_find_waits_for_room_instead_of_being_rolled_again() {
         let diamond = Sifted(1 << 8);
+        let rubble = Pile::Rubble.table();
         assert_eq!(
-            diamond.finds(),
+            diamond.finds(rubble),
             [Find::Item("base:diamond")],
             "the last row"
         );
         let mut shaker = Shaker::default();
-        assert_eq!(shaker.finds(|| diamond), diamond, "the first roll");
+        assert_eq!(
+            shaker.finds(Pile::Rubble, || diamond),
+            diamond,
+            "the first roll"
+        );
         // The output was full, so it wasn't sifted out; the next tick rolls nothing.
-        assert_eq!(shaker.finds(Sifted::default), diamond, "the diamond kept");
+        let again = shaker.finds(Pile::Rubble, Sifted::default);
+        assert_eq!(again, diamond, "the diamond kept");
         shaker.sifted_out();
         let empty = Sifted::default();
-        assert_eq!(shaker.finds(|| empty), empty, "the next Rubble rolls anew");
-        assert_eq!(shaker.finds(|| diamond), empty, "and keeps its roll too");
+        assert_eq!(
+            shaker.finds(Pile::Rubble, || empty),
+            empty,
+            "the next rolls anew"
+        );
+        assert_eq!(
+            shaker.finds(Pile::Rubble, || diamond),
+            empty,
+            "and keeps its roll too"
+        );
+    }
+
+    #[test]
+    fn a_kept_roll_is_sifted_from_its_own_pile() {
+        let mut shaker = Shaker::default();
+        let iron = Sifted(1 << 1);
+        shaker.finds(Pile::Slag, || iron);
+        let piles = [Some(Pile::Rubble), None, Some(Pile::Slag)];
+        let next = shaker.next_load(piles.into_iter());
+        assert_eq!(next, Some((2, Pile::Slag)), "the slag it rolled for");
+        let gone = shaker.next_load([Some(Pile::Rubble)].into_iter());
+        assert_eq!(gone, Some((0, Pile::Rubble)), "else the first load");
+        let rolled = shaker.finds(Pile::Rubble, Sifted::default);
+        assert_eq!(rolled, Sifted::default(), "the slag's roll dropped");
+    }
+
+    #[test]
+    fn an_empty_input_has_nothing_to_sift() {
+        let shaker = Shaker::default();
+        assert_eq!(shaker.next_load([None, None].into_iter()), None);
     }
 
     #[test]
