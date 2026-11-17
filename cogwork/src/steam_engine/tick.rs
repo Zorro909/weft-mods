@@ -41,12 +41,8 @@ fn run_for(world: &World, id: u64, engine: &mut SteamEngine, ticks: u32) -> i64 
     } else {
         0
     };
-    let (ran, lack) = engine.run(ticks, steam, stored(world, id));
-    engine.set_status(match lack {
-        _ if ran > 0 => Status::Running,
-        Some(lack) => lack,
-        None => Status::Running,
-    });
+    let (ran, status) = engine.run(ticks, steam, stored(world, id));
+    engine.set_status(status);
     if ran == 0 {
         return 0;
     }

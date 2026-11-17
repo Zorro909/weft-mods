@@ -13,7 +13,8 @@ Steam is a Cogwork liquid. [Liquid tubes and tanks](liquids.md) carry and hold i
 other, with one difference: steam does not fall. It goes from a fuller holder to an emptier one,
 whatever their height, so it fills a line up, down and sideways alike and spreads out until
 every tube and tank on the line is as full as the next. No pump is needed. Steam and other
-liquids never push each other along.
+liquids never push each other along, and never take each other's place: a tube or tank with any
+water left in it takes no steam, so give steam a line of its own.
 
 ## Firebox
 
@@ -73,7 +74,7 @@ runs.
 Its energy goes out of both ends of the axle, to the left and the right of its front: into a
 machine there, a [torque shaft](power.md#torque-shaft) or a [wooden axle](power.md#wooden-axle).
 It uses no steam it can't turn into energy: once its store is full, it rests until half of it
-has gone out, then runs again. Time its area missed is run only on the steam it holds.
+has gone out, then runs again, whether its steam ran short meanwhile or not. Time its area missed is run only on the steam it holds.
 
 Its screen shows its stored energy, what it sent out in the last tick ("Sending out 160 energy
 a tick", see [energy readouts](power.md#energy-readouts)), its status and its steam:
