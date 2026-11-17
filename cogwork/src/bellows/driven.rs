@@ -6,6 +6,10 @@
 //!
 //! It runs whether or not something is there to blow into: `bellows::driven_into` is what a
 //! furnace that needs a draft asks.
+//!
+//! Time its area missed (unloaded, or the world's time jumped) is paid for at 20 a tick like any
+//! other; short of that it stops and winds up again. A furnace catching up on that time before
+//! the bellows has paid for it gets no draft: the bellows blows only on a tick it was fed.
 
 use strum::{IntoStaticStr, VariantArray};
 use weft_sdk::{
@@ -39,12 +43,14 @@ const STROKE_PUFFS: u32 = 2;
 
 value! {
     /// A driven bellows' state: its `bag` (an entity), the game time the bag's clip started
-    /// (`stroke_from`), and the ticks in a row it has been `fed`, counted up to `WIND_UP`.
+    /// (`stroke_from`), the ticks in a row it has been `fed`, counted up to `WIND_UP`, and the
+    /// game time it was last fed (`fed_at`).
     #[derive(Default)]
     pub struct Draft {
         pub bag: u64,
         pub stroke_from: u64,
         pub fed: u32,
+        pub fed_at: u64,
     }
 }
 static DRAFT: Component<Draft> = Component::named("cogwork:draft");
@@ -61,9 +67,21 @@ enum Status {
 }
 
 impl Draft {
-    /// Counts a tick it was fed, or starts over after one it wasn't.
-    fn count_tick(&mut self, fed: bool) {
-        self.fed = if fed { (self.fed + 1).min(WIND_UP) } else { 0 };
+    /// Counts `ticks` ticks at game time `now`, of which it was fed for `paid`: on when it was
+    /// fed for all of them, started over otherwise.
+    fn count_ticks(&mut self, ticks: u32, paid: u32, now: u64) {
+        if paid < ticks {
+            self.fed = 0;
+            return;
+        }
+        self.fed = self.fed.saturating_add(ticks).min(WIND_UP);
+        self.fed_at = now;
+    }
+
+    /// Whether it blows at game time `now`: wound up, and fed this tick or the one before, as
+    /// the furnace may tick before or after it.
+    fn blows_at(&self, now: u64) -> bool {
+        self.status() == Status::Blowing && now.saturating_sub(self.fed_at) <= 1
     }
 
     fn status(&self) -> Status {
@@ -110,13 +128,13 @@ fn claims(world: &World, owner: u64, id: u64) -> bool {
 pub fn blowing(world: &World, id: u64) -> bool {
     world
         .component(id, &DRAFT)
-        .is_some_and(|draft| draft.status() == Status::Blowing)
+        .is_some_and(|draft| draft.blows_at(world.game_time()))
 }
 
 /// Every driven bellows: fed this tick or not, and its bag pumping while it is.
 fn tick(batch: &mut SystemBatch<Draft>) {
     let world = batch.world();
-    for (id, draft, _) in batch.iter_mut() {
+    for (id, draft, ticks) in batch.iter_mut() {
         let Some(entity) = world.entity(id) else {
             continue;
         };
@@ -125,23 +143,27 @@ fn tick(batch: &mut SystemBatch<Draft>) {
             continue;
         }
         machine::start_meter(&world, id);
-        draft.count_tick(feed(&world, id));
+        let paid = feed(&world, id, ticks);
+        draft.count_ticks(ticks, paid, world.game_time());
         show(&world, id, pos, draft);
     }
 }
 
-/// Takes a tick's energy from the store of the driven bellows `id`, all of it or none; true
-/// when it was there.
-fn feed(world: &World, id: u64) -> bool {
-    let drawn = world.component_mut(id, &ENERGY).map_or(0, |energy| {
-        if energy.stored < DRAW {
-            return 0;
-        }
-        energy.stored -= DRAW;
-        DRAW
+/// Takes the energy of `ticks` ticks from the store of the driven bellows `id`, a whole tick's
+/// or none of it each; the ticks it was paid for.
+fn feed(world: &World, id: u64, ticks: u32) -> u32 {
+    let paid = world.component_mut(id, &ENERGY).map_or(0, |energy| {
+        let paid = ticks_paid(energy.stored, ticks);
+        energy.stored -= DRAW * i64::from(paid);
+        paid
     });
-    machine::note_drawn(world, id, drawn, DRAW);
-    drawn == DRAW
+    machine::note_drawn(world, id, DRAW * i64::from(paid), DRAW * i64::from(ticks));
+    paid
+}
+
+/// The ticks, of `ticks`, that `stored` energy pays for.
+fn ticks_paid(stored: i64, ticks: u32) -> u32 {
+    u32::try_from(stored.max(0) / DRAW).map_or(ticks, |affordable| affordable.min(ticks))
 }
 
 /// Keeps the bag of the driven bellows `id` at `pos` in place and pumping while it is fed, with
@@ -198,9 +220,16 @@ mod tests {
     fn after(ticks: u32, fed: impl Fn(u32) -> bool) -> Status {
         let mut draft = Draft::default();
         for tick in 0..ticks {
-            draft.count_tick(fed(tick));
+            draft.count_ticks(1, u32::from(fed(tick)), u64::from(tick));
         }
         draft.status()
+    }
+
+    /// A draft blowing at game time `now`, fed every tick so far.
+    fn blowing_at(now: u64) -> Draft {
+        let mut draft = Draft::default();
+        draft.count_ticks(WIND_UP, WIND_UP, now);
+        draft
     }
 
     #[test]
@@ -222,12 +251,47 @@ mod tests {
 
     #[test]
     fn a_tick_without_energy_starts_it_over() {
-        let mut draft = Draft::default();
-        (0..WIND_UP).for_each(|_| draft.count_tick(true));
-        draft.count_tick(false);
+        let mut draft = blowing_at(100);
+        draft.count_ticks(1, 0, 101);
         assert_eq!(draft.status(), Status::NoPower, "stopped");
-        draft.count_tick(true);
+        draft.count_ticks(1, 1, 102);
         assert_eq!(draft.status(), Status::Starting, "from the start");
+    }
+
+    #[test]
+    fn missed_time_it_cannot_pay_for_stops_it() {
+        // 6,000 ticks missed with a full store of 400: twenty ticks' worth.
+        let paid = ticks_paid(STORES, 6_000);
+        assert_eq!(paid, 20, "a tick of 20 each");
+        let mut draft = blowing_at(100);
+        draft.count_ticks(6_000, paid, 6_100);
+        assert!(!draft.blows_at(6_100), "no draft for the missed time");
+        assert_eq!(draft.status(), Status::NoPower, "it winds up again");
+    }
+
+    #[test]
+    fn missed_time_paid_for_keeps_it_blowing() {
+        let mut draft = blowing_at(100);
+        draft.count_ticks(15, ticks_paid(STORES, 15), 115);
+        assert!(draft.blows_at(115), "paid for all 15");
+    }
+
+    #[test]
+    fn a_furnace_catching_up_first_gets_no_draft() {
+        let draft = blowing_at(100);
+        assert!(draft.blows_at(100), "the tick it was fed");
+        assert!(draft.blows_at(101), "the next, ticking before it");
+        assert!(
+            !draft.blows_at(6_100),
+            "after a jump it hasn't paid for yet"
+        );
+    }
+
+    #[test]
+    fn an_empty_store_pays_for_nothing() {
+        assert_eq!(ticks_paid(0, 1), 0);
+        assert_eq!(ticks_paid(DRAW - 1, 1), 0);
+        assert_eq!(ticks_paid(DRAW, 1), 1);
     }
 
     #[test]
@@ -244,6 +308,7 @@ mod tests {
         assert_eq!(offset_of!(Draft, bag), 0, "its bag");
         assert_eq!(offset_of!(Draft, stroke_from), 8, "when its clip started");
         assert_eq!(offset_of!(Draft, fed), 16, "the ticks it was fed");
+        assert_eq!(offset_of!(Draft, fed_at), 24, "when it was last fed");
     }
 
     #[test]
