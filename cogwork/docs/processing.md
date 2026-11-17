@@ -77,15 +77,16 @@ Use it with:
 - **sand** (anything tagged `sand`) to put in grit for 4 grinds. It holds 16.
 - **Ore Rubble** to put it in: up to 16, of one metal and grade at a time.
 - **an empty hand** to turn the runner once round. Six turns grind one Ore Rubble. A turn
-  counts only with Ore Rubble, water and sand in it, and room for the raw ore.
+  counts only with Ore Rubble, water and sand in it, and room for the raw ore: it keeps up to
+  64, and a grind needs room for the most its grade can give, one of Poor up to three of Pure.
 - **an empty hand while sneaking** to take out the raw ore it ground, or, with none, the Ore
-  Rubble it holds.
+  Rubble it holds. Raw ore of a mod that is no longer loaded stays in it until that mod is back.
 
 Each use says above the hotbar what it did or what it lacks: "Turn 3 of 6", "Needs water". The
 ring round the runner shows what it holds: water, sand, both, or neither.
 
-Nothing reaches it by tube: it has no slots. Broken, it keeps what it holds in its item, and
-placed again it has it all back.
+Nothing reaches it by tube: it has no slots. Broken, by hand or by the leveler or the
+excavator, it keeps what it holds in its item, and placed again it has it all back.
 
 ## Sieve
 
@@ -97,8 +98,8 @@ s s       s = #stick
 
 A wooden frame with a tray of string mesh. Use it with Rubble to put one on the mesh, then
 shake it four times with an empty hand; the fourth shake sifts it, and what it sifts into pops
-out on top. Rubble already on the mesh has to be sifted before the next goes on. Broken, it keeps
-the Rubble on its mesh in its item.
+out on top. Rubble already on the mesh has to be sifted before the next goes on. Broken, by hand or by a
+machine, it keeps the Rubble on its mesh in its item.
 
 ## Its sounds
 

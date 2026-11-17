@@ -20,6 +20,17 @@ const MOST_GRIT: u32 = 16;
 const MOST_HELD: u32 = 16;
 const MOST_GROUND: u32 = 64;
 
+/// What sneaking with an empty hand takes out of a millstone.
+#[derive(PartialEq, Debug)]
+pub enum TakenOut {
+    /// Raw ore: its item and how many.
+    RawOre(u32, u32),
+    /// Ore Rubble: its metal, grade and how many.
+    OreRubble(Ore, Grade, u32),
+    /// Nothing, for the reason shown.
+    Nothing(Status),
+}
+
 impl Mill {
     pub fn grade(&self) -> Grade {
         Grade::from_saved(self.grade)
@@ -66,15 +77,35 @@ impl Mill {
     }
 
     /// Takes out the raw ore it ground: its key and count.
-    pub fn take_ground(&mut self) -> (ItemKey, u32) {
+    fn take_ground(&mut self) -> (ItemKey, u32) {
         let taken = (self.ground, self.ground_count);
         (self.ground, self.ground_count) = (NO_ITEM, 0);
         taken
     }
 
+    /// Takes out the raw ore it ground, when `item_of` finds its item, or else the Ore Rubble
+    /// it holds. Raw ore whose item no loaded mod has stays, for when that mod is back.
+    pub fn take_out(&mut self, item_of: impl Fn(ItemKey) -> u32) -> TakenOut {
+        let raw_ore = item_of(self.ground);
+        if self.ground_count > 0 && raw_ore != 0 {
+            let (_, count) = self.take_ground();
+            return TakenOut::RawOre(raw_ore, count);
+        }
+        if self.held > 0 {
+            let (ore, grade, count) = self.take_held();
+            return TakenOut::OreRubble(ore, grade, count);
+        }
+        let reason = if self.ground_count > 0 {
+            Status::UnknownRawOre
+        } else {
+            Status::Empty
+        };
+        TakenOut::Nothing(reason)
+    }
+
     /// What it lacks for a turn to count, its Ore Rubble grinding into `raw_ore`.
     pub fn lacks(&self, raw_ore: ItemKey) -> Option<Status> {
-        let room = self.ground_count + Grade::MOST_RAW_ORE <= MOST_GROUND;
+        let room = self.ground_count + self.grade().most_raw_ore() <= MOST_GROUND;
         let fits = self.ground == NO_ITEM || (self.ground == raw_ore && room);
         if self.held == 0 {
             Some(Status::Empty)
@@ -222,6 +253,75 @@ mod tests {
         );
         assert_eq!(mill.take_ground(), (12, 5), "taken out");
         assert_eq!(mill.turn(RAW_IRON, 0.5), Status::Turning, "then it turns");
+    }
+
+    /// The item of a key while the mod with raw iron is loaded.
+    fn loaded(key: ItemKey) -> u32 {
+        if key == RAW_IRON { 900 } else { 0 }
+    }
+
+    #[test]
+    fn sneaking_takes_out_raw_ore_then_ore_rubble() {
+        let mut mill = ready(3);
+        (mill.ground, mill.ground_count) = (RAW_IRON, 5);
+        assert_eq!(
+            mill.take_out(loaded),
+            TakenOut::RawOre(900, 5),
+            "raw iron first"
+        );
+        assert!(
+            matches!(
+                mill.take_out(loaded),
+                TakenOut::OreRubble(_, Grade::Poor, 3)
+            ),
+            "then the Ore Rubble"
+        );
+        let nothing = TakenOut::Nothing(Status::Empty);
+        assert_eq!(mill.take_out(loaded), nothing, "then nothing");
+    }
+
+    #[test]
+    fn raw_ore_of_a_mod_not_loaded_stays_until_it_is_back() {
+        let mut mill = ready(2);
+        (mill.ground, mill.ground_count) = (12, 5);
+        assert!(
+            matches!(mill.take_out(loaded), TakenOut::OreRubble(_, _, 2)),
+            "the Ore Rubble can still come out"
+        );
+        let unknown = TakenOut::Nothing(Status::UnknownRawOre);
+        assert_eq!(mill.take_out(loaded), unknown, "said so");
+        assert_eq!((mill.ground, mill.ground_count), (12, 5), "kept");
+        let back = |key| if key == 12 { 901 } else { 0 };
+        assert_eq!(
+            mill.take_out(back),
+            TakenOut::RawOre(901, 5),
+            "with its mod back"
+        );
+    }
+
+    #[test]
+    fn a_poor_grind_needs_room_for_one() {
+        let mut mill = ready(1);
+        (mill.ground, mill.ground_count) = (RAW_IRON, MOST_GROUND - 1);
+        assert_eq!(
+            mill.lacks(RAW_IRON),
+            None,
+            "one Poor raw ore fits beside 63"
+        );
+        mill.ground_count = MOST_GROUND;
+        assert_eq!(mill.lacks(RAW_IRON), Some(Status::Full), "none beside 64");
+    }
+
+    #[test]
+    fn a_pure_grind_needs_room_for_three() {
+        let mut mill = Mill::default();
+        mill.pour();
+        mill.add_sand();
+        mill.put_in(iron(), Grade::Pure, 1);
+        (mill.ground, mill.ground_count) = (RAW_IRON, MOST_GROUND - 3);
+        assert_eq!(mill.lacks(RAW_IRON), None, "three fit beside 61");
+        mill.ground_count = MOST_GROUND - 2;
+        assert_eq!(mill.lacks(RAW_IRON), Some(Status::Full), "not beside 62");
     }
 
     #[test]
