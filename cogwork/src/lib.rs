@@ -2,7 +2,8 @@
 //! machines for the big jobs (quarries, an assembly bench and a leveler), cuboid loaders that keep
 //! them running with nobody near, oil: pumped up from fields underground, carried in liquid
 //! tubes, kept in tanks and burnt in the oil engine, and the rubble quarries bring up, sifted and
-//! ground by hand at the sieve and the millstone, and bellows that blow a furnace's fire.
+//! ground by hand at the sieve and the millstone, bellows that blow a furnace's fire, and steel:
+//! coke from the coke oven, blooms from the blast furnace, forged into ingots on the anvil.
 //! Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
@@ -10,14 +11,18 @@ mod arms;
 mod art;
 mod bellows;
 mod bench;
+mod blast_furnace;
 mod boxes;
+mod brickwork;
 mod chance;
 mod cogs;
+mod coke_oven;
 mod engines;
 mod excavator;
 mod fill;
 #[cfg(feature = "showcase")]
 mod films;
+mod forge_anvil;
 #[cfg(test)]
 mod generated;
 mod ghost;
@@ -47,6 +52,7 @@ mod shaft;
 mod shaker_screen;
 mod sieve;
 mod sounds;
+mod steel;
 mod store;
 mod tank;
 mod timber_liquid_tube;
@@ -93,6 +99,10 @@ fn init(r: &mut Registry) {
     grinding_mill::register(r);
     washer::register(r);
     bellows::register(r);
+    steel::register(r);
+    coke_oven::register(r);
+    blast_furnace::register(r);
+    forge_anvil::register(r);
     water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

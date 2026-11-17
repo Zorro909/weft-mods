@@ -13,6 +13,7 @@
 mod driven;
 mod hand;
 
+pub use driven::BLAST_DRAW;
 use weft_sdk::{
     Block, BlockBuilder, Facings, Modify, Output, Particle, Registry, Toward, Vec3, World, phase,
     tool_tier,
