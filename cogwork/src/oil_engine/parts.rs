@@ -2,7 +2,7 @@
 //! intakes and drives. Casing shows one framed panel a face once the engine is built: its
 //! `formed` texture connects across the face (`oil_engine_panel/oil_engine_panel.ctm`), and a
 //! formed intake or drive is that panel with its port drawn on top, so the face stays one. An
-//! intake is a holder of liquid that takes only oil and water (`liquid::Kind::Intake`); a drive
+//! intake is a holder of liquid that takes only oil, diesel and water (`liquid::Kind::Intake`); a drive
 //! holds a little energy the controller fills, for the block it faces and torque shafts.
 
 use weft_sdk::{
@@ -113,10 +113,11 @@ pub fn part_at(world: &World, pos: Pos) -> Option<Part> {
         .map(|(_, part)| part)
 }
 
-/// Shows on the controller at `pos` how much oil and water it holds and whether it runs.
-pub fn show_controller(world: &World, pos: Pos, oil: u32, water: u32, working: bool) {
+/// Shows on the controller at `pos` how much fuel and water it holds and whether it runs: its
+/// oil gauge shows `fuel`, oil or diesel.
+pub fn show_controller(world: &World, pos: Pos, fuel: u32, water: u32, working: bool) {
     crate::machine::show_working(world, pos, working);
-    let gauges = [("oil", gauge(oil)), ("water", gauge(water))];
+    let gauges = [("oil", gauge(fuel)), ("water", gauge(water))];
     for (prop, step) in gauges {
         let value = step.to_string();
         if world.prop(pos, prop).is_some_and(|now| now != value) {
@@ -137,7 +138,7 @@ pub fn show_formed(world: &World, pos: Pos, formed: bool) {
     }
 }
 
-/// A bucket of oil or water used on an intake pours into it, an empty one fills from it.
+/// A bucket of oil, diesel or water used on an intake pours into it, an empty one fills from it.
 fn use_intake(click: &mut Use) -> bool {
     let world = click.world();
     let Some(intake) = Vessel::at(&world, click.pos().into()) else {

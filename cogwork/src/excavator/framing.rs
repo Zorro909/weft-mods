@@ -6,7 +6,7 @@ use weft_sdk::{Output, World};
 
 use super::dig::Quarry;
 use super::kind::{Drill, Kind};
-use super::mine::{Mined, mine_block};
+use super::mine::{Mined, mine_block, wear_down};
 use super::power::pay;
 use super::{Dig, Stage, Status, bit, frames, materials};
 use crate::lib::{BlockState, Pos, TypedWorld};
@@ -125,7 +125,7 @@ fn clear_for_frame(
     }
     let mined = mine_block(world, quarry, dig, cell, block_state, drill.draw);
     if matches!(mined, Mined::Done) {
-        bit::wear(world, quarry.id);
+        wear_down(world, quarry, dig);
     }
     let status = cleared(dig, mined);
     dig.set_status(status);

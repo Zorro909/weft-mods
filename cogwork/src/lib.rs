@@ -5,12 +5,15 @@
 //! ground by hand at the sieve and the millstone, bellows that blow a furnace's fire, and steel:
 //! coke from the coke oven, blooms from the blast furnace, forged into ingots on the anvil, and
 //! steam: boiled over a firebox, run through a steam engine and a steam-lifted trip hammer, and
-//! the steel age's ore work: the flotation cell, the clarifier and the hand core drill.
+//! the steel age's ore work: the flotation cell, the clarifier and the hand core drill, and the
+//! refinery that distils crude into diesel for the oil engine, lubricant for the quarries, tar
+//! for asphalt roads, and gas.
 //! Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
 #[cfg(test)]
 mod art;
+mod asphalt;
 mod bellows;
 mod bench;
 mod blast_furnace;
@@ -54,6 +57,7 @@ mod oil_engine;
 mod owned;
 mod pump;
 mod recipes;
+mod refinery;
 mod rubble;
 mod shaft;
 mod shaker_screen;
@@ -121,6 +125,8 @@ fn init(r: &mut Registry) {
     flotation::register(r);
     clarifier::register(r);
     core_drill::register(r);
+    refinery::register(r);
+    asphalt::register(r);
     water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

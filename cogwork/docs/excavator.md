@@ -132,7 +132,7 @@ one waits ("Needs a drill bit"). The Timber Quarry takes stone and iron bits, th
 iron and steel ones, the Steel Excavator steel and diamond-tipped ones: a bit that doesn't fit
 doesn't go into the slot.
 A bit breaks what a pickaxe of its kind breaks, and wears by one for each block mined, until it
-is used up. A block the bit can't break, gold ore under a stone bit say, is left standing, so a
+is used up; with [lubricant](#lubricant), by one every other block. A block the bit can't break, gold ore under a stone bit say, is left standing, so a
 pillar of it stays in the pit to be mined by hand. The Gantry Excavator digs with its own drill
 and has no bit slot.
 
@@ -230,9 +230,25 @@ each) with some to spare, and 120 with a steel bit. A 9 by 9 Steel Excavator wan
 with a diamond-tipped bit: a [steam engine](steam.md#steam-engine) and a little more. One ember engine runs a 9 by 9 Gantry area slowly; add more to go
 faster.
 
+With [lubricant](#lubricant) a block costs a fifth less, and the quarry puts a fifth less into it
+a tick, so it digs at the same pace for less.
+
 It stores 20 ticks of its standby and of the most it puts into a block, and never less than
 20,000 energy: a Timber Quarry, Iron Quarry or Steel Excavator holds 20,000, a 255 by 255 Gantry area 20,000 near the top and 20,040 at 384 below, and a 9 by 9
 area 154,200 at 1,024 below. It takes in as much a tick as it stores, from any number of engines.
+
+## Lubricant
+
+Lubricant from a [refinery](refinery.md) eases the drill. Lead it into a quarry by liquid tube,
+on any side; a quarry of any kind holds 1,000 mB of it and takes no other liquid. While it holds
+some, each block it mines, in the pit or out of its frame's way, uses 1 mB and:
+
+- costs a fifth less energy: stone 800 instead of 1,000, and as much less deep down;
+- wears its bit only every other block, so a bit lasts twice as many blocks.
+
+The quarry also puts a fifth less into a block each tick, 48 instead of 60 for an Iron Quarry
+with an iron bit, so it digs as fast on less energy. A Gantry Excavator has no bit and only
+saves the energy. A quarry without lubricant digs as before. Its screen shows how much it holds.
 
 ## World settings
 
@@ -254,7 +270,8 @@ The screen shows the stored energy, what it used in the last tick (standby, work
 travel) and how short of what it wanted it fell ([energy readouts](power.md#energy-readouts)),
 the area and its standby, and what it is doing. A Timber Quarry's, Iron Quarry's or Steel
 Excavator's screen has its bit
-slot and its six frame slots beside its output.
+slot and its six frame slots beside its output. Under its status, every quarry's screen shows
+the lubricant it holds.
 
 | Status | Meaning |
 |---|---|

@@ -6,6 +6,7 @@ use weft_sdk::{Dir, World};
 use super::{Kind, Vessel};
 use crate::clarifier::{self, CLARIFIER};
 use crate::coke_oven;
+use crate::excavator::kind::Kind as Quarry;
 use crate::firebox::{self, BOILER, FIREBOX};
 use crate::flotation::{self, FLOTATION_CELL};
 use crate::grinding_mill::{self, GRINDING_MILL};
@@ -13,6 +14,7 @@ use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid_tube::is_liquid_tube;
 use crate::oil_engine::OIL_INTAKE;
 use crate::pump::PUMP;
+use crate::refinery::{self, REFINERY, REFINERY_CONDENSER, REFINERY_HEATER, REFINERY_TAP};
 use crate::steam_engine::{self, STEAM_ENGINE};
 use crate::tank::{LIQUID_TANK, Tank};
 use crate::timber_liquid_tube::{self, TIMBER_LIQUID_TUBE};
@@ -52,6 +54,10 @@ impl Vessel {
             (flotation::WATER_CAPACITY, Kind::Mill)
         } else if block.is(&CLARIFIER) {
             (clarifier::MUDDY_CAPACITY, Kind::Settler)
+        } else if let Some(found) = refinery_part(block) {
+            found
+        } else if Quarry::of(block).is_some() {
+            (crate::excavator::LUBRICANT_CAPACITY, Kind::Lubed)
         } else if block.is(&LIQUID_TANK) {
             return Tank::at(world, pos).map(Vessel::Tank);
         } else {
@@ -78,6 +84,18 @@ impl Vessel {
     }
 }
 
+/// The capacity and kind of the part of a refinery `block` is, if it holds liquid.
+fn refinery_part(block: BlockState) -> Option<(u32, Kind)> {
+    let parts = [
+        (&REFINERY, refinery::CRUDE_CAPACITY, Kind::Still),
+        (&REFINERY_HEATER, refinery::STEAM_CAPACITY, Kind::Steam),
+        (&REFINERY_CONDENSER, refinery::WATER_CAPACITY, Kind::Mill),
+        (&REFINERY_TAP, refinery::TAP_CAPACITY, Kind::Drain),
+    ];
+    let (_, capacity, kind) = parts.into_iter().find(|(part, ..)| block.is(part))?;
+    Some((capacity, kind))
+}
+
 /// Whether the block at `pos` holds liquid.
 pub fn is_vessel(world: &World, pos: Pos) -> bool {
     let block = world.block_typed(pos);
@@ -86,7 +104,8 @@ pub fn is_vessel(world: &World, pos: Pos) -> bool {
 
 /// Whether `block` is a machine that holds liquid for its work and reaches it on every side: an
 /// intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
-/// engine, a trip hammer, a flotation cell or a clarifier.
+/// engine, a trip hammer, a flotation cell, a clarifier, a refinery's part that holds liquid or a
+/// quarry.
 fn is_machine(block: BlockState) -> bool {
     let machines: [&weft_sdk::Block; 9] = [
         &OIL_INTAKE,
@@ -101,6 +120,8 @@ fn is_machine(block: BlockState) -> bool {
     ];
     machines.iter().any(|machine| block.is(machine))
         || coke_oven::creosote_capacity(block).is_some()
+        || refinery_part(block).is_some()
+        || Quarry::of(block).is_some()
 }
 
 /// Whether the holder at `pos` passes liquid toward `dir`.

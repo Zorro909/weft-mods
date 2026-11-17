@@ -4,7 +4,8 @@
 //! washer's paddle, the steel works: coke oven, blast furnace, forge anvil and their items, and
 //! the steam works: steam, the firebox, the boiler and the steam machines' moving parts, the Steel
 //! Excavator, its frame, rig and diamond-tipped bit, and the ore work: muddy water, the flotation
-//! cell's froth and rotor, the clarifier's water and rake and the core drill's rod, drawn here
+//! cell's froth and rotor, the clarifier's water and rake and the core drill's rod, and the
+//! refinery: its column, what it makes and asphalt, drawn here
 //! pixel by pixel so they can be changed and drawn again:
 //! `WRITE_ASSETS=1 cargo test --release art` writes them (`generated`). Each family is a file of
 //! its own; the colors they share are below.
@@ -14,6 +15,7 @@
 
 mod bellows;
 mod driven;
+mod fuels;
 mod gui;
 mod iron;
 mod liquids;
@@ -22,6 +24,7 @@ mod ore_work;
 mod processing;
 mod pump;
 mod quarry;
+mod refinery;
 mod steam;
 mod steel;
 mod steel_items;
@@ -299,6 +302,8 @@ fn the_pictures_are_what_is_drawn_here() {
         .chain(steel_items::all())
         .chain(steel_quarry::all())
         .chain(ore_work::all())
+        .chain(fuels::all())
+        .chain(refinery::all())
         .chain(gui::all());
     for (path, picture) in all {
         let path = crate::generated::asset(&format!("textures/{path}.png"));

@@ -10,7 +10,7 @@ short overview of the mod, see the [README](../README.md).
 | [Cogs and the tuning wrench](items.md) | The crafting parts every machine is made of, and the tool that sets machines |
 | [Item tubes](tubes.md) | The six tubes, how items find their way, and what happens when a line jams |
 | [Power](power.md) | The spring and ember engines, winding, heat, the water wheel, the torque shaft and the wooden axle |
-| [Quarries](excavator.md) | The Timber Quarry, the Iron Quarry, the Steel Excavator and the Gantry Excavator: their frames, drill bits, energy use, and what they mine |
+| [Quarries](excavator.md) | The Timber Quarry, the Iron Quarry, the Steel Excavator and the Gantry Excavator: their frames, drill bits, lubricant, energy use, and what they mine |
 | [Prospecting](prospecting.md) | The core drill, which counts the ore under it before a quarry goes down |
 | [Assembly bench](assembly-bench.md) | Setting a pattern, filling it and crafting by machine |
 | [Leveler](leveler.md) | Clearing and filling an area flat |
@@ -22,7 +22,8 @@ short overview of the mod, see the [README](../README.md).
 | [Bellows](bellows.md) | The hand and driven bellows that make a furnace cook twice as fast |
 | [Steel](steel.md) | The coke oven (coke, sulfur, creosote), the blast furnace and its draft, the forge anvil and hammer, and steel |
 | [Steam](steam.md) | The firebox and the boiler on it, steam, the steam engine and the trip hammer |
-| [Oil engine](oil-engine.md) | Building the big engine, feeding it oil and water, and taking its energy |
+| [Oil engine](oil-engine.md) | Building the big engine, feeding it oil or diesel and water, and taking its energy |
+| [Refinery](refinery.md) | The refinery column and its temperature band, what it makes of crude (gas, diesel, lubricant, tar, sulfur), and asphalt |
 | [Working with other mods](other-mods.md) | Slot groups, energy, tags: how Cogwork meets other mods' content |
 
 ## Numbers

@@ -60,8 +60,8 @@ mod tests {
         // Frames and the pump's hose are put up by machines and have no item; oil comes in
         // buckets, the ground of a seep is found, quarries bring up rubble, and the steel works
         // make the rest. Base's recipes pack steel ingots into a block. Steam comes from boilers,
-        // muddy water from flotation cells.
-        const NOT_CRAFTED: [&str; 22] = [
+        // muddy water from flotation cells, and a refinery's products from refineries.
+        const NOT_CRAFTED: [&str; 30] = [
             "gantry_frame",
             "lashed_frame",
             "iron_frame",
@@ -84,6 +84,14 @@ mod tests {
             "steam",
             "muddy_water",
             "muddy_water_bucket",
+            "tar",
+            "tar_bucket",
+            "lubricant",
+            "lubricant_bucket",
+            "diesel",
+            "diesel_bucket",
+            "gas",
+            "gas_bucket",
         ];
         let lang = include_str!("../assets/lang/en_us.lang");
         let named = lang.lines().filter_map(|line| {

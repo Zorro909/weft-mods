@@ -69,7 +69,7 @@ furnace that asks the chain that way is blown too.
 | `fuel` | What an ember engine burns (from the base game), lava buckets aside, and what a firebox burns, lava buckets too. Coke burns 3,200 ticks. |
 | `gems/coal` | What a coke oven cooks. |
 | `coke` | Cogwork's coke; what a blast furnace smelts with, so another mod's coke works too. |
-| `dusts/sulfur` | Cogwork's sulfur, from the coke oven, for other mods to use. |
+| `dusts/sulfur` | Cogwork's sulfur, from the coke oven and the refinery, for other mods to use. |
 | `ingots/steel`, `materials/steel` | Cogwork's steel ingot; base packs it into a block of steel (`ore_blocks/steel`) and back. |
 | `#planks`, `#ingots/iron`, ... | Recipe ingredients, so other mods' materials work too. |
 | `cogwork:tubes` | Every tube block. |
