@@ -15,48 +15,21 @@ const LEATHER: [Rgba; 4] = [
 /// Each bag model's texture size, and where its unwrap puts each box.
 const SIZE: (usize, usize) = (64, 64);
 const PLEATS: [Unwrap; 3] = [
-    Unwrap {
-        at: (0, 0),
-        size: (10, 2, 10),
-    },
-    Unwrap {
-        at: (0, 12),
-        size: (12, 2, 11),
-    },
-    Unwrap {
-        at: (0, 25),
-        size: (10, 2, 10),
-    },
+    Unwrap::new((0, 0), (10, 2, 10)),
+    Unwrap::new((0, 12), (12, 2, 11)),
+    Unwrap::new((0, 25), (10, 2, 10)),
 ];
-const LID: Unwrap = Unwrap {
-    at: (0, 37),
-    size: (12, 2, 13),
-};
+const LID: Unwrap = Unwrap::new((0, 37), (12, 2, 13));
 /// The hand bellows' handle: a post and a grip across it.
 const HANDLE: [Unwrap; 2] = [
-    Unwrap {
-        at: (0, 52),
-        size: (2, 3, 2),
-    },
-    Unwrap {
-        at: (10, 52),
-        size: (8, 2, 2),
-    },
+    Unwrap::new((0, 52), (2, 3, 2)),
+    Unwrap::new((10, 52), (8, 2, 2)),
 ];
 /// The driven bellows' push rod, and a cog's spoke and arm: every cog shows the same.
-const ROD: Unwrap = Unwrap {
-    at: (0, 52),
-    size: (2, 5, 2),
-};
+const ROD: Unwrap = Unwrap::new((0, 52), (2, 5, 2));
 const COG: [Unwrap; 2] = [
-    Unwrap {
-        at: (10, 52),
-        size: (1, 6, 2),
-    },
-    Unwrap {
-        at: (18, 52),
-        size: (1, 2, 2),
-    },
+    Unwrap::new((10, 52), (1, 6, 2)),
+    Unwrap::new((18, 52), (1, 2, 2)),
 ];
 
 pub fn all() -> Vec<(&'static str, Picture)> {
