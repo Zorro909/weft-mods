@@ -6,7 +6,7 @@ use weft_sdk::{Output, SystemBatch, World};
 use super::depth::{Floor, lowest_y};
 use super::framing::build_frame;
 use super::kind::{Drill, Kind};
-use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
+use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep, wear_down};
 use super::power::{fit_store, hold};
 use super::{Dig, Frame, Stage, Status, bit, rig};
 use crate::lib::{Pos, TypedWorld};
@@ -30,19 +30,28 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
         crate::machine::start_meter(&world, id);
         let floor = kind.floor(&dig.frame, Floor::now(), lowest_y());
         let drill = kind.drill(bit::fitted(&world, id));
-        work(&world, Quarry { id, pos, kind }, dig, drill, floor);
+        let lubed = super::lube::has(&world, id);
+        let quarry = Quarry {
+            id,
+            pos,
+            kind,
+            lubed,
+        };
+        work(&world, quarry, dig, drill, floor);
         super::keep_loaded(&world, pos, dig, floor);
         rig::update(&world, id, dig, kind.rig, drill);
         crate::machine::show_working(&world, pos, dig.status().is_working());
     }
 }
 
-/// The quarry a tick works on: its block entity, where it stands and its kind.
+/// The quarry a tick works on: its block entity, where it stands, its kind, and whether it
+/// holds lubricant for a block (`lube`).
 #[derive(Clone, Copy)]
 pub struct Quarry {
     pub id: u64,
     pub pos: Pos,
     pub kind: &'static Kind,
+    pub lubed: bool,
 }
 
 /// Passes on what `quarry` mined, then works on its stage, digging with `drill` if it has one
@@ -80,7 +89,7 @@ fn start(world: &World, quarry: Quarry, dig: &mut Dig) {
 
 /// Mines toward the next block there is to mine with `drill`, for `quarry`, down to `floor`.
 fn mine_next(world: &World, quarry: Quarry, dig: &mut Dig, drill: Drill, floor: Floor) {
-    let Quarry { id, pos, kind } = quarry;
+    let Quarry { id, pos, kind, .. } = quarry;
     fit_store(
         world,
         quarry,
@@ -95,7 +104,7 @@ fn mine_next(world: &World, quarry: Quarry, dig: &mut Dig, drill: Drill, floor: 
         return;
     };
     let block_state = world.block_typed(target);
-    let cost = block_cost(&dig.frame, target, block_state);
+    let cost = block_cost(&dig.frame, target, block_state, quarry.lubed);
     // Where the energy paid so far has the drill: into a block it has begun, it carries on from
     // there instead of going back to its edge.
     let reached = progress_point(&dig.frame, target, dig.spent, cost);
@@ -104,7 +113,7 @@ fn mine_next(world: &World, quarry: Quarry, dig: &mut Dig, drill: Drill, floor: 
     }
     match mine_block(world, quarry, dig, target, block_state, drill.draw) {
         Mined::Done => {
-            bit::wear(world, id);
+            wear_down(world, quarry, dig);
             world.play_sound(kind.dig_sound, target.center(), 1.0);
             dig.set_head(sweep(&dig.frame, target, 1.0));
             dig.cursor = dig.frame.next(target);

@@ -12,6 +12,7 @@ mod dig;
 mod frames;
 mod framing;
 pub mod kind;
+mod lube;
 mod materials;
 mod mine;
 mod power;
@@ -31,6 +32,7 @@ pub use area::Frame;
 use depth::Floor;
 pub use frames::{GANTRY_FRAME, IRON_FRAME, LASHED_FRAME, STEEL_FRAME};
 use kind::{KINDS, Kind};
+pub use lube::CAPACITY as LUBRICANT_CAPACITY;
 
 use crate::lib::{Pos, TypedWorld};
 use crate::loading::Cubes;
@@ -41,7 +43,8 @@ value! {
     /// under way, and `waited` the ticks the cursor's block has been unloaded. `head` is where
     /// the drill's tip is, in the world. `refused` counts the tries running at breaking what
     /// stands where the next frame block goes that were refused. `paid_ahead` counts the frame
-    /// blocks the materials already taken pay for (`materials`).
+    /// blocks the materials already taken pay for (`materials`). `lube_skipped` is 1 while the
+    /// last block mined with lubricant skipped wearing the bit (`lube::wears`).
     #[derive(Default)]
     pub struct Dig {
         pub stage: u32,
@@ -61,6 +64,8 @@ value! {
         saved_padding: u32,
         // Past the old 80 bytes, so excavators saved before it load with it 0.
         pub paid_ahead: u32,
+        // Last, so excavators saved before it load with it 0.
+        pub lube_skipped: u32,
     }
 }
 pub static DIG: Component<Dig> = Component::named("cogwork:dig");
@@ -189,6 +194,7 @@ fn quarry(r: &mut Registry, kind: &'static Kind) {
                 .attach(&rig::RIG)
                 .attach_with(&ENERGY, power::smallest_store())
                 .attach(&crate::machine::METER)
+                .attach(&crate::liquid::HELD)
                 .inventory(inventory)
         })
         .opens(kind.menu);
@@ -243,6 +249,7 @@ fn block_of(world: &World, at: Holder) -> Option<crate::lib::BlockState> {
 /// | Using 16 energy a tick                    [ ][ ][ ]   Frame     |  drawn last tick, and how short
 /// | Mining layer 42                                       [ ][ ][ ] |  status, frame materials
 /// | Area 5 x 5, standby 4 energy per tick                 [ ][ ][ ] |
+/// | [##........]  200 / 1000 mB of Lubricant                        |  lubricant, if any
 /// +-----------------------------------------------------------------+
 /// ```
 fn screen(ui: &mut Ui, kind: &'static Kind) {
@@ -273,6 +280,7 @@ fn screen(ui: &mut Ui, kind: &'static Kind) {
                         ],
                     );
                 });
+                crate::machine::tank_bar(ui, LUBRICANT_CAPACITY);
             });
             ui.group("output");
             if !kind.bits.is_empty() || !kind.frame_cost.is_empty() {
@@ -332,6 +340,11 @@ mod tests {
             offset_of!(Dig, paid_ahead),
             80,
             "past the 80 bytes saved before, not in their padding"
+        );
+        assert_eq!(
+            offset_of!(Dig, lube_skipped),
+            offset_of!(Dig, paid_ahead) + 4,
+            "the lubricant's wear last"
         );
     }
 
