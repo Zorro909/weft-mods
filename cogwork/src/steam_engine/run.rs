@@ -17,20 +17,21 @@ const RESTARTS_AT: i64 = ENERGY_STORED / 2;
 
 impl SteamEngine {
     /// Runs it up to `ticks` with `steam` millibuckets in and `stored` energy held. The ticks it
-    /// ran, and why it stopped short, if it did.
-    pub fn run(&self, ticks: u32, steam: u32, stored: i64) -> (u32, Option<Status>) {
+    /// ran, and its status after: `Full` from when its store has no room for another tick until
+    /// half of it is out again, whether or not steam comes in meanwhile.
+    pub fn run(&self, ticks: u32, steam: u32, stored: i64) -> (u32, Status) {
         if self.status() == Status::Full && stored > RESTARTS_AT {
-            return (0, Some(Status::Full));
+            return (0, Status::Full);
         }
         let by_steam = steam / STEAM_A_TICK;
         let by_room = ((ENERGY_STORED - stored).max(0) / MAKES) as u32;
         let ran = ticks.min(by_steam).min(by_room);
-        let lack = match ran {
-            _ if ran == ticks => None,
-            _ if ran == by_steam => Some(Status::NoSteam),
-            _ => Some(Status::Full),
+        let status = match ran {
+            _ if ran == by_room => Status::Full,
+            0 => Status::NoSteam,
+            _ => Status::Running,
         };
-        (ran, lack)
+        (ran, status)
     }
 }
 
@@ -47,15 +48,19 @@ mod tests {
     #[test]
     fn it_runs_a_tick_on_twenty_millibuckets() {
         let engine = running();
-        assert_eq!(engine.run(10, 1_000, 0), (10, None), "steam for 50");
+        assert_eq!(
+            engine.run(10, 1_000, 0),
+            (10, Status::Running),
+            "steam for 50"
+        );
         assert_eq!(
             engine.run(10, 99, 0),
-            (4, Some(Status::NoSteam)),
+            (4, Status::Running),
             "four ticks' steam"
         );
         assert_eq!(
             engine.run(1, STEAM_A_TICK - 1, 0),
-            (0, Some(Status::NoSteam)),
+            (0, Status::NoSteam),
             "not a tick's"
         );
     }
@@ -66,13 +71,13 @@ mod tests {
         let nearly = ENERGY_STORED - 2 * MAKES;
         assert_eq!(
             engine.run(10, 1_000, nearly),
-            (2, Some(Status::Full)),
+            (2, Status::Full),
             "room for two"
         );
         assert_eq!(
-            engine.run(10, 1_000, ENERGY_STORED),
-            (0, Some(Status::Full)),
-            "full"
+            engine.run(10, 0, ENERGY_STORED),
+            (0, Status::Full),
+            "full, with no steam either"
         );
     }
 
@@ -82,10 +87,36 @@ mod tests {
         engine.set_status(Status::Full);
         assert_eq!(
             engine.run(10, 1_000, RESTARTS_AT + 1),
-            (0, Some(Status::Full)),
+            (0, Status::Full),
             "still resting"
         );
-        assert_eq!(engine.run(10, 1_000, RESTARTS_AT), (10, None), "off again");
+        assert_eq!(
+            engine.run(10, 1_000, RESTARTS_AT),
+            (10, Status::Running),
+            "off again"
+        );
+    }
+
+    #[test]
+    fn filling_its_store_rests_it_through_a_lack_of_steam() {
+        let mut engine = running();
+        let (ran, status) = engine.run(1, STEAM_A_TICK, ENERGY_STORED - MAKES);
+        assert_eq!((ran, status), (1, Status::Full), "the tick that fills it");
+        engine.set_status(status);
+        // A load drawing 20 energy a tick, with steam coming now and then.
+        let drawn = (RESTARTS_AT + 1..ENERGY_STORED).rev().step_by(20);
+        for stored in drawn {
+            let (_, starved) = engine.run(1, 0, stored);
+            assert_eq!(starved, Status::Full, "resting without steam at {stored}");
+            engine.set_status(starved);
+            assert_eq!(
+                engine.run(1, STEAM_A_TICK, stored),
+                (0, Status::Full),
+                "steam back at {stored}, before half is out"
+            );
+        }
+        let at_half = engine.run(1, STEAM_A_TICK, RESTARTS_AT);
+        assert_eq!(at_half, (1, Status::Running), "off again at half");
     }
 
     #[test]

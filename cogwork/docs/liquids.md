@@ -21,6 +21,9 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
   into a pump. Without a pump, liquid rises no higher than where it stands.
 - **Two liquids** don't mix: one waits until the other has moved on. What is left of a liquid
   once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
+  Steam is the exception: steam and any other liquid wait for each other down to the last
+  millibucket, so a tube or tank that held water takes steam only once it is empty, or broken
+  and placed again, and the other way round.
 
 An oil engine's intake takes only oil or water, one at a time, and hands nothing on. A
 [grinding mill](processing.md#grinding-mill) or a [washer](processing.md#washer) takes only
