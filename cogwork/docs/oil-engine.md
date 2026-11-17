@@ -45,7 +45,8 @@ A pump takes 2,500 energy to bring up a bucket of oil, about 1% of what that buc
 [pump](oil.md#pump) on water keeps 10 engines in water.
 
 The two gauges on the controller show its oil and water in four steps; its screen shows both,
-its energy and what it is doing.
+its energy, what it is doing and what it sent into its drives in the last tick
+([energy readouts](power.md#energy-readouts)).
 
 ## Liquid in
 

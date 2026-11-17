@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Every machine's screen shows what it used in the last tick, "Using 120 energy a tick", and how
+  far short of what it wanted its supply fell, "short 30": the excavator, the leveler, the
+  assembly bench and the pump. The oil engine's screen shows what it sends into its drives.
+
 ## 0.4.1 - 2026-11-15
 
 ### Added

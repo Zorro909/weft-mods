@@ -37,6 +37,9 @@ out. It stores 4,000 energy and takes in up to 200 a tick.
 
 ## Its screen
 
+Under the pattern it shows the stored energy, what the bench used in the last tick and how short
+of what it wanted it fell ([energy readouts](power.md#energy-readouts)), and what it is doing.
+
 | Status | Meaning |
 |---|---|
 | Click cells to set a recipe | The pattern makes nothing. |

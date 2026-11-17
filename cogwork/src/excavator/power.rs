@@ -75,6 +75,7 @@ pub fn hold(world: &World, id: u64, dig: &mut Dig) -> bool {
     };
     let drawn = energy.stored.min(need);
     energy.stored -= drawn;
+    machine::note_drawn(world, id, drawn, need);
     if drawn < need {
         dig.set_status(Status::NoPower);
         return false;
@@ -99,8 +100,10 @@ pub fn travel(world: &World, id: u64, max: f64) -> f64 {
     let Some(energy) = world.component_mut(id, &ENERGY) else {
         return 0.0;
     };
-    let cost = energy.stored.min((max * TRAVEL_COST as f64).ceil() as i64);
+    let wanted = (max * TRAVEL_COST as f64).ceil() as i64;
+    let cost = energy.stored.min(wanted);
     energy.stored -= cost;
+    machine::note_drawn(world, id, cost, wanted);
     (cost as f64 / TRAVEL_COST as f64).min(max)
 }
 

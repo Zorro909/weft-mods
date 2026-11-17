@@ -29,13 +29,15 @@ pub fn tick(batch: &mut SystemBatch<OilEngine>) {
         }
         let front = crate::machine::front(&world, pos);
         let cube = Cube::behind(pos, front);
+        crate::machine::start_meter(&world, id);
         let shown_built = engine.status().is_built() || engine.checked == 0;
         engine.checked = 1;
         let running = match pattern::check(pos, front, |at| part_at(&world, at)) {
             Ok(layout) => {
                 take_in(&world, engine, &layout);
                 let running = run(engine, ticks);
-                give_out(&world, engine, cube, &layout);
+                let given = give_out(&world, engine, cube, &layout);
+                crate::machine::note_drawn(&world, id, given, given);
                 form(&world, &layout.shell(), true);
                 running
             }
@@ -87,8 +89,10 @@ fn take_in(world: &World, engine: &mut OilEngine, layout: &Layout) {
 }
 
 /// Fills each drive from the engine's energy, and pushes what a drive holds into the blocks it
-/// faces outside the engine.
-fn give_out(world: &World, engine: &mut OilEngine, cube: Cube, layout: &Layout) {
+/// faces outside the engine. Comes to the energy put into the drives: once they are full, what
+/// they passed on since the last tick.
+fn give_out(world: &World, engine: &mut OilEngine, cube: Cube, layout: &Layout) -> i64 {
+    let mut total = 0;
     for &drive in &layout.drives {
         let id = world.block_entity(drive);
         let Some(store) = world.component_mut(id, &ENERGY) else {
@@ -97,6 +101,7 @@ fn give_out(world: &World, engine: &mut OilEngine, cube: Cube, layout: &Layout) 
         let given = engine.energy.min(store.capacity - store.stored);
         store.stored += given;
         engine.energy -= given;
+        total += given;
         for out in cube.outward(drive) {
             let stored = world.component(id, &ENERGY).map_or(0, |store| store.stored);
             if stored == 0 {
@@ -108,6 +113,7 @@ fn give_out(world: &World, engine: &mut OilEngine, cube: Cube, layout: &Layout) 
             }
         }
     }
+    total
 }
 
 /// Shows the engine at `pos`: its gauges and lamp, its rig while built.

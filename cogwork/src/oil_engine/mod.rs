@@ -134,7 +134,7 @@ pub fn register(r: &mut Registry) {
         .sound_group("base:block.stone")
         .tab(&crate::TAB)
         .on_break(|world, change| run::broken(world, change.pos.into(), change.state.into()))
-        .entity(|entity| entity.attach(&OIL_ENGINE))
+        .entity(|entity| entity.attach(&OIL_ENGINE).attach(&crate::machine::METER))
         .opens(&OIL_ENGINE_MENU);
     r.menu(&OIL_ENGINE_MENU).screen(screen);
 }
@@ -148,6 +148,7 @@ pub fn register(r: &mut Registry) {
 /// | [###.......]  8000 / 16000 mB of Water         |
 /// | [#######...]  42000 / 60000 energy             |
 /// | Running: 600 energy a tick                     |  or what keeps it from running
+/// | Sending 600 energy a tick into its drives      |  into its drives last tick
 /// +------------------------------------------------+
 /// ```
 fn screen(ui: &mut Ui) {
@@ -189,6 +190,7 @@ fn screen(ui: &mut Ui) {
             };
             out.set(&key, &args);
         });
+        crate::machine::giving_line(ui);
     });
 }
 

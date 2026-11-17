@@ -145,6 +145,7 @@ pub fn register(r: &mut Registry) {
                 .attach(&DIG)
                 .attach(&rig::RIG)
                 .attach_with(&ENERGY, power::smallest_store())
+                .attach(&crate::machine::METER)
                 .inventory(9)
         })
         .opens(&EXCAVATOR_MENU);
@@ -169,7 +170,8 @@ pub fn register(r: &mut Registry) {
 /// | Excavator                                                       |
 /// | [#####.....]                              [ ][ ][ ]             |  stored energy, output
 /// | 12000 / 20000 energy                      [ ][ ][ ]             |
-/// | Mining layer 42                           [ ][ ][ ]             |  status
+/// | Using 150 energy a tick                   [ ][ ][ ]             |  drawn last tick, and how short
+/// | Mining layer 42                                                 |  status
 /// | Area 9 x 9, standby 30 energy per tick                          |
 /// +-----------------------------------------------------------------+
 /// ```
@@ -179,6 +181,7 @@ fn screen(ui: &mut Ui) {
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
+                crate::machine::meter_line(ui);
                 ui.text_bind(|view, out| {
                     let dig = view.menu_component(&DIG).unwrap_or_default();
                     let status: &str = dig.status().into();

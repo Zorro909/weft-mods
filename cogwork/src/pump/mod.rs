@@ -118,6 +118,7 @@ pub fn register(r: &mut Registry) {
                 .attach(&PUMP_STATE)
                 .attach(&HELD)
                 .attach_with(&ENERGY, crate::machine::energy(10_000, 500))
+                .attach(&crate::machine::METER)
                 .inventory(9)
         })
         .opens(&PUMP_MENU);
@@ -150,7 +151,8 @@ fn pull_hose(world: &World, pos: Pos) {
 /// | Pump                                             |
 /// | [#####.....]                     [ ][ ][ ]       |  stored energy, what it bored out
 /// | 4000 / 10000 energy              [ ][ ][ ]       |
-/// | Pumping, its hose 54 blocks down [ ][ ][ ]       |  status
+/// | Using 200 energy a tick          [ ][ ][ ]       |  drawn last tick, and how short
+/// | Pumping, its hose 54 blocks down                 |  status
 /// | [####......]                                     |  its tank
 /// | 3000 / 8000 mB of Oil                            |
 /// +--------------------------------------------------+
@@ -161,6 +163,7 @@ fn screen(ui: &mut Ui) {
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
+                crate::machine::meter_line(ui);
                 ui.text_bind(|view, out| {
                     let pump = view.menu_component(&PUMP_STATE).unwrap_or_default();
                     let status: &str = pump.status().into();
