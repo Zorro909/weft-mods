@@ -36,6 +36,7 @@ pub fn tick(batch: &mut SystemBatch<Level>) {
         if !world.block_typed(pos).is(&LEVELER) {
             continue;
         }
+        crate::machine::start_meter(&world, id);
         work(&world, id, pos, level);
         super::keep_loaded(&world, pos, level);
         crate::machine::show_working(&world, pos, level.status().is_working());

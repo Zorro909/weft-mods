@@ -60,6 +60,18 @@ energy, but also when what it drives uses less than 40 a tick. An
 [assembly bench](assembly-bench.md) uses at most 30, and an excavator with a full output only
 its standby, so an ember engine on either of those stops and starts with its heat.
 
+## Energy readouts
+
+The screen of every machine that runs on energy (the [excavator](excavator.md), the
+[leveler](leveler.md), the [assembly bench](assembly-bench.md) and the [pump](oil.md#pump))
+shows, under its stored energy, what it used in the last tick: "Using 120 energy a tick". When
+it wanted more than its store held, it says by how much, "Using 90 energy a tick, short 30": add
+an engine or a faster one until the shortfall goes. A machine waiting (for its output to empty,
+for blocks to fill with) uses nothing.
+
+The [oil engine](oil-engine.md)'s screen says what it gave out of its drives in the last tick:
+"Giving 600 energy a tick". Less than the 600 it makes means what it drives takes less.
+
 ## Torque Shaft
 
 A thin rod that carries energy between engines and machines. It reaches toward every block

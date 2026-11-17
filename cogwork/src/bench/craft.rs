@@ -26,6 +26,7 @@ pub fn tick(batch: &mut SystemBatch<Bench>) {
             continue;
         };
         let pos = Pos::from(entity.block_pos());
+        machine::start_meter(&world, id);
         let pattern = pattern(bench);
         let status = if evict_misplaced(&world, id, &pattern) {
             work(&world, id, pos, bench, &pattern)

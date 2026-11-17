@@ -26,6 +26,7 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
         if !world.block_typed(pos).is(&EXCAVATOR) {
             continue;
         }
+        crate::machine::start_meter(&world, id);
         work(&world, id, pos, dig);
         super::keep_loaded(&world, pos, dig, Floor::now());
         rig::update(&world, id, dig);
