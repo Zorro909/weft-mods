@@ -79,7 +79,8 @@
   40 mB of steam or 300 energy a tick in a heater at its foot and cooled by 50 mB of water a tick
   in a condenser on top. In its temperature band a bucket of crude gives 200 mB of gas, 400 of
   diesel, 200 of lubricant, 200 of tar and a sulfur, out of the taps on each product's layer; too
-  cold it all goes to tar, too hot the gas vents. Its screen shows the band.
+  cold it all goes to tar, too hot the gas vents. Its screen shows the band, and what its
+  burners use.
 - Gas, diesel, lubricant and tar, new liquids, with their buckets.
 - The oil engine burns diesel, 1 mB a tick for its 600 energy, ahead of oil.
 - Lubricant led into a quarry by liquid tube makes each block cost a fifth less energy and wears
@@ -92,11 +93,23 @@
   The parts are tagged by their form for other mods.
 - The sealed liquid tube, sleeved in plastic: a pump lifts liquid 32 blocks into it, twice what
   it lifts into a liquid tube.
-- The pressure tube, a plastic pipe that carries steam twice as fast as a liquid tube.
+- The pressure tube, a plastic pipe that carries steam and sulfuric acid twice as fast as a
+  liquid tube.
 - The Bit Magazine: placed against a quarry, it swaps a fresh bit that quarry takes into its bit
   slot when the bit is down to its last use, and keeps the worn one. The quarry never uses that
   last use, so the worn bit waits fitted while the magazine's worn-bit slots are full.
 - The Gantry Excavator takes a diamond-tipped drill bit, which digs twice as hard.
+- Sulfuric acid, a new liquid that flows like water, with its bucket. As steam, it never takes
+  the place of the last of another liquid in a tube or tank, nor another liquid its place.
+- The acid tank makes sulfuric acid: a sulfur by tube and 1,000 mB of water it draws from a tube
+  or tank beside it make 1,000 mB of acid for 2,000 energy, let out of its front.
+- The leaching vat leaches Rich Ore Rubble into Pure with 100 mB of sulfuric acid and 2,000
+  energy, bubbling as it works; other grades pass through. The acid tank and the vat keep their
+  liquids when broken.
+- The seismic thumper surveys with engine energy, 50,000 a survey, its weight booming onto the
+  ground: it counts each ore below the area survey markers mark out, up to 64 by 64 (or the 32
+  by 32 around it), in bands of 16 layers down to 160 below, and lists the oil fields within 256
+  blocks with which way, how far and how deep they lie.
 
 ### Changed
 

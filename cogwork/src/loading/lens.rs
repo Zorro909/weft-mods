@@ -85,7 +85,7 @@ fn outline(client: &Client, cube: CubePos, color: u32) {
 const LOADER_COLOR: u32 = 0x3fd8_e6ff;
 /// Green: a loader keeping everything running.
 const LOADER_ALL_COLOR: u32 = 0x5ee0_5aff;
-/// Orange: a working excavator or leveler.
+/// Orange: a working quarry, leveler, core drill or seismic thumper.
 const MACHINE_COLOR: u32 = 0xff9a_30ff;
 
 fn color(keeper: Keeper) -> u32 {

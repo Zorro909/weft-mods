@@ -19,8 +19,10 @@ Oil is burnt as it is in the [oil engine](oil-engine.md), or distilled as crude 
 Fields are rare. The overworld is divided into squares of 96 by 96 blocks, and one in 32 holds
 a field, if the place the seed picks in it is dry dirt, grass or sand on the ground: about one
 field to every 540 by 540 blocks of such land. A place where a cave or ravine opened the ground,
-or where a tree, a building or water stands on it, holds none. Every world with the same seed has its fields in the same
-places, and `/structure locate cogwork:oil_field` says where the nearest is.
+or where a tree, a building or water stands on it, holds none. Every world with the same seed
+has its fields in the same places, and `/structure locate cogwork:oil_field` says where the
+nearest is. A [seismic thumper](prospecting.md#seismic-thumper) lists the fields within 256
+blocks of it, with which way, how far and how deep each lies.
 
 | | |
 |---|---|

@@ -1,7 +1,8 @@
 //! Every core drill's tick: keep its rod in place, count up to `BUDGET` of the blocks its turns
 //! have drilled to, keeping the layer it counts loaded meanwhile, and report to the player who
 //! turned it last once it has counted everything. A block that stays unloaded for `FLOOR_WAIT`
-//! is taken for the floor of the world: the count ends there.
+//! is taken for the floor of the world: the count ends there. It counts in the first call of a
+//! tick only, so making up missed ticks reads no more blocks and waits no faster.
 
 use std::collections::HashMap;
 
@@ -18,13 +19,13 @@ const BUDGET: u32 = 1_024;
 /// Ticks a block may stay unloaded before the count takes it for the floor of the world.
 const FLOOR_WAIT: u32 = 200;
 
-/// What a block is to the count: the keys of its kind of ore and of its name, or none for no
-/// ore.
-type Kind = Option<(u64, ItemKey)>;
+/// What a block is to a count of ore: the keys of its kind of ore and of its name, or none for
+/// no ore. The seismic thumper counts by it too.
+pub type OreKind = Option<(u64, ItemKey)>;
 
 pub fn tick(batch: &mut SystemBatch<Core>) {
     let world = batch.world();
-    let mut kinds: HashMap<u32, Kind> = HashMap::new();
+    let mut kinds: HashMap<u32, OreKind> = HashMap::new();
     for (id, core, _) in batch.iter_mut() {
         let Some(entity) = world.entity(id) else {
             continue;
@@ -34,7 +35,9 @@ pub fn tick(batch: &mut SystemBatch<Core>) {
             continue;
         }
         core.rod = rod::place(&world, id, pos, core.rod);
-        count(&world, pos, core, &mut kinds);
+        if crate::machine::first_call_at(&mut core.counted_at, world.game_time()) {
+            count(&world, pos, core, &mut kinds);
+        }
         if core.is_done() && core.reported == 0 && world.entity(core.driller).is_some() {
             report(&world, core.driller, core);
             core.reported = 1;
@@ -44,7 +47,7 @@ pub fn tick(batch: &mut SystemBatch<Core>) {
 
 /// Counts what the drill at `pos` has reached and not counted yet, `BUDGET` at most, looking
 /// each kind of block up in `kinds` once a tick.
-fn count(world: &World, pos: Pos, core: &mut Core, kinds: &mut HashMap<u32, Kind>) {
+fn count(world: &World, pos: Pos, core: &mut Core, kinds: &mut HashMap<u32, OreKind>) {
     let reached = survey::reached(core.turns);
     if core.counted >= reached {
         crate::loading::release_machine(world, pos);
@@ -59,7 +62,7 @@ fn count(world: &World, pos: Pos, core: &mut Core, kinds: &mut HashMap<u32, Kind
         };
         let kind = *kinds
             .entry(block_state.id())
-            .or_insert_with(|| kind_of(block_state));
+            .or_insert_with(|| ore_kind(block_state));
         if let Some((kind, shown)) = kind {
             core.tally(kind, shown, survey::band(core.counted));
         }
@@ -83,8 +86,8 @@ fn wait(world: &World, pos: Pos, core: &mut Core) {
     crate::loading::release_machine(world, pos);
 }
 
-/// What `block_state` is to the count: its kind of ore and its name, by their keys.
-fn kind_of(block_state: BlockState) -> Kind {
+/// What `block_state` is to a count of ore: its kind of ore and its name, by their keys.
+pub fn ore_kind(block_state: BlockState) -> OreKind {
     let ore = crate::rubble::ore_name(block_state)?;
     Some((key_of_name(ore), key_of_name(block_state.block_name())))
 }

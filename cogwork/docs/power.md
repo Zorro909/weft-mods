@@ -67,7 +67,7 @@ blue when cool, green when warm, orange when hot, red when overheated.
 
 So an ember engine overheats whenever it makes more than it can hand on: when nothing takes its
 energy, but also when what it drives uses less than 40 a tick. An
-[assembly bench](assembly-bench.md) uses at most 30, and an excavator with a full output only
+[assembly bench](assembly-bench.md) uses at most 30, and a quarry with a full output only
 its standby, so an ember engine on either of those stops and starts with its heat.
 
 ## Water Wheel
@@ -88,13 +88,16 @@ sps
 
 ## Energy readouts
 
-The screen of every machine that runs on energy (the [excavator](excavator.md), the
+The screen of every machine that runs on energy (the [quarries](excavator.md), the
 [leveler](leveler.md), the [assembly bench](assembly-bench.md), the [pump](oil.md#pump), the
-[shaker screen and grinding mill](processing.md) and the [driven bellows](bellows.md#driven-bellows))
-shows, under its stored energy, what it used in the last tick: "Using 120 energy a tick". When
+[shaker screen, grinding mill, washer and flotation cell](processing.md), the
+[driven bellows](bellows.md#driven-bellows), the [polymerizer and molding press](plastics.md),
+the [acid tank and leaching vat](acid.md), the
+[seismic thumper](prospecting.md#seismic-thumper), and the [refinery](refinery.md) for its
+heaters' burners) shows, under its stored energy, what it used in the last tick: "Using 120 energy a tick". When
 it wanted more than its store held, it says by how much, "Using 90 energy a tick, short 30": add
 an engine or a faster one until the shortfall goes. A machine waiting (for its output to empty,
-for blocks to fill with) uses nothing, except an excavator: it pays its standby for as long as
+for blocks to fill with) uses nothing, except a quarry: it pays its standby for as long as
 it works, also while its output is full.
 
 The [oil engine](oil-engine.md)'s screen says how much it sent into its drives in the last tick:

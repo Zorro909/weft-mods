@@ -222,7 +222,7 @@ changed), whether depth is limited or not, or sooner where the world ends.
 
 While it mines, it keeps its own cube and the eight around it loaded, and the cubes of the
 layer it mines all the way across the frame, so it digs on with nobody near; see
-[cuboid loaders](loading.md#excavators-and-levelers). Building the frame keeps nothing loaded:
+[cuboid loaders](loading.md#quarries-levelers-and-prospecting). Building the frame keeps nothing loaded:
 stay near until it stands.
 
 A block costs 400 energy and 400 more per point of hardness: stone (1.5) takes 1,000, so a

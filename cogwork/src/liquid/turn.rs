@@ -197,8 +197,8 @@ impl<'v> Party<'v> {
 /// `from` has, what `to` has room for, and a turn's worth of the faster of the two (a pressure
 /// tube's is twice a tube's). A holder that pushes never takes: liquid run back into it would only
 /// be pushed out again. A driven timber liquid tube hands nothing to a tank: it pulls from there.
-/// A machine's holder hands nothing on, and takes only what its machine uses. Steam never takes
-/// the place of another liquid, nor another liquid that of steam (`Held::takes`).
+/// A machine's holder hands nothing on, and takes only what its machine uses. Steam and acid
+/// never take the place of another liquid, nor another liquid theirs (`Held::takes`).
 fn share(from: Party, to: Party) -> u32 {
     let (giving, taking) = (from.held, to.held);
     let (into, kind) = (to.vessel, to.vessel.kind());
