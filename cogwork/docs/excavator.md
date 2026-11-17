@@ -39,8 +39,8 @@ dcd       d = #cogs/diamond    c = base:chest
 2. Put a chest or a tube beside it for what it mines.
 3. Drive it with engines on any side, or through [torque shafts](power.md#torque-shaft) or
    [wooden axles](power.md#wooden-axle).
-4. A Timber Quarry also needs logs and string in its frame slots and a drill bit in its bit
-   slot; tubes can bring both.
+4. A Timber Quarry also needs logs and string in its frame slots, which tubes can fill, and a
+   drill bit in its bit slot, put in by hand.
 
 It works out its area as soon as it is placed, and starts once enough energy comes in. Put
 [survey markers](survey-markers.md) down before the quarry: markers placed afterwards are
@@ -70,7 +70,9 @@ block smaller on every side than the rectangle; without them, the frame goes aro
 
 The quarry puts up the frame from the bottom up, for 100 energy a block, as fast as it digs:
 a Gantry Excavator a block a tick, a Timber Quarry one every 6 ticks or so. Whatever stands in
-the way is mined first, like any other block. When breaking it is refused three times in a row
+the way is mined first, like any other block. A Timber Quarry mines it with its bit, which wears
+as it does in the pit: without a bit it waits ("Needs a drill bit"), and a block its bit can't
+break is left standing in the frame's ring, as a pillar is in the pit. When breaking it is refused three times in a row
 (a protected area, say), the quarry is jammed: it tries again only every 5 seconds, so it
 doesn't pay for the block over and over, and goes on once the block is gone. Gantry frame
 blocks drop nothing when broken, and can't be had as items.

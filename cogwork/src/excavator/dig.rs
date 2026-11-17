@@ -54,7 +54,7 @@ fn work(world: &World, quarry: Quarry, dig: &mut Dig, drill: Option<Drill>, floo
     crate::store::eject(world, quarry.pos);
     match dig.stage() {
         Stage::Frame | Stage::Mine if !hold(world, quarry, dig) => {}
-        Stage::Frame => build_frame(world, quarry, dig),
+        Stage::Frame => build_frame(world, quarry, dig, drill),
         Stage::Mine => match drill {
             Some(drill) => mine_next(world, quarry, dig, drill, floor),
             None => dig.set_status(Status::NeedsBit),

@@ -208,8 +208,8 @@ impl Kind {
         }
     }
 
-    /// The most energy it puts into putting up a frame block, or clearing its way, a tick: its
-    /// best drill's.
+    /// The most energy it puts into putting up a frame block a tick: its best drill's, whatever
+    /// bit is fitted. Clearing the frame's way is mining, at the fitted drill's.
     pub fn build_draw(&self) -> i64 {
         let best_bit = self.bits.iter().map(|fit| fit.draw).max();
         self.bare.max(best_bit).unwrap_or_default()
@@ -218,11 +218,6 @@ impl Kind {
     /// How it takes `bit`, if it does.
     fn fit(&self, bit: &Bit) -> Option<&Fit> {
         self.bits.iter().find(|fit| std::ptr::eq(fit.bit, bit))
-    }
-
-    /// Whether `stack` is a bit it takes.
-    pub fn takes_bit(&self, stack: ItemStack) -> bool {
-        super::bit::of(stack).is_some_and(|bit| self.fit(bit).is_some())
     }
 
     /// Whether `stack` is something its frame is built of.

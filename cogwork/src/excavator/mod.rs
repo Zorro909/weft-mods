@@ -200,20 +200,16 @@ fn quarry(r: &mut Registry, kind: &'static Kind) {
     menu.player_inventory().screen(move |ui| screen(ui, kind));
 }
 
-/// Puts `stack` from a tube into the quarry `at`: a bit it takes into its `bit` group, what its
-/// frame is built of into `materials`, nothing else. None for what is no quarry, or a quarry
-/// that takes nothing in.
+/// Puts `stack` from a tube into the quarry `at`: what its frame is built of into `materials`,
+/// nothing else. Bits go in by hand. None for what is no quarry, or a quarry that takes nothing
+/// in.
 pub fn insert(world: &World, at: Holder, stack: ItemStack, simulate: bool) -> Option<ItemStack> {
     world.component(at, &DIG)?;
     let kind = Kind::of(block_of(world, at)?)?;
-    let group = if kind.takes_bit(stack) {
-        bit::GROUP
-    } else if kind.takes_material(stack) {
-        materials::GROUP
-    } else {
+    if !kind.takes_material(stack) {
         return Some(stack);
-    };
-    let slots = world.inventory(at).find_group(group)?;
+    }
+    let slots = world.inventory(at).find_group(materials::GROUP)?;
     Some(crate::store::insert_into(slots, stack, simulate))
 }
 

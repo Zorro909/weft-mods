@@ -8,7 +8,7 @@
 use weft_sdk::{Component, EntityKind, Registry, Vec3, World, component_flags, value};
 
 use super::bit::BITS;
-use super::kind::Drill;
+use super::kind::{Drill, KINDS};
 use super::{Dig, Frame, Stage};
 
 /// A kind's rig: its pieces, each the Gantry's model in textures named like the piece. The
@@ -38,7 +38,6 @@ pub static TIMBER_RIG: RigLook = RigLook {
     beam_end: EntityKind::named("timber_beam_end"),
     bare_bit: None,
 };
-static RIGS: [&RigLook; 2] = [&GANTRY_RIG, &TIMBER_RIG];
 
 /// The Gantry's pieces, whose models every kind's pieces take.
 const CARRIAGE_MODEL: &str = "drill_carriage";
@@ -72,7 +71,7 @@ const BIT_HEIGHT: f64 = 0.75;
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&RIG, Rig { ids: [0; SLOTS] }, component_flags::SAVE);
-    for rig in RIGS {
+    for rig in distinct(KINDS.iter().map(|kind| kind.rig)) {
         for (kind, model) in rig.pieces() {
             piece(r, kind, model, kind.path());
         }
@@ -81,6 +80,17 @@ pub fn register(r: &mut Registry) {
     for bit in BITS {
         piece(r, &bit.look, BIT_MODEL, bit.look.path());
     }
+}
+
+/// Each of `looks` once, in order: kinds may share a look.
+fn distinct(looks: impl Iterator<Item = &'static RigLook>) -> Vec<&'static RigLook> {
+    let mut seen: Vec<&'static RigLook> = Vec::new();
+    for look in looks {
+        if !seen.iter().any(|known| std::ptr::eq(*known, look)) {
+            seen.push(look);
+        }
+    }
+    seen
 }
 
 /// A piece of the rig, drawn by the Blockbench model `model` in the texture `texture`. Bits turn.
@@ -257,7 +267,8 @@ mod tests {
             let file = format!("models/{model}.geo.json");
             assert!(crate::has_asset(&file), "no {file}");
         }
-        let looks = RIGS.iter().flat_map(|rig| rig.pieces());
+        let rigs = distinct(KINDS.iter().map(|kind| kind.rig));
+        let looks = rigs.into_iter().flat_map(|rig| rig.pieces());
         let bits = BITS.iter().map(|bit| (&bit.look, BIT_MODEL));
         for (kind, _) in looks.chain(bits) {
             let texture = format!("textures/entity/{}.png", kind.path());
@@ -267,6 +278,14 @@ mod tests {
             crate::has_asset("animations/drill_bit.animation.json"),
             "the bit's turning"
         );
+    }
+
+    #[test]
+    fn a_look_two_kinds_share_is_registered_once() {
+        let looks = [&GANTRY_RIG, &TIMBER_RIG, &GANTRY_RIG];
+        let rigs = distinct(looks.into_iter());
+        assert_eq!(rigs.len(), 2, "the gantry's once");
+        assert!(std::ptr::eq(rigs[0], &GANTRY_RIG), "in the kinds' order");
     }
 
     #[test]
