@@ -140,15 +140,71 @@ fn a_pressure_tube_carries_twice_as_much_steam_a_turn() {
 }
 
 #[test]
-fn a_pressure_tube_takes_only_steam() {
+fn a_pressure_tube_takes_only_steam_and_acid() {
     let water = key_named("base:water");
     let (tube, pressure) = (holder(Kind::Tube, 1), holder(Kind::Pressure, 0));
-    let water_in = share(
-        Party::of(&tube, holding(water, 1000), i64::MIN),
-        Party::of(&pressure, Held::default(), i64::MIN),
+    let falls_in = |liquid| {
+        share(
+            Party::of(&tube, holding(liquid, 1000), i64::MIN),
+            Party::of(&pressure, Held::default(), i64::MIN),
+        )
+    };
+    assert_eq!(falls_in(water), 0, "no water falls into it");
+    assert_eq!(
+        falls_in(crate::acid::key()),
+        2 * MOST_A_TURN,
+        "acid does, at the pressure tube's pace"
     );
-    assert_eq!(water_in, 0, "no water falls into it");
     assert!(pressure.admits(crate::steam::key()), "steam goes in");
+}
+
+#[test]
+fn a_pressure_tube_carries_twice_as_much_acid_a_turn_and_by_height() {
+    let acid = crate::acid::key();
+    let down = |kind| {
+        let (from, to) = (holder(kind, 1), holder(kind, 0));
+        share(
+            Party::of(&from, holding(acid, 1000), i64::MIN),
+            Party::of(&to, Held::default(), i64::MIN),
+        )
+    };
+    assert_eq!(down(Kind::Tube), MOST_A_TURN, "a tube's turn");
+    assert_eq!(down(Kind::Pressure), 2 * MOST_A_TURN, "twice that");
+    let (low, high) = (holder(Kind::Pressure, 0), holder(Kind::Pressure, 1));
+    let up = share(
+        Party::of(&low, holding(acid, 500), i64::MIN),
+        Party::of(&high, Held::default(), i64::MIN),
+    );
+    assert_eq!(up, 0, "acid stands as water does, it never rises");
+}
+
+#[test]
+fn a_pressure_line_keeps_steam_and_acid_apart_and_loses_neither() {
+    let (steam, acid) = (crate::steam::key(), crate::acid::key());
+    let kinds = [
+        (Kind::Pressure, acid, 1000),
+        (Kind::Pressure, steam, 800),
+        (Kind::Pressure, NO_LIQUID, 0),
+        (Kind::Pressure, acid, 5),
+        (Kind::Tube, acid, 600),
+        (Kind::Pressure, steam, 3),
+        (Kind::Pressure, NO_LIQUID, 0),
+    ];
+    let vessels = (0..).zip(kinds).map(|(y, (kind, ..))| holder(kind, y % 2));
+    let held = kinds.map(|(_, liquid, amount)| holding(liquid, amount));
+    let mut line = Line::new(vessels.collect(), held.to_vec());
+    let (steam_before, acid_before) = (line.total(steam), line.total(acid));
+    for _ in 0..500 {
+        let was = line.held.clone();
+        line.turn();
+        for (before, after) in was.iter().zip(&line.held) {
+            let rising = |held: &Held| rises(held.liquid);
+            let replaced = before.amount > 0 && after.amount > 0 && rising(before) != rising(after);
+            assert!(!replaced, "{before:?} became {after:?}");
+        }
+        assert_eq!(line.total(steam), steam_before, "no steam made or lost");
+        assert_eq!(line.total(acid), acid_before, "no acid made or lost");
+    }
 }
 
 #[test]

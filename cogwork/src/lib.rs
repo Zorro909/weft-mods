@@ -8,9 +8,13 @@
 //! the steel age's ore work: the flotation cell, the clarifier and the hand core drill, and the
 //! refinery that distils crude into diesel for the oil engine, lubricant for the quarries, tar
 //! for asphalt roads, and gas, which the polymerizer turns into plastic for the molding press:
-//! sealed and pressure tubes, the Bit Magazine and the Gantry Excavator's composite frame.
+//! sealed and pressure tubes, the Bit Magazine and the Gantry Excavator's composite frame, and
+//! sulfuric acid, which the leaching vat leaches the richest Ore Rubble pure with, and the
+//! seismic thumper, which counts the ore below an area and hears oil fields from afar.
 //! Everything goes through `weft_sdk` and `base_api`.
 
+mod acid;
+mod acid_tank;
 mod arms;
 #[cfg(test)]
 mod art;
@@ -39,6 +43,7 @@ mod generated;
 mod ghost;
 mod grinding_mill;
 mod harvest;
+mod leaching_vat;
 mod leveler;
 /// The types the whole mod builds on: helpers for points in the world, in `src/lib/`, and block
 /// positions, areas, states and typed world calls from `weftkit`.
@@ -64,6 +69,7 @@ mod pump;
 mod recipes;
 mod refinery;
 mod rubble;
+mod seismic_thumper;
 mod shaft;
 mod shaker_screen;
 mod sieve;
@@ -136,6 +142,10 @@ fn init(r: &mut Registry) {
     polymerizer::register(r);
     molding_press::register(r);
     bit_magazine::register(r);
+    acid::register(r);
+    acid_tank::register(r);
+    leaching_vat::register(r);
+    seismic_thumper::register(r);
     water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

@@ -21,7 +21,7 @@ use crate::lib::Pos;
 type Inserts = fn(&World, Holder, ItemStack, bool) -> Option<ItemStack>;
 
 /// The machines that pick their own slots.
-const PICKY: [Inserts; 14] = [
+const PICKY: [Inserts; 16] = [
     crate::bench::insert,
     crate::engines::insert,
     crate::excavator::insert,
@@ -36,6 +36,8 @@ const PICKY: [Inserts; 14] = [
     crate::polymerizer::insert,
     crate::molding_press::insert,
     crate::bit_magazine::insert,
+    crate::acid_tank::insert,
+    crate::leaching_vat::insert,
 ];
 
 /// Puts `stack` into the machine `owner` (its entity, or its block) and returns what didn't

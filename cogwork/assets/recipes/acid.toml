@@ -1,0 +1,17 @@
+# Acid and prospecting: the acid tank and the leaching vat, lined with plastic against the acid,
+# and the seismic thumper, a steel weight on plastic gears.
+
+[[shaped]]
+result = "acid_tank"
+pattern = ["PtP", "PGP", "sbs"]
+key = { P = "#plates/plastic", t = "liquid_tube", G = "base:glass", s = "#ingots/steel", b = "base:bucket" }
+
+[[shaped]]
+result = "leaching_vat"
+pattern = ["P P", "PcP", "sgs"]
+key = { P = "#plates/plastic", c = "base:bucket", s = "#ingots/steel", g = "#gears/plastic" }
+
+[[shaped]]
+result = "seismic_thumper"
+pattern = ["sCs", "gSg", "sss"]
+key = { s = "#ingots/steel", C = "#plates/composite", g = "#gears/plastic", S = "#ore_blocks/steel" }

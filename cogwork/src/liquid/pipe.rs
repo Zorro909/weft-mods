@@ -4,20 +4,43 @@
 
 use weft_sdk::{Dir, World};
 
-use super::LiquidKey;
 use super::vessel::{Holders, Kind, Vessel, reaches};
+use super::{Held, LiquidKey};
 use crate::lib::Pos;
 
 /// Hands up to `most` of `liquid` from the machine at `from` into the holder toward `side`, where
 /// it reaches back and takes that liquid; the millibuckets it took. A pump never takes.
 pub fn pour(world: &World, from: Pos, side: Dir, liquid: LiquidKey, most: u32) -> u32 {
+    pour_with(world, from, side, liquid, most, Held::takes)
+}
+
+/// As `pour`, but only into a holder of that liquid or an empty one: never in place of a leftover
+/// of another liquid, however little, which would be lost unseen.
+pub fn pour_apart(world: &World, from: Pos, side: Dir, liquid: LiquidKey, most: u32) -> u32 {
+    pour_with(world, from, side, liquid, most, takes_apart)
+}
+
+/// Whether a holder of `_capacity` holding `held` takes `liquid` as `pour_apart` pours it.
+fn takes_apart(held: &Held, liquid: LiquidKey, _capacity: u32) -> bool {
+    held.liquid == liquid || held.amount == 0
+}
+
+/// `pour`, with `takes` saying whether a holder takes the liquid.
+fn pour_with(
+    world: &World,
+    from: Pos,
+    side: Dir,
+    liquid: LiquidKey,
+    most: u32,
+    takes: fn(&Held, LiquidKey, u32) -> bool,
+) -> u32 {
     let at = from.toward(side);
     let Some(into) = Vessel::at(world, at).filter(|_| reaches(world, at, side.opposite())) else {
         return 0;
     };
     let mut holders = Holders::outside(*world);
     let has = into.held(&holders);
-    if into.kind().pushes() || !into.admits(liquid) || !has.takes(liquid, into.capacity()) {
+    if into.kind().pushes() || !into.admits(liquid) || !takes(&has, liquid, into.capacity()) {
         return 0;
     }
     let had = if has.liquid == liquid { has.amount } else { 0 };
@@ -63,6 +86,26 @@ fn gives_up(kind: Kind) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pouring_apart_never_washes_away_a_leftover_of_another_liquid() {
+        let (acid, water) = (7, 8);
+        let holding = |liquid, amount| Held {
+            liquid,
+            amount,
+            ..Held::default()
+        };
+        assert!(takes_apart(&holding(acid, 400), acid, 1000), "more acid");
+        assert!(takes_apart(&Held::default(), acid, 1000), "an empty tube");
+        assert!(
+            !takes_apart(&holding(water, 1), acid, 1000),
+            "a millibucket of water stays"
+        );
+        assert!(
+            holding(water, 1).takes(acid, 1000),
+            "where a plain pour would wash it away"
+        );
+    }
 
     #[test]
     fn only_what_hands_liquid_on_is_drawn_on() {
