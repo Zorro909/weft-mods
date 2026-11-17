@@ -50,7 +50,12 @@ pub fn register(r: &mut Registry) {
 
 /// Whether a drill of `tier` breaks `block_state`: what needs a better pickaxe stays standing.
 pub fn breaks(tier: u32, block_state: BlockState) -> bool {
-    needs(HARVEST_LEVEL.on_block(block_state.id())) <= tier
+    needed(block_state) <= tier
+}
+
+/// The tier a drill needs to break `block_state`.
+pub fn needed(block_state: BlockState) -> u32 {
+    needs(HARVEST_LEVEL.on_block(block_state.id()))
 }
 
 /// The tier a block of `harvest_level` needs, the lowest for one that has none.
