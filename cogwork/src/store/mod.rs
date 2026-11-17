@@ -1,7 +1,8 @@
 //! Putting items into and taking them out of any mod's machines, by the names of their slot
 //! groups: `fuel` and `input` take, `output` gives, a chest's `chest` does both. An inventory
 //! without any of these names is one big chest. An assembly bench takes what its pattern asks
-//! for. Liquid groups are left alone both ways: these are item tubes.
+//! for, a quarry its bits and frame materials. Liquid groups are left alone both ways: these are
+//! item tubes.
 
 mod fill;
 mod span;
@@ -22,6 +23,9 @@ pub fn insert(
 ) -> ItemStack {
     let owner = owner.into();
     if let Some(left) = crate::bench::insert(world, owner, stack, simulate) {
+        return left;
+    }
+    if let Some(left) = crate::excavator::insert(world, owner, stack, simulate) {
         return left;
     }
     let Some(span) = takes(world.inventory(owner), stack) else {

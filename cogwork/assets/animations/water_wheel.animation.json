@@ -1,0 +1,35 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.water_wheel.turn": {
+			"loop": true,
+			"animation_length": 4,
+			"bones": {
+				"wheel": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"1.0": [0, 0, -90],
+						"2.0": [0, 0, -180],
+						"3.0": [0, 0, -270],
+						"4.0": [0, 0, -360]
+					}
+				}
+			}
+		},
+		"animation.water_wheel.creep": {
+			"loop": true,
+			"animation_length": 16,
+			"bones": {
+				"wheel": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"4.0": [0, 0, -90],
+						"8.0": [0, 0, -180],
+						"12.0": [0, 0, -270],
+						"16.0": [0, 0, -360]
+					}
+				}
+			}
+		}
+	}
+}

@@ -1,13 +1,14 @@
-//! An excavator's tick: plan the area, build the frame (`framing`), then mine, and pass on what
-//! it mined.
+//! A quarry's tick: plan the area, build the frame (`framing`), then mine, and pass on what it
+//! mined. What its bit can't break it leaves standing, a pillar in the pit.
 
 use weft_sdk::{Output, SystemBatch, World};
 
 use super::depth::Floor;
 use super::framing::build_frame;
+use super::kind::{Drill, Kind};
 use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep};
 use super::power::{fit_store, hold};
-use super::{Dig, EXCAVATOR, Frame, Stage, Status, rig};
+use super::{Dig, Frame, Stage, Status, bit, rig};
 use crate::lib::{Pos, TypedWorld};
 use crate::sounds;
 
@@ -23,43 +24,71 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
             continue;
         };
         let pos = Pos::from(entity.block_pos());
-        if !world.block_typed(pos).is(&EXCAVATOR) {
+        let Some(kind) = Kind::of(world.block_typed(pos)) else {
             continue;
-        }
+        };
         crate::machine::start_meter(&world, id);
-        work(&world, id, pos, dig);
-        super::keep_loaded(&world, pos, dig, Floor::now());
-        rig::update(&world, id, dig);
+        let floor = kind.floor(&dig.frame, Floor::now());
+        let drill = kind.drill(bit::fitted(&world, id));
+        work(&world, Quarry { id, pos, kind }, dig, drill, floor);
+        super::keep_loaded(&world, pos, dig, floor);
+        rig::update(&world, id, dig, kind.rig, drill);
         crate::machine::show_working(&world, pos, dig.status().is_working());
     }
 }
 
-/// Passes on what the excavator `id` at `pos` mined, then works on its stage.
-fn work(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
+/// The quarry a tick works on: its block entity, where it stands and its kind.
+#[derive(Clone, Copy)]
+pub struct Quarry {
+    pub id: u64,
+    pub pos: Pos,
+    pub kind: &'static Kind,
+}
+
+/// Passes on what `quarry` mined, then works on its stage, digging with `drill` if it has one
+/// down to `floor`.
+fn work(world: &World, quarry: Quarry, dig: &mut Dig, drill: Option<Drill>, floor: Floor) {
     if dig.stage() == Stage::New {
-        start(world, id, pos, dig);
+        start(world, quarry, dig);
     }
-    crate::store::eject(world, pos);
+    crate::store::eject(world, quarry.pos);
     match dig.stage() {
-        Stage::Frame | Stage::Mine if !hold(world, id, dig) => {}
-        Stage::Frame => build_frame(world, id, dig),
-        Stage::Mine => mine_next(world, id, pos, dig),
+        Stage::Frame | Stage::Mine if !hold(world, quarry, dig) => {}
+        Stage::Frame => build_frame(world, quarry, dig),
+        Stage::Mine => match drill {
+            Some(drill) => mine_next(world, quarry, dig, drill, floor),
+            None => dig.set_status(Status::NeedsBit),
+        },
         Stage::New | Stage::Done => {}
     }
 }
 
-/// Plans the area of the excavator `id` at `pos` and sizes its store to it.
-fn start(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
-    dig.frame = Frame::plan(world, pos, crate::machine::front(world, pos));
-    fit_store(world, id, &dig.frame, dig.frame.below(dig.frame.first()));
+/// Plans the area of `quarry` and sizes its store to it.
+fn start(world: &World, quarry: Quarry, dig: &mut Dig) {
+    let Quarry { pos, kind, .. } = quarry;
+    dig.frame = Frame::plan(world, pos, crate::machine::front(world, pos), kind);
+    fit_store(
+        world,
+        quarry,
+        &dig.frame,
+        dig.frame.below(dig.frame.first()),
+        0,
+    );
     dig.set_stage(Stage::Frame);
     dig.step = 0;
 }
 
-/// Mines toward the next block that is there to mine, for the excavator `id` at `pos`.
-fn mine_next(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
-    fit_store(world, id, &dig.frame, dig.frame.below(dig.cursor));
-    let Some(target) = find_target(world, dig) else {
+/// Mines toward the next block there is to mine with `drill`, for `quarry`, down to `floor`.
+fn mine_next(world: &World, quarry: Quarry, dig: &mut Dig, drill: Drill, floor: Floor) {
+    let Quarry { id, pos, kind } = quarry;
+    fit_store(
+        world,
+        quarry,
+        &dig.frame,
+        dig.frame.below(dig.cursor),
+        drill.draw,
+    );
+    let Some(target) = find_target(world, dig, drill, floor) else {
         if dig.stage() == Stage::Done {
             world.play_sound(&sounds::EXCAVATOR_DONE, pos.center(), 1.0);
         }
@@ -73,9 +102,10 @@ fn mine_next(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
     if !drill_to(world, id, dig, reached) {
         return;
     }
-    match mine_block(world, id, dig, target, block_state) {
+    match mine_block(world, quarry, dig, target, block_state, drill.draw) {
         Mined::Done => {
-            world.play_sound(&sounds::DRILL, target.center(), 1.0);
+            bit::wear(world, id);
+            world.play_sound(kind.dig_sound, target.center(), 1.0);
             dig.set_head(sweep(&dig.frame, target, 1.0));
             dig.cursor = dig.frame.next(target);
         }
@@ -87,10 +117,9 @@ fn mine_next(world: &World, id: u64, pos: Pos, dig: &mut Dig) {
     }
 }
 
-/// The next block worth mining from the cursor on, skipping air, liquids and what can't be
-/// broken; `None` while waiting or once finished.
-fn find_target(world: &World, dig: &mut Dig) -> Option<Pos> {
-    let floor = Floor::now();
+/// The next block worth mining from the cursor on, skipping air, liquids, what can't be broken
+/// and what `drill` doesn't break; `None` while waiting or once finished at `floor`.
+fn find_target(world: &World, dig: &mut Dig, drill: Drill, floor: Floor) -> Option<Pos> {
     for _ in 0..SCAN {
         let cell = dig.cursor;
         if floor.is_above(cell.y) {
@@ -102,7 +131,7 @@ fn find_target(world: &World, dig: &mut Dig) -> Option<Pos> {
             return None;
         };
         dig.waited = 0;
-        if super::mine::worth_mining(block_state) {
+        if super::mine::worth_mining(block_state) && bit::breaks(drill.tier, block_state) {
             return Some(cell);
         }
         dig.cursor = dig.frame.next(cell);

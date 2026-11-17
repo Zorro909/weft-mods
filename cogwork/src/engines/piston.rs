@@ -2,7 +2,9 @@
 //! standing at the foot of the trunk, shaped by a Blockbench model (`assets/models/piston.geo.json`,
 //! or `piston_standing.geo.json` on an engine lying on its side), and each stroke is a clip of
 //! `assets/animations/piston.animation.json` that the server starts, so every engine's piston
-//! keeps time with the world's ticks.
+//! keeps time with the world's ticks. A spring engine's piston carries a crank handle on its
+//! plate (`spring_piston.geo.json`, `spring_piston_standing.geo.json`), which the `wind` clip turns
+//! once round the trunk.
 //!
 //! The plate's texture is clear in the middle of its top and bottom, where the trunk goes
 //! through it. At the top of a stroke the plate is flush with the trunk's end, and a solid plate
@@ -14,22 +16,25 @@ use super::{ENGINE, Engine, Kind, model};
 use crate::lib::{Pos, point};
 
 /// The pistons of one kind of engine: lying flat (engines facing up or down) and standing
-/// (facing sideways), both in one texture.
+/// (facing sideways), both in one texture, and the models of each.
 struct Pistons {
     flat: EntityKind,
     standing: EntityKind,
     texture: &'static str,
+    models: [&'static str; 2],
 }
 
 static SPRING: Pistons = Pistons {
     flat: EntityKind::named("spring_piston"),
     standing: EntityKind::named("spring_piston_standing"),
     texture: "spring_piston",
+    models: ["spring_piston", "spring_piston_standing"],
 };
 static EMBER: Pistons = Pistons {
     flat: EntityKind::named("ember_piston"),
     standing: EntityKind::named("ember_piston_standing"),
     texture: "ember_piston",
+    models: [FLAT_MODEL, STANDING_MODEL],
 };
 
 fn pistons(kind: Kind) -> &'static Pistons {
@@ -47,6 +52,8 @@ const CLIPS: &str = "piston";
 /// one), and the same the other way.
 const STROKE: &str = "stroke";
 const STROKE_BACK: &str = "stroke_back";
+/// The clip of a spring engine's crank turning once.
+const WIND: &str = "wind";
 
 /// Ticks the clips take to rise or to fall, and to rest at each end.
 const TRAVEL: u32 = 6;
@@ -59,10 +66,8 @@ const REST_BELOW_MIDDLE: f64 = 2.0;
 
 pub fn register(r: &mut Registry) {
     for pistons in [&SPRING, &EMBER] {
-        let models = [
-            (&pistons.flat, FLAT_MODEL),
-            (&pistons.standing, STANDING_MODEL),
-        ];
+        let [flat, standing] = pistons.models;
+        let models = [(&pistons.flat, flat), (&pistons.standing, standing)];
         for (entity, model) in models {
             // Small enough to stay inside the engine, so aiming at it aims at the block.
             crate::owned::kind(r.entity(entity), claims)
@@ -114,6 +119,11 @@ fn toward(pistons: &'static Pistons, out: Dir) -> (&'static EntityKind, f32, &'s
         Dir::East => (&pistons.standing, 90.0, STROKE),
         Dir::West => (&pistons.standing, 90.0, STROKE_BACK),
     }
+}
+
+/// Turns the crank on the spring engine piston `id` once round.
+pub fn wind(world: &World, id: u64) {
+    world.action_play(id, WIND, false);
 }
 
 /// Keeps the piston of the engine `id` at the foot of its trunk, and starts its stroke when one
@@ -245,9 +255,25 @@ mod tests {
 
     #[test]
     fn every_piston_has_its_model_clips_and_texture() {
-        for file in [FLAT_MODEL, STANDING_MODEL] {
+        for file in SPRING.models.into_iter().chain(EMBER.models) {
             let model = format!("models/{file}.geo.json");
             assert!(crate::has_asset(&model), "no {model}");
+        }
+        let clips = include_str!("../../assets/animations/piston.animation.json");
+        assert!(
+            clips.contains("\"animation.piston.wind\""),
+            "the crank's turn"
+        );
+        for file in SPRING.models {
+            let path = format!(
+                "{}/assets/models/{file}.geo.json",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            let model = std::fs::read_to_string(&path).expect("the spring piston's model");
+            assert!(
+                model.contains("\"name\": \"crank\""),
+                "{file}: a crank to turn"
+            );
         }
         let clips = format!("animations/{CLIPS}.animation.json");
         assert!(crate::has_asset(&clips), "no {clips}");

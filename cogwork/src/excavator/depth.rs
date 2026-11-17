@@ -44,6 +44,11 @@ impl Floor {
         Floor(Some(lowest_y))
     }
 
+    /// This floor, or `lowest_y` where that is higher.
+    pub fn raised_to(self, lowest_y: i32) -> Floor {
+        Floor::at(self.0.map_or(lowest_y, |y| y.max(lowest_y)))
+    }
+
     /// Whether the layer `y` lies below the floor, so it is not mined.
     pub fn is_above(self, y: i32) -> bool {
         self.0.is_some_and(|lowest_y| y < lowest_y)

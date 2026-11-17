@@ -41,3 +41,9 @@ result = "torque_shaft"
 count = 8
 pattern = ["grg"]
 key = { g = "#ingots/gold", r = "base:redstone" }
+
+[[shaped]]
+result = "wooden_axle"
+count = 8
+pattern = ["psp"]
+key = { p = "#planks", s = "#stick" }
