@@ -3,18 +3,16 @@
 //! Rubble into raw ore, using up a grind's water and sand.
 
 use super::{Mill, Status};
-use crate::chance;
 use crate::ghost::{ItemKey, NO_ITEM};
+use crate::rubble::grinding::{self, GRINDS_PER_SAND, WATER_PER_GRIND};
 use crate::rubble::{Grade, Ore};
 
 /// Turns of the runner that grind one Ore Rubble.
 pub const TURNS: u32 = 6;
-/// Millibuckets of water a grind takes, a bucket's worth, and the most it holds.
-const WATER_PER_GRIND: u32 = 125;
+/// Millibuckets of water in a bucket, and the most it holds.
 pub const BUCKET: u32 = 1_000;
 const MOST_WATER: u32 = 2_000;
-/// Grinds a block of sand lasts, and the most grinds of sand it holds.
-pub const GRINDS_PER_SAND: u32 = 4;
+/// The most grinds of sand it holds.
 const MOST_GRIT: u32 = 16;
 /// The most Ore Rubble it holds, and the most raw ore it keeps for the player to take out.
 const MOST_HELD: u32 = 16;
@@ -137,7 +135,7 @@ impl Mill {
         self.water -= WATER_PER_GRIND;
         self.grit -= 1;
         self.ground = raw_ore;
-        self.ground_count += chance::count(self.grade().raw_ore(), roll);
+        self.ground_count += grinding::raw_ore(self.grade(), roll);
         Status::Ground
     }
 }
@@ -179,8 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn a_bucket_lasts_eight_grinds_and_a_sand_four() {
-        assert_eq!(BUCKET / WATER_PER_GRIND, 8, "eight");
+    fn a_sand_lasts_four_grinds() {
         let mut mill = ready(16);
         mill.water = MOST_WATER;
         let mut ground = 0;

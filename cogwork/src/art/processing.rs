@@ -7,7 +7,7 @@ use super::{CLEAR, Picture, Rgba, Unwrap, noise};
 
 /// Broken stone, dark to light: the gaps between chunks, then a chunk's shaded edge, its
 /// middle and its lit edge.
-const STONE: [Rgba; 4] = [
+pub(super) const STONE: [Rgba; 4] = [
     [0x4a, 0x4a, 0x4c, 255],
     [0x76, 0x76, 0x78, 255],
     [0x8c, 0x8c, 0x8e, 255],
@@ -20,7 +20,7 @@ const FLECK: [Rgba; 3] = [
     [0xff, 0xff, 0xff, 255],
 ];
 /// Oak, dark to light, as base's planks have it.
-const OAK: [Rgba; 4] = [
+pub(super) const OAK: [Rgba; 4] = [
     [0x7e, 0x5d, 0x31, 255],
     [0x94, 0x70, 0x3f, 255],
     [0xad, 0x85, 0x50, 255],
@@ -29,7 +29,7 @@ const OAK: [Rgba; 4] = [
 /// String, shaded and lit.
 const STRING: [Rgba; 2] = [[0xc8, 0xc8, 0xc0, 255], [0xec, 0xec, 0xe4, 255]];
 /// The runner's granite, dark to light.
-const GRANITE: [Rgba; 4] = [
+pub(super) const GRANITE: [Rgba; 4] = [
     [0x5c, 0x5a, 0x58, 255],
     [0x72, 0x70, 0x6c, 255],
     [0x84, 0x82, 0x7e, 255],
@@ -254,7 +254,7 @@ fn mesh(size: usize) -> Picture {
 }
 
 /// Oak grain: lengthwise streaks by row.
-fn oak(x: usize, y: usize) -> Rgba {
+pub(super) fn oak(x: usize, y: usize) -> Rgba {
     let streak = noise(x / 4, y, 127) % 4;
     OAK[streak as usize]
 }

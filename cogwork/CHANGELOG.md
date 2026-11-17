@@ -25,6 +25,10 @@
 - The wooden axle, a cheap wooden torque shaft.
 - Spring engines are wound by hand: use one with an empty hand to turn its crank, 200 energy a
   turn, up to 10,000, which runs it down at 10 a tick.
+- The shaker screen sifts Rubble with engine energy, as the sieve does: tubes bring the Rubble,
+  and what it sifts out leaves by its front.
+- The grinding mill grinds Ore Rubble into raw ore with engine energy, as the millstone does,
+  with water by liquid tube and sand by tube; the raw ore leaves by its front.
 
 ### Changed
 

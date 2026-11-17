@@ -1,6 +1,6 @@
 //! What sifting one Rubble gives: mostly sand and gravel, and rarely something worth more than
 //! stone. Each find has its own chance, rolled on its own, so one Rubble may give several or
-//! none. The sieve sifts by this table, and so will the shaker screen.
+//! none. The sieve and the shaker screen both sift by this table.
 
 use weft_sdk::{Item, ItemStack, World};
 

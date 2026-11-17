@@ -64,11 +64,15 @@ block.cogwork.rubble = Rubble
 block.cogwork.rubble.tooltip = Broken stone, as quarries bring it up. Sifts into sand and gravel, and now and then something better.
 item.cogwork.ore_rubble = Ore Rubble
 item.cogwork.ore_rubble.tooltip = {if:cogwork:ore.named==1}{lang:cogwork.metal.iron}{/if}{if:cogwork:ore.named==2}{lang:cogwork.metal.gold}{/if}{if:cogwork:ore.named==3}{lang:cogwork.metal.copper}{/if}{if:cogwork:ore.named==4}{lang:cogwork.metal.tin}{/if}{if:cogwork:ore.named==5}{lang:cogwork.metal.silver}{/if}{if:cogwork:ore.named==6}{lang:cogwork.metal.lead}{/if}{if:cogwork:ore.named==7}{lang:cogwork.metal.zinc}{/if}{if:cogwork:ore.named==8}{lang:cogwork.metal.nickel}{/if}{if:cogwork:ore.named==9}{lang:cogwork.metal.aluminum}{/if}{if:cogwork:ore.named==10}{lang:cogwork.metal.uranium}{/if}{if:cogwork:ore.named==11}{lang:cogwork.metal.osmium}{/if}{if:cogwork:ore.named==12}{lang:cogwork.metal.platinum}{/if}{if:cogwork:ore.named==0}{lang:cogwork.metal.other}{/if}, {if:cogwork:grade==0}{lang:cogwork.grade.poor}{/if}{if:cogwork:grade==1}{lang:cogwork.grade.common}{/if}{if:cogwork:grade==2}{lang:cogwork.grade.rich}{/if}{if:cogwork:grade==3}{lang:cogwork.grade.pure}{/if}
-    {on_key:!core:sneak}{lang:tooltip.more}{/on_key}{on_key:core:sneak}Grinds into its metal's raw ore at a millstone: one of Poor, two of Rich. Processing raises the grade.{/on_key}
+    {on_key:!core:sneak}{lang:tooltip.more}{/on_key}{on_key:core:sneak}Grinds into its metal's raw ore at a millstone or a grinding mill: one of Poor, two of Rich. Processing raises the grade.{/on_key}
 block.cogwork.millstone = Millstone
 block.cogwork.millstone.tooltip = Grinds Ore Rubble into raw ore by hand. Use it with a water bucket, sand and Ore Rubble, then with an empty hand to turn it: six turns grind one. Sneak with an empty hand to take out what it holds.
 block.cogwork.sieve = Sieve
 block.cogwork.sieve.tooltip = Sifts Rubble by hand. Use it with Rubble to put one on its mesh, then shake it four times with an empty hand.
+block.cogwork.shaker_screen = Shaker Screen
+block.cogwork.shaker_screen.tooltip = Sifts Rubble with engine energy, as the sieve does: 800 energy at up to 20 a tick, two seconds a Rubble. Rubble comes in by tube; what it sifts out leaves by its front.
+block.cogwork.grinding_mill = Grinding Mill
+block.cogwork.grinding_mill.tooltip = Grinds Ore Rubble into raw ore with engine energy, as the millstone does: 800 energy at up to 40 a tick. Takes water by liquid tube (125 mB a grind) and sand by tube (4 grinds a sand); the raw ore leaves by its front.
 
 block.cogwork.oil = Oil
 item.cogwork.oil_bucket = Oil Bucket
@@ -240,3 +244,17 @@ cogwork.sieve.loaded = Rubble on the mesh: shake it with an empty hand
 cogwork.sieve.busy = Rubble lies on the mesh already: shake it with an empty hand
 cogwork.sieve.shaking = Shake {0} of {1}
 cogwork.sieve.sifted = Sifted
+cogwork.shaker_screen.idle = Waiting for Rubble
+cogwork.shaker_screen.no_power = Needs energy from an engine
+cogwork.shaker_screen.sifting = Sifting
+cogwork.shaker_screen.full = Output full: connect a tube or a chest at its front
+cogwork.shaker_screen.input = Rubble
+cogwork.grinding_mill.idle = Waiting for Ore Rubble
+cogwork.grinding_mill.no_power = Needs energy from an engine
+cogwork.grinding_mill.grinding = Grinding
+cogwork.grinding_mill.no_raw_ore = No mod has a raw ore of this metal: take the Ore Rubble out
+cogwork.grinding_mill.no_water = Needs water: connect a liquid tube
+cogwork.grinding_mill.no_sand = Needs sand to grind with
+cogwork.grinding_mill.full = Output full: connect a tube or a chest at its front
+cogwork.grinding_mill.input = Ore Rubble
+cogwork.grinding_mill.sand = Sand
