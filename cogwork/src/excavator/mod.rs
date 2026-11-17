@@ -56,7 +56,10 @@ value! {
         pub waited: u32,
         // Last, so excavators saved before it load with it 0.
         pub refused: u32,
-        // After `refused`, so excavators saved before it load with it 0.
+        // The padding of the 80 bytes excavators were saved in until `paid_ahead` came: never
+        // read, as those saves may hold anything there.
+        saved_padding: u32,
+        // Past the old 80 bytes, so excavators saved before it load with it 0.
         pub paid_ahead: u32,
     }
 }
@@ -324,10 +327,11 @@ mod tests {
             "after stage and status, as `lo` was"
         );
         assert_eq!(offset_of!(Dig, cursor), 32, "after `lo` and `hi`");
+        assert_eq!(offset_of!(Dig, refused), 72, "the last field saved before");
         assert_eq!(
             offset_of!(Dig, paid_ahead),
-            offset_of!(Dig, refused) + 4,
-            "the newest last"
+            80,
+            "past the 80 bytes saved before, not in their padding"
         );
     }
 
