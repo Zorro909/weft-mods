@@ -1,9 +1,9 @@
 # Cuboid loaders and the cuboid lens
 
 The world is loaded in cubes of 16 by 16 by 16 blocks, and only those near a player run. Cuboid
-loaders keep cubes loaded with nobody near, so machines there go on working. Excavators and
-levelers keep what they need loaded on their own while they work. The cuboid lens shows all of
-it.
+loaders keep cubes loaded with nobody near, so machines there go on working. Quarries,
+levelers, core drills and seismic thumpers keep what they need loaded on their own while they
+work. The cuboid lens shows all of it.
 
 ## Cuboid Loader
 
@@ -55,17 +55,19 @@ A loader keeps its cubes loaded for 5 seconds at a time and renews them while it
 it lets them go at once; when it is gone some other way, they go within 5 seconds. Loading
 survives a restart.
 
-## Excavators and levelers
+## Quarries, levelers and prospecting
 
-While it works, an [excavator](excavator.md) or a [leveler](leveler.md) keeps its own cube and
+While it works, a [quarry](excavator.md) or a [leveler](leveler.md) keeps its own cube and
 the eight around it loaded, at its height, and every cube of its area at the height it works
 at:
 
-- An excavator keeps the cubes of the layer it mines, all the way across the frame. Building
+- A quarry keeps the cubes of the layer it mines, all the way across the frame. Building
   its frame keeps nothing loaded: someone has to be near for that.
 - A leveler keeps the cubes of the layer it clears, all the way across its area, then, while it
   fills, those of every layer left to fill (at most two cubes high), so the cubes just below its
   height stay from clearing to filling.
+- A [core drill or seismic thumper](prospecting.md) keeps the cubes of the layer it counts, all
+  the way across its area, while it counts.
 
 When the layer it works at is more than four cubes above or below its own, it also keeps one
 cube in every four straight above or below itself: a machine reaches only blocks joined to its
@@ -84,7 +86,7 @@ Held in either hand, it outlines every cube Cogwork keeps loaded in your dimensi
 |---|---|
 | Cyan | a cuboid loader keeping machines running |
 | Green | a cuboid loader keeping everything running |
-| Orange | a working excavator or leveler |
+| Orange | a working quarry, leveler, core drill or seismic thumper |
 
 It shows what the server keeps now, updated twice a second. It does not stack.
 

@@ -225,7 +225,12 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `rubble/` | Rubble and Ore Rubble: grades (`grade.rs`), metals of any mod (`metal.rs`), what a quarry brings up (`quarry.rs`), what sifting gives (`sifting.rs`), what grinding takes and gives (`grinding.rs`) and passing Ore Rubble on through a machine that raises its grade (`raise.rs`) |
 | `millstone/`, `sieve.rs` | The hand machines: the millstone's grinding (`grind.rs`) and its runner (`runner.rs`); the sieve and its tray |
 | `shaker_screen/`, `grinding_mill/` | The driven machines: the screen's sifting (`work.rs`) and tray (`tray.rs`); the mill's grinding (`work.rs`), what it needs for a grind (`supply.rs`) and its runner (`runner.rs`) |
+| `washer/` | The washer: its tick (`work.rs`) and paddle wheel (`paddle.rs`) |
 | `flotation/`, `clarifier/`, `muddy_water.rs` | The flotation cell: what a float takes and leaves (`cell.rs`), its tick (`work.rs`) and its rotor (`rotor.rs`); the clarifier: its settling (`settle.rs`), its tick (`work.rs`) and its rake (`rake.rs`); muddy water |
+| `bellows/` | The hand bellows (`hand.rs`) and the driven bellows (`driven.rs`) |
+| `brickwork.rs`, `coke_oven/`, `blast_furnace/`, `forge_anvil.rs`, `steel.rs` | Whether bricks make a machine; the coke oven and its batches (`batch.rs`); the blast furnace and its smelting (`smelt.rs`); the forge anvil; steel blooms and slag |
+| `steam.rs`, `firebox/`, `steam_engine/`, `trip_hammer/` | Steam; the firebox, its burning (`burn.rs`) and the boiler on it (`boiler.rs`); the steam engine, its tick (`tick.rs`), what it runs on (`run.rs`) and its rig (`rig.rs`); the trip hammer, its strikes (`strike.rs`) and hammer (`hammer.rs`) |
+| `refinery/`, `asphalt.rs` | The refinery: the blocks of its column (`parts.rs`, `column.rs`), its heat (`heat.rs`), what it makes (`products.rs`), its tick (`work.rs`) and its distilling (`work/distil.rs`); asphalt |
 | `plastics.rs`, `polymerizer/`, `molding_press/`, `bit_magazine/` | Plastic and its parts; the polymerizer and its batches (`work.rs`); the molding press, its molds (`molds.rs`), its presses (`work.rs`) and ram (`ram.rs`); the Bit Magazine, when it swaps a bit (`swap.rs`) and its tick (`work.rs`) |
 | `core_drill/` | The core drill: what it counts and its tally (`survey.rs`), counting a little every tick (`count.rs`) and its rod (`rod.rs`) |
 | `seismic_thumper/` | The seismic thumper: its area and tally (`survey.rs`), its tick (`work.rs`), listening for oil fields (`oil.rs`), its weight (`weight.rs`) and its screen (`screen.rs`) |
@@ -243,40 +248,34 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 Unit tests sit at the end of the files whose logic they check; `tools/check-mods.sh cogwork`,
 run from the repository root, runs them.
 
-Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. Entities (the
-quarries' rigs and drill bits, the engines' pistons with the spring engine's crank, the water
-wheel, the timber liquid tube's wheel, the oil engine's rig, the millstone's runner, the
-sieve's tray, the shaker screen's tray, the grinding mill's runner, the flotation cell's rotor,
-the clarifier's rake, the core drill's rod and the seismic thumper's weight) are
-"Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
-are "Java Block/Item" models in `block/`: the survey marker, the engine, the water wheel's axle, the pump and its hose,
-the oil engine's controller, the millstone's bed and the sieve's frame, with and without Rubble
-on it, the shaker screen's frame, the grinding mill's vat and frame, the flotation cell with and
-without froth, the clarifier with and without water, the core drill's tripod, the acid tank, the
-leaching vat with and without acid and the seismic thumper's frame; `item/` has the millstone,
-the sieve, the shaker screen, the grinding mill, the flotation cell, the clarifier, the core
-drill, the acid tank, the leaching vat and the seismic thumper whole. A formed oil engine's casing joins into one panel a face by
-connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
-skirt at the bottom, and one for its top and bottom. Its intakes and drives show that panel with
-their port drawn on top as a layer, so the face stays one.
+Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. What moves
+(the quarries' rigs, carriages, beams and drill bits, the engines' pistons, the water wheel, the
+timber liquid tube's wheel, the runners, trays, paddles, rotors and rakes of the processing
+machines, the bellows' bags, the steam engine's and oil engine's rigs, the trip hammer's hammer,
+the molding press's ram, the Bit Magazine's drum, the core drill's rod and the seismic thumper's
+weight) is a "Bedrock Entity" model, `<name>.geo.json`, moved by the clips in
+`assets/animations/`. A block that isn't a plain cube is a "Java Block/Item" model in `block/`,
+some with a second one for what they hold: the sieve with Rubble on it, the washer and the
+clarifier with water, the flotation cell with froth, the forge anvil and trip hammer with a
+bloom, the leaching vat with acid. `item/` has the machines whose
+item shows the whole machine. The formed oil engine's casing and the refinery column join into
+one panel a face by connected textures, `textures/block/oil_engine_panel/` and
+`refinery_panel/`; the oil engine's intakes and drives show that panel with their port drawn on
+top as a layer, so the face stays one.
 
 Blocks with a shape for every set of neighbours are put together in code when the mod loads,
 since the mod index packs `assets/` as it is in the repository and runs nothing to make more
-files. Tubes, liquid tubes, timber liquid tubes, torque shafts, wooden axles and lashed frames
-each have one Blockbench model,
-`block/<block>/hub_and_arm.json`: a hub and an arm pointing north, which `src/arms/` turns
+files. Tubes, liquid tubes of every kind, torque shafts, wooden axles and the lashed and iron
+frames each have one Blockbench model, `block/<block>/hub_and_arm.json`: a hub and an arm pointing north, which `src/arms/` turns
 toward each side the block has an arm. Edit it in Blockbench like any other model; its faces
 show their texture where the box lies, as Blockbench's own UVs do. A tube's model names a texture
 for each side, shown in Blockbench with the sorting tube's colors. The tank's shape for each set
 of joined sides is built in `src/tank/shape.rs`, and the liquid standing in a liquid tube or tank
 in `fill.rs`, in the colors of whatever liquid it is.
 
-The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks, the pump, the
-oil engine, Rubble and Ore Rubble, the millstone's runner and the sieve's tray and mesh, the
-shaker screen's tray and the grinding mill's runner, the
-Timber Quarry, its lashed frame, rig and drill bits, the water wheel, the wooden axle, sulfuric
-acid, the acid tank's sight glass and the seismic thumper's plate, gearbox and weight are
-drawn pixel by pixel in `src/art/`.
+Textures drawn pixel by pixel in code are in `src/art/`, a file for each area: liquids, tanks
+and the pump, the quarries and their frames and bits, the hand and driven processing machines,
+bellows, steel, steam, the oil engine, the refinery, plastics, acid and the seismic thumper.
 Change them there, then run `WRITE_ASSETS=1 cargo test --release art` in `cogwork/`. Without the
 variable the same test fails when a file differs from what it would draw, so a texture changed
 by hand has to be changed there too.

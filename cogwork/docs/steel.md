@@ -62,7 +62,8 @@ of a drain, tube or tank beside it.
 Coke burns twice as long as coal (3,200 ticks), in a furnace or an ember engine too, and is what
 the blast furnace smelts with. It is tagged `coke`.
 
-Sulfur is tagged `dusts/sulfur`, so other mods can use it too.
+The [acid tank](acid.md#acid-tank) makes sulfuric acid of sulfur. Sulfur is tagged
+`dusts/sulfur`, so other mods can use it too.
 
 ### Recipes
 
