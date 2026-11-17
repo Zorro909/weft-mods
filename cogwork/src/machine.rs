@@ -178,7 +178,7 @@ pub fn meter_line(ui: &mut Ui) {
     });
 }
 
-/// The meter of the engine whose menu is open: "Giving 600 energy a tick".
+/// The meter of the engine whose menu is open: "Sending 600 energy a tick into its drives".
 pub fn giving_line(ui: &mut Ui) {
     ui.text_bind(|view, out| {
         let meter = view.menu_component(&METER).unwrap_or_default();
