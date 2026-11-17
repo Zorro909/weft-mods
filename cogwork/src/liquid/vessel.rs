@@ -1,12 +1,10 @@
 //! The blocks that hold liquid: a liquid tube, a timber liquid tube, a pump, an oil engine's
 //! intake or a grinding mill, one block each, or a tank, one holder however many blocks it has.
-//! `turn` passes liquid between them.
-//!
-//! A system works on copies of its values, written back when it returns, so a holder changed
-//! during the tick goes through `Holders`, which changes the copy when there is one.
+//! `turn` passes liquid between them. What each holder keeps is read and written through `Holders`.
 
-use std::collections::HashMap;
+mod holders;
 
+pub use holders::Holders;
 use weft_sdk::{Dir, World};
 
 use super::flow::{LIFT, UNIT};
@@ -18,58 +16,6 @@ use crate::oil_engine::OIL_INTAKE;
 use crate::pump::PUMP;
 use crate::tank::{LIQUID_TANK, Tank};
 use crate::timber_liquid_tube::{self, TIMBER_LIQUID_TUBE};
-
-/// The `Held` of every holder, read and written through this tick's copies where they are.
-pub struct Holders<'a> {
-    world: World,
-    index: HashMap<u64, usize>,
-    values: &'a mut [Held],
-}
-
-impl<'a> Holders<'a> {
-    /// The holders of a system's batch, the others reached through the world.
-    pub(super) fn of_batch(world: World, ids: &[u64], values: &'a mut [Held]) -> Holders<'a> {
-        let index = ids.iter().copied().zip(0..).collect();
-        Holders {
-            world,
-            index,
-            values,
-        }
-    }
-
-    /// Every holder through the world: outside a system's tick.
-    pub fn outside(world: World) -> Holders<'static> {
-        Holders {
-            world,
-            index: HashMap::new(),
-            values: &mut [],
-        }
-    }
-
-    pub fn world(&self) -> &World {
-        &self.world
-    }
-
-    /// What the holder `id` keeps now.
-    pub fn get(&self, id: u64) -> Held {
-        match self.index.get(&id) {
-            Some(&i) => self.values[i],
-            None => self.world.component(id, &super::HELD).unwrap_or_default(),
-        }
-    }
-
-    /// Makes the holder `id` keep `held`.
-    pub fn set(&mut self, id: u64, held: Held) {
-        match self.index.get(&id) {
-            Some(&i) => self.values[i] = held,
-            None => {
-                if let Some(stored) = self.world.component_mut(id, &super::HELD) {
-                    *stored = held;
-                }
-            }
-        }
-    }
-}
 
 /// A holder of liquid: one block, or a tank of several.
 pub enum Vessel {

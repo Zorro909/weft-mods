@@ -1,6 +1,6 @@
 //! A grinding mill's tick: hand on the raw ore by its front, then, with water, sand and room
 //! for what it gives, put energy into the first Ore Rubble of its input until that is paid for
-//! and ground, the runner turning meanwhile.
+//! and ground, the runner turning meanwhile. Water and sand are taken only by a finished grind.
 
 use weft_sdk::{ItemStack, SlotGroup, StackData, SystemBatch, World};
 
@@ -53,11 +53,12 @@ fn grind(world: &World, id: u64, grinder: &mut Grinder) -> Status {
     let Some((slot, raw_ore, grade)) = waiting(&input) else {
         return Status::Idle;
     };
-    take_sand(&inventory.group("sand"), grinder);
+    let sand = inventory.group("sand");
     let output = || inventory.group("output");
     let most = ItemStack::new(raw_ore, grade.most_raw_ore());
     let supplies = Supplies {
         water: water(world, id),
+        sand: !sand.get(0).is_empty(),
         raw_ore: raw_ore != 0,
         room: raw_ore != 0 && crate::store::insert_into(output(), most, true).is_empty(),
     };
@@ -73,15 +74,10 @@ fn grind(world: &World, id: u64, grinder: &mut Grinder) -> Status {
     crate::store::insert_into(output(), ItemStack::new(raw_ore, count), false);
     input.set(slot, input.get(slot).shrink(1));
     use_water(world, id);
-    grinder.ground();
-    Status::Grinding
-}
-
-/// Takes a sand out of the slot `sand` into the grinds `grinder` has, once it has none left.
-fn take_sand(sand: &SlotGroup, grinder: &mut Grinder) {
-    if grinder.top_up(!sand.get(0).is_empty()) {
+    if grinder.ground() {
         sand.set(0, sand.get(0).shrink(1));
     }
+    Status::Grinding
 }
 
 /// Uses up a grind's water in the grinding mill `id`.

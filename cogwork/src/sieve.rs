@@ -205,7 +205,7 @@ fn shake(world: &World, pos: Pos, sift: &mut Sift) -> Status {
     world.play_sound(&crate::sounds::SHAKE, pos.center(), 1.0);
     if status == Status::Sifted {
         let top = pos.floor_middle() + Vec3::new(0.0, POP_HEIGHT, 0.0);
-        for stack in crate::rubble::sifting::sift_rubble(world) {
+        for stack in crate::rubble::sifting::roll_rubble(world).stacks() {
             world.spawn_item(top, stack);
         }
     }
