@@ -213,6 +213,7 @@ cogwork.millstone.no_raw_ore = No mod has a raw ore of this metal: sneak to take
 cogwork.millstone.no_water = Needs water: use it with a water bucket
 cogwork.millstone.no_sand = Needs sand to grind with: use it with sand
 cogwork.millstone.full = Full: sneak with an empty hand to take out the raw ore
+cogwork.millstone.unknown_raw_ore = It holds raw ore of a mod that is not loaded: load that mod again to take it out
 cogwork.millstone.no_room = No room for that
 cogwork.millstone.ready = Ready: turn it with an empty hand
 cogwork.millstone.turning = Turn {0} of {1}

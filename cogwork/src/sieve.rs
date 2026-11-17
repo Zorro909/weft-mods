@@ -39,7 +39,7 @@ value! {
         pub shakes: u32,
     }
 }
-static SIFT: Component<Sift> = Component::named("cogwork:sift");
+pub(crate) static SIFT: Component<Sift> = Component::named("cogwork:sift");
 
 /// What lies on a sieve's mesh. Kept in `Sift::load` as its number, so the order is part of the
 /// save format: new ones go last.

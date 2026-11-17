@@ -10,6 +10,7 @@
 mod grind;
 mod runner;
 
+use grind::TakenOut;
 use strum::{IntoStaticStr, VariantArray};
 use weft_sdk::{
     Arg, Block, Component, Facings, Item, ItemStack, Output, Registry, StackData, SystemBatch, Tag,
@@ -44,7 +45,7 @@ value! {
         pub turns: u32,
     }
 }
-static MILL: Component<Mill> = Component::named("cogwork:mill");
+pub(crate) static MILL: Component<Mill> = Component::named("cogwork:mill");
 
 /// What a turn did, or what the millstone lacks for one; shown above the hotbar as
 /// `cogwork.millstone.<name>`. Never saved.
@@ -57,6 +58,8 @@ pub enum Status {
     NoSand,
     /// The raw ore it ground leaves no room for more.
     Full,
+    /// It keeps raw ore that no loaded mod has.
+    UnknownRawOre,
     /// It has no room for what the player holds.
     NoRoom,
     /// It has all it needs: the next turn counts.
@@ -193,17 +196,14 @@ fn use_up(world: &World, player: u64, slot: u32, held: ItemStack, count: u32) {
 
 /// Hands `player` the raw ore the millstone ground, or else the Ore Rubble it holds.
 fn take_out(world: &World, player: u64, mill: &mut Mill) -> bool {
-    let stack = if mill.ground_count > 0 {
-        let (key, count) = mill.take_ground();
-        ItemStack::new(item_of(key), count)
-    } else {
-        let (ore, grade, count) = mill.take_held();
-        ore_rubble(ore, grade, count)
+    let stack = match mill.take_out(item_of) {
+        TakenOut::RawOre(item, count) => ItemStack::new(item, count),
+        TakenOut::OreRubble(ore, grade, count) => ore_rubble(ore, grade, count),
+        TakenOut::Nothing(reason) => {
+            hint(world, player, reason, mill);
+            return true;
+        }
     };
-    if stack.is_empty() || stack.item == 0 {
-        hint(world, player, Status::Empty, mill);
-        return true;
-    }
     let left = world.inventory(player).insert(stack);
     if !left.is_empty() {
         let at = world.entity(player).map(|entity| entity.pos);

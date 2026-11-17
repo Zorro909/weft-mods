@@ -32,8 +32,10 @@ impl Grade {
         }
     }
 
-    /// The most raw ore one Ore Rubble of any grade grinds into.
-    pub const MOST_RAW_ORE: u32 = 3;
+    /// The most raw ore one Ore Rubble of this grade grinds into: its fraction come up.
+    pub fn most_raw_ore(self) -> u32 {
+        self.raw_ore().ceil() as u32
+    }
 }
 
 #[cfg(test)]
@@ -59,8 +61,11 @@ mod tests {
             .map(|grade| grade.raw_ore())
             .collect();
         assert_eq!(yields, [1.0, 1.5, 2.0, 2.5], "poor 1 to pure 2.5");
-        let most = yields.iter().map(|amount| amount.ceil() as u32).max();
-        assert_eq!(most, Some(Grade::MOST_RAW_ORE), "never more than the most");
+        let most: Vec<u32> = Grade::VARIANTS
+            .iter()
+            .map(|grade| grade.most_raw_ore())
+            .collect();
+        assert_eq!(most, [1, 2, 2, 3], "at most 1 to 3");
     }
 
     #[test]
