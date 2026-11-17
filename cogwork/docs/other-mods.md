@@ -15,6 +15,8 @@ of its slot groups:
 | `input` | anything | |
 | `output` | | results |
 | `chest` | anything | anything |
+| `bit` | Cogwork's drill bits, into a quarry that takes them | |
+| `materials` | what a quarry builds its frame of (logs and string) | |
 
 The base game's furnace has `input`, `fuel` and `output`, and its chest has `chest`, so tubes
 fill and empty both. An inventory that names none of these groups, such as a dispenser's, counts
@@ -41,10 +43,10 @@ so tubes couldn't tell a liquid tank from an item slot.
 ## Energy
 
 Engines push into any block entity that takes `core:energy` (up to 200 a tick), and the
-excavator, leveler, assembly bench and timber tube take energy from any mod's engines,
+quarries, leveler, assembly bench and timber tube take energy from any mod's engines,
 generators or cables in the same way.
 
-The torque shaft is tagged `conductor`, so the engine's energy networks join it with any mod's
+The torque shaft and the wooden axle are tagged `conductor`, so the engine's energy networks join it with any mod's
 cables and machines.
 
 ## Tags

@@ -30,7 +30,7 @@ pub fn engine<'a>(builder: BlockBuilder<'a>, kind: &'static str) -> BlockBuilder
         .prop("heat", 0..=3)
         .sound_group("base:block.stone")
         .states(move |props, state| look(props, state, kind))
-        .on_use(use_wrench)
+        .on_use(use_engine)
 }
 
 /// One state's turn and textures: the plate of its `kind`, the trunk of its heat.
@@ -47,13 +47,15 @@ fn look<'s>(props: &Props, state: State<'s>, kind: &str) -> State<'s> {
         .hitbox([0.0; 3], [16.0; 3])
 }
 
-fn use_wrench(click: &mut Use) -> bool {
-    let world = click.world();
-    if !crate::cogs::holds_wrench(&world, click.player()) {
-        return false;
+/// A wrench turns the engine; an empty hand winds a spring engine (`wind`). False passes the
+/// click on: the ember engine opens its screen.
+fn use_engine(click: &mut Use) -> bool {
+    let (world, pos) = (click.world(), Pos::from(click.pos()));
+    if crate::cogs::holds_wrench(&world, click.player()) {
+        turn(&world, pos);
+        return true;
     }
-    turn(&world, Pos::from(click.pos()));
-    true
+    super::wind::wind(&world, click.player(), pos)
 }
 
 /// The tuning wrench on the engine at `pos`: its trunk points the next way round.

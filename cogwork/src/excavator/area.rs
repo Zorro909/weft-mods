@@ -1,18 +1,16 @@
-//! Where an excavator works: its frame, a box five blocks high from its own height, and the
-//! order it mines the inside in, a layer at a time from the top, back and forth along rows.
+//! Where a quarry works: its frame, a box five blocks high from its own height, and the order it
+//! mines the inside in, a layer at a time from the top, back and forth along rows.
 
 use std::collections::HashSet;
 
-use weft_sdk::{Dir, World, value};
+use weft_sdk::{Block, Dir, World, value};
 
-use super::GANTRY_FRAME;
+use super::kind::Kind;
 use crate::lib::{Area, Pos, TypedWorld};
 use crate::markers::{LARGEST_REACH, square_behind, take_area};
 
-/// The frame's height above the excavator's block.
+/// The frame's height above the quarry's block.
 const FRAME_RISE: i32 = 4;
-/// Inside of the frame when no markers say otherwise: 9 by 9.
-const DEFAULT_INSIDE: i32 = 9;
 /// The most frame blocks followed looking for a standing frame: a ring round the largest area
 /// survey markers mark out in any world.
 const MAX_RING: usize = 4 * (LARGEST_REACH as usize + 2);
@@ -28,13 +26,19 @@ value! {
 }
 
 impl Frame {
-    /// The frame for an excavator at `pos` facing `front`: on the rectangle of the survey
-    /// markers next to it, else on a frame already standing beside it (one put back by its old
-    /// frame carries on there), else around a 9 by 9 area behind it.
-    pub fn plan(world: &World, pos: Pos, front: Dir) -> Frame {
+    /// The frame for a quarry of `kind` at `pos` facing `front`: on the rectangle of the survey
+    /// markers next to it, else on a frame of its kind already standing beside it (one put back
+    /// by its old frame carries on there), else around its default square behind it. Each no
+    /// larger than its kind takes.
+    pub fn plan(world: &World, pos: Pos, front: Dir, kind: &Kind) -> Frame {
+        let default = kind.inside.default;
         let ground = take_area(world, pos)
-            .or_else(|| standing_frame(world, pos))
-            .unwrap_or_else(|| square_behind(pos, front, DEFAULT_INSIDE, 1));
+            .or_else(|| standing_frame(world, pos, kind.frame))
+            .unwrap_or_else(|| square_behind(pos, front, default, 1));
+        let ground = match kind.inside.largest {
+            Some(largest) => cropped(ground, pos, largest),
+            None => ground,
+        };
         Frame {
             lo: ground.lo.with_y(pos.y),
             hi: ground.hi.with_y(pos.y + FRAME_RISE),
@@ -128,10 +132,32 @@ impl From<([i32; 3], [i32; 3])> for Frame {
     }
 }
 
-/// The bottom ring of a frame beside `pos` at its height, with `pos` outside it.
-fn standing_frame(world: &World, pos: Pos) -> Option<Area> {
-    let ring = ring_bounds(pos, |at| world.block_typed(at).is(&GANTRY_FRAME))?;
+/// The bottom ring of a frame of `frame` blocks beside `pos` at its height, with `pos` outside
+/// it.
+fn standing_frame(world: &World, pos: Pos, frame: &Block) -> Option<Area> {
+    let ring = ring_bounds(pos, |at| world.block_typed(at).is(frame))?;
     (!ring.spans(pos)).then_some(ring)
+}
+
+/// `ring`, a frame's bottom ring, with at most `largest` blocks inside it across each way: the
+/// part nearest `pos`, the quarry beside it.
+fn cropped(ring: Area, pos: Pos, largest: i32) -> Area {
+    let side = |lo: i32, hi: i32, near: i32| {
+        let span = largest + 1;
+        if hi - lo <= span {
+            (lo, hi)
+        } else if (near - lo).abs() <= (hi - near).abs() {
+            (lo, lo + span)
+        } else {
+            (hi - span, hi)
+        }
+    };
+    let (lo_x, hi_x) = side(ring.lo.x, ring.hi.x, pos.x);
+    let (lo_z, hi_z) = side(ring.lo.z, ring.hi.z, pos.z);
+    Area {
+        lo: Pos::new(lo_x, ring.lo.y, lo_z),
+        hi: Pos::new(hi_x, ring.hi.y, hi_z),
+    }
 }
 
 /// The area the frame blocks joined to a side of `pos` ring, at its height, if they make a ring
@@ -215,6 +241,25 @@ mod tests {
         );
         let post = HashSet::from([Pos::new(0, 4, 0)]);
         assert_eq!(found([-1, 4, 0], &post), None, "a lone block");
+    }
+
+    #[test]
+    fn markers_too_far_apart_are_taken_only_as_far_as_the_kind_reaches() {
+        let ring = Area::between(Pos::new(0, 4, 0), Pos::new(20, 4, 5));
+        let near_lo = cropped(ring, Pos::new(-1, 4, 0), 7);
+        assert_eq!(
+            Frame::from(near_lo).inside(),
+            [7, 4],
+            "7 across, 4 as it was"
+        );
+        assert_eq!(near_lo.lo.x, 0, "from the end by the quarry");
+        let near_hi = cropped(ring, Pos::new(21, 4, 3), 7);
+        assert_eq!((near_hi.lo.x, near_hi.hi.x), (12, 20), "or the other end");
+        assert_eq!(
+            cropped(near_lo, Pos::new(-1, 4, 0), 7),
+            near_lo,
+            "small enough"
+        );
     }
 
     #[test]

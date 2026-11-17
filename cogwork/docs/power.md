@@ -4,7 +4,8 @@ Engines make energy and push it into the block their trunk points at: a
 [timber tube](tubes.md#timber-extraction-tube), a
 [timber liquid tube](liquids.md#timber-liquid-tube), a machine of this mod, or any mod's machine
 that takes `core:energy`. They also offer it to energy networks, so [torque shafts](#torque-shaft)
-carry it further. The [oil engine](oil-engine.md), a cube of 27 blocks, burns oil for fifteen
+and [wooden axles](#wooden-axle) carry it further. A [water wheel](#water-wheel) on a stream
+makes energy from the water. The [oil engine](oil-engine.md), a cube of 27 blocks, burns oil for fifteen
 times an ember engine's energy.
 
 ## Engines
@@ -15,7 +16,7 @@ point the next way round. The piston moves while the engine runs.
 
 | | Spring Engine | Ember Engine |
 |---|---|---|
-| Runs on | a redstone signal | anything that burns (`fuel`) |
+| Runs on | its spring, wound by hand | anything that burns (`fuel`) |
 | Energy per tick | 10 | 40 |
 | Stores | 1,000 | 10,000 |
 | Overheats | never | when its energy has nowhere to go |
@@ -26,12 +27,16 @@ Several engines can drive the same machine; their energy adds up.
 
 ### Spring Engine
 
-Runs while it gets a redstone signal, and stops when the signal does.
+Runs on a spring you wind by hand. Use it with an empty hand to turn its crank once: that winds
+200 energy into the spring, up to 10,000, fifty turns. The spring then runs down into the
+engine, 10 a tick, for as long as there is room in its store; a full spring runs it for over
+eight minutes. A redstone signal holds the spring still, a brake, so a wound engine waits until
+the signal goes. Winding it again tops up what is left.
 
 ```
 ppp       p = #planks          c = #cogs/wood
- g        g = base:glass       P = base:piston
-cPc
+ g        g = base:glass       i = #ingots/iron
+cic
 ```
 
 ### Ember Engine
@@ -60,6 +65,22 @@ energy, but also when what it drives uses less than 40 a tick. An
 [assembly bench](assembly-bench.md) uses at most 30, and an excavator with a full output only
 its standby, so an ember engine on either of those stops and starts with its heat.
 
+## Water Wheel
+
+A wheel three blocks across, turning on its axle. Place it against the block it should drive,
+one block above a stream: while flowing water (not a still source) runs under it, it makes 12
+energy a tick and pushes it out of its axle into that block, a machine or a
+[wooden axle](#wooden-axle). It stores 1,000. It makes the same however much water touches it,
+so each wheel needs a stream of its own; two wheels on one stream make 12 each, if each stands
+over flowing water. The wheel turns while it works, slowly while what it drives takes nothing,
+and stands still without flowing water.
+
+```
+sps       s = #stick           p = #planks
+pcp       c = #cogs/wood
+sps
+```
+
 ## Energy readouts
 
 The screen of every machine that runs on energy (the [excavator](excavator.md), the
@@ -84,4 +105,13 @@ and with an [oil engine's drives](oil-engine.md#energy-out).
 
 ```
 grg       g = #ingots/gold     r = base:redstone      (makes 8)
+```
+
+## Wooden Axle
+
+The torque shaft of the early game: a rod of wood that carries energy the same way, between
+water wheels, engines and machines, and joins the same networks. Mined with an axe.
+
+```
+psp       p = #planks          s = #stick             (makes 8)
 ```

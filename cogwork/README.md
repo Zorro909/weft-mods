@@ -3,8 +3,8 @@
 # Cogwork
 
 A Weft mod about moving items, digging and making things by machine. Items travel through
-tubes you can see into, engines drive the machines, and three machines take over the big jobs:
-an excavator that mines out a whole area, an assembly bench that crafts on its own, and a
+tubes you can see into, engines and water wheels drive the machines, and three machines take
+over the big jobs: quarries that mine out a whole area, an assembly bench that crafts on its own, and a
 leveler that makes land flat. A pump brings up oil from deep underground, liquid tubes and
 tanks carry and store it, and an oil engine burns it for far more energy than the small engines.
 
@@ -22,9 +22,11 @@ send everything one way; void tubes destroy what reaches them. A line that jams 
 
 ### Power
 
-The spring engine runs on redstone, the ember engine burns fuel for four times as much energy
-and overheats when nothing takes it. Engines push energy into the block their trunk points at,
-and torque shafts carry it further, joining any mod's cables. The oil engine, a cube of 27
+The spring engine runs on a spring you wind by hand with its crank, and a redstone signal holds
+it; the ember engine burns fuel for four times as much energy and overheats when nothing takes
+it. A water wheel over a stream turns for a little energy of its own. Engines push energy into
+the block their trunk points at, and wooden axles and torque shafts carry it further, joining
+any mod's cables. The oil engine, a cube of 27
 blocks built around a combustion chamber, burns oil with water for 600 energy a tick, its two
 pistons and flywheel turning on top and its exhaust hazing the air round it: about 4 hours on a
 medium oil field. Every machine's screen shows what it used last tick and how short its supply
@@ -41,19 +43,21 @@ turning.
 
 ### Machines
 
-- **Excavator.** Builds a gantry frame around an area and lowers a drill that mines everything
-  inside, layer by layer, as deep as the world's settings allow, from areas up to 256 by 256.
-  More engines make it dig faster.
+- **Quarries.** Build a frame around an area and lower a drill that mines everything inside,
+  layer by layer. The Timber Quarry is the first: it lashes its frame of logs and string, digs
+  a small pit 16 deep with a stone or iron drill bit, and leaves standing what its bit can't
+  break. The Gantry Excavator digs areas up to 256 by 256 as deep as the world's settings
+  allow. More engines make them dig faster.
 - **Assembly bench.** Lay out a crafting recipe with ghost items; tubes bring the ingredients
   and it crafts again and again with engine power.
 - **Leveler.** Clears the ground above its height and fills the holes below it, leaving the
   area flat.
-- **Survey markers** mark out the area the excavator or leveler works.
+- **Survey markers** mark out the area a quarry or the leveler works.
 
 ### Rubble and ore
 
-The excavator brings stone up as Rubble and ore as Ore Rubble, two for each ore block, of any
-mod's metal. Ore Rubble comes in grades, Poor to Pure; every quarry brings it up Poor, and the
+Quarries bring stone up as Rubble and ore as Ore Rubble, of any mod's metal: one for each ore
+block from a Timber Quarry, two from a Gantry Excavator. Ore Rubble comes in grades, Poor to Pure; every quarry brings it up Poor, and the
 richer the grade, the more raw ore it grinds into. The millstone grinds it into raw ore by hand,
 with water and sand, its runner turning with each turn of its handle; the sieve sifts Rubble
 into sand and gravel and, now and then, something better.
@@ -73,9 +77,12 @@ engines and directing tubes.
 
 1. Put a chest down, a timber tube next to it, and a line of stone tubes to a second chest.
 2. Place a spring engine against the timber tube (its trunk points into the block you click)
-   and power it with redstone. Items leave the first chest and travel to the second.
-3. Place an excavator with an ember engine on it and a chest or tube beside it, and put coal in
-   the engine. It digs out the 9 by 9 area behind it; add engines and it digs faster.
+   and wind it: use it a few times with an empty hand. Items leave the first chest and travel
+   to the second.
+3. Place a Timber Quarry with a chest beside it, put logs and string in its frame slots and a
+   stone drill bit in its bit slot, and drive it with a water wheel over a stream or a wound
+   spring engine. It lashes a frame round the 5 by 5 area behind it and digs it out 16 deep.
+4. Later, a Gantry Excavator with ember engines on it digs much bigger areas all the way down.
 
 Everything is in the Cogwork tab of the creative inventory, and crafted on the crafting table.
 
@@ -85,8 +92,8 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 
 - [Cogs and the tuning wrench](docs/items.md)
 - [Item tubes](docs/tubes.md)
-- [Power](docs/power.md): engines and the torque shaft
-- [Excavator](docs/excavator.md)
+- [Power](docs/power.md): engines, the water wheel, the torque shaft and the wooden axle
+- [Quarries](docs/excavator.md): the Timber Quarry and the Gantry Excavator
 - [Assembly bench](docs/assembly-bench.md)
 - [Leveler](docs/leveler.md)
 - [Survey markers](docs/survey-markers.md)
@@ -127,8 +134,9 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 |---|---|
 | `lib` | The types the whole mod builds on: helpers for points in the world (`lib/point.rs`), and from the shared [`weftkit`](../weftkit) library `Pos` (a block), `Area` (a box of blocks), `BlockState` and `TypedWorld` (the world's block calls with those types), which `lib.rs` re-exports |
 | `tube/` | The tubes: their shape, routing, moving items along, pulling, sorting, jams, the pictures of items |
-| `engines/` | Spring and ember engines: their block, tick, heat and piston |
-| `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen |
+| `engines/` | Spring and ember engines: their block, tick, heat and piston, and winding a spring engine (`wind.rs`) |
+| `excavator/`, `bench/`, `leveler/` | The three machines, each with its tick and screen; the quarries' kinds (`excavator/kind.rs`, one row each), their frame blocks (`frames.rs`), drill bits (`bit.rs`) and frame materials (`materials.rs`) |
+| `water_wheel/` | The water wheel: its tick, where water flows under it (`flow.rs`) and its turning wheel (`wheel.rs`) |
 | `oil/` | Oil, the oil-soaked ground of a seep, and where fields lie (`oil/fields.rs`) |
 | `oil_engine/` | The oil engine: its parts (`parts.rs`), whether they make the engine (`pattern.rs`), what it burns and makes (`fuel.rs`), its tick (`run.rs`), its rig (`rig.rs`) and how the rig's crank moves its rods (`stroke.rs`, which writes the rig's clip) |
 | `pump/` | The pump: its block and screen, boring and pumping (`work.rs`), finding the next source (`drain.rs`) |
@@ -144,9 +152,9 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `chance.rs` | Fractions of an item as chances of one more |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
-| `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
+| `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft and the wooden axle |
 | `sounds.rs` | The sound events, whose files are under `assets/sounds/` |
-| `arms/`, `boxes.rs` | Hubs with arms (tubes, liquid tubes of both kinds and torque shafts) put together from one Blockbench model each; drawing a block from boxes in code |
+| `arms/`, `boxes.rs` | Hubs with arms (tubes, liquid tubes of both kinds, torque shafts, wooden axles and lashed frames) put together from one Blockbench model each; drawing a block from boxes in code |
 | `recipes.rs` | Registers the crafting recipes, which are written in `assets/recipes/*.toml` and checked by `build.rs` when the mod is built |
 | `films/` | The showcase film, only with `--features showcase` |
 | `art/`, `generated.rs` | Only in tests: the drawn textures, and keeping them as they would be drawn |
@@ -155,10 +163,11 @@ Unit tests sit at the end of the files whose logic they check; `tools/check-mods
 run from the repository root, runs them.
 
 Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. Entities (the
-excavator's rig, the engines' pistons, the timber liquid tube's wheel, the oil engine's rig, the
-millstone's runner and the sieve's tray) are
+quarries' rigs and drill bits, the engines' pistons with the spring engine's crank, the water
+wheel, the timber liquid tube's wheel, the oil engine's rig, the millstone's runner and the
+sieve's tray) are
 "Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
-are "Java Block/Item" models in `block/`: the survey marker, the engine, the pump and its hose,
+are "Java Block/Item" models in `block/`: the survey marker, the engine, the water wheel's axle, the pump and its hose,
 the oil engine's controller, the millstone's bed and the sieve's frame, with and without Rubble
 on it; `item/` has the millstone and the sieve whole. A formed oil engine's casing joins into one panel a face by
 connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
@@ -167,7 +176,8 @@ their port drawn on top as a layer, so the face stays one.
 
 Blocks with a shape for every set of neighbours are put together in code when the mod loads,
 since the mod index packs `assets/` as it is in the repository and runs nothing to make more
-files. Tubes, liquid tubes, timber liquid tubes and torque shafts each have one Blockbench model,
+files. Tubes, liquid tubes, timber liquid tubes, torque shafts, wooden axles and lashed frames
+each have one Blockbench model,
 `block/<block>/hub_and_arm.json`: a hub and an arm pointing north, which `src/arms/` turns
 toward each side the block has an arm. Edit it in Blockbench like any other model; its faces
 show their texture where the box lies, as Blockbench's own UVs do. A tube's model names a texture
@@ -176,7 +186,8 @@ of joined sides is built in `src/tank/shape.rs`, and the liquid standing in a li
 in `fill.rs`, in the colors of whatever liquid it is.
 
 The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks, the pump, the
-oil engine, Rubble and Ore Rubble, the millstone's runner and the sieve's tray and mesh are
+oil engine, Rubble and Ore Rubble, the millstone's runner and the sieve's tray and mesh, the
+Timber Quarry, its lashed frame, rig and drill bits, the water wheel and the wooden axle are
 drawn pixel by pixel in `src/art/`.
 Change them there, then run `WRITE_ASSETS=1 cargo test --release art` in `cogwork/`. Without the
 variable the same test fails when a file differs from what it would draw, so a texture changed

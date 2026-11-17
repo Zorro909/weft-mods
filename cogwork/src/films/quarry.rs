@@ -10,6 +10,7 @@ use weft_sdk::{Dir, Item, Shape};
 
 use super::parts::{CHEST, area, engine, fuel, shafts, tubes};
 use super::site::SITE;
+use crate::excavator::kind::GANTRY;
 use crate::excavator::{DIG, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
@@ -63,7 +64,7 @@ pub fn build(set: &Set) {
 fn frame_and_pit(set: &Set) {
     let world = set.world();
     let pos = set.at(DIGGER);
-    let frame = Frame::plan(&world, pos, Dir::South);
+    let frame = Frame::plan(&world, pos, Dir::South, &GANTRY);
     for cell in frame.cells() {
         world.set_block_typed(cell, BlockState::of(&GANTRY_FRAME));
     }
@@ -104,7 +105,7 @@ pub fn start(set: &Set) {
 fn mine(set: &Set) {
     let world = set.world();
     let pos = set.at(DIGGER);
-    let frame = Frame::plan(&world, pos, Dir::South);
+    let frame = Frame::plan(&world, pos, Dir::South, &GANTRY);
     let Some(dig) = world.component_mut(world.block_entity(pos), &DIG) else {
         return;
     };
