@@ -6,10 +6,10 @@ goes to the tubes and chests beside it. There are four:
 
 | | Timber Quarry | Iron Quarry | Steel Excavator | Gantry Excavator |
 |---|---|---|---|---|
-| Frame | [lashed frame](#lashed-frame): a log and a string a block | [iron frame](#iron-frame): an iron ingot a block | [steel frame](#steel-frame): a steel ingot every 4 blocks | gantry frame, free |
+| Frame | [lashed frame](#lashed-frame): a log and a string a block | [iron frame](#iron-frame): an iron ingot a block | [steel frame](#steel-frame): a steel ingot every 4 blocks | [composite frame](#composite-frame): a composite panel every 4 blocks |
 | Inside of its area | 5 by 5, up to 7 by 7 with markers | 9 by 9, up to 17 by 17 with markers | 9 by 9, up to 63 by 63 with markers | 9 by 9, up to 255 by 255 with markers |
 | Digs down to | 16 below itself | 64 below itself | the world's `excavator_lowest_y` | as deep as the world's [settings](#world-settings) let it |
-| Digs with | a [drill bit](#drill-bits), 12 or 18 energy a tick | an iron or steel [drill bit](#drill-bits), 60 or 90 energy a tick | a steel or diamond-tipped [drill bit](#drill-bits), 120 or 160 energy a tick, and more deep down | its own drill, 120 a tick and more deep down |
+| Digs with | a [drill bit](#drill-bits), 12 or 18 energy a tick | an iron or steel [drill bit](#drill-bits), 60 or 90 energy a tick | a steel or diamond-tipped [drill bit](#drill-bits), 120 or 160 energy a tick, and more deep down | its own drill, 120 a tick, or a diamond-tipped [drill bit](#drill-bits), 240 a tick; more deep down |
 | Standby a tick | 4 | 12, and 1 per block along each side | 12, and 1 per block along each side | 12, and 1 per block along each side |
 | Ore Rubble per ore block | 1 | 1.25 | 1.5 | 2 |
 
@@ -18,7 +18,8 @@ The Timber Quarry is the first one: wood, string and a little stone, run by a
 comes next: wider, four times as deep, and a quarter more Ore Rubble, for a couple of ember
 engines. The Steel Excavator follows the [blast furnace](steel.md): a frame of steel lattice up to
 63 across, dug all the way down to the world's lowest layer for quarries, and half as much Ore
-Rubble again. The Gantry Excavator is the big one.
+Rubble again. The Gantry Excavator is the big one, built from [plastics](plastics.md): a frame
+of composite panels on steel, any size the markers reach, and twice the Ore Rubble.
 
 Every quarry brings up its Ore Rubble Poor: a better quarry brings up more of it, and
 [washing and the steps after it](processing.md) make it richer.
@@ -50,10 +51,13 @@ sss
 ### Gantry Excavator
 
 ```
-iri       i = #cogs/iron       r = base:redstone
-gPg       g = #cogs/gold       P = base:diamond_pickaxe
-dcd       d = #cogs/diamond    c = base:chest
+PdP       P = #plates/composite      d = #cogs/diamond
+gSg       g = #gears/plastic         S = cogwork:steel_excavator
+PPP
 ```
+
+Excavators built before composite panels keep working: their lattice frame stands as it is and
+is never charged for, and they dig as they did.
 
 ## Setting it up
 
@@ -61,8 +65,9 @@ dcd       d = #cogs/diamond    c = base:chest
 2. Put a chest or a tube beside it for what it mines.
 3. Drive it with engines on any side, or through [torque shafts](power.md#torque-shaft) or
    [wooden axles](power.md#wooden-axle).
-4. A Timber Quarry, Iron Quarry or Steel Excavator also needs what its frame is built of in its frame slots, which
-   tubes can fill, and a drill bit in its bit slot, put in by hand.
+4. A quarry also needs what its frame is built of in its frame slots, which tubes can fill.
+   A Timber Quarry, Iron Quarry or Steel Excavator needs a drill bit in its bit slot, put in by
+   hand or by a [Bit Magazine](#bit-magazine); a Gantry Excavator digs without one.
 
 It works out its area as soon as it is placed, and starts once enough energy comes in. Put
 [survey markers](survey-markers.md) down before the quarry: markers placed afterwards are
@@ -98,8 +103,7 @@ drill bit mines it with its bit, which wears as it does in the pit: without a bi
 ("Needs a drill bit"), and a block its bit can't break is left standing in the frame's ring, as
 a pillar is in the pit. When breaking it is refused three times in a row
 (a protected area, say), the quarry is jammed: it tries again only every 5 seconds, so it
-doesn't pay for the block over and over, and goes on once the block is gone. Gantry frame
-blocks drop nothing when broken, and can't be had as items.
+doesn't pay for the block over and over, and goes on once the block is gone.
 
 ### Lashed frame
 
@@ -125,6 +129,18 @@ standing are passed over and cost nothing. A 9 by 9 inside takes 23 ingots, a 33
 ingot gives it back when broken, by hand or by a leveler, and the other three give nothing: a
 frame broken down gives back exactly what it took.
 
+### Composite frame
+
+A Gantry Excavator builds its frame of [composite panels](plastics.md#molding-press) on steel
+girders, each panel cut through with a round hole. It pays as the Steel Excavator does: one
+composite panel from its six frame slots for every four frame blocks, 23 for a 9 by 9 inside,
+and the block that took a panel gives it back when broken.
+
+The plain lattice that Gantry Excavators put up for energy alone before this stays in worlds
+that have it: it holds up the frames already built, a quarry passes over it, and it drops
+nothing when broken. A Gantry that was building its frame when the world was saved finishes it
+of composite panels.
+
 ## Drill bits
 
 A Timber Quarry, Iron Quarry or Steel Excavator digs with the bit in its bit slot, and without
@@ -134,7 +150,7 @@ doesn't go into the slot.
 A bit breaks what a pickaxe of its kind breaks, and wears by one for each block mined, until it
 is used up; with [lubricant](#lubricant), by one every other block. A block the bit can't break, gold ore under a stone bit say, is left standing, so a
 pillar of it stays in the pit to be mined by hand. The Gantry Excavator digs with its own drill
-and has no bit slot.
+when its bit slot is empty, as before, and twice as hard with a diamond-tipped bit in it.
 
 | | Stone Drill Bit | Iron Drill Bit | Steel Drill Bit | Diamond-Tipped Drill Bit |
 |---|---|---|---|---|
@@ -143,6 +159,7 @@ and has no bit slot.
 | Most a Timber Quarry puts into a block a tick | 12 | 18 | | |
 | Most an Iron Quarry puts into a block a tick | | 60 | 90 | |
 | Most a Steel Excavator puts into a block a tick | | | 120 | 160 |
+| Most a Gantry Excavator puts into a block a tick | | | | 240 (120 with no bit) |
 
 ```
  k        k = #stick           t = base:string         s = #cobblestone
@@ -163,6 +180,29 @@ The diamond-tipped bit is a steel bit set with diamonds:
 dbd       s = #ingots/steel
  s
 ```
+
+### Bit Magazine
+
+Placed against a quarry of any kind, the Bit Magazine keeps its bit slot filled. Drill bits go
+into its four bit slots by tube or by hand, only bits with more than one use left. When the
+quarry's slot is empty, or its bit is down to its last use, the magazine puts in the first of its
+bits that this quarry takes: a stone bit never goes into an Iron Quarry, nor a steel one into a
+Gantry. The worn bit goes into its four worn-bit slots, where a [timber tube](tubes.md) or you
+take it out; while those are full, it leaves the worn bit where it is. Its drum turns a quarter
+with a clack at each swap.
+
+```
+sgs       s = #ingots/steel    g = #gears/plastic
+gcg       c = base:chest
+sgs
+```
+
+| Status | Meaning |
+|---|---|
+| Place it against a quarry | Its feed, the side away from you when you placed it, faces no quarry. |
+| Keeping the quarry's bit slot filled | The quarry has a bit, or gets one now. |
+| None of its bits fits this quarry | It has no bit that quarry takes with uses to spare. |
+| Worn bits full | The worn bit waits until you take some out. |
 
 ## Mining
 
@@ -222,7 +262,7 @@ standby, the quarry doesn't run at all, and the energy it had is used up all the
 weak supply can't save up to run in bursts. What comes in beyond standby pays for the work, up
 to its bit's 12 or 18 a tick for a Timber Quarry, 60 or 90 for an Iron Quarry, 120 or 160 for a
 Steel Excavator (more deep down), and for a Gantry
-Excavator up to 120 a tick
+Excavator up to 120 a tick with no bit or 240 with a diamond-tipped one
 near the top and more deep down (see [Mining](#mining)), so the more engines drive it, the
 faster it digs. One water wheel (12 a tick) runs a Timber Quarry with a stone bit at a little
 under its full pace. A 9 by 9 Iron Quarry wants 90 a tick with an iron bit, three ember engines (40 a tick
@@ -247,8 +287,8 @@ some, each block it mines, in the pit or out of its frame's way, uses 1 mB and:
 - wears its bit only every other block, so a bit lasts twice as many blocks.
 
 The quarry also puts a fifth less into a block each tick, 48 instead of 60 for an Iron Quarry
-with an iron bit, so it digs as fast on less energy. A Gantry Excavator has no bit and only
-saves the energy. A quarry without lubricant digs as before. Its screen shows how much it holds.
+with an iron bit, so it digs as fast on less energy. A Gantry Excavator with no bit only saves
+the energy. A quarry without lubricant digs as before. Its screen shows how much it holds.
 
 ## World settings
 
@@ -268,9 +308,8 @@ Timber Quarry stops 16 below itself and an Iron Quarry 64 whatever they say, and
 
 The screen shows the stored energy, what it used in the last tick (standby, work and the drill's
 travel) and how short of what it wanted it fell ([energy readouts](power.md#energy-readouts)),
-the area and its standby, and what it is doing. A Timber Quarry's, Iron Quarry's or Steel
-Excavator's screen has its bit
-slot and its six frame slots beside its output. Under its status, every quarry's screen shows
+the area and its standby, and what it is doing. Every quarry's screen has its bit slot and its
+six frame slots beside its output. Under its status, every quarry's screen shows
 the lubricant it holds.
 
 | Status | Meaning |
@@ -278,7 +317,7 @@ the lubricant it holds.
 | Waiting to start | It has not worked out its area yet. |
 | Not enough energy | Less than standby comes in, or nothing to pay the work with. |
 | Building the frame | |
-| Needs what its frame is built of | A Timber Quarry is out of logs or string, an Iron Quarry out of iron ingots, a Steel Excavator out of steel ingots. |
+| Needs what its frame is built of | A Timber Quarry is out of logs or string, an Iron Quarry out of iron ingots, a Steel Excavator out of steel ingots, a Gantry Excavator out of composite panels. |
 | Needs a drill bit | A Timber Quarry, Iron Quarry or Steel Excavator has no bit, or its bit is used up. |
 | Mining layer *y* | |
 | Output full | Nothing beside it takes what it mined: connect a tube or a chest. |

@@ -107,11 +107,13 @@ impl Kind {
         KINDS.into_iter().find(|kind| block_state.is(kind.block))
     }
 
-    /// Whether `block_state` is a quarry or a frame of any kind, which no quarry mines.
+    /// Whether `block_state` is a quarry or a frame of any kind, which no quarry mines: the
+    /// Gantry's old lattice too, which holds up frames built before composite panels.
     pub fn is_part(block_state: BlockState) -> bool {
-        KINDS
-            .iter()
-            .any(|kind| block_state.is(kind.block) || block_state.is(kind.frame))
+        block_state.is(&super::GANTRY_FRAME)
+            || KINDS
+                .iter()
+                .any(|kind| block_state.is(kind.block) || block_state.is(kind.frame))
     }
 
     /// The standby energy a tick to hold up `frame`.
@@ -155,6 +157,11 @@ impl Kind {
     pub fn build_draw(&self) -> i64 {
         let best_bit = self.bits.iter().map(|fit| fit.draw).max();
         self.bare.max(best_bit).unwrap_or_default()
+    }
+
+    /// Whether `bit` goes into its bit slot.
+    pub fn takes_bit(&self, bit: &Bit) -> bool {
+        self.fit(bit).is_some()
     }
 
     /// How it takes `bit`, if it does.

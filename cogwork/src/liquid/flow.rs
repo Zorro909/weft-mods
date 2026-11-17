@@ -2,7 +2,7 @@
 //! higher to where it stands lower, as between vessels joined at the bottom. A holder's head is
 //! the height its liquid reaches, in millionths of a block (`UNIT`): its surface, or, when it is
 //! full, the head of what pushes into it from beside, less `LOSS`. A pump holding liquid pushes
-//! `LIFT` blocks above itself.
+//! `LIFT` blocks above itself, `SEALED_LIFT` into a sealed liquid tube.
 //!
 //! Steam rises instead: its head is how full its holder is, wherever that stands (`pressure`), so
 //! it spreads to where holders are emptier, up as well as down, and never settles at the bottom.
@@ -11,6 +11,8 @@
 pub const UNIT: i64 = 1_000_000;
 /// How high above itself a pump holding liquid pushes it, in blocks.
 pub const LIFT: i64 = 16;
+/// How high above itself a pump pushes liquid into a sealed liquid tube, in blocks.
+pub const SEALED_LIFT: i64 = 32;
 /// The head lost from one full holder to the next: a block in sixteen. Pressure that nothing
 /// keeps up so dies away, also in a ring of full tubes.
 pub const LOSS: i64 = UNIT / 16;

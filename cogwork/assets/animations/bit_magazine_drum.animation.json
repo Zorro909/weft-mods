@@ -1,0 +1,17 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.bit_magazine_drum.swap": {
+			"loop": false,
+			"animation_length": 0.4,
+			"bones": {
+				"drum": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"0.4": [0, 90, 0]
+					}
+				}
+			}
+		}
+	}
+}

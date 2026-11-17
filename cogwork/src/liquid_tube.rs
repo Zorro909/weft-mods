@@ -2,7 +2,10 @@
 //! tanks and pumps beside it. The liquid in it is drawn as it stands: a fill block (`fill`) in
 //! its cell, level through its hub and sideways arms. Its shape is the Blockbench model
 //! `assets/models/block/liquid_tube/hub_and_arm.json`, with an arm toward each side it joins
-//! (`arms`). The timber liquid tube (`timber_liquid_tube`) is built the same way.
+//! (`arms`). The timber liquid tube (`timber_liquid_tube`) is built the same way, and so are the
+//! two plastic tubes: the sealed liquid tube, its glass sleeved in plastic, into which a pump
+//! lifts liquid twice as high, and the pressure tube, a plastic pipe with a window that carries
+//! steam twice as fast (`liquid::Kind`).
 
 use std::sync::LazyLock;
 
@@ -15,22 +18,47 @@ use crate::liquid::{HELD, Held, LiquidKey, NO_LIQUID, is_full, is_vessel, reache
 use crate::timber_liquid_tube::TIMBER_LIQUID_TUBE;
 
 pub static LIQUID_TUBE: Block = Block::named("liquid_tube");
+pub static SEALED_LIQUID_TUBE: Block = Block::named("sealed_liquid_tube");
+pub static PRESSURE_TUBE: Block = Block::named("pressure_tube");
 
 /// Millibuckets one tube holds, of either kind.
 pub const CAPACITY: u32 = 1000;
 
+/// The tubes that only hold and pass on liquid: each block, its model, and its sounds.
+static PLAIN: [(&Block, &LazyLock<HubAndArms>, &str); 3] = [
+    (&LIQUID_TUBE, &crate::arms::LIQUID_TUBE, "base:block.glass"),
+    (
+        &SEALED_LIQUID_TUBE,
+        &crate::arms::SEALED_LIQUID_TUBE,
+        "base:block.glass",
+    ),
+    (
+        &PRESSURE_TUBE,
+        &crate::arms::PRESSURE_TUBE,
+        "base:block.stone",
+    ),
+];
+
 pub fn register(r: &mut Registry) {
-    tube(r.block(&LIQUID_TUBE), &crate::arms::LIQUID_TUBE)
-        .hardness(0.6)
-        .mined_by("pickaxe", tool_tier::HAND)
-        .sound_group("base:block.glass")
-        .tab(&crate::TAB)
-        .entity(|entity| entity.attach(&HELD));
+    for (block, model, sound_group) in PLAIN {
+        tube(r.block(block), model)
+            .hardness(0.6)
+            .mined_by("pickaxe", tool_tier::HAND)
+            .sound_group(sound_group)
+            .tab(&crate::TAB)
+            .entity(|entity| entity.attach(&HELD));
+    }
 }
 
-/// Whether `block` is a liquid tube of either kind.
+/// Whether `block` is a liquid tube of any kind.
 pub fn is_liquid_tube(block: BlockState) -> bool {
-    block.is(&LIQUID_TUBE) || block.is(&TIMBER_LIQUID_TUBE)
+    shows_own_fill(block) || block.is(&TIMBER_LIQUID_TUBE)
+}
+
+/// Whether `block` is a tube that shows its fill as its turn leaves it: any but the timber
+/// liquid tube, which shows its own after its pump.
+pub fn shows_own_fill(block: BlockState) -> bool {
+    PLAIN.iter().any(|(tube, ..)| block.is(tube))
 }
 
 /// A liquid tube drawn as `model`, with an arm toward every holder of liquid it joins, showing the

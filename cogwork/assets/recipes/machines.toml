@@ -36,11 +36,6 @@ pattern = [" c ", "iii", " i "]
 key = { c = "#cogs/wood", i = "#ingots/iron" }
 
 [[shaped]]
-result = "excavator"
-pattern = ["iri", "gPg", "dcd"]
-key = { i = "#cogs/iron", r = "base:redstone", g = "#cogs/gold", P = "base:diamond_pickaxe", d = "#cogs/diamond", c = "base:chest" }
-
-[[shaped]]
 result = "assembly_bench"
 pattern = ["iTi", "cCc", "iri"]
 key = { i = "#ingots/iron", T = "base:crafting_table", c = "#cogs/iron", C = "base:chest", r = "base:redstone" }

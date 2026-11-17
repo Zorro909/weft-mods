@@ -1,11 +1,13 @@
-//! The blocks quarries build their frames of. The Gantry's is a plain lattice cube that drops
-//! nothing. The Steel Excavator's is a cube of riveted steel lattice, built of a steel ingot for
-//! every four blocks: the block that took the ingot is marked `paid` and gives it back when
-//! broken, the same on every try, so a machine with a full output can't break it for nothing.
-//! The others, the Timber
-//! Quarry's lashed logs and the Iron Quarry's bars, are poles joined toward the frame blocks
-//! beside them, drawn from a hub-and-arm model (`arms`), and give back what they were built of
-//! when broken.
+//! The blocks quarries build their frames of. The Steel Excavator's is a cube of riveted steel
+//! lattice, built of a steel ingot for every four blocks, and the Gantry's a cube of composite
+//! panels on steel, a composite panel for every four: the block that took the ingot or panel is
+//! marked `paid` and gives it back when broken, the same on every try, so a machine with a full
+//! output can't break it for nothing. The others, the Timber Quarry's lashed logs and the Iron
+//! Quarry's bars, are poles joined toward the frame blocks beside them, drawn from a hub-and-arm
+//! model (`arms`), and give back what they were built of when broken.
+//!
+//! `gantry_frame` is the plain lattice the Gantry built with energy alone before composite
+//! panels: it stays in worlds that have it, holds up the frames already built and drops nothing.
 
 use std::sync::LazyLock;
 
@@ -18,9 +20,32 @@ pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 pub static LASHED_FRAME: Block = Block::named("lashed_frame");
 pub static IRON_FRAME: Block = Block::named("iron_frame");
 pub static STEEL_FRAME: Block = Block::named("steel_frame");
+pub static COMPOSITE_FRAME: Block = Block::named("composite_frame");
 
 /// The property of a frame block paid for in batches that marks the one that took its batch.
 const PAID: &str = "paid";
+
+/// A cube of frame paid for in batches: the block, its texture, and the item its block that took
+/// a batch gives back.
+struct Batched {
+    block: &'static Block,
+    gives_back: &'static str,
+    hardness: f32,
+}
+
+/// The steel lattice and the composite panels on steel.
+static BATCHED: [Batched; 2] = [
+    Batched {
+        block: &STEEL_FRAME,
+        gives_back: "steel_ingot",
+        hardness: 1.5,
+    },
+    Batched {
+        block: &COMPOSITE_FRAME,
+        gives_back: "composite_panel",
+        hardness: 2.0,
+    },
+];
 
 /// A frame block of poles: the block, its model, and the item it drops when broken.
 struct Poles {
@@ -58,27 +83,29 @@ pub fn register(r: &mut Registry) {
         .mined_by("pickaxe", tool_tier::HAND)
         .drops_nothing()
         .no_item();
-    register_steel(r);
+    for batched in &BATCHED {
+        register_batched(r, batched);
+    }
     for poles in &POLES {
         register_poles(r, poles);
     }
 }
 
-/// The steel lattice, whose block that took an ingot gives it back.
-fn register_steel(r: &mut Registry) {
-    r.block(&STEEL_FRAME)
+/// A cube of frame whose block that took a batch gives it back.
+fn register_batched(r: &mut Registry, batched: &Batched) {
+    r.block(batched.block)
         .prop(PAID, ["false", "true"])
-        .texture("steel_frame")
+        .texture(batched.block.path())
         .cutout()
-        .hardness(1.5)
+        .hardness(batched.hardness)
         .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.stone")
         .no_item();
-    r.loot(&STEEL_FRAME).pool(
+    r.loot(batched.block).pool(
         Pool::new()
             .when(Cond::harvested())
             .when(paid())
-            .item("steel_ingot"),
+            .item(batched.gives_back),
     );
 }
 
@@ -170,16 +197,19 @@ mod tests {
     }
 
     #[test]
-    fn a_steel_frame_block_gives_the_same_back_on_every_try() {
+    fn a_batched_frame_block_gives_the_same_back_on_every_try() {
         assert_eq!(
             paid().text(),
             "state(paid=true)",
-            "the block that took the ingot, never a roll a full output could wait out"
+            "the block that took the batch, never a roll a full output could wait out"
         );
-        assert!(
-            crate::has_asset("textures/block/steel_frame.png"),
-            "its look"
-        );
+        for batched in &BATCHED {
+            let name = batched.block.path();
+            let texture = format!("textures/block/{name}.png");
+            assert!(crate::has_asset(&texture), "{name}: its look");
+            let key = format!("block.cogwork.{name}");
+            assert!(crate::translated(&key), "{name}: its name");
+        }
     }
 
     #[test]

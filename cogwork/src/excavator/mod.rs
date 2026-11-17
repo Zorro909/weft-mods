@@ -3,10 +3,12 @@
 //! world's settings let it (`kind`, `depth`), handing everything it mines to the tubes and chests
 //! beside it. The Timber and Iron Quarries and the Steel Excavator dig with a drill bit (`bit`)
 //! and build their frames of logs and string, of iron ingots or of steel ingots; the Gantry
-//! Excavator, block `excavator`, digs with no bit and builds with energy alone.
+//! Excavator, block `excavator`, builds its frame of composite panels and digs with no bit or a
+//! diamond-tipped one. A Bit Magazine beside a quarry keeps its bit slot filled
+//! (`bit_magazine`).
 
 mod area;
-mod bit;
+pub mod bit;
 mod depth;
 mod dig;
 mod frames;
@@ -30,9 +32,10 @@ pub static IRON_QUARRY: Block = Block::named("iron_quarry");
 pub static STEEL_EXCAVATOR: Block = Block::named("steel_excavator");
 pub use area::Frame;
 use depth::Floor;
-pub use frames::{GANTRY_FRAME, IRON_FRAME, LASHED_FRAME, STEEL_FRAME};
+pub use frames::{COMPOSITE_FRAME, GANTRY_FRAME, IRON_FRAME, LASHED_FRAME, STEEL_FRAME};
 use kind::{KINDS, Kind};
 pub use lube::CAPACITY as LUBRICANT_CAPACITY;
+pub use materials::taken;
 
 use crate::lib::{Pos, TypedWorld};
 use crate::loading::Cubes;
