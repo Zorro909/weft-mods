@@ -67,10 +67,13 @@ The screen of every machine that runs on energy (the [excavator](excavator.md), 
 shows, under its stored energy, what it used in the last tick: "Using 120 energy a tick". When
 it wanted more than its store held, it says by how much, "Using 90 energy a tick, short 30": add
 an engine or a faster one until the shortfall goes. A machine waiting (for its output to empty,
-for blocks to fill with) uses nothing.
+for blocks to fill with) uses nothing, except an excavator: it pays its standby for as long as
+it works, also while its output is full.
 
-The [oil engine](oil-engine.md)'s screen says what it gave out of its drives in the last tick:
-"Giving 600 energy a tick". Less than the 600 it makes means what it drives takes less.
+The [oil engine](oil-engine.md)'s screen says how much it sent into its drives in the last tick:
+"Sending 600 energy a tick into its drives". Once the drives are full, that is what they passed
+on since the tick before; less than the 600 it makes means what it drives takes less. An engine
+with nothing on its drives sends 600 a tick only until they are full, then nothing.
 
 ## Torque Shaft
 
