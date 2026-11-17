@@ -60,7 +60,9 @@ Quarries bring stone up as Rubble and ore as Ore Rubble, of any mod's metal: one
 block from a Timber Quarry, two from a Gantry Excavator. Ore Rubble comes in grades, Poor to Pure; every quarry brings it up Poor, and the
 richer the grade, the more raw ore it grinds into. The millstone grinds it into raw ore by hand,
 with water and sand, its runner turning with each turn of its handle; the sieve sifts Rubble
-into sand and gravel and, now and then, something better.
+into sand and gravel and, now and then, something better. Their driven counterparts, the shaker
+screen and the grinding mill, do the same with engine energy, fed by tubes and the mill's water
+by liquid tube.
 
 ### Keeping the world loaded
 
@@ -101,7 +103,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Oil and the pump](docs/oil.md)
 - [Liquid tubes and tanks](docs/liquids.md)
 - [Oil engine](docs/oil-engine.md)
-- [Rubble, ore grades, the millstone and the sieve](docs/processing.md)
+- [Rubble, ore grades, sifting and grinding](docs/processing.md)
 - [Working with other mods](docs/other-mods.md)
 
 What changed in each version is in the [changelog](CHANGELOG.md).
@@ -144,11 +146,12 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `timber_liquid_tube/` | The timber liquid tube: its pull out of tanks (`pull.rs`) and its paddle wheel (`wheel.rs`) |
 | `liquid_tube.rs`, `tank/` | The liquid tube; the tank, how its blocks make one tank (`merge.rs`), its liquid across them (`blocks.rs`) and its shape for each set of joined sides (`shape.rs`) |
 | `fill.rs` | The liquid shown standing in a liquid tube or tank, for every liquid of any mod |
-| `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar and the meter of what went through it last tick |
+| `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar, the meter of what went through it last tick and the liquid a machine holds |
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |
 | `harvest.rs` | Breaking a block by machine into its output, as it drops or as a quarry brings it up |
-| `rubble/` | Rubble and Ore Rubble: grades (`grade.rs`), metals of any mod (`metal.rs`), what a quarry brings up (`quarry.rs`) and what sifting gives (`sifting.rs`) |
+| `rubble/` | Rubble and Ore Rubble: grades (`grade.rs`), metals of any mod (`metal.rs`), what a quarry brings up (`quarry.rs`), what sifting gives (`sifting.rs`) and what grinding takes and gives (`grinding.rs`) |
 | `millstone/`, `sieve.rs` | The hand machines: the millstone's grinding (`grind.rs`) and its runner (`runner.rs`); the sieve and its tray |
+| `shaker_screen/`, `grinding_mill/` | The driven machines: the screen's sifting (`work.rs`) and tray (`tray.rs`); the mill's grinding (`work.rs`), what it needs for a grind (`supply.rs`) and its runner (`runner.rs`) |
 | `chance.rs` | Fractions of an item as chances of one more |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
@@ -164,12 +167,13 @@ run from the repository root, runs them.
 
 Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. Entities (the
 quarries' rigs and drill bits, the engines' pistons with the spring engine's crank, the water
-wheel, the timber liquid tube's wheel, the oil engine's rig, the millstone's runner and the
-sieve's tray) are
+wheel, the timber liquid tube's wheel, the oil engine's rig, the millstone's runner, the
+sieve's tray, the shaker screen's tray and the grinding mill's runner) are
 "Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
 are "Java Block/Item" models in `block/`: the survey marker, the engine, the water wheel's axle, the pump and its hose,
 the oil engine's controller, the millstone's bed and the sieve's frame, with and without Rubble
-on it; `item/` has the millstone and the sieve whole. A formed oil engine's casing joins into one panel a face by
+on it, the shaker screen's frame and the grinding mill's vat and frame; `item/` has the
+millstone, the sieve, the shaker screen and the grinding mill whole. A formed oil engine's casing joins into one panel a face by
 connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
 skirt at the bottom, and one for its top and bottom. Its intakes and drives show that panel with
 their port drawn on top as a layer, so the face stays one.
@@ -187,6 +191,7 @@ in `fill.rs`, in the colors of whatever liquid it is.
 
 The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks, the pump, the
 oil engine, Rubble and Ore Rubble, the millstone's runner and the sieve's tray and mesh, the
+shaker screen's tray and the grinding mill's runner, the
 Timber Quarry, its lashed frame, rig and drill bits, the water wheel and the wooden axle are
 drawn pixel by pixel in `src/art/`.
 Change them there, then run `WRITE_ASSETS=1 cargo test --release art` in `cogwork/`. Without the

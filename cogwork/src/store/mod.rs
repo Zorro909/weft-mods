@@ -1,8 +1,8 @@
 //! Putting items into and taking them out of any mod's machines, by the names of their slot
 //! groups: `fuel` and `input` take, `output` gives, a chest's `chest` does both. An inventory
 //! without any of these names is one big chest. An assembly bench takes what its pattern asks
-//! for, a quarry its bits and frame materials. Liquid groups are left alone both ways: these are
-//! item tubes.
+//! for, a quarry its bits and frame materials, a shaker screen Rubble, a grinding mill Ore Rubble
+//! and sand. Liquid groups are left alone both ways: these are item tubes.
 
 mod fill;
 mod span;
@@ -13,6 +13,18 @@ use weft_sdk::*;
 
 use crate::lib::Pos;
 
+/// A machine that picks its own slots for what comes in: what is left of a stack it put in, or
+/// none for what is not that machine.
+type Inserts = fn(&World, Holder, ItemStack, bool) -> Option<ItemStack>;
+
+/// The machines that pick their own slots.
+const PICKY: [Inserts; 4] = [
+    crate::bench::insert,
+    crate::excavator::insert,
+    crate::shaker_screen::insert,
+    crate::grinding_mill::insert,
+];
+
 /// Puts `stack` into the machine `owner` (its entity, or its block) and returns what didn't
 /// fit. With `simulate` nothing changes.
 pub fn insert(
@@ -22,11 +34,10 @@ pub fn insert(
     simulate: bool,
 ) -> ItemStack {
     let owner = owner.into();
-    if let Some(left) = crate::bench::insert(world, owner, stack, simulate) {
-        return left;
-    }
-    if let Some(left) = crate::excavator::insert(world, owner, stack, simulate) {
-        return left;
+    for inserts in PICKY {
+        if let Some(left) = inserts(world, owner, stack, simulate) {
+            return left;
+        }
     }
     let Some(span) = takes(world.inventory(owner), stack) else {
         return stack;
@@ -95,12 +106,18 @@ pub fn has_inventory(world: &World, pos: Pos) -> bool {
 
 /// Hands one stack of the `output` of the machine at `pos` to a tube or machine beside it.
 pub fn eject(world: &World, pos: Pos) {
+    eject_toward(world, pos, &Dir::ALL);
+}
+
+/// Hands one stack of the `output` of the machine at `pos` to a tube or machine on one of
+/// `sides` of it, in that order.
+pub fn eject_toward(world: &World, pos: Pos, sides: &[Dir]) {
     let out = world.inventory(pos).group("output");
     let Some(slot) = (0..out.len()).find(|&i| !out.get(i).is_empty()) else {
         return;
     };
     let mut stack = out.get(slot);
-    for dir in Dir::ALL {
+    for &dir in sides {
         let other = pos.toward(dir);
         stack = if crate::tube::is_tube(world, other) {
             crate::tube::inject(world, other, stack)

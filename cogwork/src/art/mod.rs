@@ -1,11 +1,13 @@
 //! Cogwork's pictures of oil, liquid tubes, tanks, the pumps, the oil engine, the liquid bars on
-//! the screens, rubble and the hand machines that work it, and the Timber Quarry, its bits, the
-//! water wheel and the wooden axle, drawn here pixel by pixel so they can be changed and drawn
-//! again: `WRITE_ASSETS=1 cargo test --release art` writes them (`generated`). Each family is a file of its own; the colors they share are below.
+//! the screens, rubble and the hand and driven machines that work it, and the Timber Quarry, its
+//! bits, the water wheel and the wooden axle, drawn here pixel by pixel so they can be changed
+//! and drawn again: `WRITE_ASSETS=1 cargo test --release art` writes them (`generated`). Each
+//! family is a file of its own; the colors they share are below.
 //!
 //! The pictures are small and few-colored like the rest of the mod's: a grid of letters with a
 //! key for anything drawn by hand, and `noise` for a surface of one material.
 
+mod driven;
 mod gui;
 mod liquids;
 mod oil_engine;
@@ -200,6 +202,11 @@ pub struct Unwrap {
 }
 
 impl Unwrap {
+    /// The box of `size` (width, height, depth) whose unwrap starts at `at` in the texture.
+    pub const fn new(at: (usize, usize), size: (usize, usize, usize)) -> Unwrap {
+        Unwrap { at, size }
+    }
+
     /// Paints every face of the box with `color` of where a pixel is.
     pub fn paint(self, picture: &mut Picture, color: impl Fn(usize, usize) -> Rgba) {
         let ((u, v), (w, h, d)) = (self.at, self.size);
@@ -268,6 +275,7 @@ fn the_pictures_are_what_is_drawn_here() {
         .chain(timber::all())
         .chain(oil_engine::all())
         .chain(processing::all())
+        .chain(driven::all())
         .chain(quarry::all())
         .chain(wheel::all())
         .chain(gui::all());

@@ -1,0 +1,20 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.shaker_screen_tray.shake": {
+			"loop": true,
+			"animation_length": 0.3,
+			"bones": {
+				"tray": {
+					"position": {
+						"0.0": [0, 0, 0],
+						"0.075": [0, 0.5, -1],
+						"0.15": [0, 0, 0],
+						"0.225": [0, 0, 1],
+						"0.3": [0, 0, 0]
+					}
+				}
+			}
+		}
+	}
+}

@@ -1,9 +1,10 @@
 //! What quarries bring up and the hand machines work: Rubble, broken stone that falls like gravel
 //! and sifts into sand, gravel and now and then something better (`sifting`); and Ore Rubble, an
-//! item of one metal (`metal`) at one grade (`grade`), which grinds into that metal's raw ore.
-//! Quarries bring up both (`quarry`); every Ore Rubble starts Poor.
+//! item of one metal (`metal`) at one grade (`grade`), which grinds into that metal's raw ore
+//! (`grinding`). Quarries bring up both (`quarry`); every Ore Rubble starts Poor.
 
 mod grade;
+pub mod grinding;
 mod metal;
 mod quarry;
 pub mod sifting;
