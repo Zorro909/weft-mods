@@ -1,0 +1,11 @@
+# The hand machines that work what quarries bring up.
+
+[[shaped]]
+result = "millstone"
+pattern = [" s ", "SSS", "PPP"]
+key = { s = "#stick", S = "#smooth_stone", P = "#planks" }
+
+[[shaped]]
+result = "sieve"
+pattern = ["PtP", "PtP", "s s"]
+key = { P = "#planks", t = "base:string", s = "#stick" }

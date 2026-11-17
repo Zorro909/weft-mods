@@ -58,14 +58,16 @@ mod tests {
     #[test]
     fn every_item_and_block_with_a_name_can_be_crafted() {
         // The gantry frame and the pump's hose are put up by machines and have no item; oil
-        // comes in buckets, and the ground of a seep is found.
-        const NOT_CRAFTED: [&str; 6] = [
+        // comes in buckets, the ground of a seep is found, and quarries bring up rubble.
+        const NOT_CRAFTED: [&str; 8] = [
             "gantry_frame",
             "pump_hose",
             "oil",
             "oil_bucket",
             "oily_dirt",
             "oil_sand",
+            "rubble",
+            "ore_rubble",
         ];
         let lang = include_str!("../assets/lang/en_us.lang");
         let named = lang.lines().filter_map(|line| {
