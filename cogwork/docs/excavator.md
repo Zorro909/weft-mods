@@ -75,8 +75,10 @@ It puts as much more into a block each tick as the block costs more, so with eno
 block takes as long at any depth: depth costs energy, not time.
 
 The drill also pays 80 energy per block it travels, at any depth. What a block drops is what a
-diamond pickaxe would get, and goes into the excavator's 3 by 3 output. Each tick the excavator hands a stack from its
-output to a tube, chest or machine beside it.
+diamond pickaxe would get, except that stone comes up as Rubble and metal ore as Poor Ore
+Rubble, two for each ore block, and other ores bring up twice their drops; see
+[rubble and ore grades](processing.md). It goes into the excavator's 3 by 3 output. Each tick
+the excavator hands a stack from its output to a tube, chest or machine beside it.
 
 ## Energy
 

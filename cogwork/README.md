@@ -50,6 +50,14 @@ turning.
   area flat.
 - **Survey markers** mark out the area the excavator or leveler works.
 
+### Rubble and ore
+
+The excavator brings stone up as Rubble and ore as Ore Rubble, two for each ore block, of any
+mod's metal. Ore Rubble comes in grades, Poor to Pure; every quarry brings it up Poor, and the
+richer the grade, the more raw ore it grinds into. The millstone grinds it into raw ore by hand,
+with water and sand, its runner turning with each turn of its handle; the sieve sifts Rubble
+into sand and gravel and, now and then, something better.
+
 ### Keeping the world loaded
 
 The cuboid loader keeps its own cube of the world running with nobody near, the ultra cuboid
@@ -86,6 +94,7 @@ Every block and item in detail, with recipes and numbers, is in [`docs/`](docs/R
 - [Oil and the pump](docs/oil.md)
 - [Liquid tubes and tanks](docs/liquids.md)
 - [Oil engine](docs/oil-engine.md)
+- [Rubble, ore grades, the millstone and the sieve](docs/processing.md)
 - [Working with other mods](docs/other-mods.md)
 
 What changed in each version is in the [changelog](CHANGELOG.md).
@@ -129,7 +138,10 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `fill.rs` | The liquid shown standing in a liquid tube or tank, for every liquid of any mod |
 | `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar and the meter of what went through it last tick |
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |
-| `harvest.rs` | Breaking a block by machine into its output |
+| `harvest.rs` | Breaking a block by machine into its output, as it drops or as a quarry brings it up |
+| `rubble/` | Rubble and Ore Rubble: grades (`grade.rs`), metals of any mod (`metal.rs`), what a quarry brings up (`quarry.rs`) and what sifting gives (`sifting.rs`) |
+| `millstone/`, `sieve.rs` | The hand machines: the millstone's grinding (`grind.rs`) and its runner (`runner.rs`); the sieve and its tray |
+| `chance.rs` | Fractions of an item as chances of one more |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
 | `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
@@ -143,10 +155,12 @@ Unit tests sit at the end of the files whose logic they check; `tools/check-mods
 run from the repository root, runs them.
 
 Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. Entities (the
-excavator's rig, the engines' pistons, the timber liquid tube's wheel, the oil engine's rig) are
+excavator's rig, the engines' pistons, the timber liquid tube's wheel, the oil engine's rig, the
+millstone's runner and the sieve's tray) are
 "Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
 are "Java Block/Item" models in `block/`: the survey marker, the engine, the pump and its hose,
-the oil engine's controller. A formed oil engine's casing joins into one panel a face by
+the oil engine's controller, the millstone's bed and the sieve's frame, with and without Rubble
+on it; `item/` has the millstone and the sieve whole. A formed oil engine's casing joins into one panel a face by
 connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
 skirt at the bottom, and one for its top and bottom. Its intakes and drives show that panel with
 their port drawn on top as a layer, so the face stays one.
@@ -161,8 +175,9 @@ for each side, shown in Blockbench with the sorting tube's colors. The tank's sh
 of joined sides is built in `src/tank/shape.rs`, and the liquid standing in a liquid tube or tank
 in `fill.rs`, in the colors of whatever liquid it is.
 
-The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks, the pump and the
-oil engine are drawn pixel by pixel in `src/art/`.
+The textures of oil, liquid tubes, the timber liquid tube and its wheel, tanks, the pump, the
+oil engine, Rubble and Ore Rubble, the millstone's runner and the sieve's tray and mesh are
+drawn pixel by pixel in `src/art/`.
 Change them there, then run `WRITE_ASSETS=1 cargo test --release art` in `cogwork/`. Without the
 variable the same test fails when a file differs from what it would draw, so a texture changed
 by hand has to be changed there too.

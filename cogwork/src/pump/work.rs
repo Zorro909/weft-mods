@@ -7,7 +7,7 @@ use weft_sdk::{Dir, Output, SystemBatch, World};
 
 use super::drain::survey;
 use super::{CAPACITY, PUMP, PUMP_HOSE, Pump, Stage, Status};
-use crate::harvest::{Harvest, cost, harvest};
+use crate::harvest::{Harvest, Keep, cost, harvest};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid::{self, BUCKET, HELD};
 use crate::machine::{self, Payment};
@@ -117,7 +117,7 @@ fn lower(world: &World, id: u64, pump: &mut Pump, next: Pos, may_break: bool) {
 
 /// Breaks `block` at `next` into the pump's output; false when it couldn't.
 fn bore_through(world: &World, id: u64, pump: &mut Pump, next: Pos, block: BlockState) -> bool {
-    match harvest(world, id, next, block) {
+    match harvest(world, id, next, block, Keep::Clean) {
         Harvest::Done => true,
         Harvest::Full => {
             // Paid for already: it stays paid until there is room.

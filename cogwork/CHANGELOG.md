@@ -7,6 +7,19 @@
 - Every machine's screen shows what it used in the last tick, "Using 120 energy a tick", and how
   far short of what it wanted its supply fell, "short 30": the excavator, the leveler, the
   assembly bench and the pump. The oil engine's screen shows what it sends into its drives.
+- Rubble and Ore Rubble. Ore Rubble is of one metal, any mod's (an ore tagged `ores/<metal>`
+  with a raw ore tagged `raw_ores/<metal>`), at a grade from Poor to Pure; its tooltip and
+  flecks show which.
+- The millstone grinds Ore Rubble into raw ore by hand, with water and sand: six turns of its
+  runner an Ore Rubble, one raw ore of Poor up to 2.5 of Pure.
+- The sieve sifts Rubble by hand into sand, gravel, flint and clay, and rarely coal, redstone,
+  diamond or Poor iron or gold Ore Rubble.
+
+### Changed
+
+- The excavator brings stone up as Rubble and metal ore as Poor Ore Rubble, two for each ore
+  block; coal, diamond and redstone ore bring up twice their drops. The leveler and the pump
+  keep the drops as they are.
 
 ## 0.4.1 - 2026-11-15
 
