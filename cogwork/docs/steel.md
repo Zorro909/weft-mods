@@ -95,9 +95,14 @@ without a break.
 | Energy | 80 a tick, through its driven bellows |
 
 The ingot and the coke stay in their slots until the bloom and slag fit in the output. Without a
-draft it waits and keeps the heat it has, so a pause loses nothing; two bellows blow it no
-faster than one. Time its area missed counts only where the bellows paid for it: a bellows
-holds five ticks' worth at 80, so after a longer gap it winds up again and the furnace waits.
+draft it waits and keeps the heat it has, so a pause loses nothing.
+
+Every tick a bellows is paid its 80 gives one tick of draft, and the furnace smelts only the
+ticks of draft it gets. So two bellows blow it no faster than one, and a bellows against a wall
+two furnaces share works only one of them. Time its area missed counts only as far as a bellows
+paid for it: a bellows keeps at most four ticks of draft for the furnace to take, and its store
+holds five ticks' worth at 80, so after a longer gap the furnace has lost that time and the
+bellows winds up again.
 
 Iron ingots go into its iron slot and coke into its coke slot, by tube or by hand; blooms and
 slag leave by the front of the tap hole. While it smelts, the tap hole glows, sparks fly out of
@@ -106,7 +111,7 @@ its open top, and it roars.
 | Status | Means |
 |---|---|
 | Waiting for an iron ingot and a coke | |
-| No draft | no driven bellows blows into its bottom layer, or it isn't fed 80 a tick |
+| No draft | no driven bellows blows into its bottom layer, it isn't fed 80 a tick, or another furnace takes its draft |
 | Smelting | |
 | Output full | connect a tube or a chest at its front |
 

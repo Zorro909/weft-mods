@@ -1,6 +1,6 @@
 //! Every blast furnace's tick, at its controller: check the box behind it, hand on its blooms
-//! and slag by its front, smelt for the ticks the call stands for while a driven bellows blows
-//! into its bottom layer (`smelt`), then show it: the tap hole glowing, sparks out of its top and
+//! and slag by its front, smelt for as many of the ticks the call stands for as the driven
+//! bellows blowing into its bottom layer give it draft for (`smelt`), then show it: the tap hole glowing, sparks out of its top and
 //! a roar while it smelts.
 
 use weft_sdk::{Output, StackData, SystemBatch, Vec3, World};
@@ -33,7 +33,7 @@ pub fn tick(batch: &mut SystemBatch<Blast>) {
         match brickwork::check(pos, front, &SHAPE, |at| part_at(&world, at), is_air) {
             Ok(layout) => {
                 crate::store::eject_toward(&world, pos, &[front]);
-                let status = smelt(&world, id, blast, ticks, blown(&world, &layout));
+                let status = smelt(&world, id, blast, ticks, &layout);
                 blast.set_status(status);
             }
             Err(problem) => blast.set_unbuilt(problem),
@@ -42,19 +42,23 @@ pub fn tick(batch: &mut SystemBatch<Blast>) {
     }
 }
 
-/// Whether a driven bellows blows into a block of the bottom layer of `layout`.
-fn blown(world: &World, layout: &Layout) -> bool {
-    layout
-        .bottom()
-        .any(|pos| crate::bellows::driven_into(world, pos))
+/// Takes up to `wanted` ticks of draft from the driven bellows blowing into the bottom layer of
+/// `layout`; the ticks taken.
+fn take_draft(world: &World, layout: &Layout, wanted: u32) -> u32 {
+    let mut taken = 0;
+    for pos in layout.bottom() {
+        taken += crate::bellows::take_draft(world, pos, wanted - taken);
+    }
+    taken
 }
 
-/// Smelts the iron and coke of the blast furnace `id` for `ticks`.
-fn smelt(world: &World, id: u64, blast: &mut Blast, ticks: u32, blown: bool) -> Status {
+/// Smelts the iron and coke of the blast furnace `id`, built as `layout`, for up to `ticks`.
+fn smelt(world: &World, id: u64, blast: &mut Blast, ticks: u32, layout: &Layout) -> Status {
     let inventory = world.inventory(id);
     let (input, fuel) = (inventory.group("input"), inventory.group("fuel"));
     let charges = input.get(0).count.min(fuel.get(0).count);
-    blast.smelt(ticks, blown, charges, || {
+    let draft = |wanted| take_draft(world, layout, wanted);
+    blast.smelt(ticks, charges, draft, || {
         let made = [STEEL_BLOOM.stack(1), SLAG.stack(1)];
         if !crate::store::insert_all(inventory.group("output"), &made) {
             return false;

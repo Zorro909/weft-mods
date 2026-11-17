@@ -3,14 +3,14 @@
 //! entity looping the clip `pump`); after a second of feeding without a break it blows into the
 //! block its nozzle points at, and a furnace there cooks twice as fast. A feed short of its draw
 //! never gets that far, so half the energy can't buy most of the speed. Blowing into a blast
-//! furnace, it works four times as hard: 80 a tick.
+//! furnace, it works four times as hard: 80 a tick, and each tick it blows there is a tick of
+//! draft it keeps until the furnace uses it (`bellows::take_draft`), a few at most.
 //!
-//! It runs whether or not something is there to blow into: `bellows::driven_into` is what a
-//! furnace that needs a draft asks.
+//! It runs whether or not something is there to blow into.
 //!
 //! Time its area missed (unloaded, or the world's time jumped) is paid for at its draw like any
-//! other; short of that it stops and winds up again. A furnace catching up on that time before
-//! the bellows has paid for it gets no draft: the bellows blows only on a tick it was fed.
+//! other; short of that it stops and winds up again. A furnace catching up on time the bellows
+//! hasn't paid for gets no draft for it.
 
 use strum::{IntoStaticStr, VariantArray};
 use weft_sdk::{
@@ -19,7 +19,7 @@ use weft_sdk::{
 };
 
 use super::DRIVEN_BELLOWS;
-use crate::lib::{BlockState, Pos, TypedWorld};
+use crate::lib::{Pos, TypedWorld};
 use crate::machine;
 
 static BAG: EntityKind = EntityKind::named("driven_bellows_bag");
@@ -30,6 +30,9 @@ const DRAW: i64 = 20;
 pub const BLAST_DRAW: i64 = 80;
 /// Ticks in a row it must be fed before it blows: a second to get the fire going.
 const WIND_UP: u32 = 20;
+/// The most ticks of draft it keeps for a blast furnace: enough for the two to tick in either
+/// order, too few to save energy up for later.
+const DRAFT_KEPT: u32 = 4;
 /// The most energy it takes from engines a tick, and the most it stores.
 const MAX_IN: i64 = 100;
 const STORES: i64 = 400;
@@ -45,14 +48,16 @@ const STROKE_PUFFS: u32 = 2;
 
 value! {
     /// A driven bellows' state: its `bag` (an entity), the game time the bag's clip started
-    /// (`stroke_from`), the ticks in a row it has been `fed`, counted up to `WIND_UP`, and the
-    /// game time it was last fed (`fed_at`).
+    /// (`stroke_from`), the ticks in a row it has been `fed`, counted up to `WIND_UP`, the game
+    /// time it was last fed (`fed_at`), and the ticks of draft it blew into a blast furnace that
+    /// the furnace hasn't used yet (`kept`).
     #[derive(Default)]
     pub struct Draft {
         pub bag: u64,
         pub stroke_from: u64,
         pub fed: u32,
         pub fed_at: u64,
+        pub kept: u32,
     }
 }
 static DRAFT: Component<Draft> = Component::named("cogwork:draft");
@@ -69,15 +74,31 @@ enum Status {
 }
 
 impl Draft {
-    /// Counts `ticks` ticks at game time `now`, of which it was fed for `paid`: on when it was
-    /// fed for all of them, started over otherwise.
-    fn count_ticks(&mut self, ticks: u32, paid: u32, now: u64) {
+    /// Counts `ticks` ticks at game time `now`, the first `paid` of them fed: on when it was
+    /// fed for all of them, started over otherwise. The ticks of them it blew, wound up and fed.
+    fn count_ticks(&mut self, ticks: u32, paid: u32, now: u64) -> u32 {
+        // The tick that winds it up blows already.
+        let wound_up_after = WIND_UP.saturating_sub(self.fed + 1);
+        let blown = paid.saturating_sub(wound_up_after);
         if paid < ticks {
             self.fed = 0;
-            return;
+            return blown;
         }
         self.fed = self.fed.saturating_add(ticks).min(WIND_UP);
         self.fed_at = now;
+        blown
+    }
+
+    /// Keeps `blown` ticks of draft for a blast furnace, up to `DRAFT_KEPT`.
+    fn keep(&mut self, blown: u32) {
+        self.kept = self.kept.saturating_add(blown).min(DRAFT_KEPT);
+    }
+
+    /// Hands over up to `wanted` ticks of the draft it keeps; the ticks handed over.
+    fn take(&mut self, wanted: u32) -> u32 {
+        let taken = wanted.min(self.kept);
+        self.kept -= taken;
+        taken
     }
 
     /// Whether it blows at game time `now`: wound up, and fed this tick or the one before, as
@@ -133,6 +154,14 @@ pub fn blowing(world: &World, id: u64) -> bool {
         .is_some_and(|draft| draft.blows_at(world.game_time()))
 }
 
+/// Takes up to `wanted` ticks of the draft the driven bellows `id` keeps for a blast furnace;
+/// the ticks taken, each used once.
+pub fn take(world: &World, id: u64, wanted: u32) -> u32 {
+    world
+        .component_mut(id, &DRAFT)
+        .map_or(0, |draft| draft.take(wanted))
+}
+
 /// Every driven bellows: fed this tick or not, and its bag pumping while it is.
 fn tick(batch: &mut SystemBatch<Draft>) {
     let world = batch.world();
@@ -145,16 +174,20 @@ fn tick(batch: &mut SystemBatch<Draft>) {
             continue;
         }
         machine::start_meter(&world, id);
-        let paid = feed(&world, id, pos, ticks);
-        draft.count_ticks(ticks, paid, world.game_time());
+        let into_blast =
+            crate::blast_furnace::is_part(world.block_typed(super::target(&world, pos)));
+        let paid = feed(&world, id, draw(into_blast), ticks);
+        let blown = draft.count_ticks(ticks, paid, world.game_time());
+        if into_blast {
+            draft.keep(blown);
+        }
         show(&world, id, pos, draft);
     }
 }
 
-/// Takes the energy of `ticks` ticks from the store of the driven bellows `id` at `pos`, a
-/// whole tick's or none of it each; the ticks it was paid for.
-fn feed(world: &World, id: u64, pos: Pos, ticks: u32) -> u32 {
-    let draw = draw(world.block_typed(super::target(world, pos)));
+/// Takes `ticks` ticks of `draw` from the store of the driven bellows `id`, a whole tick's or
+/// none of it each; the ticks it was paid for.
+fn feed(world: &World, id: u64, draw: i64, ticks: u32) -> u32 {
     let paid = world.component_mut(id, &ENERGY).map_or(0, |energy| {
         let paid = ticks_paid(energy.stored, ticks, draw);
         energy.stored -= draw * i64::from(paid);
@@ -164,13 +197,9 @@ fn feed(world: &World, id: u64, pos: Pos, ticks: u32) -> u32 {
     paid
 }
 
-/// The energy a tick it takes blowing into `target`.
-fn draw(target: BlockState) -> i64 {
-    if crate::blast_furnace::is_part(target) {
-        BLAST_DRAW
-    } else {
-        DRAW
-    }
+/// The energy a tick it takes, blowing into a blast furnace or not.
+fn draw(into_blast: bool) -> i64 {
+    if into_blast { BLAST_DRAW } else { DRAW }
 }
 
 /// The ticks, of `ticks`, that `stored` energy pays for at `draw` a tick.
@@ -232,6 +261,7 @@ fn screen(ui: &mut Ui) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::blast_furnace::{Blast, SMELT_TICKS};
 
     /// The status after `ticks` ticks, fed on those `fed` says.
     fn after(ticks: u32, fed: impl Fn(u32) -> bool) -> Status {
@@ -247,6 +277,28 @@ mod tests {
         let mut draft = Draft::default();
         draft.count_ticks(WIND_UP, WIND_UP, now);
         draft
+    }
+
+    /// A tick of a bellows blowing into a blast furnace, `paid` of its `ticks` fed.
+    fn blow(draft: &mut Draft, ticks: u32, paid: u32, now: u64) {
+        let blown = draft.count_ticks(ticks, paid, now);
+        draft.keep(blown);
+    }
+
+    /// A blast furnace's call for `ticks`, with iron and coke for five blooms, taking its draft
+    /// from `draft`.
+    fn smelt(blast: &mut Blast, draft: &mut Draft, ticks: u32) -> u32 {
+        let mut blooms = 0;
+        blast.smelt(
+            ticks,
+            5,
+            |wanted| draft.take(wanted),
+            || {
+                blooms += 1;
+                true
+            },
+        );
+        blooms
     }
 
     #[test]
@@ -305,6 +357,73 @@ mod tests {
     }
 
     #[test]
+    fn it_blows_from_the_tick_it_is_wound_up() {
+        let mut draft = Draft::default();
+        assert_eq!(
+            draft.count_ticks(WIND_UP - 1, WIND_UP - 1, 19),
+            0,
+            "winding up"
+        );
+        assert_eq!(draft.count_ticks(1, 1, 20), 1, "wound up");
+        assert_eq!(draft.count_ticks(60, 60, 80), 60, "every tick paid");
+        assert_eq!(draft.count_ticks(60, 5, 140), 5, "only those paid");
+    }
+
+    #[test]
+    fn a_furnace_catching_up_gets_only_the_draft_kept_for_it() {
+        let mut draft = blowing_at(100);
+        let mut blast = Blast::default();
+        for now in 101..1_301 {
+            blow(&mut draft, 1, 1, now);
+        }
+        // Its area was away 1,200 ticks; the engine hands them over in calls of 60.
+        let blooms: u32 = (0..20).map(|_| smelt(&mut blast, &mut draft, 60)).sum();
+        assert_eq!(blooms, 0, "no bloom for draft it didn't get");
+        assert_eq!(blast.heat, DRAFT_KEPT, "the few ticks kept");
+    }
+
+    #[test]
+    fn repeated_calls_at_one_game_time_use_each_tick_of_draft_once() {
+        let mut draft = blowing_at(100);
+        blow(&mut draft, 1, 1, 101);
+        let mut blast = Blast::default();
+        for _ in 0..20 {
+            smelt(&mut blast, &mut draft, 60);
+        }
+        assert_eq!(blast.heat, 1, "the one tick it blew, not 1,200");
+    }
+
+    #[test]
+    fn a_bellows_catching_up_keeps_only_a_few_ticks() {
+        let mut draft = blowing_at(100);
+        let mut blast = Blast::default();
+        let paid = ticks_paid(STORES, 1_200, BLAST_DRAW);
+        blow(&mut draft, 1_200, paid, 1_300);
+        let blooms: u32 = (0..1_200).map(|_| smelt(&mut blast, &mut draft, 1)).sum();
+        assert_eq!(
+            blooms, 0,
+            "the furnace ticked on while the bellows was away"
+        );
+        assert_eq!(
+            blast.heat, DRAFT_KEPT,
+            "paid ticks, but no more than it keeps"
+        );
+    }
+
+    #[test]
+    fn one_bellows_works_one_furnace() {
+        let mut draft = blowing_at(0);
+        let (mut first, mut second) = (Blast::default(), Blast::default());
+        let mut blooms = 0;
+        for now in 1..=2 * u64::from(SMELT_TICKS) {
+            blow(&mut draft, 1, 1, now);
+            blooms += smelt(&mut first, &mut draft, 1) + smelt(&mut second, &mut draft, 1);
+        }
+        assert_eq!(blooms, 2, "two blooms in 800 ticks of draft, not four");
+        assert_eq!(first.heat + second.heat, 0, "every tick of draft used once");
+    }
+
+    #[test]
     fn an_empty_store_pays_for_nothing() {
         assert_eq!(ticks_paid(0, 1, DRAW), 0);
         assert_eq!(ticks_paid(DRAW - 1, 1, DRAW), 0);
@@ -332,6 +451,7 @@ mod tests {
         assert_eq!(offset_of!(Draft, stroke_from), 8, "when its clip started");
         assert_eq!(offset_of!(Draft, fed), 16, "the ticks it was fed");
         assert_eq!(offset_of!(Draft, fed_at), 24, "when it was last fed");
+        assert_eq!(offset_of!(Draft, kept), 32, "the draft it keeps");
     }
 
     #[test]
