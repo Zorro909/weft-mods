@@ -7,7 +7,8 @@
 //! model (`arms`), and give back what they were built of when broken.
 //!
 //! `gantry_frame` is the plain lattice the Gantry built with energy alone before composite
-//! panels: it stays in worlds that have it, holds up the frames already built and drops nothing.
+//! panels: it stays in worlds that have it, holds up the frames already built, alone or finished
+//! with composite blocks, and drops nothing, since no panel was ever paid for it.
 
 use std::sync::LazyLock;
 

@@ -3,12 +3,13 @@
 
 use weft_sdk::{Output, SystemBatch, World};
 
+use super::bit::{self, Bit};
 use super::depth::{Floor, lowest_y};
 use super::framing::build_frame;
 use super::kind::{Drill, Kind};
 use super::mine::{Mined, block_cost, drill_to, mine_block, progress_point, sweep, wear_down};
 use super::power::{fit_store, hold};
-use super::{Dig, Frame, Stage, Status, bit, rig};
+use super::{Dig, Frame, Stage, Status, rig};
 use crate::lib::{Pos, TypedWorld};
 use crate::sounds;
 
@@ -29,7 +30,7 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
         };
         crate::machine::start_meter(&world, id);
         let floor = kind.floor(&dig.frame, Floor::now(), lowest_y());
-        let drill = kind.drill(bit::fitted(&world, id));
+        let drill = kind.drill(usable_bit(&world, pos, id));
         let lubed = super::lube::has(&world, id);
         let quarry = Quarry {
             id,
@@ -42,6 +43,16 @@ pub fn tick(batch: &mut SystemBatch<Dig>) {
         rig::update(&world, id, dig, kind.rig, drill);
         crate::machine::show_working(&world, pos, dig.status().is_working());
     }
+}
+
+/// The bit the quarry `id` at `pos` digs with: the fitted one, unless a Bit Magazine holds it
+/// back for a swap.
+fn usable_bit(world: &World, pos: Pos, id: u64) -> Option<&'static Bit> {
+    let fitted = bit::fitted(world, id);
+    if crate::bit_magazine::holds_back(world, pos, fitted) {
+        return None;
+    }
+    bit::of(fitted)
 }
 
 /// The quarry a tick works on: its block entity, where it stands, its kind, and whether it
@@ -113,7 +124,7 @@ fn mine_next(world: &World, quarry: Quarry, dig: &mut Dig, drill: Drill, floor: 
     }
     match mine_block(world, quarry, dig, target, block_state, drill.draw) {
         Mined::Done => {
-            wear_down(world, quarry, dig);
+            wear_down(world, quarry, dig, drill);
             world.play_sound(kind.dig_sound, target.center(), 1.0);
             dig.set_head(sweep(&dig.frame, target, 1.0));
             dig.cursor = dig.frame.next(target);

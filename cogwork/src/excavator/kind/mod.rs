@@ -25,6 +25,9 @@ pub struct Kind {
     /// that has them.
     pub menu: &'static Menu,
     pub frame: &'static Block,
+    /// The block its frames were of before `frame`: never put up again, but taken for its own
+    /// where a frame of it, or of both, still stands.
+    pub old_frame: Option<&'static Block>,
     /// What each batch of frame blocks takes from the `materials` group, beside its energy.
     pub frame_cost: &'static [Cost],
     /// The frame blocks one `frame_cost` pays for. It is taken as the first of them goes up,
@@ -107,13 +110,17 @@ impl Kind {
         KINDS.into_iter().find(|kind| block_state.is(kind.block))
     }
 
-    /// Whether `block_state` is a quarry or a frame of any kind, which no quarry mines: the
-    /// Gantry's old lattice too, which holds up frames built before composite panels.
+    /// Whether `block_state` is a quarry or a frame of any kind, old frames too, which no quarry
+    /// mines.
     pub fn is_part(block_state: BlockState) -> bool {
-        block_state.is(&super::GANTRY_FRAME)
-            || KINDS
-                .iter()
-                .any(|kind| block_state.is(kind.block) || block_state.is(kind.frame))
+        KINDS.iter().any(|kind| {
+            block_state.is(kind.block) || kind.frame_blocks().any(|frame| block_state.is(frame))
+        })
+    }
+
+    /// The blocks a frame of its own may be of: `frame`, then `old_frame`.
+    pub fn frame_blocks(&self) -> impl Iterator<Item = &'static Block> {
+        std::iter::once(self.frame).chain(self.old_frame)
     }
 
     /// The standby energy a tick to hold up `frame`.

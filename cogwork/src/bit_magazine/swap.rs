@@ -7,6 +7,12 @@ use super::Status;
 /// wears it away to nothing and the worn bit comes back to the player.
 pub const SWAP_AT: u32 = 1;
 
+/// Whether a fitted bit with `left` uses waits for the magazine to take it out, unused by the
+/// quarry: its last use, kept while the worn-bit slots are full or no fresh bit is there.
+pub fn held(left: u32) -> bool {
+    left <= SWAP_AT
+}
+
 /// A bit as the magazine sees it: whether the quarry beside it takes it, and its uses left.
 #[derive(Clone, Copy, Debug)]
 pub struct Seen {
@@ -17,7 +23,7 @@ pub struct Seen {
 impl Seen {
     /// Whether the quarry can dig on with it.
     fn serves(self) -> bool {
-        self.fits && self.left > SWAP_AT
+        self.fits && !held(self.left)
     }
 }
 
@@ -100,6 +106,29 @@ mod tests {
     #[test]
     fn a_worn_bit_waits_for_room_in_the_output() {
         assert_eq!(plan(Some(WORN), &[Some(GOOD)], false), (Status::Full, None));
+    }
+
+    #[test]
+    fn a_bit_held_for_a_full_output_keeps_its_last_use() {
+        let mut left = SWAP_AT + 2;
+        for _ in 0..10 {
+            let fitted = Seen { left, ..GOOD };
+            let (status, swap) = plan(Some(fitted), &[Some(GOOD)], false);
+            assert_eq!(swap, None, "no room, no swap");
+            // The quarry mines a block a tick with its bit, unless the magazine holds it back.
+            if !held(left) {
+                left -= 1;
+            } else {
+                assert_eq!(status, Status::Full, "and says why");
+            }
+        }
+        assert_eq!(left, SWAP_AT, "never worn away to nothing");
+        let fitted = Seen { left, ..GOOD };
+        assert_eq!(
+            plan(Some(fitted), &[Some(GOOD)], true).1,
+            Some(Swap::Replace(0)),
+            "swapped once there is room"
+        );
     }
 
     #[test]
