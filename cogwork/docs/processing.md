@@ -1,9 +1,12 @@
-# Rubble, ore grades, the millstone and the sieve
+# Rubble, ore grades, sifting and grinding
 
 A [quarry](excavator.md) doesn't bring stone and ore up clean: stone comes up as Rubble,
 and ore as Ore Rubble. The quarry sets how much comes up; working it by hand or by machine
 sets what it is worth. Two hand machines start the work: the sieve sifts Rubble, and the
-millstone grinds Ore Rubble into raw ore.
+millstone grinds Ore Rubble into raw ore. Their driven counterparts, the
+[shaker screen](#shaker-screen) and the [grinding mill](#grinding-mill), do the same work with
+engine energy and tubes, by the same table and the same yields. Neither replaces the other: the
+hand machines need no power, and the millstone never takes a tube.
 
 ## Rubble
 
@@ -12,7 +15,8 @@ like any other block. A quarry brings up Rubble for every block that drops stone
 (anything tagged `stone` or `cobblestone`, any mod's). Dirt, gravel and sand come up as they
 drop.
 
-Sifting one Rubble rolls each of these on its own, so it may give several or nothing:
+Sifting one Rubble, on a sieve or a shaker screen, rolls each of these on its own, so it may
+give several or nothing:
 
 | Find | Chance |
 |---|---|
@@ -49,6 +53,8 @@ A fraction of an amount is a chance of one more. The [leveler](leveler.md) and t
 Every quarry's Ore Rubble comes up **Poor**. Processing raises the grade a step at a time, and
 grinding a richer grade gives more raw ore: a bigger quarry brings up more, and better
 processing makes each worth more.
+
+Grinding gives the same in the millstone and the grinding mill:
 
 | Grade | Raw ore when ground |
 |---|---|
@@ -102,7 +108,74 @@ shake it four times with an empty hand; the fourth shake sifts it, and what it s
 out on top. Rubble already on the mesh has to be sifted before the next goes on. Broken, by hand or by a
 machine, it keeps the Rubble on its mesh in its item.
 
-## Its sounds
+## Shaker Screen
+
+```
+iSi       i = #ingots/iron
+c c       S = sieve
+PPP       c = #cogs/stone, P = #planks
+```
+
+The sieve, driven: a frame of oak posts over a catch pan of sand, with an iron mesh tray on top
+that shakes back and forth while it works. It sifts Rubble by the table above.
+
+- **Rubble in.** Tubes put Rubble, and nothing else, into its three input slots; so can you.
+- **Energy.** It sifts one Rubble with 800 energy, put in at up to 20 a tick: two seconds a
+  Rubble at full speed. A spring engine or a water wheel can run it, slower.
+- **Out by its front.** Its front is the side with the chute, the side that faced you when you
+  placed it. What it sifts out goes into its nine output slots, and from there into a tube or a
+  machine at its front, and nowhere else: so the tube that brings the Rubble doesn't also take
+  the sand back. A [timber tube](tubes.md#timber-extraction-tube) on any side can pull the
+  output out too.
+- A Rubble stays in its input until it is sifted, so breaking the screen loses nothing but the
+  energy put in. When what a Rubble sifts into has no room in the output, it waits, "Output
+  full", until there is.
+
+Its screen shows the energy bar, the [energy readout](power.md#energy-readouts), what it is doing
+(waiting for Rubble, sifting, short of energy, output full), its output and its input.
+
+## Grinding Mill
+
+```
+LcL       L = #logs, c = #cogs/stone
+iMi       i = #ingots/iron, M = millstone
+SSS       S = #smooth_stone
+```
+
+The millstone, driven: a granite runner on a bed stone in a low wooden vat, under an open timber
+frame. Its iron spindle rises to the top, where a shaft from above can meet it, and the runner
+turns while it grinds. It grinds Ore Rubble into raw ore with the millstone's yields.
+
+- **Ore Rubble and sand in.** Tubes put Ore Rubble into its three input slots, and sand
+  (anything tagged `sand`) into its sand slot; nothing else goes in. A sand lasts 4 grinds, as
+  in the millstone. Stacks of different metals or grades wait side by side and are ground in
+  turn.
+- **Water in.** It holds 1,000 mB of water, filled by [liquid tube](liquids.md) or from a
+  tank or pump touching it, and a grind takes 125. It takes only water, and hands none on.
+  Liquid flows by height: a tank on the same level fills the mill only while the tank is fuller
+  than the mill, so stand the tank a block higher, or use a pump.
+- **Energy.** A grind takes 800 energy, put in at up to 40 a tick: one Ore Rubble a second at
+  full speed. An ember engine runs it at full speed.
+- **Raw ore out by its front**, the side with the spout, the side that faced you when you placed
+  it, into a tube or a machine there; a timber tube can pull it out too. It grinds only when
+  its three output slots have room for the most that grind can give.
+- An Ore Rubble stays in its input until it is ground. Ore Rubble of a metal no loaded mod has a
+  raw ore of waits, "No mod has a raw ore of this metal"; take it out by hand.
+
+Its screen shows the energy bar, the energy readout, what it is doing or lacks (Ore Rubble,
+water, sand, energy, room), the water it holds, its raw ore, its Ore Rubble and its sand.
+
+## A processing line
+
+A quarry's output tube carries Rubble and Ore Rubble together. Lead it past a shaker screen and a
+grinding mill: tubes give each item to a machine that takes it, so Rubble goes to the screen and
+Ore Rubble to the mill. Run the screen's front into a second tube that reaches the mill and a
+chest: the mill takes the sand it needs, and the chest the gravel, flint and the rest. A chest at
+the mill's front gathers the raw ore. Keep the two tube lines apart, or the chest takes Rubble
+too.
+
+## Their sounds
 
 The runner grinds stone on stone with each turn, and the tray rattles its gravel with each
-shake.
+shake. The shaker screen rattles and thumps while it sifts, and the grinding mill rumbles while
+it grinds; both carry far.

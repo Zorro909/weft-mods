@@ -87,7 +87,8 @@ impl OilEngine {
 /// vapor, with a boom and a puff at each beat.
 pub fn show(world: &World, id: u64, cube: Cube, engine: &mut OilEngine, time: u64) {
     let top = cube.middle.center().offset(0.0, TOP_ABOVE_MIDDLE, 0.0);
-    engine.rig = crate::owned::place(world, id, engine.rig, &RIG, top, yaw(cube.front));
+    let yaw = crate::owned::yaw(cube.front);
+    engine.rig = crate::owned::place(world, id, engine.rig, &RIG, top, yaw);
     super::haze::show(world, engine);
     if !engine.is_stroking() {
         return;
@@ -120,17 +121,6 @@ pub fn remove(world: &World, engine: &mut OilEngine) {
     if engine.rig != 0 {
         world.despawn(engine.rig);
         engine.rig = 0;
-    }
-}
-
-/// The turn of a rig whose front faces `front`, in degrees: the model's front is its north, and
-/// a quarter turn takes it west.
-fn yaw(front: Dir) -> f32 {
-    match front {
-        Dir::West => 90.0,
-        Dir::South => 180.0,
-        Dir::East => -90.0,
-        _ => 0.0,
     }
 }
 

@@ -1,6 +1,6 @@
 //! What this mod's machines share: a block whose front lights up while it works, a store of
-//! energy put into a job a little every tick, and on their screens the energy bar and a meter of
-//! what went through it last tick.
+//! energy put into a job a little every tick, and on their screens the energy bar, a meter of
+//! what went through it last tick and the liquid it holds.
 
 use weft_sdk::{
     Arg, BlockBuilder, Component, Dir, ENERGY, Energy, Facings, Registry, S, Toward, Ui, World,
@@ -8,6 +8,7 @@ use weft_sdk::{
 };
 
 use crate::lib::{BlockState, Pos, TypedWorld};
+use crate::liquid::{HELD, Held};
 
 /// A machine's block, textured `<name>_front` (`<name>_front_on` while it works), `<name>_top`
 /// and `<name>_side`, also underneath. Its front faces the player who places it. Any tool breaks
@@ -176,6 +177,27 @@ pub fn meter_line(ui: &mut Ui) {
         let meter = view.menu_component(&METER).unwrap_or_default();
         let (key, args) = meter.readout();
         out.set(key, &args.map(Arg::Int));
+    });
+}
+
+/// The liquid held by the machine whose menu is open, in a store of `capacity`: a bar, and how
+/// much of which liquid.
+pub fn tank_bar(ui: &mut Ui, capacity: u32) {
+    ui.progress_bind("cogwork:tank", S::default().size(80.0, 8.0), move |view| {
+        let held = view.menu_component(&HELD).unwrap_or_default();
+        held.amount as f32 / capacity as f32
+    });
+    ui.text_bind(move |view, out| {
+        let held: Held = view.menu_component(&HELD).unwrap_or_default();
+        let amount = Arg::Int(held.amount as i64);
+        let most = Arg::Int(capacity as i64);
+        match crate::liquid::name(held.liquid).filter(|_| !held.is_empty()) {
+            Some(liquid) => {
+                let name = format!("item:{liquid}");
+                out.set("cogwork.liquid.held", &[amount, most, Arg::Name(&name)]);
+            }
+            None => out.set("cogwork.liquid.empty", &[most]),
+        }
     });
 }
 

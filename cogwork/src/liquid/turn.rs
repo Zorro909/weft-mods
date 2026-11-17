@@ -150,12 +150,12 @@ fn sleep(holders: &mut Holders, id: u64) {
 
 /// Hands from `from`, pushed by `pushed`, to `to` what evens out their heads; whether any went.
 /// A holder that pushes never takes: liquid run back into it would only be pushed out again. A
-/// driven timber liquid tube hands nothing to a tank: it pulls from there. An intake hands
-/// nothing on, and takes only what its engine burns.
+/// driven timber liquid tube hands nothing to a tank: it pulls from there. An intake or a
+/// grinding mill hands nothing on, and takes only what its machine uses.
 fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
     let (to, told) = (&*to.vessel, holders.get(to.id).head);
     let into_source = from.kind() == Kind::Driven && matches!(to, Vessel::Tank(_));
-    if to.kind().pushes() || into_source || from.kind() == Kind::Intake {
+    if to.kind().pushes() || into_source || from.kind().keeps() {
         return false;
     }
     let (giving, taking) = (from.held(holders), to.held(holders));
@@ -242,6 +242,24 @@ mod tests {
             tube(1, at(0)).admits(named("base:lava")),
             "a tube takes any liquid"
         );
+    }
+
+    #[test]
+    fn a_grinding_mill_takes_only_water_and_keeps_it() {
+        let mill = Vessel::One {
+            id: 1,
+            pos: at(0),
+            capacity: 1000,
+            kind: Kind::Mill,
+        };
+        let named = super::super::key_named;
+        assert!(mill.admits(named("base:water")), "water for its grinds");
+        assert!(!mill.admits(named("cogwork:oil")), "not oil");
+        assert!(
+            Kind::Mill.keeps() && Kind::Intake.keeps(),
+            "hands nothing on"
+        );
+        assert!(!Kind::Tube.keeps(), "a tube does");
     }
 
     #[test]
