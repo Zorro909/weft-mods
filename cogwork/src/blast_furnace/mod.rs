@@ -1,7 +1,8 @@
 //! The blast furnace: a box of fire bricks 3 by 3 and 4 high, hollow up its middle above the
 //! hearth, its controller in the middle of the bottom of its front (`brickwork`). A driven
-//! bellows blowing into any block of its bottom layer gives it the draft it smelts by: the
-//! bellows then draws 80 energy a tick instead of 20 (`bellows`). An iron ingot and a coke, put
+//! bellows blowing into any block of its bottom layer gives it the draft it smelts by, a tick of
+//! draft for each tick the bellows was paid 80 energy instead of 20, each used by one furnace
+//! (`bellows`). An iron ingot and a coke, put
 //! in by tube or by hand, smelt in 400 ticks into a steel bloom and slag (`smelt`), which leave by
 //! the controller's front into a tube there; the bloom is forged into a steel ingot on the forge
 //! anvil.
