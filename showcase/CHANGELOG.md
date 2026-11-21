@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3 - 2026-11-20
+
+### Changed
+
+- Built for Weft 26.11.6.
+
 ## 0.3.2 - 2026-11-15
 
 ### Added
