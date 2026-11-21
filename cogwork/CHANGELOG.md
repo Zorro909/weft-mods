@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2 - 2026-11-20
+
+### Changed
+
+- Builds against Weft v26.11.6.
+
 ## 0.4.1 - 2026-11-15
 
 ### Added

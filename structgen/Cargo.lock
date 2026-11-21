@@ -4,8 +4,8 @@ version = 4
 
 [[package]]
 name = "base_api"
-version = "26.11.5"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.5#ee292476a9764bacad3b7876e1541ac23607ac5e"
+version = "26.11.6"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.6#fc79fa648b132c9c90bf32e46ab3b7032a090da1"
 dependencies = [
  "weft_sdk",
 ]
@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "showcase_api"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "weft_sdk",
  "weftkit",
@@ -92,7 +92,7 @@ dependencies = [
 
 [[package]]
 name = "structgen"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "base_api",
  "serde_json",
@@ -120,18 +120,18 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 
 [[package]]
 name = "weft_abi"
-version = "26.11.5"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.5#ee292476a9764bacad3b7876e1541ac23607ac5e"
+version = "26.11.6"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.6#fc79fa648b132c9c90bf32e46ab3b7032a090da1"
 
 [[package]]
 name = "weft_noise"
-version = "26.11.5"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.5#ee292476a9764bacad3b7876e1541ac23607ac5e"
+version = "26.11.6"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.6#fc79fa648b132c9c90bf32e46ab3b7032a090da1"
 
 [[package]]
 name = "weft_sdk"
-version = "26.11.5"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.5#ee292476a9764bacad3b7876e1541ac23607ac5e"
+version = "26.11.6"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.6#fc79fa648b132c9c90bf32e46ab3b7032a090da1"
 dependencies = [
  "weft_abi",
  "weft_noise",
@@ -139,7 +139,7 @@ dependencies = [
 
 [[package]]
 name = "weftkit"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "weft_sdk",
 ]
