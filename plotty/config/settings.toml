@@ -1,0 +1,20 @@
+# Plotty's settings. Read when the server starts: restart it after a change.
+
+# Golden Woof a player gets the first time they join.
+starting_woof = 100
+
+# Normal plots (32 x 32) a player may claim. Everybody may claim one small plot (16 x 16) on top.
+# Moderators raise this for one player with /plot allowance.
+plot_allowance = 1
+
+# Blocks around the spawn nobody below moderator may change, when /setspawn names no radius.
+spawn_radius = 32
+
+# Outside cities and the spawn: "open" lets anyone build, "closed" only moderators.
+wilderness = "open"
+
+# Golden Woof for renting a market place for 1, 7 and 30 days. The rent leaves the game.
+rent_woof = [10, 50, 150]
+
+# Days after a rent ends before moderators may clear the place.
+rent_grace_days = 3

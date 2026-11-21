@@ -24,6 +24,8 @@ pub use area::Area;
 pub use block_state::BlockState;
 #[cfg(feature = "config")]
 pub use config::ConfigFile;
+#[cfg(any(feature = "config", feature = "store"))]
+pub use folder::game_folder;
 pub use player_key::PlayerKey;
 pub use pos::Pos;
 #[cfg(feature = "store")]

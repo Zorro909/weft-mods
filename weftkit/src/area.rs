@@ -8,6 +8,7 @@ use crate::Pos;
 value! {
     /// The blocks from its lowest corner `lo` to its highest `hi`, both included.
     #[derive(Default)]
+    #[cfg_attr(feature = "store", derive(serde::Serialize, serde::Deserialize))]
     pub struct Area {
         pub lo: Pos,
         pub hi: Pos,

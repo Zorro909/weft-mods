@@ -95,5 +95,6 @@ jobs:
           release-unchanged: true
           mods: |
             cogwork
+            plotty
             showcase
             structgen
