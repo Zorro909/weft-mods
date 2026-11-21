@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.2 - 2026-11-20
+
+### Changed
+
+- Built for Weft 26.11.6.
+
+### Fixed
+
+- The mod loads in Weft 26.11.6: the beds of its buildings no longer fill their head's cell
+  with `core:covered`, a block that release dropped, which kept the game from loading any mod.
+
 ## 0.4.1 - 2026-11-15
 
 ### Added

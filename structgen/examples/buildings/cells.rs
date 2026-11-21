@@ -19,7 +19,6 @@ const OPEN: &[&str] = &[
     "base:rose",
     "base:sapling",
     "base:sugar_cane",
-    "core:covered",
 ];
 pub const LADDER: &str = "base:ladder";
 

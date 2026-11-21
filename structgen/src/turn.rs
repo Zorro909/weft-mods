@@ -1,11 +1,10 @@
 //! Turning a structure a quarter at a time about the vertical axis: where its blocks go, and
 //! which way the blocks then face.
 //!
-//! Block states are turned here and not by the engine: up to v26.11.5 its `turned_state` turns
-//! `facing`, `attach` and `front` but leaves a log's `axis` and a ladder's sides as they were,
-//! so a turned timber frame would show its beams across and its ladders off the wall. This
-//! turns names (`base:oak_log[axis=x]`) rather than states, for the copies `buildings.rs`
-//! registers.
+//! Block states are turned here and not by the engine: at v26.11.6 its `turned_state` turns
+//! `facing`, `attach`, `front` and a log's `axis`, but leaves a ladder's sides as they were, so
+//! a turned building would show its ladders off the wall. This turns names
+//! (`base:oak_log[axis=x]`) rather than states, for the copies `buildings.rs` registers.
 
 use weftkit::Pos;
 
@@ -60,11 +59,10 @@ impl Turn {
         }
     }
 
-    /// Property `name=value` once turned: directions and axes turn, and so do sides. `to` is
-    /// where a big block's other cell (`core:covered`) points: a bed's head to its foot.
+    /// Property `name=value` once turned: directions and axes turn, and so do sides.
     fn prop<'a>(self, name: &'a str, value: &'a str) -> (&'a str, &'a str) {
         match name {
-            "facing" | "front" | "attach" | "to" => (name, self.direction(value)),
+            "facing" | "front" | "attach" => (name, self.direction(value)),
             "axis" => (name, self.axis(value)),
             "north" | "east" | "south" | "west" => (self.direction(name), value),
             _ => (name, value),
@@ -168,14 +166,6 @@ mod tests {
             "base:glass",
             "no properties"
         );
-    }
-
-    #[test]
-    fn a_bed_head_points_at_its_foot_once_turned() {
-        // A bed facing north has its head south of its foot, pointing north at it; turned right,
-        // the bed faces east and its head west of the foot points east.
-        assert_eq!(Turn::Right.prop("facing", "north"), ("facing", "east"));
-        assert_eq!(Turn::Right.prop("to", "north"), ("to", "east"), "the head");
     }
 
     #[test]
