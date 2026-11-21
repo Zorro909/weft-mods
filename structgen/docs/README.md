@@ -42,19 +42,18 @@ What is planned for the buildings and settlements is in the [roadmap](../ROADMAP
 
 ## Missing in the engine
 
-What structgen works around, as of Weft v26.11.5, and what change to the engine would let each
+What structgen works around, as of Weft v26.11.6, and what change to the engine would let each
 workaround go.
 
-1. **Logs and ladders don't turn.** `turned_state` and `mirrored_state`
-   (`Weft/crates/engine/src/content.rs`, around line 1210) only take a state whose model turn
-   and sides are exactly the turned ones. A log's `axis=x` turned a quarter is not the model
-   turn of `axis=z`, and a ladder's states (an `on_sides` block) all share one model turn, so
-   none has the turned one; both keep their state: a turned timber frame shows its beams
-   across and its ladders off the wall. Structgen turns block names itself (`src/turn.rs`) and
-   registers every building turned the three other ways, `structgen:<name>/right`, `/back`,
-   `/left` (`src/buildings.rs`), instead of placing it with a `Transform`. Would go with:
-   `turned_state` finding the state whose `axis` and sides point where the turned ones do,
-   not only an equal model turn.
+1. **Ladders don't turn.** `turned_state` (`Weft/crates/engine/src/content.rs`, around line
+   1170) takes the state whose model turn and sides are the turned ones, and since v26.11.6,
+   when none has them, the one whose `facing`, `attach`, `front` or `axis` points where the
+   turned one does: logs turn now. A ladder's states (an `on_sides` block) all share one model
+   turn and have none of those properties, so a ladder keeps its state: a turned building shows
+   its ladders off the wall. Structgen turns block names itself (`src/turn.rs`) and registers
+   every building turned the three other ways, `structgen:<name>/right`, `/back`, `/left`
+   (`src/buildings.rs`), instead of placing it with a `Transform`. Would go with: that last
+   step also finding the state whose sides are the turned ones.
 2. **A palette can't fill `@ground`.** A `@ground` cell always takes the column's top block; a
    palette's `ground` slot goes only where the column has none (`make_variant` in
    `Weft/crates/engine/src/template.rs`, `write_piece` in `Weft/crates/engine/src/features.rs`).
