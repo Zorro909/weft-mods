@@ -27,16 +27,17 @@ From inside `Weft/`, with your mods installed (they load for every test):
 
 ### Known failures
 
-At Weft v26.11.5, checked with and without the mods of this repository:
+At Weft v26.11.6, checked with and without the mods of this repository:
 
 | Test | What happens |
 |---|---|
 | `ctm_any_model` | Fails alone too: "plant: green in the middle" and more. The engine's, not a mod's |
 | `clouds` | Fails with structgen, alone too: "thunder darkens clouds" by about 10 where it wants 15; about 19 without it. structgen touches no sky or weather, so most likely its settlements change the natural world (seed 5) whose view the test averages |
-| `redstone_flying_machine` | Sometimes, without the mods too: once in three runs alone, "blocks a flying machine went: 0" though the player rode 21 blocks. The engine's |
-| `redstone_piston_moves` | Sometimes in a whole run, without the mods too ("carried along: 0.70"); passes alone. The engine's |
+| `sky` | Fails with structgen, alone too: "a sunset on its side: 0.020, away 0.000"; passes without it. Most likely the same cause as `clouds` |
+| `dimensions` | Fails with cogwork, alone too: "'find 160 base:water': not found". `core:debug_blocks` lays every block state out in a square grid as wide as the square root of their number; cogwork brings the states to about 10,700 (3,500 without it), which puts water in the grid's first row more than 160 blocks from the player. The test's reach, not a fault of cogwork |
+| A process without a report | Once in a whole run: the engine panicked in `crates/engine/src/client/lod.rs:415` ("index out of bounds") during `big_blocks`, so the rest of that test process went unreported. Run again, `big_blocks` and the tests the process left passed, all but `dimensions` above. The engine's |
 
-A run with these four and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
+A run with these and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
 
 ## Pictures
 
