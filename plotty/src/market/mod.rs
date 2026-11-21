@@ -1,6 +1,6 @@
-//! Market stalls: a player builds one of Plotty's blocks on their own plot or a market place they
-//! rent, and it trades for them with any other player, online or not. Up to eight offers sell items or buy them, each side
-//! items or Golden Woof.
+//! Market stalls: a player builds one of Plotty's blocks on a plot they can build on or a market
+//! place they rent, and it trades for them with any other player, online or offline. Up to eight
+//! offers sell or buy items, with each side items or Golden Woof.
 //!
 //! - `blocks.rs`: the blocks, in three woods; `pattern.rs`: how they make a stall.
 //! - `stall.rs`: a stall's state on its register; `owner.rs`: who owns it.
@@ -19,7 +19,7 @@ pub mod stall;
 pub mod trade;
 
 pub use blocks::part_of;
-pub use owner::{StallEntry, may_break, owner_in};
+pub use owner::{StallEntry, breaking, owner_in};
 pub use rent::{Rent, any_rented, forget as forget_rents, owners_term};
 pub use trade::tell_sales;
 

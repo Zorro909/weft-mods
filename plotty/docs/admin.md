@@ -8,7 +8,7 @@ in by taking a listed player's name. Only admins (level 3) use `/whitelist`.
 
 | Command | What it does |
 |---|---|
-| `/whitelist on` | Turns it on. The first time, every player Plotty has seen join is listed, so nobody already playing is shut out, and so is the admin turning it on. It refuses to turn on a list that would let nobody in. Says which file it turned on |
+| `/whitelist on` | Turns it on and prints the file path. The first time, it lists every player Plotty has seen join plus the admin running it, so nobody already playing is locked out. Refuses to turn on an empty list |
 | `/whitelist off` | Sets the file aside as `whitelist.txt.off`, which the engine doesn't read. Its list is kept for when it goes back on |
 | `/whitelist list` | The listed players, by name where Plotty knows it, else by key |
 | `/whitelist add <players>` | Adds players who are online, chosen as any command chooses players: a name, `@a` |
@@ -34,8 +34,9 @@ bed. One with a bed wakes there as before.
 
 ## Protection
 
-The engine asks Plotty before a player breaks, places or uses a block, before anyone is hurt and
-before a creature spawns by itself. Where a block lies decides:
+The engine asks Plotty before a player breaks, places or uses a block, or uses a hoe or base's
+assembly tool on one, before anyone is hurt and before a creature spawns by itself. Where a block
+lies decides:
 
 | Where | Change blocks | Use doors, chests, levers | Players fight | Hurt creatures | Creatures spawn |
 |---|---|---|---|---|---|
@@ -46,19 +47,19 @@ before a creature spawns by itself. Where a block lies decides:
 
 A city built around the spawn keeps its own rules, so its plots are their owners' there too.
 
-Plot posts and city stones answer anyone who right-clicks them, and anyone trades at a stall
-wherever it stands. Stall blocks go only on your own plot, one you're trusted on, or a market place you rent, and
-nothing else goes on a market place.
+Plot posts, city stones and rent posts answer anyone who right-clicks them, and anyone can trade
+at a stall wherever it stands. Stall blocks go only on a plot you own or are trusted on, or on a
+market place you rent; nothing else goes on a market place.
 
-`/plot bypass` lets a moderator change, use and hurt anything until they type it again; it never
-lets them fight where fighting is off. It ends when they lose the moderator level.
+`/plot bypass` lets a moderator break, place, use and hurt creatures anywhere until they run it
+again; it never enables PvP where fighting is off. It ends if they lose the moderator level.
 
 What changes blocks without the engine asking isn't stopped: pistons, flowing liquids, another
 mod's machines ([`ROADMAP.md`](../ROADMAP.md), gap E).
 
 ## Settings
 
-`config/plotty/settings.toml`, read when the server starts:
+`config/plotty/settings.toml`, read when the server starts (restart after editing):
 
 | Setting | Default | What |
 |---|---|---|

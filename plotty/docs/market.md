@@ -13,12 +13,13 @@ on, or on a market place you rent.
 ```
 
 Place the register last, facing you: it faces the customers, and the rest of the stall is built
-around it as above. Right-click any block of it. While a part is missing, its screen says which,
-and the stall doesn't trade. A stall that ends up off its owner's plot, for a plot taken back or
-given up, closes too, and so does one whose market place's rent has ended.
+around it as above. Right-click any block of the stall to open it. While a part is missing, its
+screen says which, and the stall doesn't trade. A stall also closes if its owner loses access to
+its plot (taken back, unclaimed or untrusted) or if its market place's rent expires.
 
 The register holds everything: breaking it drops the samples, the stock and the till. Only its
-owner can break it, or a moderator with `/plot bypass`; a friend trusted on the plot can't.
+owner can break it, or a moderator with `/plot bypass`; a friend trusted on the plot can't. The
+owner can break it wherever it stands, even on a plot they may no longer build on.
 
 ## Market places
 
@@ -69,5 +70,5 @@ inventory or balance. If something falls short, the line above the hotbar says w
 stock or till, its owner's Woof, or the customer's items, room or Woof. An offer its owner changed
 while the shop was open asks the customer to look again.
 
-Customers trade from within eight blocks. When the owner next joins, a line says how often their
-stalls traded since they last did.
+Customers trade from within eight blocks. When the owner next joins, chat reports how many times
+their stalls traded since they last joined.

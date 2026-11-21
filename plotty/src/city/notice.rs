@@ -1,11 +1,12 @@
 //! A line above the hotbar when a player walks into another part of the world: a city's street,
 //! its market, a plot and its owner, the spawn or the wilderness. Players are looked at every
-//! half second; what each last saw is kept here, by entity id, which starts over in every world.
+//! half second; what each last saw is kept here, by entity id. Entity ids start over in every
+//! world, so a player's entry is forgotten when they join.
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
-use weft_sdk::{Arg, Output, Registry, World};
+use weft_sdk::{Arg, Output, PLAYER_JOINED, Registry, World};
 use weftkit::Pos;
 
 use super::{CellKind, cell_at};
@@ -20,6 +21,14 @@ const EVERY: u64 = 10;
 static LAST: Mutex<Option<HashMap<u64, String>>> = Mutex::new(None);
 
 pub fn register(r: &mut Registry) {
+    r.on_event(&PLAYER_JOINED, |batch| {
+        let mut last = lock();
+        if let Some(last) = last.as_mut() {
+            batch
+                .iter()
+                .for_each(|joined| _ = last.remove(&joined.player));
+        }
+    });
     r.world_tick(|world| {
         if world.game_time() % EVERY != 0 {
             return;

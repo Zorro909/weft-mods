@@ -4,11 +4,11 @@ use weft_sdk::{Arg, ServerCommand, World, permission};
 use weftkit::{PlayerKey, Pos};
 
 use super::build::{self, Plan, Target, What};
-use super::grid::CellXZ;
-use super::structures::Kind;
+use super::grid::{CellXZ, Footprint};
+use super::structures::{self, Kind};
 use super::{CellKind, buildings, cell_at, city_named, undo};
 use crate::tables::{self, CELLS, CITIES, PLOTS};
-use crate::{dims, plot};
+use crate::{dims, market, plot};
 
 const USAGE: &str = "found <name:word> [how:word(build,mark)] \
                      | build <kind:word(plaza,road,small,normal,large,market)> | building <name:word> \
@@ -181,7 +181,9 @@ fn undo(cmd: &mut ServerCommand, here: &Here) {
     }
 }
 
-/// Takes a marked cell, or a marked plot's cells, out of its city; built ones need `/city undo`.
+/// Takes a marked cell out of its city, with the rest of the plot, plaza or market it is part of;
+/// built ones need `/city undo`. Refused as `/city undo` refuses; a city left without cells is
+/// forgotten.
 fn unmark(cmd: &mut ServerCommand, here: &Here) {
     let Some(cell) = cell_at(here.dim, here.pos) else {
         return cmd.reply("plotty.city.no_city_here", &[]);
@@ -192,17 +194,31 @@ fn unmark(cmd: &mut ServerCommand, here: &Here) {
     let plot = cell
         .plot
         .and_then(|id| PLOTS.get(&id).map(|plot| (id, plot)));
-    if plot.as_ref().is_some_and(|(_, plot)| plot.owner.is_some()) {
-        return cmd.reply("plotty.city.undo_claimed", &[]);
+    let footprint = match &plot {
+        Some((_, plot)) => plot.footprint,
+        None => Footprint {
+            corner: cell.corner,
+            side: structures::side_of(cell.kind),
+        },
+    };
+    let cells: Vec<CellXZ> = footprint.cells().collect();
+    let refused = if plot.as_ref().is_some_and(|(_, plot)| plot.owner.is_some()) {
+        Some("plotty.city.undo_claimed")
+    } else if cell.kind == CellKind::Plaza && undo::has_other_cells(cell.city, &cells) {
+        Some("plotty.city.undo_plaza_last")
+    } else if cell.kind == CellKind::Market && market::any_rented(here.dim, cell.corner) {
+        Some("plotty.city.undo_rented")
+    } else {
+        None
+    };
+    if let Some(refused) = refused {
+        return cmd.reply(refused, &[]);
     }
-    match plot {
-        Some((id, plot)) => {
-            plot.footprint
-                .cells()
-                .for_each(|cell| CELLS.remove(&(here.dim, cell)));
-            PLOTS.remove(&id);
-        }
-        None => CELLS.remove(&(here.dim, CellXZ::of(here.pos))),
+    cells.iter().for_each(|at| CELLS.remove(&(here.dim, *at)));
+    plot.iter().for_each(|(id, _)| PLOTS.remove(id));
+    market::forget_rents(here.dim, cell.corner);
+    if !undo::has_other_cells(cell.city, &[]) {
+        CITIES.remove(&cell.city);
     }
     cmd.reply("plotty.city.unmarked", &[]);
 }

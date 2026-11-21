@@ -126,6 +126,7 @@ pub fn confirm(cmd: &mut ServerCommand, holder: &PlayerKey) {
     }
     if place::build(cmd, &plan) {
         *slot = None;
+        crate::outlines::clear(&cmd.world(), cmd.player());
     }
 }
 
@@ -133,18 +134,22 @@ pub fn confirm(cmd: &mut ServerCommand, holder: &PlayerKey) {
 pub fn cancel(cmd: &mut ServerCommand, holder: &PlayerKey) {
     let world = cmd.world();
     let mut slot = lock();
-    let may = slot.as_ref().is_some_and(|pending| {
-        &pending.holder == holder || world.permission(cmd.player()) >= permission::GAME_MASTER
-    });
+    let may = slot
+        .as_ref()
+        .filter(|pending| held(pending))
+        .is_some_and(|pending| {
+            &pending.holder == holder || world.permission(cmd.player()) >= permission::GAME_MASTER
+        });
     if !may {
         return cmd.reply("plotty.city.nothing_to_cancel", &[]);
     }
     *slot = None;
+    crate::outlines::clear(&world, cmd.player());
     cmd.reply("plotty.city.cancelled", &[]);
 }
 
-/// Where `side` cells may go around the block `pos` for a city of ground `ground_y`, or why not:
-/// cells nobody has, next to exactly one city (`founding`: next to none needed).
+/// Where `side` cells may go around the block `pos`, or why not: cells nobody has, next to
+/// exactly one city (none needed when `founding`).
 pub fn footprint_for(
     dim: u64,
     pos: Pos,
@@ -177,7 +182,8 @@ fn fit(
 }
 
 /// Whether `plan` can still be built as it was previewed: in the two minutes, another build or
-/// a mark may have taken its cells, a player claimed its plot, or a city taken its name.
+/// a mark may have taken its cells, a player claimed its plot or a game master unmarked it, or a
+/// city taken its name.
 fn still_fits(plan: &Plan) -> Result<(), &'static str> {
     if let Target::New(name) = &plan.target
         && super::city_named(name).is_some()
@@ -185,12 +191,16 @@ fn still_fits(plan: &Plan) -> Result<(), &'static str> {
         return Err("plotty.city.name_taken");
     }
     let city_of = |cell: CellXZ| CELLS.get(&(plan.dim, cell)).map(|cell| cell.city);
-    let claimed = |plot: u32| PLOTS.get(&plot).is_some_and(|plot| plot.owner.is_some());
-    recheck(plan, city_of, claimed)
+    recheck(plan, city_of, |plot| !free(PLOTS.get(&plot)))
+}
+
+/// Whether a building may go on `plot`: it is still there, and nobody claimed it.
+fn free(plot: Option<super::Plot>) -> bool {
+    plot.is_some_and(|plot| plot.owner.is_none())
 }
 
 /// `still_fits` for the cells and plots: `city_of` says whose a cell is, `claimed` whether a
-/// plot has an owner.
+/// plot is gone or has an owner.
 fn recheck(
     plan: &Plan,
     city_of: impl Fn(CellXZ) -> Option<u32>,
@@ -303,5 +313,6 @@ mod tests {
             Err("plotty.city.building_on_claimed"),
             "its plot was claimed meanwhile"
         );
+        assert!(!free(None), "its plot was unmarked or undone meanwhile");
     }
 }

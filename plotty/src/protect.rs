@@ -1,13 +1,13 @@
 //! The hooks that keep the spawn and towns safe: the engine asks before a player breaks, places
-//! or uses a block, before anyone is hurt and before a creature spawns, and Plotty answers from
-//! `rules::allowed`. A denial runs in the last phase, the one the SDK keeps for claims, so no
-//! other mod's yes gets past it. What changes blocks without asking (pistons, flowing liquids, a
+//! or uses a block or uses a tool on one, before anyone is hurt and before a creature spawns, and
+//! Plotty answers from `rules::allowed`. A denial runs in the last phase, the one the SDK keeps
+//! for claims, so no other mod's yes gets past it. What changes blocks without asking (pistons, flowing liquids, a
 //! mod's `fill` or `set_block`) is not stopped: `ROADMAP.md`.
 
 use std::collections::HashSet;
 use std::sync::{Mutex, MutexGuard};
 
-use weft_sdk::{Ask, Output, Registry, Verdict, World, abi, actions, permission, phase};
+use weft_sdk::{Ask, Item, Output, Registry, Tag, Verdict, World, abi, actions, permission, phase};
 use weftkit::{BlockState, PlayerKey, Pos};
 
 use crate::plot::post;
@@ -18,12 +18,19 @@ use crate::{admin::spawn, city, dims, market, settings};
 /// server stops.
 static BYPASSING: Mutex<Option<HashSet<PlayerKey>>> = Mutex::new(None);
 
+/// Base's tools that change the block they are used on without the engine asking about the
+/// block: a hoe tills soil, and the assembly tool picks blocks to take into a moving body.
+static HOES: Tag<Item> = Tag::named("tools/hoe");
+static ASSEMBLY_TOOL: Item = Item::named("base:assembly_tool");
+
 pub fn register(r: &mut Registry) {
     r.before_event(&actions::BREAK_BLOCK, |ask| by_player(ask, Action::Change))
         .phase(&phase::FINAL);
     r.before_event(&actions::PLACE_BLOCK, |ask| by_player(ask, Action::Change))
         .phase(&phase::FINAL);
     r.before_event(&actions::USE_BLOCK, |ask| by_player(ask, Action::Use))
+        .phase(&phase::FINAL);
+    r.before_event(&actions::USE_ITEM, tool_used)
         .phase(&phase::FINAL);
     r.before_event(&actions::HURT, hurt).phase(&phase::FINAL);
     r.before_event(&actions::SPAWN, spawned)
@@ -55,9 +62,13 @@ fn by_player(ask: &Ask, action: Action) -> Verdict {
     let pos = Pos::from(ask.pos());
     if action == Action::BuildStall {
         let owner = market::owner_in(dims::key_of(&world), pos);
-        if !market::may_break(owner.as_ref(), &key, bypassing(&world, player, &key)) {
-            world.hint("plotty.refused.not_your_stall", &[]).to(player);
-            return Verdict::Deny;
+        match market::breaking(owner.as_ref(), &key, bypassing(&world, player, &key)) {
+            Some(true) => return Verdict::Abstain,
+            Some(false) => {
+                world.hint("plotty.refused.not_your_stall", &[]).to(player);
+                return Verdict::Deny;
+            }
+            None => {}
         }
     }
     let zone = zone_at(&world, pos, Some(&key));
@@ -73,6 +84,16 @@ fn by_player(ask: &Ask, action: Action) -> Verdict {
         world.hint(key, &[]).to(player);
     }
     Verdict::Deny
+}
+
+/// A player using a held item: on a block, base's block-changing tools change it.
+fn tool_used(ask: &Ask) -> Verdict {
+    let item = ask.item();
+    let changes = HOES.on_item(item) || item == ASSEMBLY_TOOL.id();
+    if ask.state() == 0 || !changes {
+        return Verdict::Abstain;
+    }
+    by_player(ask, Action::Change)
 }
 
 /// `action` as it is on the block `state`: building or trading where it is part of a stall.

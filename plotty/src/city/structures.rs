@@ -98,6 +98,14 @@ const KINDS: [Row; 6] = [
     row(Kind::Market, "market", &MARKET, 2, CellKind::Market, None),
 ];
 
+/// Cells along a side of what a city's `cells` are part of; a plot's own footprint says its size.
+pub fn side_of(cells: CellKind) -> i32 {
+    KINDS
+        .iter()
+        .find(|row| row.cells == cells)
+        .map_or(1, |row| row.side)
+}
+
 /// The words for the kinds, as a command's usage lists them.
 #[cfg(test)]
 pub const WORDS: &str = "plaza,road,small,normal,large,market";
@@ -250,6 +258,13 @@ mod tests {
         let blocks = [Kind::Small, Kind::Normal, Kind::Large]
             .map(|kind| kind.side() * super::super::grid::CELL);
         assert_eq!(blocks, [16, 32, 64], "a side each");
+    }
+
+    #[test]
+    fn plazas_and_markets_are_unmarked_whole() {
+        assert_eq!(side_of(CellKind::Plaza), 2, "a plaza's 2 x 2");
+        assert_eq!(side_of(CellKind::Market), 2, "a market's 2 x 2");
+        assert_eq!(side_of(CellKind::Road), 1, "a road cell alone");
     }
 
     #[test]

@@ -25,17 +25,14 @@ These need a change to the SDK first, agreed with the upstream project.
   `set_block` change blocks without the engine asking the protection hooks, so at a plot's edge
   they reach into it. Base has no explosions, fire spread or creatures that change blocks.
 - **The game folder:** the SDK doesn't tell a server where its folders are. Plotty (through
-  weftkit) takes the folder `--run-dir` names, else the folder the server runs in. Started
-  without `--run-dir`, the engine may use its install's `run/` or the user's data folders
-  instead, and then `/whitelist` and the settings and tables are elsewhere than the engine's own
-  files. `/whitelist on` says which file it turned on. Start a server with `--run-dir` until the
-  SDK says.
+  weftkit) takes the folder `--run-dir` names, else the folder the server runs in. Without
+  `--run-dir`, the engine may use its install's `run/` or the user's data folder instead, putting
+  `/whitelist`, settings and tables in a different folder from the engine's own files.
+  `/whitelist on` prints which file it turned on. Start a server with `--run-dir` until the SDK
+  provides the path.
 - **Big blocks under a build:** the SDK reads a big block (a door, a bed) as itself in each of
   its cells and doesn't say which is its own. A build over one saves it in every cell, and
   `/city undo` may then put back more than was there. Build cities on open land until it does.
-- **Outlines from the server:** the engine draws a mod's `World::draw_box` only while the player
-  shows some gizmo group with `/gizmo`, even with no group named. Plotty sends its outlines to the
-  client and draws them there (`src/outlines.rs`) until the engine draws them as it says.
 - **Hosted games:** only a dedicated server reads the whitelist; a game hosted from the client
   ignores it, and the SDK can't tell a mod which one it runs in.
 

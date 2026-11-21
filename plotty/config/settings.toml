@@ -16,5 +16,5 @@ wilderness = "open"
 # Golden Woof for renting a market place for 1, 7 and 30 days. The rent leaves the game.
 rent_woof = [10, 50, 150]
 
-# Days after a rent ends before moderators may clear the place.
+# Days after a rent ends before the place is free for anyone to rent.
 rent_grace_days = 3

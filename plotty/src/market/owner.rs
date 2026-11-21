@@ -8,7 +8,7 @@ use weftkit::{PlayerKey, Pos, TypedWorld};
 use super::blocks::{self, REGISTERS};
 use super::pattern;
 use super::screens::{SETUP, SHOP};
-use super::stall::front_of;
+use super::stall::{self, STALL, front_of};
 use crate::dims;
 use crate::tables::STALLS;
 
@@ -50,11 +50,15 @@ pub fn is_owner(owner: Option<&PlayerKey>, you: Option<&PlayerKey>) -> bool {
     owner.is_some() && owner == you
 }
 
-/// Whether `you` may break a block whose stall register, if it is one, `owner` owns: anyone the
-/// rules let, except that a register is its owner's, or a moderator's who switched protection
-/// off (`bypass`).
-pub fn may_break(owner: Option<&PlayerKey>, you: &PlayerKey, bypass: bool) -> bool {
-    bypass || owner.is_none_or(|owner| owner == you)
+/// Whether `you` may break a block whose stall register, if it is one, `owner` owns, or `None`
+/// where the rules decide: a register is its owner's to take down wherever it stands, even on a
+/// plot they lost, and nobody else's but a moderator's who switched protection off (`bypass`).
+pub fn breaking(owner: Option<&PlayerKey>, you: &PlayerKey, bypass: bool) -> Option<bool> {
+    match owner {
+        Some(owner) if owner == you => Some(true),
+        Some(_) if !bypass => Some(false),
+        _ => None,
+    }
 }
 
 /// Opens the stall a used block belongs to, instead of what using it would do: its owner sets
@@ -76,19 +80,26 @@ fn open(ask: &Ask) -> Verdict {
     } else {
         &SHOP
     };
-    world.open_menu(player, menu, world.block_entity(register));
+    let id = world.block_entity(register);
+    // Up to date before the screen reads it: after a load it is filled only at the next tick.
+    if let Some(stall) = world.component_mut(id, &STALL) {
+        stall::look(&world, id, register, stall);
+    }
+    world.open_menu(player, menu, id);
     Verdict::Deny
 }
 
-/// The register of the stall holding the block `pos`.
+/// The register of the stall holding the block `pos`: `pos` itself where it is one.
 fn register_of(world: &World, pos: Pos) -> Option<Pos> {
-    pattern::registers_near(pos).find(|near| {
-        let state = world.block_typed(*near);
-        REGISTERS.iter().any(|register| state.is(register))
-            && pattern::layout(*near, front_of(world, *near))
-                .iter()
-                .any(|(at, _)| *at == pos)
-    })
+    std::iter::once(pos)
+        .chain(pattern::registers_near(pos))
+        .find(|near| {
+            let state = world.block_typed(*near);
+            REGISTERS.iter().any(|register| state.is(register))
+                && pattern::layout(*near, front_of(world, *near))
+                    .iter()
+                    .any(|(at, _)| *at == pos)
+        })
 }
 
 #[cfg(test)]
@@ -110,12 +121,25 @@ mod tests {
     #[test]
     fn a_register_is_broken_only_by_its_owner() {
         let (ana, bo) = (key("ana"), key("bo"));
-        assert!(may_break(Some(&ana), &ana, false), "the owner");
-        assert!(
-            !may_break(Some(&ana), &bo, false),
+        assert_eq!(
+            breaking(Some(&ana), &ana, false),
+            Some(true),
+            "the owner, even where they may no longer build"
+        );
+        assert_eq!(
+            breaking(Some(&ana), &bo, false),
+            Some(false),
             "a friend trusted on the plot"
         );
-        assert!(may_break(Some(&ana), &bo, true), "a moderator with bypass");
-        assert!(may_break(None, &bo, false), "no register: the rules decide");
+        assert_eq!(
+            breaking(Some(&ana), &bo, true),
+            None,
+            "a moderator with bypass: the rules decide"
+        );
+        assert_eq!(
+            breaking(None, &bo, false),
+            None,
+            "no register: the rules decide"
+        );
     }
 }

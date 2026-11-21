@@ -5,7 +5,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use weft_sdk::{Arg, PLAYER_JOINED, Registry, ServerCommand};
+use weft_sdk::{Arg, PLAYER_JOINED, Registry, ServerCommand, World};
 use weftkit::PlayerKey;
 
 use crate::tables::PLAYERS;
@@ -60,18 +60,32 @@ fn remember(key: PlayerKey, name: String) -> bool {
     first
 }
 
-/// The player known by `name`, any case.
-pub fn find(name: &str) -> Found {
+/// The player known by `name`, any case; where several players have used it, the one of them
+/// online in `world`.
+pub fn find(world: &World, name: &str) -> Found {
     let mut known = Vec::new();
     PLAYERS.for_each(|key, entry| known.push((key, entry.name)));
-    matching(known, name)
+    let online = world
+        .players_iter()
+        .filter_map(|player| Some((PlayerKey::of(world, player)?, world.player_name(player)?)))
+        .collect();
+    among(matching(known, name), matching(online, name))
+}
+
+/// Who a name finds among everyone known (`known`), or among the players `online` with it where
+/// it names several.
+fn among(known: Found, online: Found) -> Found {
+    match (known, online) {
+        (Found::Several, Found::One(key)) => Found::One(key),
+        (known, _) => known,
+    }
 }
 
 /// The player a command's `name` parameter names, with that name; where it names nobody or
 /// several players, the command says so.
 pub fn named(cmd: &mut ServerCommand) -> Option<(PlayerKey, String)> {
     let name = cmd.text("name").unwrap_or_default().to_string();
-    match find(&name) {
+    match find(&cmd.world(), &name) {
         Found::One(key) => Some((key, name)),
         Found::Nobody => {
             cmd.reply("plotty.unknown_name", &[Arg::Text(&name)]);
@@ -148,6 +162,26 @@ mod tests {
     fn an_unknown_name_finds_nobody() {
         let known = vec![(key("a1"), "Ana".to_string())];
         assert_eq!(matching(known, "Cy"), Found::Nobody, "nobody by that name");
+    }
+
+    #[test]
+    fn a_shared_name_finds_the_one_online() {
+        let (ana, other) = (key("a1"), key("a2"));
+        assert_eq!(
+            among(Found::Several, Found::One(ana)),
+            Found::One(ana),
+            "the one online"
+        );
+        assert_eq!(
+            among(Found::Several, Found::Nobody),
+            Found::Several,
+            "neither online"
+        );
+        assert_eq!(
+            among(Found::One(other), Found::One(ana)),
+            Found::One(other),
+            "a name only one player used finds them, online or not"
+        );
     }
 
     #[test]

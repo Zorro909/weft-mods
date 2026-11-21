@@ -178,7 +178,7 @@ fn forget(dim: u64, id: u32, build: &Build, plot_under: Option<u32>) {
 }
 
 /// Whether city `city` has cells besides `own`.
-fn has_other_cells(city: u32, own: &[CellXZ]) -> bool {
+pub fn has_other_cells(city: u32, own: &[CellXZ]) -> bool {
     let mut other = false;
     CELLS.for_each(|(_, cell), entry| other |= entry.city == city && !own.contains(&cell));
     other
