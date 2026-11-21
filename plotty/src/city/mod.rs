@@ -50,7 +50,7 @@ pub struct Cell {
     pub builds: Vec<u32>,
 }
 
-/// How big a plot is.
+/// How big a plot is. Kept by its place in this list: new sizes go last.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PlotSize {
     Small,

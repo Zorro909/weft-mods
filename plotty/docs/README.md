@@ -9,6 +9,6 @@
 Roles are the engine's permission levels: everyone (0), moderator (1), game master (2), admin
 (3) and owner (4). A command for one level is open to every level above it.
 
-Plotty's data is the server's, not a world's: one world per server. It lives in
-`data/plotty/` and the settings in `config/plotty/settings.toml`, both in the folder the server
-was started with `--run-dir` for ([`ROADMAP.md`](../ROADMAP.md), "The game folder").
+Plotty stores its data per server, not per world (one world per server). Its tables live in
+`data/plotty/` and its settings in `config/plotty/settings.toml`, both under the `--run-dir`
+folder ([`ROADMAP.md`](../ROADMAP.md), "The game folder").

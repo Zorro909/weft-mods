@@ -4,7 +4,7 @@
 
 A Weft mod for running a server town: a whitelist, a protected spawn that new players start at,
 cities that game masters lay out on a grid of 16-block cells, with plots players claim and build
-on, Golden Woof, a money that is no item, and market stalls that trade for their owners.
+on, Golden Woof (a currency that isn't an item), and market stalls that trade for their owners.
 [`ROADMAP.md`](ROADMAP.md) says what is still to come.
 
 It needs the base game (`base`). [Structgen](../structgen/README.md) is optional: when it is
@@ -19,18 +19,18 @@ loaded, game masters can also put its buildings on free plots.
 - `/setspawn` puts the spawn where a game master stands and protects a circle around it. Players
   joining for the first time start there, and so does a player who respawns without a bed.
   `/spawn` takes anyone back.
-- Building is guarded everywhere: at the spawn and on a city's streets only moderators change
-  blocks, on a plot only its owner and the players they trust. Players can't hurt each other in a
-  city, and no creatures spawn there by themselves. The wilderness is open, or closed when the
-  settings say so.
+- Building is guarded everywhere: at the spawn and on a city's streets only moderators with
+  `/plot bypass` change blocks, and on a plot only its owner and the players they trust. Players
+  can't hurt each other in a city, and no creatures spawn there by themselves. The wilderness is
+  open, or closed when the settings say so.
 
 ### Cities
 
 A game master founds a city with `/city found <name>`, which lays down a plaza, and grows it a
 piece at a time with `/city build road | small | normal | large | market`. Every build shows its
-outline first and waits for `/city confirm`; one build at a time on the whole server, and
-`/city undo` always puts back what a build replaced. With structgen loaded,
-`/city building <name>` puts one of its houses on a free plot.
+outline first and waits for `/city confirm`; one preview at a time server-wide, and `/city undo`
+puts back what a build replaced. With structgen loaded, `/city building <name>` puts one of its
+houses on a free plot.
 
 ### Plots
 
@@ -42,17 +42,18 @@ whose a plot is, and a line above the hotbar says where you are as you walk.
 ### Golden Woof
 
 Every player has a balance of Golden Woof, shown beside their inventory. It isn't an item, so it
-can't be dropped, stolen or lost in death. `/woof` tells it and `/woof pay <name> <amount>` pays
-another player, online or not. New players start with some; game masters give and take more.
+can't be dropped, stolen or lost on death. `/woof` shows your balance and
+`/woof pay <name> <amount>` pays another player, online or offline. New players start with some;
+game masters give and take more.
 
 ### Market stalls
 
-A player builds a stall of sixteen blocks on their own plot or a market place they rent for
-1, 7 or 30 days, in oak, spruce or birch: a register
-between two counters, three crates behind, four posts and an awning. It trades with any other
-player, whether its owner is online or not, through up to eight offers. Each offer gives
-something and gets something for it, items or Golden Woof either way, so a stall can sell and
-buy. Its owner fills the stock and takes payments out of the till.
+A player builds a stall of sixteen blocks on a plot they can build on or a market place they rent
+for 1, 7 or 30 days, in oak, spruce or birch: a register between two counters, three crates behind,
+four posts and an awning. It trades with any other player, whether its owner is online or not,
+through up to eight offers. Each offer gives something and gets something for it, items or Golden
+Woof either way, so a stall can sell and buy. Its owner fills the stock and takes payments out of
+the till.
 
 ## Getting started
 

@@ -156,8 +156,7 @@ fn trust(cmd: &mut ServerCommand, here: &Here, add: bool) {
     cmd.reply(reply, &[Arg::Text(&name)]);
 }
 
-/// Outlines the plots around the player for a while, in the color of whose they are.
-/// Outlines the plots around `pos` for `player` (`key`): theirs, others', free.
+/// Outlines the plots around `pos` for `player` (`key`): theirs or trusted, others', free.
 pub fn show(world: &World, player: u64, key: &PlayerKey, pos: Pos) {
     let dim = dims::key_of(world);
     let centre = CellXZ::of(pos);

@@ -59,8 +59,8 @@ pub fn allowed(zone: Zone, action: Action, bypass: bool, wilderness: Wilderness)
     }
 }
 
-/// Outside towns everything goes, except changing blocks where the wilderness is closed, and
-/// stalls, which stand on plots.
+/// Outside towns everything goes, except changing blocks when wilderness is closed, and stalls,
+/// which only go on plots or rented market places.
 fn wild(action: Action, wilderness: Wilderness) -> bool {
     match action {
         Action::Change => wilderness == Wilderness::Open,

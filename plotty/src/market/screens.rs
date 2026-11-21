@@ -212,7 +212,7 @@ fn status_line(ui: &mut Ui) {
     });
 }
 
-/// Sets a Woof price the owner typed, where they stand near.
+/// Sets a Woof price typed by the owner, if they are within reach.
 fn set_price(packet: &Packet, asked: SetPrice) {
     let world = packet.world();
     let player = packet.player();

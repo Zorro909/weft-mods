@@ -28,7 +28,7 @@ pub struct Settings {
     pub wilderness: Wilderness,
     /// Golden Woof for a market place for 1, 7 and 30 days.
     pub rent_woof: [u64; 3],
-    /// Days after a rent ends before moderators may clear the place.
+    /// Days after a rent ends before the place becomes free for anyone to rent.
     pub rent_grace_days: u32,
 }
 

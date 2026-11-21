@@ -47,7 +47,8 @@ fn run(cmd: &mut ServerCommand) {
     }
 }
 
-/// Creates the file with every player Plotty has seen, so nobody already playing is shut out.
+/// Turns the whitelist on, restoring the set-aside file or seeding it with every known player so
+/// nobody already playing is shut out.
 fn turn_on(cmd: &mut ServerCommand) -> io::Result<()> {
     if file().exists() {
         cmd.reply("plotty.whitelist.already_on", &[]);

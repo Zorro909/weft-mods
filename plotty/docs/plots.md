@@ -21,7 +21,7 @@ Stand on the plot and type:
 | `/plot unclaim` | Gives yours up; your trusted players go with it |
 | `/plot trust <name>` | Lets a player build and use things on your plot |
 | `/plot untrust <name>` | Takes that back |
-| `/plot show` | Outlines the plots around you for 30 seconds: green yours, blue someone else's, white free |
+| `/plot show` | Outlines the plots around you for 30 seconds: green yours or trusted, blue someone else's, white free |
 | `/plot list` | Your plots and where they are |
 
 Right-clicking a plot's post says whose it is; the city stone on the plaza lists the city's free

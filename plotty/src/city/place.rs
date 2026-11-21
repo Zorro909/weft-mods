@@ -13,7 +13,7 @@ use super::{Cell, City, Plot, next_id};
 use crate::tables::{BUILDS, CELLS, CITIES, PLOTS};
 use crate::{dims, plot};
 
-/// Blocks under the ground a build saves and lays with dirt.
+/// Blocks under the ground a build saves for undo; `level` fills `BELOW - 1` of them with dirt.
 pub const BELOW: i32 = 4;
 /// Blocks over the ground a build saves and clears.
 pub const ABOVE: i32 = 32;

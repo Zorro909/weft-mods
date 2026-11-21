@@ -105,8 +105,7 @@ pub fn attempt(world: &World, player: u64, trade: Trade) -> Result<(), Refusal> 
     Ok(())
 }
 
-/// Moves both sides of `offer` between the register `register` and the customer `player`;
-/// `keys` are the owner's and the customer's.
+/// Moves both sides of `offer` between `register` and `player` (`owner` and `customer`).
 fn exchange(
     world: &World,
     register: u64,
