@@ -2,7 +2,7 @@
 //! the parts the style repeats (45° roofs, timber-framed walls, windows, chimneys). See
 //! `docs/materials.md` for what each slot is for.
 
-use crate::draft::Draft;
+use crate::draft::{AIR, Draft};
 use crate::structure_file::Structure;
 
 /// One building of a family: its file name and how it is drawn.
@@ -85,12 +85,12 @@ pub fn side_windows(d: &mut Draft, x: [usize; 2], y: usize, height: usize, zs: &
 }
 
 /// A bed with its foot at `foot`, facing `facing`: the head lies the other way. A bed is one block
-/// in two cells; the head's cell points back to the foot's, so that writing it as air doesn't
-/// take the bed away again.
+/// that reaches from its foot's cell into the head's, which the structure leaves air for it, as
+/// the game's own `/structure save` does.
 pub fn bed(d: &mut Draft, foot: [usize; 3], facing: &str) {
     d.set(foot, &format!("base:bed[facing={facing}]"));
     if let Some(head) = step(foot, opposite(facing)) {
-        d.set(head, &format!("core:covered[to={facing}]"));
+        d.set(head, AIR);
     }
 }
 
@@ -265,5 +265,22 @@ pub fn opposite(facing: &str) -> &'static str {
         "west" => "east",
         "east" => "west",
         _ => panic!("no direction {facing}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_bed_is_written_in_its_foot_cell_alone() {
+        let mut room = Draft::new([3, 1, 3]);
+        bed(&mut room, [1, 0, 1], "north");
+        assert_eq!(room.get([1, 0, 1]), "base:bed[facing=north]", "the foot");
+        assert_eq!(
+            room.get([1, 0, 2]),
+            AIR,
+            "the head, which the bed reaches into"
+        );
     }
 }
