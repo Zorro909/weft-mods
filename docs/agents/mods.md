@@ -31,6 +31,8 @@ Doc names below are under `Weft/docs/`.
 | Channel between client and server | `client.md` "Messages between server and client" | `cogwork/src/ghost.rs`, `cogwork/src/loading/lens.rs` |
 | Client drawing | `client.md`, `shaders.md`, `environment.md` | `cogwork/src/loading/lens.rs`, `showcase/src/view.rs` |
 | Text | `localization.md` | any mod's `assets/lang/en_us.lang` |
+| Quest in the almanac | `almanac/docs/writing-quests.md` here | `almanac/src/demo.rs` |
+| Data other mods add to and change | `registration.md` "Record" | `almanac/api/src/record.rs`, `almanac/api/src/read.rs` |
 
 ## Building against a Weft release
 
