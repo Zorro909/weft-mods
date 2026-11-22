@@ -41,8 +41,16 @@ static PLANTS: Tag = Tag::named("plantable");
 static LEAVES: Tag = Tag::named("leaves");
 static DIRT: Tag = Tag::named("dirt");
 static SAND: Tag = Tag::named("sand");
+/// Ground cover that is not tagged `plantable`, which a seep looks through and clears as it
+/// does plants: base v26.11.7 tags neither its clover and fern nor the moss by its boulders.
+const COVER_TAG: &str = "cogwork:ground_cover";
+const GROUND_COVER: [&str; 3] = ["base:clover", "base:fern", "base:moss"];
+static COVER: Tag = Tag::named(COVER_TAG);
+/// What a seep takes off the ground it soaks.
+const CLEARED: &str = "#plantable #cogwork:ground_cover";
 
 pub fn register(r: &mut Registry) {
+    r.tag(COVER_TAG, &GROUND_COVER);
     r.feature(&OIL_FIELD)
         .dimension(&OVERWORLD)
         .spacing(SPACING)
@@ -122,7 +130,7 @@ impl Field {
 /// What a seep finds in a cell, looking down its column for the ground.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Cell {
-    /// Air, a plant or leaves: it looks on down.
+    /// Air, a plant, ground cover or leaves: it looks on down.
     Open,
     Dirt,
     Sand,
@@ -132,7 +140,10 @@ enum Cell {
 
 impl Cell {
     fn of(state: u32) -> Cell {
-        if state == AIR || PLANTS.on_block(state) || LEAVES.on_block(state) {
+        let open = [&PLANTS, &COVER, &LEAVES]
+            .iter()
+            .any(|tag| tag.on_block(state));
+        if state == AIR || open {
             Cell::Open
         } else if DIRT.on_block(state) {
             Cell::Dirt
@@ -196,7 +207,7 @@ fn soak(p: &mut Plan, puddle: Pos, dx: i32, dz: i32) {
     };
     p.set(ground, soaked);
     let plants = Area::between(ground.add_y(1), ground.add_y(PLANT_HEIGHT));
-    p.replace(plants.lo, plants.hi, "#plantable", AIR);
+    p.replace(plants.lo, plants.hi, CLEARED, AIR);
 }
 
 #[cfg(test)]
@@ -282,6 +293,18 @@ mod tests {
             let down = (top - pos.y) as usize;
             cells.get(down).copied().unwrap_or(Cell::Open)
         }
+    }
+
+    #[test]
+    fn a_seep_clears_base_s_clover_and_fern() {
+        for plant in ["base:clover", "base:fern"] {
+            assert!(GROUND_COVER.contains(&plant), "{plant} is ground cover");
+        }
+        assert!(CLEARED.contains("#plantable"), "plants go too");
+        assert!(
+            CLEARED.contains(&format!("#{COVER_TAG}")),
+            "the cover goes too"
+        );
     }
 
     #[test]
