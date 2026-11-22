@@ -6,8 +6,13 @@
 
 - Builds against Weft v26.11.7.
 - Machines, engines, tubes, torque shafts, tanks, the pump, loaders, oil engine parts and survey
-  markers always go on the block grid, also in Weft's new face placement mode, so none ends up
-  part of a block off what it should join.
+  markers always go on the block grid, also in Weft's new Gridless placement mode, so none ends
+  up part of a block off what it joins or keeps loaded.
+
+### Fixed
+
+- Oil fields no longer go missing where the base game's new clover and ferns grow: a seep looks
+  through them, and moss, for the ground and clears them off it, as it does grass.
 
 ## 0.4.2 - 2026-11-20
 

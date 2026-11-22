@@ -13,10 +13,11 @@ It needs the base game (`base`).
 
 ### In the world
 
-Hamlets, villages and towns grow on the overworld's open land (plains, meadows, hills), each laid out afresh: a
-village green or a town's market square, roads winding out of it along the ground, buildings
-facing the roads, gardens, small fields and a mill. Villages have gravel lanes, a church, a
-tavern and a smithy; towns have cobbled streets, a town hall, a guildhall and a coaching inn.
+Hamlets, villages and towns grow on the overworld's open land (plains, meadows, lavender
+fields, hills), each laid out afresh: a village green or a town's market square, roads winding
+out of it along the ground, buildings facing the roads, gardens, small fields and a mill.
+Villages have gravel lanes, a church, a tavern and a smithy; towns have cobbled streets, a town
+hall, a guildhall and a coaching inn.
 All 29 buildings share one timber-framed style, and their roofs, frames and wall panels change
 from one settlement to the next. One or two buildings of each settlement have something in
 their chests.
