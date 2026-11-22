@@ -2,7 +2,7 @@
 //! whole of a plain inventory. Liquid groups are no place for items.
 
 use base_api::components::FUEL;
-use weft_sdk::*;
+use weft_sdk::{FLUID, Inventory, ItemStack, SlotGroup};
 
 /// Group names this file knows the meaning of.
 const KNOWN: [&str; 4] = ["fuel", "input", "output", "chest"];

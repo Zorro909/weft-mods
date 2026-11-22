@@ -3,7 +3,10 @@
 //! running there and everything, and shows how many cubes cogwork keeps of the world's limit.
 
 use strum::FromRepr;
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, Block, Channel, Component, Menu, Packet, Registry, S, SystemBatch, Ui, World,
+    component_flags, tool_tier, value,
+};
 
 use super::tickets::{self, Keeper, Kept};
 use super::{Cubes, Role};

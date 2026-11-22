@@ -30,13 +30,13 @@ use plan::Plan;
 use random::Random;
 use roads::Road;
 use shape::{Point, length_of, sub};
-use weft_sdk::*;
+use weft_sdk::{LootTable, Template};
 use weftkit::Pos;
 
 use crate::styles;
 
-/// Open land to build on: plains, meadows and hills, without the trees of forests, which would
-/// stand cut through a building.
+/// Open land to build on: plains, meadows, lavender fields and hills, without the trees of
+/// forests, which would stand cut through a building.
 pub const OPEN: &str = "#animals !#forest !#mountain";
 static OPEN_LAND: Biomes = Biomes::named(OPEN);
 /// How many spots a settlement tries, and how far from its start the others are at most.

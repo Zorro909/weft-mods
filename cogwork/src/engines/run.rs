@@ -2,7 +2,7 @@
 //! the piston's strokes while running.
 
 use base_api::components::FUEL;
-use weft_sdk::*;
+use weft_sdk::{ENERGY, ItemStack, Output, SystemBatch, World, consume_one};
 
 use super::{Engine, Kind, model, piston};
 use crate::lib::Pos;

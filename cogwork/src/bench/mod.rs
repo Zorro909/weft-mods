@@ -9,7 +9,9 @@ mod fill;
 use base_api::recipes::CRAFTING;
 pub use fill::insert;
 use strum::{FromRepr, IntoStaticStr, VariantArray};
-use weft_sdk::*;
+use weft_sdk::{
+    Block, Component, ENERGY, Holds, Menu, Registry, S, Slots, Ui, World, component_flags, value,
+};
 
 use crate::ghost::{self, ItemKey, SLOT};
 

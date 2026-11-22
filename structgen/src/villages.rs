@@ -2,7 +2,7 @@
 //! lanes round a green with a church, a tavern and a smithy, and towns of cobbled streets round
 //! a market square.
 
-use weft_sdk::*;
+use weft_sdk::{Feature, Placed, Pool, Registry, Template};
 
 use crate::settlement::{self, CHESTS, Faces, Kind, OPEN, Settlement};
 
