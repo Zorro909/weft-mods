@@ -123,6 +123,7 @@ pub fn register(r: &mut Registry) {
     parts::register(r);
     rig::register(r);
     r.block(&OIL_ENGINE_CONTROLLER)
+        .grid_placement()
         .facing(Facings::HORIZONTAL, Toward::Player)
         .prop("working", ["false", "true"])
         .prop("oil", 0..=fuel::GAUGE_STEPS)

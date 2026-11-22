@@ -32,7 +32,8 @@ pub fn tube<'a>(builder: BlockBuilder<'a>, texture: &'static str, arms: Arms) ->
         .hardness(0.4)
         .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.glass")
-        .tag("cogwork:tubes");
+        .tag("cogwork:tubes")
+        .grid_placement();
     if matches!(arms, Arms::Output(_)) {
         builder = builder.prop("out", Dir::ALL.map(Dir::name));
         for name in OTHER_ARMS {

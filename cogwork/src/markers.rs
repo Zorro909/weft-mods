@@ -26,6 +26,7 @@ pub const LARGEST_REACH: i32 = MAX_AREAS[MAX_AREAS.len() - 1].1;
 
 pub fn register(r: &mut Registry) {
     r.block(&SURVEY_MARKER)
+        .grid_placement()
         .hitbox(HITBOX.0, HITBOX.1)
         .needs_below("")
         .hardness(0.0)

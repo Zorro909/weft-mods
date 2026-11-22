@@ -10,6 +10,7 @@ use crate::lib::{BlockState, Pos, TypedWorld};
 /// it whole; an axe is quickest.
 pub fn block<'a>(builder: BlockBuilder<'a>, name: &'static str) -> BlockBuilder<'a> {
     builder
+        .grid_placement()
         .facing(Facings::HORIZONTAL, Toward::Player)
         .prop("working", ["false", "true"])
         .states(move |props, state| {

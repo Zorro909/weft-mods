@@ -97,6 +97,7 @@ fn loader(
     range: u32,
 ) {
     r.block(block)
+        .grid_placement()
         .texture(texture)
         .hardness(5.0)
         .mined_by("axe", tool_tier::HAND)

@@ -11,6 +11,9 @@ tanks carry and store it, and an oil engine burns it for far more energy than th
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
 
+Cogwork's machines, engines, tubes, shafts, tanks and survey markers snap to the block grid as you
+place them, also in the game's face placement mode, so they always line up with what they join.
+
 ## Features
 
 ### Item tubes

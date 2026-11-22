@@ -51,6 +51,7 @@ pub fn register(r: &mut Registry) {
 /// What every part shares: as hard as iron, mined with a pickaxe.
 fn part(builder: BlockBuilder<'_>) -> BlockBuilder<'_> {
     builder
+        .grid_placement()
         .hardness(4.0)
         .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.stone")

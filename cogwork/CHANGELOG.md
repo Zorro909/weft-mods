@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.3 - 2026-11-22
+
+### Changed
+
+- Builds against Weft v26.11.7.
+- Machines, engines, tubes, torque shafts, tanks, the pump, loaders, oil engine parts and survey
+  markers always go on the block grid, also in Weft's new face placement mode, so none ends up
+  part of a block off what it should join.
+
 ## 0.4.2 - 2026-11-20
 
 ### Changed
