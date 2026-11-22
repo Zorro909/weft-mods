@@ -18,6 +18,7 @@ pub fn register(r: &mut Registry) {
         builder = builder.prop(dir.name(), ["false", "true"]);
     }
     builder
+        .grid_placement()
         .states(model)
         .on_place(|world, change| refresh(world, change.pos.into()))
         .on_neighbor(|event| refresh(&event.world(), event.pos().into()))

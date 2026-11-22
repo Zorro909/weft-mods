@@ -34,6 +34,7 @@ pub fn register(r: &mut Registry) {
     });
     let mut builder = r
         .block(&LIQUID_TANK)
+        .grid_placement()
         .hardness(2.0)
         .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.glass")

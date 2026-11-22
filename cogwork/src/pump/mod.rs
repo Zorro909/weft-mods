@@ -99,6 +99,7 @@ pub fn register(r: &mut Registry) {
     );
     r.system(&PUMP_STATE, work::tick);
     r.block(&PUMP)
+        .grid_placement()
         .prop("working", ["false", "true"])
         .states(|props, state| {
             let side = if props.is("working", "true") {

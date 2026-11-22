@@ -25,6 +25,7 @@ const TRUNKS: [&str; 4] = [
 /// against, so its trunk points into that block.
 pub fn engine<'a>(builder: BlockBuilder<'a>, kind: &'static str) -> BlockBuilder<'a> {
     builder
+        .grid_placement()
         .model_file(MODEL)
         .facing(Facings::ALL, Toward::Face)
         .prop("heat", 0..=3)

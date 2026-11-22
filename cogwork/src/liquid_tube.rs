@@ -43,6 +43,7 @@ pub fn tube<'a>(
         builder = builder.prop(dir.name(), ["false", "true"]);
     }
     builder
+        .grid_placement()
         .states(move |props, state| {
             // Every arm joins a holder of liquid, which the liquid goes on into.
             let arm = |dir: Dir| props.is(dir.name(), "true").then_some(Arm::Open);
