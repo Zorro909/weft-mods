@@ -1,7 +1,7 @@
 //! Which slots of an inventory items go into or come out of: one of its groups by name, or the
 //! whole of a plain inventory. Liquid groups are no place for items.
 
-use base_api::FUEL;
+use base_api::components::FUEL;
 use weft_sdk::*;
 
 /// Group names this file knows the meaning of.

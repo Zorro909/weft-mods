@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "showcase"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "showcase_api",
  "weft_sdk",
@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "showcase_api"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "weft_sdk",
  "weftkit",
@@ -20,18 +20,18 @@ dependencies = [
 
 [[package]]
 name = "weft_abi"
-version = "26.11.6"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.6#fc79fa648b132c9c90bf32e46ab3b7032a090da1"
+version = "26.11.7"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.7#cab2d5f72ace01e3aa453840d80aaffebd4a9fcb"
 
 [[package]]
 name = "weft_noise"
-version = "26.11.6"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.6#fc79fa648b132c9c90bf32e46ab3b7032a090da1"
+version = "26.11.7"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.7#cab2d5f72ace01e3aa453840d80aaffebd4a9fcb"
 
 [[package]]
 name = "weft_sdk"
-version = "26.11.6"
-source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.6#fc79fa648b132c9c90bf32e46ab3b7032a090da1"
+version = "26.11.7"
+source = "git+https://github.com/Weft-Rust/Weft?tag=v26.11.7#cab2d5f72ace01e3aa453840d80aaffebd4a9fcb"
 dependencies = [
  "weft_abi",
  "weft_noise",
@@ -39,7 +39,7 @@ dependencies = [
 
 [[package]]
 name = "weftkit"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "weft_sdk",
 ]

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3 - 2026-11-22
+
+### Changed
+
+- Built for Weft 26.11.7.
+- Settlements also grow in the base game's new open biomes: hills, lavender fields and the
+  tallgrass and clover meadows.
+
 ## 0.4.2 - 2026-11-20
 
 ### Changed

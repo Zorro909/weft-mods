@@ -35,7 +35,7 @@ use weftkit::Pos;
 
 use crate::styles;
 
-/// Open land to build on: plains and snowy plains, without the trees of forests, which would
+/// Open land to build on: plains, meadows and hills, without the trees of forests, which would
 /// stand cut through a building.
 pub const OPEN: &str = "#animals !#forest !#mountain";
 static OPEN_LAND: Biomes = Biomes::named(OPEN);

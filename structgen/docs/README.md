@@ -42,11 +42,11 @@ What is planned for the buildings and settlements is in the [roadmap](../ROADMAP
 
 ## Missing in the engine
 
-What structgen works around, as of Weft v26.11.6, and what change to the engine would let each
+What structgen works around, as of Weft v26.11.7, and what change to the engine would let each
 workaround go.
 
 1. **Ladders don't turn.** `turned_state` (`Weft/crates/engine/src/content.rs`, around line
-   1170) takes the state whose model turn and sides are the turned ones, and since v26.11.6,
+   1200) takes the state whose model turn and sides are the turned ones, and since v26.11.6,
    when none has them, the one whose `facing`, `attach`, `front` or `axis` points where the
    turned one does: logs turn now. A ladder's states (an `on_sides` block) all share one model
    turn and have none of those properties, so a ladder keeps its state: a turned building shows
