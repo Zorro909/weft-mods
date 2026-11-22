@@ -27,15 +27,18 @@ From inside `Weft/`, with your mods installed (they load for every test):
 
 ### Known failures
 
-At Weft v26.11.6, checked with and without the mods of this repository:
+At Weft v26.11.7, checked with and without the mods of this repository:
 
 | Test | What happens |
 |---|---|
-| `ctm_any_model` | Fails alone too: "plant: green in the middle" and more. The engine's, not a mod's |
-| `clouds` | Fails with structgen, alone too: "thunder darkens clouds" by about 10 where it wants 15; about 19 without it. structgen touches no sky or weather, so most likely its settlements change the natural world (seed 5) whose view the test averages |
-| `sky` | Fails with structgen, alone too: "a sunset on its side: 0.020, away 0.000"; passes without it. Most likely the same cause as `clouds` |
-| `dimensions` | Fails with cogwork, alone too: "'find 160 base:water': not found". `core:debug_blocks` lays every block state out in a square grid as wide as the square root of their number; cogwork brings the states to about 10,700 (3,500 without it), which puts water in the grid's first row more than 160 blocks from the player. The test's reach, not a fault of cogwork |
-| A process without a report | Once in a whole run: the engine panicked in `crates/engine/src/client/lod.rs:415` ("index out of bounds") during `big_blocks`, so the rest of that test process went unreported. Run again, `big_blocks` and the tests the process left passed, all but `dimensions` above. The engine's |
+| `ctm_any_model` | Fails alone too, and without the mods: "plant: green in the middle" and more. The engine's, not a mod's |
+| `sky` | Fails with the mods, alone too: "a sunset on its side: 0.016, away 0.000"; passes without them. At v26.11.6 it was structgen's settlements changing the natural world whose view the test averages |
+| `names_translated` | Fails alone too, and without the mods: "no name in en_us: base:bush_leaves". Base names the block in `ru_ru.lang` but not in `en_us.lang`. The engine's |
+| `replaced_plants_drop` | Fails alone too, and without the mods: "the flower dropped: near '', inventory '0:base:stone:1'". Base's plants now drop themselves only to shears (`plant` in `mods/base/src/blocks.rs`), and the test still wants a dandelion covered by stone to drop. The engine's |
+| `redstone_floater_riders` | Fails alone too, and without the mods: "the lever and the flower dropped". The same dandelion that drops nothing without shears. The engine's |
+| `hud_editor` | Fails alone too, and without the mods: "timed out waiting for no screen". The HUD editor stays open after "Reset all" and closing it. Some runs, with the mods or without, also miss "the crosshair hidden in the game". The engine's |
+| `lod_columns` | Fails alone too, and without the mods: "columns sent: 769" (1,767 without them), where it wants fewer than 64 for the tower it builds. Far more distant columns reach the client than were built on; the engine's |
+| `redstone_flying_machine`, `burning` | In a whole run: the flying machine failed in both runs ("blocks a flying machine went in 1000 frames: 0"), `burning` in one of two ("still burning after leaving lava"). Both pass alone, with and without the mods: flakes under three tests at once |
 
 A run with these and no other is a pass. Any other failure: run it alone, then with your mod taken out of `Weft/run/mods/`, before calling it a regression or a flake.
 
