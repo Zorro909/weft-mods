@@ -3,8 +3,8 @@
 The mod adds hamlets, villages and towns to the base game's overworld while it generates. They
 appear in new parts of a world, in any world, old or new.
 
-All of them stand on open land: plains and snowy plains (biome tag `#animals`, without
-`#forest` and `#mountain`). None stands where water or ice covers the ground, so none lands in
+All of them stand on open land: plains, snowy plains, hills, lavender fields and the tallgrass
+and clover meadows (biome tag `#animals`, without `#forest` and `#mountain`). None stands where water or ice covers the ground, so none lands in
 a lake or the sea.
 Each building sits on a foundation of the ground's own top block, and ground that rises above
 it is cut away. The world grows no trees inside a settlement, since the engine keeps them out of

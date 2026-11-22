@@ -13,7 +13,7 @@ It needs the base game (`base`).
 
 ### In the world
 
-Hamlets, villages and towns grow on the overworld's open plains, each laid out afresh: a
+Hamlets, villages and towns grow on the overworld's open land (plains, meadows, hills), each laid out afresh: a
 village green or a town's market square, roads winding out of it along the ground, buildings
 facing the roads, gardens, small fields and a mill. Villages have gravel lanes, a church, a
 tavern and a smithy; towns have cobbled streets, a town hall, a guildhall and a coaching inn.

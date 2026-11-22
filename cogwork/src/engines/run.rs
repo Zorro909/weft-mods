@@ -1,7 +1,7 @@
 //! The engines' tick: make energy, push it out of the trunk, warm up or cool down, and start
 //! the piston's strokes while running.
 
-use base_api::FUEL;
+use base_api::components::FUEL;
 use weft_sdk::*;
 
 use super::{Engine, Kind, model, piston};

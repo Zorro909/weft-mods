@@ -8,7 +8,7 @@
 //! have changed since the terrain gave each column its height: each block of it looks down its
 //! column for the ground (`ground`). A field whose puddle finds none is left out.
 
-use base_api::OVERWORLD;
+use base_api::dimensions::OVERWORLD;
 use weft_sdk::{Feature, Placed, Plan, Registry, Tag, abi::stage};
 
 use super::{OIL, OIL_SAND, OILY_DIRT};

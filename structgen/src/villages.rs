@@ -150,7 +150,7 @@ const REACH_DOWN: i32 = 512;
 pub fn register(r: &mut Registry) {
     for (feature, settlement) in [(&HAMLETS, &HAMLET), (&VILLAGES, &VILLAGE), (&TOWNS, &TOWN)] {
         r.feature(feature)
-            .dimension(&base_api::OVERWORLD)
+            .dimension(&base_api::dimensions::OVERWORLD)
             .biome(OPEN)
             .spacing(settlement.spacing)
             .chance(settlement.chance)

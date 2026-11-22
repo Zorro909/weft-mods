@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, PoisonError};
 
-use base_api::CRAFTING;
+use base_api::recipes::CRAFTING;
 use weft_sdk::*;
 
 use super::{Bench, CRAFT_COST, Status, cells, pattern};

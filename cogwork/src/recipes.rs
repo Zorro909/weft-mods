@@ -2,7 +2,7 @@
 //! `assets/recipes/*.toml`; `build.rs` checks those files and turns them into `RECIPES` when the
 //! mod is built.
 
-use base_api::CRAFTING;
+use base_api::recipes::CRAFTING;
 use weft_sdk::Registry;
 
 pub enum Recipe {

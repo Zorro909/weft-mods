@@ -6,7 +6,7 @@ mod cells;
 mod craft;
 mod fill;
 
-use base_api::CRAFTING;
+use base_api::recipes::CRAFTING;
 pub use fill::insert;
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::*;
