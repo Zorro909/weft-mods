@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, PoisonError};
 
 use base_api::recipes::CRAFTING;
-use weft_sdk::*;
+use weft_sdk::{ItemStack, Output, REMAINDER, StackData, SystemBatch, World, recipe_grid_output};
 
 use super::{Bench, CRAFT_COST, Status, cells, pattern};
 use crate::lib::Pos;

@@ -6,7 +6,7 @@
 //! name `engine.json` as their parent and set only its textures. Without them an item would show
 //! its block facing south, lying on its side.
 
-use weft_sdk::*;
+use weft_sdk::{BlockBuilder, Dir, Facings, Orientation, Output, Props, State, Toward, Use, World};
 
 use crate::lib::Pos;
 
