@@ -8,6 +8,11 @@
 - Settlements also grow in the base game's new open biomes: hills, lavender fields and the
   tallgrass and clover meadows.
 
+### Fixed
+
+- Towns are found again on the new terrain, about as often as in Weft 26.11.6: a town is tried
+  in every square of open land, not every other one.
+
 ## 0.4.2 - 2026-11-20
 
 ### Changed

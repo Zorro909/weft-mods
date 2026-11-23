@@ -9,7 +9,8 @@ lays the settlement out.
 1. **The grid.** Each kind of settlement is a feature on a grid of squares, 384, 512 or 640
    blocks a side (`src/villages.rs`). The engine picks one start in each square from the seed
    and keeps it with the kind's chance where the biome under it is open land
-   (`#animals !#forest !#mountain`) and the ground there isn't under the sea.
+   (`#animals !#forest !#mountain`) and the ground there isn't under the sea. A town keeps
+   every start there, since few spots leave room for its 17 buildings.
 2. **Kept out.** A start of a higher priority whose box would touch it keeps it out: a town (3)
    over a village (2) over a hamlet (1) over trees (0). Only what really stands counts, so a
    village a town kept out keeps nothing out itself.

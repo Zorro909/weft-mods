@@ -48,7 +48,7 @@ its own square.
 | | Hamlet | Village | Town |
 |---|---|---|---|
 | Feature | `structgen:hamlet` | `structgen:village` | `structgen:town` |
-| One per square of | 384 blocks, 38% | 512 blocks, 38% | 640 blocks, 50% |
+| One per square of | 384 blocks, 38% | 512 blocks, 38% | 640 blocks, always |
 | Heart | a green with a well | a green with a well, and an oak if there is room | a cobbled market square, fountain and stalls |
 | Roads | gravel lanes | gravel lanes | cobbled streets between stone kerbs |
 | Buildings | 5 cottages or farms | a church, a tavern, a smithy and forge, 5 cottages and farms, a post mill | a town hall, church, guildhall, coaching inn and smithy, 12 town houses, a tower mill |

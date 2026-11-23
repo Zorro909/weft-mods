@@ -107,9 +107,11 @@ static VILLAGE: Settlement = Settlement {
     infills: &["", "white_infill"],
 };
 
+/// Tried in every square: a town has to fit 14 of its 17 buildings, which few starts leave room
+/// for in base's hills and lakes.
 static TOWN: Settlement = Settlement {
     spacing: 640,
-    chance: 0.5,
+    chance: 1.0,
     priority: 3,
     kind: Kind::Town,
     steps: 6,
@@ -181,4 +183,17 @@ pub fn register(r: &mut Registry) {
                 .item("base:gold_ingot")
                 .item("base:arrow"),
         );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_square_of_open_land_tries_for_a_town() {
+        assert_eq!(
+            TOWN.chance, 1.0,
+            "a town has to fit 14 of its 17 buildings, so few starts leave room for one"
+        );
+    }
 }
