@@ -88,9 +88,9 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 
 | Mod | Release | Release candidate |
 |---|---|---|
-| cogwork | [0.4.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.4.2), Weft 26.11.6 [fc79fa6](https://github.com/Weft-Rust/Weft/commit/fc79fa648b132c9c90bf32e46ab3b7032a090da1) | – |
-| showcase | [0.3.3](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.3), Weft 26.11.6 [fc79fa6](https://github.com/Weft-Rust/Weft/commit/fc79fa648b132c9c90bf32e46ab3b7032a090da1) | – |
-| structgen | [0.4.2](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.4.2), Weft 26.11.6 [fc79fa6](https://github.com/Weft-Rust/Weft/commit/fc79fa648b132c9c90bf32e46ab3b7032a090da1) | – |
+| cogwork | [0.4.3](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.4.3), Weft 26.11.7 [cab2d5f](https://github.com/Weft-Rust/Weft/commit/cab2d5f72ace01e3aa453840d80aaffebd4a9fcb) | – |
+| showcase | [0.3.4](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.4), Weft 26.11.7 [cab2d5f](https://github.com/Weft-Rust/Weft/commit/cab2d5f72ace01e3aa453840d80aaffebd4a9fcb) | – |
+| structgen | [0.4.3](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.4.3), Weft 26.11.7 [cab2d5f](https://github.com/Weft-Rust/Weft/commit/cab2d5f72ace01e3aa453840d80aaffebd4a9fcb) | – |
 | structures | [0.1.3](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.3), Weft 26.11.2 [2db18c2](https://github.com/Weft-Rust/Weft/commit/2db18c2387c1bb09ecb25871072d4d82c3ee0ab4) | [0.1.4-rc.24.gfbcd03f](https://github.com/Zorro909/weft-mods/releases/tag/structures-v0.1.4-rc.24.gfbcd03f), Weft unknown |
 
 ## Versions
@@ -99,6 +99,7 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 
 | Version | Released | Weft |
 |---|---|---|
+| [0.4.3](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.4.3) | 2026-11-23 | 26.11.7 [cab2d5f](https://github.com/Weft-Rust/Weft/commit/cab2d5f72ace01e3aa453840d80aaffebd4a9fcb) |
 | [0.4.2](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.4.2) | 2026-11-21 | 26.11.6 [fc79fa6](https://github.com/Weft-Rust/Weft/commit/fc79fa648b132c9c90bf32e46ab3b7032a090da1) |
 | [0.4.1](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.4.1) | 2026-11-16 | 26.11.5 [ee29247](https://github.com/Weft-Rust/Weft/commit/ee292476a9764bacad3b7876e1541ac23607ac5e) |
 | [0.4.0](https://github.com/Zorro909/weft-mods/releases/tag/cogwork-v0.4.0) | 2026-11-12 | 26.11.4 [2e2014f](https://github.com/Weft-Rust/Weft/commit/2e2014f2714943c07d33279a70cdc5ed44e8d601) |
@@ -114,6 +115,7 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 
 | Version | Released | Weft |
 |---|---|---|
+| [0.3.4](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.4) | 2026-11-23 | 26.11.7 [cab2d5f](https://github.com/Weft-Rust/Weft/commit/cab2d5f72ace01e3aa453840d80aaffebd4a9fcb) |
 | [0.3.3](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.3) | 2026-11-21 | 26.11.6 [fc79fa6](https://github.com/Weft-Rust/Weft/commit/fc79fa648b132c9c90bf32e46ab3b7032a090da1) |
 | [0.3.2](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.2) | 2026-11-16 | 26.11.5 [ee29247](https://github.com/Weft-Rust/Weft/commit/ee292476a9764bacad3b7876e1541ac23607ac5e) |
 | [0.3.1](https://github.com/Zorro909/weft-mods/releases/tag/showcase-v0.3.1) | 2026-11-12 | 26.11.4 [2e2014f](https://github.com/Weft-Rust/Weft/commit/2e2014f2714943c07d33279a70cdc5ed44e8d601) |
@@ -126,6 +128,7 @@ against. Release candidates (`X.Y.Z-rc.…`) are builds of `main` on the way to 
 
 | Version | Released | Weft |
 |---|---|---|
+| [0.4.3](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.4.3) | 2026-11-23 | 26.11.7 [cab2d5f](https://github.com/Weft-Rust/Weft/commit/cab2d5f72ace01e3aa453840d80aaffebd4a9fcb) |
 | [0.4.2](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.4.2) | 2026-11-21 | 26.11.6 [fc79fa6](https://github.com/Weft-Rust/Weft/commit/fc79fa648b132c9c90bf32e46ab3b7032a090da1) |
 | [0.4.1](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.4.1) | 2026-11-16 | 26.11.5 [ee29247](https://github.com/Weft-Rust/Weft/commit/ee292476a9764bacad3b7876e1541ac23607ac5e) |
 | [0.4.0](https://github.com/Zorro909/weft-mods/releases/tag/structgen-v0.4.0) | 2026-11-12 | 26.11.4 [2e2014f](https://github.com/Weft-Rust/Weft/commit/2e2014f2714943c07d33279a70cdc5ed44e8d601) |
