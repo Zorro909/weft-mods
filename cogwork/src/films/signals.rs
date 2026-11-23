@@ -8,7 +8,7 @@ use showcase_api::{Set, signal};
 use weft_sdk::{Registry, World};
 
 use super::engine_bay::CONTROLLER;
-use super::site::SITE;
+use super::site::{SITE, lowered_block};
 use crate::lib::TypedWorld;
 
 pub const RUNNING: &str = "running";
@@ -50,7 +50,11 @@ fn send_when_running(world: &World) {
     // A wait from a world left since would end at a time far from this world's.
     let now = world.game_time();
     waiting.retain(|wait| (now..=now + WAIT_TICKS).contains(&wait.until));
-    if world.block_typed(SITE + CONTROLLER).prop("working") != Some("true") {
+    if world
+        .block_typed(SITE + lowered_block(CONTROLLER))
+        .prop("working")
+        != Some("true")
+    {
         return;
     }
     for wait in waiting.drain(..) {

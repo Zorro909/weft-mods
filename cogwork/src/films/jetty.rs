@@ -1,4 +1,5 @@
-//! The jetty on the lake north of the hall: oak planks on piles, and at its head a pump over
+//! The jetty on the lake north of the hall, out from the shore: oak planks on piles, and at its
+//! head, in four blocks of water, a pump over
 //! a gap in the planks, lowering its hose into the lake. Its line of liquid tubes runs back
 //! along the jetty and up the bank into the hall's water tank. Water climbs a line only as
 //! fast as it fills it, a block every two seconds, so the film starts as if this pump had been
@@ -10,27 +11,28 @@ use weft_sdk::{Block, Dir};
 use super::engine_bay::WATER_TANK;
 use super::ground::{over_ground, route};
 use super::parts::{OAK_LOG, area, engine, fuel, liquid_tubes, prefill};
+use super::site::{WORKS_DOWN, lowered_block};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid_tube::LIQUID_TUBE;
 use crate::pump::PUMP;
 
 /// The jetty's middle row along x, the height of its planks (the lake's surface is the block
-/// below), and its two ends along z: its head out in the lake and its foot on the sand.
+/// below, at y 63), and its two ends along z: its head out in the lake and its foot on the sand.
 const MIDDLE_X: i32 = 12;
 const DECK: i32 = -12;
-const HEAD_Z: i32 = -47;
-const FOOT_Z: i32 = -37;
+const HEAD_Z: i32 = -25;
+const FOOT_Z: i32 = -15;
 /// The pump, a block in from the head, standing over the gap in the planks.
 pub const PUMP_AT: Pos = Pos::new(MIDDLE_X, DECK + 1, HEAD_Z + 1);
 /// The sides of the pump its engines stand on; its line leaves it to the south.
 const ENGINE_SIDES: [Dir; 3] = [Dir::West, Dir::East, Dir::North];
 /// Where its piles stand along z, and how far they go down into the lake.
-const PILES_Z: [i32; 3] = [HEAD_Z, -42, FOOT_Z];
+const PILES_Z: [i32; 3] = [HEAD_Z, -20, FOOT_Z];
 const PILE_DEPTH: i32 = 3;
 /// The line, from behind the pump to the block against the hall's water tank, and the
-/// highest block it climbs to.
+/// highest block it climbs to: a block over the hall's terrace.
 const LINE: [(i32, i32); 2] = [(MIDDLE_X, HEAD_Z + 2), (MIDDLE_X, -7)];
-const LINE_TOP: i32 = 1;
+const LINE_TOP: i32 = 1 - WORKS_DOWN;
 /// How full the hall's water tank is when the film starts: two thirds.
 const TANK_FULL: [u32; 2] = [2, 3];
 
@@ -62,7 +64,8 @@ pub fn pump(set: &Set) {
     for side in ENGINE_SIDES {
         fuel(set, PUMP_AT.toward(side));
     }
-    let blocks = line(set).into_iter().chain(WATER_TANK.blocks());
+    let tank = WATER_TANK.blocks().map(lowered_block);
+    let blocks = line(set).into_iter().chain(tank);
     prefill(set, blocks, "base:water", TANK_FULL);
 }
 

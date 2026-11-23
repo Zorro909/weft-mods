@@ -9,7 +9,7 @@ use showcase_api::Set;
 use weft_sdk::{Dir, Item, Shape};
 
 use super::parts::{CHEST, area, engine, fuel, shafts, tubes};
-use super::site::SITE;
+use super::site::{SITE, WORKS_DOWN};
 use crate::excavator::{DIG, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
@@ -18,7 +18,7 @@ use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
 /// so how deep its pit is then.
 pub const DIGGER: Pos = Pos::new(33, 0, 2);
 const MINING_Y: i32 = -70;
-const PIT_DEPTH: i32 = DIGGER.y + SITE.y - MINING_Y - 1;
+const PIT_DEPTH: i32 = DIGGER.y + SITE.y - WORKS_DOWN - MINING_Y - 1;
 /// The one that builds its frame while the camera watches, and the sides its engines are on.
 const BUILDER: Pos = Pos::new(64, 1, 3);
 const BUILDER_ENGINES: [Dir; 2] = [Dir::Up, Dir::East];
