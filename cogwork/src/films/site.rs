@@ -7,9 +7,14 @@ use showcase_api::{Film, Look, Path, Set, Step};
 
 use crate::lib::Pos;
 
-/// The block everything is counted from, in the world: the first above the hall's floor, on
-/// the hall's long axis at its west end. The seep's puddle is the block (-32, 2, -13) from it.
+/// The block everything is counted from, in the world: on the hall's long axis at its west
+/// end, `WORKS_DOWN` above the first block over its floor. The lake's surface is 13 below it.
 pub const SITE: Pos = Pos::new(16, 76, -76);
+/// How far below the site the works stand: the hall and the digger's terrace beside it, which
+/// the engine's shaft joins and so stand at one height, the frame builder's, the loader and
+/// the seep, each set into the land where it now lies. Their sections build in blocks from
+/// `works`; the jetty and the knoll stand on the site's own count.
+pub const WORKS_DOWN: i32 = 8;
 
 /// The middle of `block`, `up` blocks higher: where the camera looks to have it in view.
 pub const fn above(block: Pos, up: f64) -> [f64; 3] {
@@ -28,6 +33,30 @@ pub fn on_site(set: &Set) -> Set {
 /// A cue handler that is handed the set counted from the site.
 pub fn at_site(handler: fn(&Set)) -> impl Fn(&Set) + Send + Sync + 'static {
     move |set| handler(&on_site(set))
+}
+
+/// `set`, counted from the site, counting from the works instead: `WORKS_DOWN` lower.
+pub fn works(set: &Set) -> Set {
+    Set::new(
+        set.world(),
+        set.player(),
+        set.at(lowered_block(Pos::new(0, 0, 0))),
+    )
+}
+
+/// A cue handler that is handed the set counted from the works.
+pub fn at_works(handler: fn(&Set)) -> impl Fn(&Set) + Send + Sync + 'static {
+    move |set| handler(&works(&on_site(set)))
+}
+
+/// `block` of the works, counted from the site.
+pub const fn lowered_block(block: Pos) -> Pos {
+    block.add_y(-WORKS_DOWN)
+}
+
+/// `place` by the works, counted from the site.
+pub const fn lowered(place: [f64; 3]) -> [f64; 3] {
+    [place[0], place[1] - WORKS_DOWN as f64, place[2]]
 }
 
 /// `film`, written in blocks from the site, counted from `origin` instead: the block the film
@@ -84,6 +113,21 @@ mod tests {
         let pump = Pos::new(-32, 3, -13);
         assert_eq!(above(pump, 0.0), [-31.5, 3.5, -12.5], "its middle");
         assert_eq!(above(pump, 1.0), [-31.5, 4.5, -12.5], "a block higher");
+    }
+
+    #[test]
+    fn the_works_stand_below_the_site() {
+        let down = WORKS_DOWN;
+        assert_eq!(
+            lowered_block(Pos::new(4, 0, -5)),
+            Pos::new(4, -down, -5),
+            "a block"
+        );
+        assert_eq!(
+            lowered([1.5, 2.5, -0.5]),
+            [1.5, 2.5 - f64::from(down), -0.5],
+            "a place"
+        );
     }
 
     #[test]

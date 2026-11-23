@@ -4,7 +4,7 @@
 //! on the lake and one on an oil seep, which bores down to its field on camera; their lines of
 //! liquid tubes into an open hall with the tanks, the oil engine, which hazes the air round
 //! it, and a row of assembly benches the engine drives; an excavator on the engine's shaft, its
-//! pit dug down past y = -64, and its sorting tube; a leveler cutting a shoulder of the knoll
+//! pit dug down past y = -64, and its sorting tube; a leveler cutting the crest of a knoll
 //! flat; an excavator putting up its frame; and a cuboid loader, with the lens that shows what
 //! it keeps. The camera carries engines (`kit`), which show under the screens it opens. It
 //! comes in over the lake, goes east through it all, and back to the loader by the hall. The
@@ -31,11 +31,11 @@ use weft_sdk::Registry;
 use self::engine_bay::SHAFT_X;
 use self::ground::Pad;
 use self::parts::{GRASS, GRAVEL};
-use self::site::{above, at_site, from_site, on_site};
+use self::site::{above, at_site, at_works, from_site, lowered, lowered_block, on_site, works};
 use crate::lib::Pos;
 
-/// The terraces: the hall's, the digging excavator's beside it, and the frame builder's beyond
-/// the knoll.
+/// The terraces, in blocks from the works: the hall's, the digging excavator's beside it, and
+/// the frame builder's east of the knoll.
 const PADS: [Pad; 3] = [
     Pad {
         west: -5,
@@ -67,24 +67,24 @@ const PADS: [Pad; 3] = [
 /// oil tank, the tubes up into the oil engine and the engine, its shaft under the roof and
 /// where that comes down behind the benches, the second bench, the sorting tube, the middles
 /// of the two excavators' areas, the drill at the bottom of the pit, the loader and the sky over it, the works as a whole, and the
-/// shore below them.
+/// shore below them. All but the jetty's pump stand with the works, `WORKS_DOWN` below the site.
 const JETTY_PUMP: [f64; 3] = above(jetty::PUMP_AT, 0.0);
-const SEEP: [f64; 3] = above(seep::PUMP_AT, 1.0);
-const HALL_WEST: [f64; 3] = [hall::WEST as f64, 3.0, 0.0];
-const OIL_TANK: [f64; 3] = above(engine_bay::OIL_TANK.lo, 0.7);
-const OIL_RISE: [f64; 3] = above(engine_bay::OIL_RISE[1], 0.5);
-const OIL_ENGINE: [f64; 3] = above(engine_bay::CHAMBER, 0.3);
-const SHAFT: [f64; 3] = above(Pos::new(SHAFT_X, engine_bay::SHAFT_HEIGHT, 0), -0.5);
-const SHAFT_FOOT: [f64; 3] = above(Pos::new(SHAFT_X, 1, crafting::SHAFT_Z), 0.0);
-const BENCH: [f64; 3] = above(crafting::STONE_COGS, 0.1);
-const SORTER: [f64; 3] = above(quarry::SORTER, 0.0);
-const PIT: [f64; 3] = above(quarry::PIT, 0.5);
-const DRILL: [f64; 3] = above(quarry::DRILL, 0.0);
-const FRAME: [f64; 3] = above(quarry::RAISED, 0.5);
-const LOADER: [f64; 3] = above(loading::LOADER, 0.0);
-const OVER_LOADER: [f64; 3] = above(loading::LOADER, 1.3);
-const WORKS: [f64; 3] = [22.0, 0.0, -8.0];
-const SHORE: [f64; 3] = [18.0, -2.0, -15.0];
+const SEEP: [f64; 3] = lowered(above(seep::PUMP_AT, 1.0));
+const HALL_WEST: [f64; 3] = lowered([hall::WEST as f64, 3.0, 0.0]);
+const OIL_TANK: [f64; 3] = lowered(above(engine_bay::OIL_TANK.lo, 0.7));
+const OIL_RISE: [f64; 3] = lowered(above(engine_bay::OIL_RISE[1], 0.5));
+const OIL_ENGINE: [f64; 3] = lowered(above(engine_bay::CHAMBER, 0.3));
+const SHAFT: [f64; 3] = lowered(above(Pos::new(SHAFT_X, engine_bay::SHAFT_HEIGHT, 0), -0.5));
+const SHAFT_FOOT: [f64; 3] = lowered(above(Pos::new(SHAFT_X, 1, crafting::SHAFT_Z), 0.0));
+const BENCH: [f64; 3] = lowered(above(crafting::STONE_COGS, 0.1));
+const SORTER: [f64; 3] = lowered(above(quarry::SORTER, 0.0));
+const PIT: [f64; 3] = lowered(above(quarry::PIT, 0.5));
+const DRILL: [f64; 3] = lowered(above(quarry::DRILL, 0.0));
+const FRAME: [f64; 3] = lowered(above(quarry::RAISED, 0.5));
+const LOADER: [f64; 3] = lowered(above(loading::LOADER, 0.0));
+const OVER_LOADER: [f64; 3] = lowered(above(loading::LOADER, 1.3));
+const WORKS: [f64; 3] = lowered([22.0, 0.0, -8.0]);
+const SHORE: [f64; 3] = lowered([18.0, -2.0, -15.0]);
 
 pub fn register(r: &mut Registry) {
     // Block entities only exist once the tick they were placed in is over: everything is
@@ -92,14 +92,14 @@ pub fn register(r: &mut Registry) {
     let build = |set: &Set| from_site(set.origin(), showcase(&on_site(set)));
     film(r, "showcase", build)
         .on_cue("start", at_site(start))
-        .on_cue("bore", at_site(seep::bore))
-        .on_cue("lift", at_site(lift))
+        .on_cue("bore", at_works(seep::bore))
+        .on_cue("lift", at_works(lift))
         .on_cue("survey", at_site(leveling::survey))
         .on_cue("leveler", at_site(leveling::place_leveler))
         .on_cue("wrench", at_site(leveling::turn_engines))
-        .on_cue("frame", at_site(quarry::raise_frame))
-        .on_cue("lens", at_site(loading::lens))
-        .on_cue("lens_away", at_site(loading::lens_away))
+        .on_cue("frame", at_works(quarry::raise_frame))
+        .on_cue("lens", at_works(loading::lens))
+        .on_cue("lens_away", at_works(loading::lens_away))
         .on_cue("unpack", at_site(kit::unpack));
     signals::register(r);
 }
@@ -108,9 +108,10 @@ pub fn register(r: &mut Registry) {
 fn start(set: &Set) {
     kit::pack(set);
     jetty::pump(set);
-    engine_bay::stock_oil(set);
-    crafting::start(set);
-    quarry::start(set);
+    let works = works(set);
+    engine_bay::stock_oil(&works);
+    crafting::start(&works);
+    quarry::start(&works);
 }
 
 /// The timber liquid tube is started, and the film waits for the oil engine.
@@ -120,16 +121,17 @@ fn lift(set: &Set) {
 }
 
 fn showcase(set: &Set) -> Film {
-    ground::terraces(set, &PADS);
+    let works = works(set);
+    ground::terraces(&works, &PADS);
     // The lines over the ground first: under the hall's roof they would climb onto it.
-    seep::build(set);
+    seep::build(&works);
     jetty::build(set);
-    hall::build(set);
-    engine_bay::build(set);
-    crafting::build(set);
-    quarry::build(set);
+    hall::build(&works);
+    engine_bay::build(&works);
+    crafting::build(&works);
+    quarry::build(&works);
     leveling::build(set);
-    loading::build(set);
+    loading::build(&works);
     let film = Film::new().cue("start");
     let film = opening(film);
     let film = water(film);
@@ -175,16 +177,12 @@ fn halfway(from: [f64; 3], to: [f64; 3]) -> [f64; 3] {
 
 /// Where the flight from the lake leaves the jetty behind, and where it is halfway up the
 /// bank.
-const PAST_JETTY: [f64; 3] = [-7.0, -3.5, -35.5];
-const UP_BANK: [f64; 3] = [-17.0, 2.0, -28.0];
+const PAST_JETTY: [f64; 3] = [-7.0, -5.5, -13.5];
+const UP_BANK: [f64; 3] = [-17.0, -4.0, -16.0];
 
 /// In from high over the lake toward the works.
 fn opening(film: Film) -> Film {
-    let path = [
-        [38.0, 27.0, -100.0],
-        [27.0, 12.0, -78.0],
-        [17.0, -3.0, -61.0],
-    ];
+    let path = [[38.0, 19.0, -78.0], [27.0, 6.0, -56.0], [17.0, -3.0, -39.0]];
     film.title("mod.cogwork.name", 4.0).shot(
         flyby(&path)
             .look(Look::Pan(WORKS, JETTY_PUMP))
@@ -196,9 +194,9 @@ fn opening(film: Film) -> Film {
 /// Low round the head of the jetty, where a pump stands over the lake.
 fn water(film: Film) -> Film {
     let path = [
-        [17.0, -3.0, -61.0],
-        [7.5, -7.0, -52.5],
-        [0.5, -6.5, -44.0],
+        [17.0, -3.0, -39.0],
+        [7.5, -7.0, -30.5],
+        [0.5, -6.5, -22.0],
         PAST_JETTY,
     ];
     film.title("cogwork.film.water", 6.0).shot(
@@ -223,7 +221,7 @@ fn boring(film: Film) -> Film {
         between(SEEP_UP, part)
     };
     let north = on_orbit(SEEP, SEEP_OUT, SEEP_UP[0], SEEP_ARC[0]);
-    let to_seep = [UP_BANK, [-25.0, 6.5, -22.5], north];
+    let to_seep = [UP_BANK, [-25.0, -2.0, -18.5], north];
     let round = |from: f64, to: f64, secs: f32| {
         orbit(SEEP, SEEP_OUT)
             .arc(from, to)
@@ -246,7 +244,7 @@ fn boring(film: Film) -> Film {
     .cue("bore")
     .title("cogwork.film.seep", 5.0)
     .shot(round(SEEP_ARC[0], -114.0, 2.5))
-    .menu("cogwork:pump", seep::PUMP_AT, 9.0)
+    .menu("cogwork:pump", lowered_block(seep::PUMP_AT), 9.0)
     .shot(round(-114.0, -178.0, 6.5))
     .title("cogwork.film.field", 5.0)
     .shot(round(-178.0, SEEP_ARC[1], 9.4))
@@ -254,17 +252,17 @@ fn boring(film: Film) -> Film {
 
 /// Where the camera comes into the hall at its west end, and where it stops south of the oil
 /// tank, the timber liquid tube beside the tank in view.
-const IN_HALL: [f64; 3] = [1.0, 2.6, -0.5];
-const BY_TANK: [f64; 3] = [3.8, 2.0, -1.2];
+const IN_HALL: [f64; 3] = lowered([1.0, 2.6, -0.5]);
+const BY_TANK: [f64; 3] = lowered([3.8, 2.0, -1.2]);
 
 /// East beside the oil line, down the slope and in at the hall's west end, up to the tank.
 fn oil_line(film: Film) -> Film {
     let south_of_seep = on_orbit(SEEP, SEEP_OUT, SEEP_UP[1], SEEP_ARC[1]);
     let along = [
         south_of_seep,
-        [-22.0, 6.5, -6.5],
-        [-13.0, 4.2, -1.0],
-        [-5.0, 2.8, -0.8],
+        lowered([-22.0, 6.5, -6.5]),
+        lowered([-13.0, 4.2, -1.0]),
+        lowered([-5.0, 2.8, -0.8]),
         IN_HALL,
     ];
     film.title("cogwork.film.liquid_tubes", 5.0)
@@ -308,15 +306,19 @@ fn oil_engine(film: Film) -> Film {
         .wait_for(signals::RUNNING, signals::WAIT_SECS)
         .title("cogwork.film.oil_engine", 5.0)
         .shot(round(ENGINE_FROM, 75.0, [0.8, 2.0], 7.5).blend(1.0))
-        .menu("cogwork:oil_engine", engine_bay::CONTROLLER, 5.0)
+        .menu(
+            "cogwork:oil_engine",
+            lowered_block(engine_bay::CONTROLLER),
+            5.0,
+        )
         .shot(round(75.0, 40.0, [2.0, 2.4], 5.0))
 }
 
 /// Where the camera stands in the engine's haze, beside its rig and a little above, and where
 /// it drifts to while it looks out north-west, between two posts of the hall, over the shore to
 /// the lake and the hills beyond, which the haze browns.
-const IN_HAZE: [[f64; 3]; 2] = [[11.2, 4.7, -2.6], [10.9, 4.8, -2.4]];
-const OVER_SHORE: [f64; 3] = [5.5, 3.0, -12.0];
+const IN_HAZE: [[f64; 3]; 2] = [lowered([11.2, 4.7, -2.6]), lowered([10.9, 4.8, -2.4])];
+const OVER_SHORE: [f64; 3] = lowered([5.5, 3.0, -12.0]);
 
 /// Up beside the running engine's rig, into its haze, to look out of the hall through it.
 fn haze(film: Film) -> Film {
@@ -369,7 +371,11 @@ fn benches(film: Film) -> Film {
                 .ease(speeds(0.3, 0.25))
                 .secs(4.0),
         )
-        .menu("cogwork:assembly_bench", crafting::STONE_COGS, 5.0)
+        .menu(
+            "cogwork:assembly_bench",
+            lowered_block(crafting::STONE_COGS),
+            5.0,
+        )
         .wait(5.0)
 }
 
@@ -384,7 +390,12 @@ const SORTER_ARC: [f64; 2] = [175.0, 105.0];
 fn sorting(film: Film) -> Film {
     let at_bench = on_orbit(BENCH, BENCH_OUT, BENCH_UP[1], BENCH_FROM);
     let at_sorter = on_orbit(SORTER, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
-    let out = [at_bench, [17.5, 2.4, 0.6], [20.0, 2.6, 1.2], at_sorter];
+    let out = [
+        at_bench,
+        lowered([17.5, 2.4, 0.6]),
+        lowered([20.0, 2.6, 1.2]),
+        at_sorter,
+    ];
     let round = |from: f64, to: f64, ease: Ease, secs: f32| {
         orbit(SORTER, SORTER_OUT)
             .arc(from, to)
@@ -400,7 +411,7 @@ fn sorting(film: Film) -> Film {
     )
     .title("cogwork.film.sorting", 5.0)
     .shot(round(SORTER_ARC[0], 150.0, speeds(0.6, 0.15), 2.5))
-    .menu("cogwork:sorting_tube", quarry::SORTER, 4.0)
+    .menu("cogwork:sorting_tube", lowered_block(quarry::SORTER), 4.0)
     .shot(round(150.0, 140.0, speeds(0.15, 0.15), 4.0))
     .shot(round(140.0, SORTER_ARC[1], speeds(0.15, 1.0), 2.5))
 }
@@ -417,10 +428,10 @@ const PIT_LEFT: f64 = 215.0;
 /// Where the camera goes down the pit: in through the open west side of the frame, under the
 /// gantry's beams, and down between two of the rows the drill mines along x, so that its shaft
 /// never comes through the camera; and how far above the drill it stops.
-const INTO_PIT: [f64; 3] = [30.0, 2.0, -4.0];
+const INTO_PIT: [f64; 3] = lowered([30.0, 2.0, -4.0]);
 /// Ten blocks down the line from there to the drill: where the camera looks as it goes in, so
 /// that its look runs on unturned down to the drill.
-const DOWN_PIT: [f64; 3] = [30.25, -8.0, -4.0];
+const DOWN_PIT: [f64; 3] = lowered([30.25, -8.0, -4.0]);
 const OVER_DRILL: f64 = 4.0;
 
 /// Up over the digging excavator and round the west of its pit, looking down into it, then
@@ -457,7 +468,7 @@ fn digging(film: Film) -> Film {
             .ease(speeds(4.0, 0.3))
             .secs(13.0),
     )
-    .menu("cogwork:excavator", quarry::DIGGER, 5.0)
+    .menu("cogwork:excavator", lowered_block(quarry::DIGGER), 5.0)
     .shot(hold(at_drill).look_at(DRILL).secs(5.0))
     .fade_out(1.5)
 }
@@ -543,14 +554,18 @@ fn framing(film: Film) -> Film {
         )
 }
 
-/// Where the camera turns west over the knoll, and where it comes down past the digger's
-/// frame toward the loader.
-const OVER_KNOLL: [f64; 3] = [52.0, 12.0, 4.0];
-const PAST_DIGGER: [f64; 3] = [41.0, 9.0, -11.0];
+/// Where the camera turns west by the knoll's north edge, and where it comes down past the
+/// digger's frame toward the loader.
+const OVER_KNOLL: [f64; 3] = [50.0, 5.0, 7.0];
+const PAST_DIGGER: [f64; 3] = lowered([41.0, 9.0, -11.0]);
 /// Where the camera watches the loader from, north-east of it, the loader low in the picture
 /// so that its screen opens above it: when it gets there, when the screen opens, and when
 /// the screen closes.
-const BY_LOADER: [[f64; 3]; 3] = [[31.6, 5.2, -12.2], [31.7, 5.4, -12.7], [31.9, 5.8, -13.6]];
+const BY_LOADER: [[f64; 3]; 3] = [
+    lowered([31.6, 5.2, -12.2]),
+    lowered([31.7, 5.4, -12.7]),
+    lowered([31.9, 5.8, -13.6]),
+];
 
 /// Back west over the levelled knoll and the pit to the loader on its mast by the hall, with
 /// the hall behind it, and into its screen.
@@ -576,7 +591,11 @@ fn loader(film: Film) -> Film {
             .ease(speeds(0.2, 0.2))
             .secs(1.5),
     )
-    .menu("cogwork:ultra_cuboid_loader", loading::LOADER, 4.5)
+    .menu(
+        "cogwork:ultra_cuboid_loader",
+        lowered_block(loading::LOADER),
+        4.5,
+    )
     .shot(
         dolly(BY_LOADER[1], BY_LOADER[2])
             .look_at(OVER_LOADER)
@@ -589,10 +608,14 @@ fn loader(film: Film) -> Film {
 /// loaded as a grid through the works; without it again, down to the shore east of the works,
 /// to rest on a last look along it all.
 fn closing(film: Film) -> Film {
-    let over_lake = [37.0, 13.0, -28.0];
-    let north_east = [68.0, 27.0, -34.0];
-    let with_lens = [over_lake, [50.0, 25.0, -42.0], north_east];
-    let to_shore = [north_east, [66.0, 15.0, -27.0], [54.0, 8.5, -22.0]];
+    let over_lake = lowered([37.0, 13.0, -28.0]);
+    let north_east = lowered([68.0, 27.0, -34.0]);
+    let with_lens = [over_lake, lowered([50.0, 25.0, -42.0]), north_east];
+    let to_shore = [
+        north_east,
+        lowered([66.0, 15.0, -27.0]),
+        lowered([54.0, 8.5, -22.0]),
+    ];
     film.shot(
         dolly(BY_LOADER[2], over_lake)
             .look(Look::Pan(OVER_LOADER, LOADER))
