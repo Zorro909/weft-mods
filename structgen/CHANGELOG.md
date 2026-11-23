@@ -7,6 +7,8 @@
 - Built for Weft 26.11.7.
 - Settlements also grow in the base game's new open biomes: hills, lavender fields and the
   tallgrass and clover meadows.
+- The showcase film flies where seed 42 puts its settlements in Weft 26.11.7: a hamlet, a
+  village and a town, one after the other on a flight east.
 
 ### Fixed
 

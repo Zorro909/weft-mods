@@ -1,8 +1,9 @@
 //! Structgen's film for the showcase mod, built only with the `showcase` feature:
 //! `tools/showcase.sh structgen:showcase`. A journey through seed 42's world as it generates,
-//! nothing built or levelled for it: a hamlet, a village, a town and, over the mountains, a last
-//! hamlet, flying north from one to the next and into some of their buildings. The places are where seed 42 puts them, written in world coordinates, so
-//! the film is for that seed and the settlements as they are now laid out.
+//! nothing built or levelled for it: a hamlet, a village and a town some 5,000 blocks
+//! north-west of spawn, flying east from one to the next and into some of their buildings. The
+//! places are where seed 42 puts them, written in world coordinates, so the film is for that
+//! seed and the settlements as they are now laid out.
 
 mod building;
 mod flights;
@@ -29,9 +30,7 @@ fn journey() -> Film {
     let film = flights::to_the_village(film);
     let film = village::village(film);
     let film = flights::to_the_town(film);
-    let film = town::town(film);
-    let film = flights::over_the_mountains(film);
-    hamlets::last(film)
+    town::town(film)
 }
 
 /// A flight through the first of each pair, looking at the second there, turning smoothly
