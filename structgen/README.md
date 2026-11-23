@@ -75,14 +75,11 @@ The details are in [`docs/`](docs/README.md):
 ## Showcase film
 
 With the `showcase` feature, structgen brings a film for the [showcase](../showcase) mod: a
-journey north through seed 42's world as it generates, past a hamlet, a village, a town and,
-over the mountains, a last hamlet, and into some of their buildings. It takes about 4:15. Record it with
-`tools/showcase.sh structgen:showcase -- --view 32`, which makes a world of the showcase's own
-seed, 42; the film only fits that seed's world. Without the feature, none of this is compiled
-in, and showcase is not a dependency.
-
-Its flight follows the settlements of the old layout. In 0.4.0 they stand in other places, so
-the film has to be recorded again.
+journey east through seed 42's world as it generates, some 5,000 blocks north-west of spawn,
+past a hamlet, a village and a town, and into some of their buildings. It takes about 4
+minutes. Record it with `tools/showcase.sh structgen:showcase -- --view 32`, which makes a
+world of the showcase's own seed, 42; the film only fits that seed's world. Without the
+feature, none of this is compiled in, and showcase is not a dependency.
 
 ## Build and install
 

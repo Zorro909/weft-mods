@@ -1,7 +1,8 @@
-//! The town: round its market square, in under the coaching inn's arch and through its yard
-//! out onto the square, round to the town hall's door and in, and out again over the square.
+//! The town, where the journey ends: down past its west side, in under the coaching inn's arch
+//! and through its yard out onto the street, across into the town hall and round it, out again
+//! and up over the square as the picture fades.
 
-use showcase_api::{Film, orbit};
+use showcase_api::{Film, flyby, orbit, screen};
 use weftkit::Pos;
 
 use super::building::Building;
@@ -9,31 +10,41 @@ use super::{glide, on_orbit, speeds, turn};
 use crate::turn::Turn;
 
 /// The market square, the fountain in its middle.
-pub const SQUARE: [f64; 3] = [-3556.0, 68.0, 1575.0];
-/// The coaching inn on the square's north-west: in from the square through its front, a yard,
-/// and an arch out the back.
+pub const SQUARE: [f64; 3] = [-3702.5, 74.0, -2984.5];
+/// The coaching inn on the west of the main street, south of the square: in from the fields
+/// through an arch in its back, a yard, and its front onto the street.
 const INN: Building = Building {
-    corner: Pos::new(-3590, 70, 1553),
+    corner: Pos::new(-3728, 72, -2967),
     size: [17, 17],
-    turn: Turn::Back,
+    turn: Turn::Right,
 };
-/// The town hall on the square's north side, its door to the square; a market stall stands
-/// before it.
+/// The town hall across the street from it, its door to the street.
 const HALL: Building = Building {
-    corner: Pos::new(-3571, 71, 1546),
+    corner: Pos::new(-3696, 73, -2985),
     size: [21, 18],
-    turn: Turn::Back,
+    turn: Turn::Left,
 };
+/// Seconds the picture takes to fade to black at the end, the camera coming to rest meanwhile.
+const FADE_OUT: f32 = 4.0;
 
-/// Round the square from the east by the north; down behind the inn, in under its arch and
-/// through its yard out onto the square; round to the town hall, in and round its stair tower to
-/// the long bench; round and back out over the square, and round to the north.
+/// Down past the town's west side over the lake shore, the square in view; behind the inn, in
+/// under its arch and through its yard out onto the street; across to the town hall, in and
+/// round its stair tower to the long bench; round and back out, up over the square, and round it
+/// rising as the picture fades to black.
 pub fn town(film: Film) -> Film {
+    let round_the_west = [
+        [-3795.0, 128.0, -3090.0],
+        [-3808.0, 116.0, -3032.0],
+        [-3803.0, 105.0, -2988.0],
+        [-3786.0, 97.0, -2962.0],
+        // On the way the glide goes.
+        [-3762.0, 92.0, -2959.0],
+    ];
     let under_the_arch = INN.at([7.0, 2.7, 16.0]);
     let through_the_yard = [
-        (on_orbit(SQUARE, 48.0, 24.0, 250.0), SQUARE),
-        ([-3578.0, 88.0, 1533.0], INN.at([7.0, 3.0, 22.0])),
-        ([-3580.5, 82.0, 1540.0], under_the_arch),
+        ([-3762.0, 92.0, -2959.0], SQUARE),
+        ([-3748.0, 86.0, -2960.0], INN.at([7.0, 3.0, 22.0])),
+        ([-3738.0, 80.0, -2960.0], under_the_arch),
         (INN.at([7.0, 4.0, 22.0]), INN.at([7.0, 2.6, 14.0])),
         (INN.at([7.0, 2.8, 19.0]), INN.at([7.0, 2.6, 12.0])),
         (under_the_arch, INN.at([5.5, 2.6, 11.5])),
@@ -44,14 +55,13 @@ pub fn town(film: Film) -> Film {
         (INN.at([3.5, 2.6, 1.0]), INN.at([3.5, 2.8, -6.0])),
     ];
     let outside_the_hall = HALL.at([10.5, 3.4, -3.0]);
-    // South out of the inn and round to the east and the north, over the stall to the door.
-    let round_to_the_hall = [
+    // Out of the inn onto the street, left along it and round into the hall's door.
+    let across_to_the_hall = [
         (INN.at([3.5, 2.6, 1.0]), INN.at([3.5, 2.8, -6.0])),
-        (INN.at([3.5, 3.0, -2.5]), [-3572.0, 75.0, 1580.0]),
-        ([-3574.0, 75.5, 1578.0], [-3564.0, 77.0, 1583.0]),
-        ([-3568.0, 77.0, 1583.0], [-3560.0, 77.0, 1580.0]),
-        ([-3562.0, 77.5, 1582.0], HALL.at([10.5, 3.0, -3.0])),
-        (HALL.at([10.5, 5.0, -9.0]), HALL.at([10.5, 2.6, 2.0])),
+        (INN.at([3.5, 3.0, -2.5]), [-3700.0, 76.0, -2968.0]),
+        ([-3707.0, 76.0, -2966.5], [-3700.0, 76.0, -2972.0]),
+        ([-3704.0, 76.0, -2971.0], HALL.at([10.5, 3.0, -1.0])),
+        (HALL.at([10.5, 3.6, -5.0]), HALL.at([10.5, 2.6, 2.0])),
         (outside_the_hall, HALL.at([10.5, 2.6, 6.0])),
     ];
     let at_the_bench = HALL.at([4.5, 3.0, 12.0]);
@@ -78,34 +88,47 @@ pub fn town(film: Film) -> Film {
         (HALL.at([10.5, 2.6, 3.5]), HALL.at([10.5, 2.6, -3.0])),
         (HALL.at([10.5, 2.6, 1.5]), HALL.at([10.5, 3.0, -8.0])),
         (outside_the_hall, HALL.at([10.5, 3.0, -10.0])),
-        // Over the stall, clear of the house east of it, then round to the west and the north.
-        (HALL.at([10.5, 5.5, -9.0]), [-3556.0, 74.0, 1585.0]),
-        ([-3561.0, 85.0, 1582.0], [-3568.0, 78.0, 1594.0]),
-        ([-3567.0, 95.0, 1591.0], [-3585.0, 84.0, 1590.0]),
-        ([-3580.0, 104.0, 1593.0], [-3595.0, 95.0, 1570.0]),
-        ([-3592.0, 114.0, 1580.0], [-3596.0, 100.0, 1520.0]),
-        ([-3596.0, 122.0, 1560.0], [-3600.0, 105.0, 1450.0]),
-        // On the way the flight goes.
-        ([-3597.0, 125.0, 1548.0], [-3600.0, 105.0, 1450.0]),
+        // Up over the street, turning north to the square, into the closing orbit.
+        (HALL.at([10.5, 5.0, -5.0]), [-3712.0, 80.0, -2978.0]),
+        ([-3702.0, 84.0, -2975.0], [-3709.0, 77.0, -2983.0]),
+        ([-3702.3, 92.0, -2973.5], SQUARE),
+        (on_orbit(SQUARE, 12.0, 26.0, 85.0), SQUARE),
+        (on_orbit(SQUARE, 12.0, 26.0, 90.0), SQUARE),
     ];
-    film.title("structgen.film.town", 6.0)
-        .shot(
-            orbit(SQUARE, 88.0)
-                .arc(360.0, 250.0)
-                .radius(88.0, 48.0)
-                .height(50.0, 24.0)
-                .ease(speeds(20.0, 6.0))
-                .secs(13.0),
-        )
-        .title("structgen.film.inn", 5.0)
-        .shot(glide(&through_the_yard, 12.0).ease(speeds(6.0, 1.5)))
-        .shot(glide(&round_to_the_hall, 10.0).ease(speeds(1.5, 1.5)))
-        .title("structgen.film.hall", 5.0)
-        .shot(glide(&round_the_tower, 11.0).ease(speeds(1.5, 0.5)))
-        .shot(turn(
-            at_the_bench,
-            &[HALL.at([10.0, 2.3, 16.0]), bench, tower, back_round],
-            7.0,
-        ))
-        .shot(glide(&out_and_up, 18.0).ease(speeds(1.0, 10.0)))
+    film.shot(
+        flyby(&round_the_west)
+            .look_at(SQUARE)
+            .ease(speeds(14.0, 8.0))
+            .secs(15.0),
+    )
+    .title("structgen.film.inn", 5.0)
+    .shot(glide(&through_the_yard, 12.0).ease(speeds(8.0, 1.5)))
+    .shot(glide(&across_to_the_hall, 8.0).ease(speeds(1.5, 1.5)))
+    .title("structgen.film.hall", 5.0)
+    .shot(glide(&round_the_tower, 11.0).ease(speeds(1.5, 0.5)))
+    .shot(turn(
+        at_the_bench,
+        &[HALL.at([10.0, 2.3, 16.0]), bench, tower, back_round],
+        7.0,
+    ))
+    .shot(glide(&out_and_up, 16.0).ease(speeds(1.0, 4.0)))
+    .title("structgen.film.end", 7.0)
+    .shot(
+        orbit(SQUARE, 12.0)
+            .arc(90.0, 300.0)
+            .radius(12.0, 90.0)
+            .height(26.0, 55.0)
+            .ease(speeds(4.0, 1.5))
+            .secs(16.0),
+    )
+    .screen(screen::BLACK, 1.0, FADE_OUT)
+    .shot(
+        orbit(SQUARE, 90.0)
+            .arc(300.0, 302.0)
+            .radius(90.0, 90.7)
+            .height(55.0, 55.5)
+            .ease(speeds(1.5, 0.0))
+            .secs(FADE_OUT),
+    )
+    .wait(0.5)
 }
