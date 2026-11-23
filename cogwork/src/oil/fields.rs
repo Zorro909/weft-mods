@@ -140,14 +140,16 @@ enum Cell {
 
 impl Cell {
     fn of(state: u32) -> Cell {
-        let open = [&PLANTS, &COVER, &LEAVES]
-            .iter()
-            .any(|tag| tag.on_block(state));
-        if state == AIR || open {
+        Cell::tagged(state == AIR, |tag| tag.on_block(state))
+    }
+
+    /// What a block is to a seep, from whether it is air and which tags it has (`has`).
+    fn tagged(air: bool, has: impl Fn(&Tag) -> bool) -> Cell {
+        if air || [&PLANTS, &COVER, &LEAVES].into_iter().any(&has) {
             Cell::Open
-        } else if DIRT.on_block(state) {
+        } else if has(&DIRT) {
             Cell::Dirt
-        } else if SAND.on_block(state) {
+        } else if has(&SAND) {
             Cell::Sand
         } else {
             Cell::Other
@@ -295,12 +297,31 @@ mod tests {
         }
     }
 
+    /// A block tagged `name` alone.
+    fn tagged_only(name: &'static str) -> impl Fn(&Tag) -> bool {
+        move |tag| tag.name() == name
+    }
+
     #[test]
-    fn a_seep_clears_base_s_clover_and_fern() {
+    fn a_seep_tells_ground_by_its_tags() {
+        use Cell::{Dirt, Open, Other, Sand};
+        assert_eq!(Cell::tagged(true, |_| false), Open, "air");
+        for name in ["plantable", "leaves"] {
+            assert_eq!(Cell::tagged(false, tagged_only(name)), Open, "{name}");
+        }
+        assert_eq!(Cell::tagged(false, tagged_only("dirt")), Dirt, "dirt");
+        assert_eq!(Cell::tagged(false, tagged_only("sand")), Sand, "sand");
+        assert_eq!(Cell::tagged(false, |_| false), Other, "stone");
+    }
+
+    #[test]
+    fn a_seep_looks_through_and_clears_base_s_clover_and_fern() {
         for plant in ["base:clover", "base:fern"] {
             assert!(GROUND_COVER.contains(&plant), "{plant} is ground cover");
         }
-        assert!(CLEARED.contains("#plantable"), "plants go too");
+        let cover = Cell::tagged(false, tagged_only(COVER_TAG));
+        assert_eq!(cover, Cell::Open, "it looks through the cover");
+        assert!(CLEARED.contains("#plantable"), "plants go");
         assert!(
             CLEARED.contains(&format!("#{COVER_TAG}")),
             "the cover goes too"
