@@ -2,11 +2,13 @@
 //! machines for the big jobs (quarries, an assembly bench and a leveler), cuboid loaders that keep
 //! them running with nobody near, oil: pumped up from fields underground, carried in liquid
 //! tubes, kept in tanks and burnt in the oil engine, and the rubble quarries bring up, sifted and
-//! ground by hand at the sieve and the millstone. Everything goes through `weft_sdk` and `base_api`.
+//! ground by hand at the sieve and the millstone, and bellows that blow a furnace's fire.
+//! Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
 #[cfg(test)]
 mod art;
+mod bellows;
 mod bench;
 mod boxes;
 mod chance;
@@ -88,6 +90,7 @@ fn init(r: &mut Registry) {
     sieve::register(r);
     shaker_screen::register(r);
     grinding_mill::register(r);
+    bellows::register(r);
     water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

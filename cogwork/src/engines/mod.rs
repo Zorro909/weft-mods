@@ -2,7 +2,7 @@
 //! a quarry, any mod's machine), and offer it to `conductor` networks too. The spring engine is
 //! wound by hand (`wind`) and runs down while a redstone signal doesn't brake it; it never
 //! overheats. The ember engine burns fuel, makes four times as much, and stops to cool down when
-//! its energy has nowhere to go.
+//! its energy has nowhere to go. It never burns lava.
 
 mod model;
 mod piston;
@@ -11,11 +11,17 @@ mod wind;
 
 pub use model::turn;
 use strum::FromRepr;
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, Block, Component, ENERGY, Energy, Holder, Holds, Item, ItemStack, Menu, Registry, S,
+    Slots, Ui, World, abi, component_flags, ratio, tool_tier, value,
+};
 
 pub static SPRING_ENGINE: Block = Block::named("spring_engine");
 pub static EMBER_ENGINE: Block = Block::named("ember_engine");
 static EMBER_MENU: Menu = Menu::named("ember_engine");
+static LAVA_BUCKET: Item = Item::named("base:lava_bucket");
+/// What an ember engine's fuel slot takes: any fuel but lava.
+const EMBER_FUEL: &str = "#fuel !base:lava_bucket";
 
 value! {
     /// An engine's state: its kind (`Kind`), `heat` 0..1000, `overheated` (1 while it cools
@@ -115,9 +121,22 @@ fn ember_engine(r: &mut Registry) {
         })
         .opens(&EMBER_MENU);
     r.menu(&EMBER_MENU)
-        .group("fuel", Slots::single().accepts("#fuel").holder())
+        .group("fuel", Slots::single().accepts(EMBER_FUEL).holder())
         .player_inventory()
         .screen(ember_screen);
+}
+
+/// Whether an ember engine burns `stack`: lava it leaves where it is, even a bucket put in its
+/// slot before it refused them.
+fn burns(stack: ItemStack) -> bool {
+    stack.item != LAVA_BUCKET.id()
+}
+
+/// Refuses `stack` from a tube when the engine `at` is an ember engine that doesn't burn it.
+/// None for anything else, which takes items by the slot names alone.
+pub fn insert(world: &World, at: Holder, stack: ItemStack, _simulate: bool) -> Option<ItemStack> {
+    let engine = world.component(at, &ENGINE)?;
+    (engine.kind() == Kind::Ember && !burns(stack)).then_some(stack)
 }
 
 /// An engine's store of `capacity` energy, empty, giving out up to `max_out` a tick to

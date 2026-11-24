@@ -82,9 +82,10 @@ fn burn(world: &World, id: u64, pos: Pos, engine: &mut Engine, ticks: u32) -> bo
     true
 }
 
-/// Ticks of burning one item of `stack` gives, if it is fuel.
+/// Ticks of burning one item of `stack` gives, if it is fuel an ember engine burns.
 fn fuel_ticks(stack: ItemStack) -> Option<u32> {
-    FUEL.on_item(stack.item).filter(|_| !stack.is_empty())
+    FUEL.on_item(stack.item)
+        .filter(|_| !stack.is_empty() && super::burns(stack))
 }
 
 /// Adds what the engine made to its store; true when the store is full.

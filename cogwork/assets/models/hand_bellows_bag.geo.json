@@ -1,0 +1,35 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.hand_bellows_bag",
+				"texture_width": 64,
+				"texture_height": 64,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 2,
+				"visible_bounds_offset": [0, 1, 0]
+			},
+			"bones": [
+				{
+					"name": "bag",
+					"pivot": [0, 2, 0],
+					"cubes": [
+						{"origin": [-5, 2, -3], "size": [10, 2, 10], "uv": [0, 0]},
+						{"origin": [-6, 4, -3], "size": [12, 2, 11], "uv": [0, 12]},
+						{"origin": [-5, 6, -3], "size": [10, 2, 10], "uv": [0, 25]}
+					]
+				},
+				{
+					"name": "lid",
+					"pivot": [0, 8, 0],
+					"cubes": [
+						{"origin": [-6, 8, -5], "size": [12, 2, 13], "uv": [0, 37]},
+						{"origin": [-1, 10, 3], "size": [2, 3, 2], "uv": [0, 52]},
+						{"origin": [-4, 13, 3], "size": [8, 2, 2], "uv": [10, 52]}
+					]
+				}
+			]
+		}
+	]
+}
