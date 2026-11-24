@@ -1,4 +1,5 @@
-//! Hubs with arms toward some of their six sides, as tubes, liquid tubes and torque shafts are.
+//! Hubs with arms toward some of their six sides, as tubes, liquid tubes, torque shafts, wooden
+//! axles and lashed frames are.
 //! Each kind is drawn from one Blockbench model, `assets/models/block/<block>/hub_and_arm.json`:
 //! its elements named `hub` stay in the middle of the block, and those named `arm` point north
 //! and are turned toward every side the block has an arm. A face whose texture is named after
@@ -34,6 +35,14 @@ pub static TIMBER_LIQUID_TUBE: LazyLock<HubAndArms> = LazyLock::new(|| {
 pub static TORQUE_SHAFT: LazyLock<HubAndArms> = LazyLock::new(|| {
     let file = include_str!("../../assets/models/block/torque_shaft/hub_and_arm.json");
     HubAndArms::read("torque_shaft", file)
+});
+pub static WOODEN_AXLE: LazyLock<HubAndArms> = LazyLock::new(|| {
+    let file = include_str!("../../assets/models/block/wooden_axle/hub_and_arm.json");
+    HubAndArms::read("wooden_axle", file)
+});
+pub static LASHED_FRAME: LazyLock<HubAndArms> = LazyLock::new(|| {
+    let file = include_str!("../../assets/models/block/lashed_frame/hub_and_arm.json");
+    HubAndArms::read("lashed_frame", file)
 });
 
 /// The side the arms of a hub-and-arm model point to.
@@ -297,7 +306,15 @@ mod tests {
 
     #[test]
     fn the_mods_models_have_a_hub_and_an_arm() {
-        for model in [&TUBE, &LIQUID_TUBE, &TIMBER_LIQUID_TUBE, &TORQUE_SHAFT] {
+        let models = [
+            &TUBE,
+            &LIQUID_TUBE,
+            &TIMBER_LIQUID_TUBE,
+            &TORQUE_SHAFT,
+            &WOODEN_AXLE,
+            &LASHED_FRAME,
+        ];
+        for model in models {
             assert!(!model.hub.is_empty() && !model.arm.is_empty(), "both");
             assert!(
                 !model.texture("particle").is_empty(),
