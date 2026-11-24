@@ -47,9 +47,9 @@ const GILDED_X: [i32; 2] = [28, 30];
 const SHAFT_Z: i32 = super::crafting::SHAFT_Z;
 const SHAFT_X: i32 = DIGGER.x + 1;
 
-/// Camera landmarks shared with S10 (knoll entry) and S11 (loader departure).
-pub const PIT_LOOK: [f64; 3] = lowered(above(PIT, 0.5));
+/// Camera landmarks shared with S11 (loader departure).
 pub const FRAME_LOOK: [f64; 3] = lowered(above(RAISED, 0.5));
+pub const PIT_LOOK: [f64; 3] = lowered(above(PIT, 0.5));
 const SORTER_LOOK: [f64; 3] = lowered(above(SORTER, 0.0));
 const DRILL_LOOK: [f64; 3] = lowered(above(DRILL, 0.0));
 const MAGAZINE_LOOK: [f64; 3] = lowered(above(MAGAZINE_AT, 0.3));
@@ -58,10 +58,9 @@ const SORTER_OUT: f64 = 3.0;
 const SORTER_UP: f64 = 3.0;
 const SORTER_ARC: [f64; 2] = [125.0, 85.0];
 
-pub const PIT_OUT: f64 = 8.0;
-pub const PIT_UP: [f64; 2] = [9.0, 2.5];
+const PIT_OUT: f64 = 8.0;
+const PIT_UP: [f64; 2] = [9.0, 2.5];
 const PIT_ARC: [f64; 2] = [108.0, 180.0];
-pub const PIT_LEFT: f64 = 215.0;
 
 const INTO_PIT: [f64; 3] = lowered([30.0, 2.0, -4.0]);
 const DOWN_PIT: [f64; 3] = lowered([30.25, -8.0, -4.0]);
@@ -164,9 +163,9 @@ pub fn raise_frame(set: &Set) {
 pub fn sorting_and_digging_shots(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
     let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
-    // One continuous curve north-east off the elevated Pad P terrace, staying west of the look line
-    // so the camera sweeps smoothly across the courtyard onto the sorting tube.
-    let to_sorter = [plastics_bay::END_EYE, lowered([24.3, 4.8, 7.6]), at_sorter];
+    // High curve north-east off Pad P, staying well clear above the grassy bank and east of the
+    // hall's south-east corner post.
+    let to_sorter = [plastics_bay::END_EYE, lowered([25.8, 6.2, 7.2]), at_sorter];
     let by_magazine = [
         leave_sorter,
         lowered([31.2, 2.8, 5.4]),

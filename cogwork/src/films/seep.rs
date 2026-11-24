@@ -1,8 +1,8 @@
 //! The oil seep west of the hall: a puddle of oil in oil-soaked ground (both oily dirt and oil
 //! sand on its sandy lake-side edge), and its field 70 blocks below. A pump stands on the puddle
-//! under a timber derrick, with ember engines on two sides and on top, its south side left clear
-//! for the camera; lit on camera, it bores down to the field and pumps. A line of liquid tubes
-//! carries the crude oil over the ground into Pad R's crude tank, with a gravel path beside it.
+//! with ember engines on two sides and on top, its south side left clear for the camera; lit on
+//! camera, it bores down to the field and pumps. A line of liquid tubes carries the crude oil
+//! over the ground into Pad R's crude tank, with a gravel path beside it.
 
 use showcase_api::{Film, Look, Set, dolly, flyby, orbit};
 use weft_sdk::{Dir, Shape};
@@ -10,7 +10,7 @@ use weft_sdk::{Dir, Shape};
 use super::camera::{between, on_orbit, speeds};
 use super::ground::{fell_near, ground_top, mow, over_ground, pave, route};
 use super::jetty;
-use super::parts::{GLOWSTONE, GRAVEL, OAK_LOG, area, engine, fuel, liquid_tubes};
+use super::parts::{GRAVEL, engine, fuel, liquid_tubes};
 use super::site::{above, lowered, lowered_block};
 use crate::lib::{BlockState, Pos};
 use crate::oil::{OIL, OIL_SAND, OILY_DIRT};
@@ -30,10 +30,6 @@ const LINE: [(i32, i32); 3] = [(-31, -13), (-18, -5), (-17, -5)];
 /// The path beside the line: its rows along z, and its ends along x.
 const PATH_Z: [i32; 2] = [-12, -11];
 const PATH_X: [i32; 2] = [-28, -21];
-/// The gallows post: east of the pump on its own row so it never stands between the camera and
-/// the pump on the north-west-south orbit, carrying a jib and lamp overhead.
-const POST_EAST: i32 = 2;
-const DERRICK_TOP: i32 = 8;
 /// Blocks around the pump within which no tree is left standing, and within which tall grass is
 /// mown, which hid the pump.
 const CLEARING: i32 = 11;
@@ -63,7 +59,6 @@ pub fn build(set: &Set) {
     let path = (PATH_X[0]..=PATH_X[1]).flat_map(|x| PATH_Z.map(|z| (x, z)));
     pave(set, path, &GRAVEL);
     liquid_tubes(set, &over_ground(set, &route(&LINE)));
-    derrick(set);
 }
 
 /// The puddle under the pump, the soaked dirt and oil sand round it, and the ball of oil below.
@@ -83,24 +78,6 @@ fn field(set: &Set) {
     set.world().fill(ball, OIL.id()).keep("core:air");
 }
 
-/// Single gallows post straight east of the pump with a jib and lamp overhanging it, keeping the
-/// entire north-west-south camera arc unobstructed.
-fn derrick(set: &Set) {
-    let (x, z) = (PUMP_AT.x, PUMP_AT.z);
-    let post_x = x + POST_EAST;
-    let foot = Pos::new(post_x, ground_top(set, post_x, z) + 1, z);
-    set.fill(
-        area(foot, foot.with_y(DERRICK_TOP)),
-        BlockState::of(&OAK_LOG),
-    );
-    let jib = area(
-        Pos::new(x, DERRICK_TOP, z),
-        Pos::new(post_x - 1, DERRICK_TOP, z),
-    );
-    set.fill(jib, OAK_LOG.with(&[("axis", "x")]).into());
-    set.place(Pos::new(x, DERRICK_TOP - 1, z), BlockState::of(&GLOWSTONE));
-}
-
 /// Lights the pump's engines: it bores down to the field and pumps.
 pub fn bore(set: &Set) {
     for side in ENGINE_SIDES {
@@ -108,7 +85,7 @@ pub fn bore(set: &Set) {
     }
 }
 
-/// Up the bank from the jetty to the oil seep, and half round its derrick while it bores down.
+/// Up the bank from the jetty to the oil seep, and half round the pump while it bores down.
 pub fn shots(film: Film) -> Film {
     let up = |angle: f64| {
         let part = (angle - SEEP_ARC[0]) / (SEEP_ARC[1] - SEEP_ARC[0]);

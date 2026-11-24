@@ -4,7 +4,7 @@
 //! polymerizer, two molding presses, an acid tank brewing sulfuric acid into glowing pressure
 //! tubes, and a bubbling leaching vat.
 
-use showcase_api::{Film, Look, Set, dolly, flyby};
+use showcase_api::{Film, Look, Set, dolly};
 use weft_sdk::Dir;
 
 use super::camera::speeds;
@@ -52,10 +52,10 @@ const ENGINES: [(Pos, Dir); 3] = [
     (Pos::new(23, FLOOR, 16), Dir::North),
 ];
 
-/// Where S8 hands the camera off to S9, gliding smoothly north-east over the terrace edge toward
-/// the sorting tube on one heading.
-pub const END_EYE: [f64; 3] = lowered([24.0, FLOOR as f64 + 1.8, 10.6]);
-pub const END_LOOK: [f64; 3] = lowered([27.2, FLOOR as f64 + 0.5, 11.2]);
+/// Where S8 hands the camera off to S9, well clear above the grassy bank north-east of Pad P and
+/// clear of the hall's south-east corner post.
+pub const END_EYE: [f64; 3] = lowered([25.2, FLOOR as f64 + 2.6, 10.8]);
+pub const END_LOOK: [f64; 3] = lowered([27.5, FLOOR as f64 + 0.5, 10.8]);
 
 pub fn build(set: &Set) {
     // Power backbone behind the row, climbing cleanly from the hall's torque shaft up to Pad P.
@@ -180,34 +180,48 @@ pub fn start(set: &Set) {
     stock_rubble(set, LEACH_VAT_AT, "input", "iron", Grade::Rich, 3);
 }
 
-/// Exits the hall cleanly down the center of the open bay between the x = 14 and x = 18 posts,
-/// rising onto the Pad P terrace and gliding close past all five machines.
+/// Slides east inside the hall to the center of the 5-block-wide bay between the x = 16 and
+/// x = 22 posts, flies straight south out the center of that bay (keeping both posts 3 blocks
+/// away and outside the frame), then glides west onto Pad P's polymerizer and sweeps east past
+/// all five machines.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
+    let east_bench = lowered([19.5, 1.0, 5.2]);
+    let press_mid = lowered([19.5, f + 0.8, 14.5]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
     let leach_look = lowered(above(LEACH_VAT_AT, 0.2));
 
-    let exit = [
-        crafting::end_eye(),
-        lowered([16.0, 4.6, 7.8]),
-        lowered([16.2, f + 1.6, 10.8]),
-    ];
-    let at_poly = lowered([17.6, f + 1.5, 10.8]);
-    let at_press = lowered([20.0, f + 1.5, 10.8]);
-    let at_acid = lowered([22.4, f + 1.6, 10.8]);
+    let bay_entry = lowered([19.5, 2.2, 2.2]);
+    let outside = lowered([19.5, 5.2, 9.8]);
+    let at_poly_start = lowered([15.6, f + 1.8, 10.6]);
+    let at_poly = lowered([17.6, f + 1.8, 10.6]);
+    let at_press = lowered([20.0, f + 1.8, 10.6]);
+    let at_acid = lowered([22.2, f + 2.0, 10.7]);
 
     film.shot(
-        flyby(&exit)
-            .look(Look::Pan(crafting::BENCH_LOOK, poly_look))
-            .ease(speeds(0.25, 0.8))
-            .secs(5.5),
+        dolly(crafting::end_eye(), bay_entry)
+            .look(Look::Pan(crafting::BENCH_LOOK, east_bench))
+            .ease(speeds(0.25, 1.4))
+            .secs(3.0),
+    )
+    .shot(
+        dolly(bay_entry, outside)
+            .look(Look::Pan(east_bench, press_mid))
+            .ease(speeds(1.4, 1.0))
+            .secs(3.5),
+    )
+    .shot(
+        dolly(outside, at_poly_start)
+            .look(Look::Pan(press_mid, poly_look))
+            .ease(speeds(1.0, 0.8))
+            .secs(3.2),
     )
     .title("cogwork.film.t5_plastics", 5.5)
     .menu("cogwork:polymerizer", lowered_block(POLYMERIZER_AT), 4.0)
     .shot(
-        dolly(exit[2], at_poly)
+        dolly(at_poly_start, at_poly)
             .look(Look::Pan(poly_look, press_look))
             .ease(speeds(0.8, 0.6))
             .secs(5.2),

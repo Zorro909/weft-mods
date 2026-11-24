@@ -14,7 +14,7 @@ pub const WEST: i32 = -2;
 pub const EAST: i32 = 22;
 const HALF_WIDTH: i32 = 7;
 /// Blocks from one post to the next along a row.
-const POST_EVERY: usize = 4;
+const POST_EVERY: usize = 6;
 /// The height of the beams the posts carry; the roof starts a block above.
 const BEAM: i32 = 6;
 /// How far the roof reaches past the posts, on all four sides.

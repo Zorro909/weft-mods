@@ -5,13 +5,12 @@
 //! the knoll, the powered seismic thumper stands ready beside its own marked area, and its screen
 //! opens before the camera continues to the composite-frame Gantry Excavator.
 
-use showcase_api::{Film, Look, Set, dolly, flyby, orbit};
+use showcase_api::{Film, Look, Set, dolly, orbit};
 use weft_sdk::{Dir, Item, ItemStack, Output};
 
 use super::camera::{between, on_orbit, speeds};
 use super::ground::ground_top;
 use super::parts::{COBBLESTONE, engine, fuel};
-use super::quarry::{PIT_LEFT, PIT_LOOK, PIT_OUT, PIT_UP};
 use super::site::{above, lowered, lowered_block};
 use crate::leveler::LEVELER;
 use crate::lib::{BlockState, Pos};
@@ -23,10 +22,11 @@ const HEIGHT: i32 = 0;
 /// The marked square, x 42 to 50 and z 9 to 17: its corner marker, and the two along it.
 const CORNER: Pos = Pos::new(50, HEIGHT, 9);
 const MARKERS: [Pos; 3] = [CORNER, Pos::new(42, HEIGHT, 9), Pos::new(50, HEIGHT, 17)];
-/// The leveler, east of the corner marker, and its engines to the east and south.
+/// The leveler, east of the corner marker facing east, flanked north and south by its engines so
+/// its east front face is completely unobstructed for the camera.
 const LEVELER_AT: Pos = Pos::new(51, HEIGHT, 9);
 const ENGINES: [(Pos, Dir); 2] = [
-    (Pos::new(52, HEIGHT, 9), Dir::West),
+    (Pos::new(51, HEIGHT, 8), Dir::South),
     (Pos::new(51, HEIGHT, 10), Dir::North),
 ];
 /// The middle of the square, at the height it is made flat at (site coordinates).
@@ -41,10 +41,13 @@ const THUMPER_ENGINES: [(Pos, Dir); 2] = [
 ];
 const THUMPER_MARKERS: [Pos; 3] = [Pos::new(59, 1, 5), Pos::new(64, 1, 5), Pos::new(59, 1, 8)];
 
-/// Camera orbit around the knoll and close eye-height framing on the seismic thumper's west front.
-const KNOLL_ARC: [f64; 2] = [205.0, 295.0];
-const KNOLL_OUT: [f64; 2] = [6.6, 6.2];
-const KNOLL_UP: [f64; 2] = [3.6, 3.0];
+/// Close front-facing arc around the leveler (4.3 blocks from its east face, eye height) so the
+/// leveler sits in the foreground with the cut/filled square right behind it, plus close eye-level
+/// framing on the seismic thumper's west front.
+const LEVELER_CENTER: [f64; 3] = above(LEVELER_AT, 0.0);
+const LEVELER_ARC: [f64; 2] = [-42.0, -12.0];
+const LEVELER_OUT: f64 = 4.3;
+const LEVELER_UP: [f64; 2] = [1.7, 1.6];
 pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
 pub const END_EYE: [f64; 3] = lowered([56.6, 2.6, 3.0]);
 
@@ -122,65 +125,64 @@ pub fn turn_engines(set: &Set) {
     }
 }
 
-fn knoll_part(angle: f64) -> f64 {
-    (angle - KNOLL_ARC[0]) / (KNOLL_ARC[1] - KNOLL_ARC[0])
+fn leveler_part(angle: f64) -> f64 {
+    (angle - LEVELER_ARC[0]) / (LEVELER_ARC[1] - LEVELER_ARC[0])
 }
 
-fn on_knoll(angle: f64) -> [f64; 3] {
-    let part = knoll_part(angle);
-    let (out, up) = (between(KNOLL_OUT, part), between(KNOLL_UP, part));
-    on_orbit(MIDDLE, out, up, angle)
+fn on_leveler(angle: f64) -> [f64; 3] {
+    let up = between(LEVELER_UP, leveler_part(angle));
+    on_orbit(LEVELER_CENTER, LEVELER_OUT, up, angle)
 }
 
-/// Section 10a–10b: out of the fade to the knoll (leveling + leveler screen), then east past the
-/// seismic thumper and its screen toward the composite-frame Gantry Excavator.
+/// Section 10a–10b: out of the fade to the front of the leveler at eye height with the marked
+/// ground behind it (survey, placement, wrench, leveling + screen), then a level turn over Pad 2
+/// to the seismic thumper and its screen.
 pub fn shots(film: Film) -> Film {
-    let over_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[0], PIT_LEFT);
+    let entry = [49.0, 3.8, 1.5];
     let round = |from: f64, to: f64, secs: f32| {
-        let at_ends = |of: [f64; 2]| [from, to].map(|angle| between(of, knoll_part(angle)));
-        let (out, up) = (at_ends(KNOLL_OUT), at_ends(KNOLL_UP));
-        orbit(MIDDLE, out[0])
+        let up = [from, to].map(|angle| between(LEVELER_UP, leveler_part(angle)));
+        orbit(LEVELER_CENTER, LEVELER_OUT)
             .arc(from, to)
-            .radius(out[0], out[1])
             .height(up[0], up[1])
-            .ease(speeds(0.75, 0.75))
+            .ease(speeds(0.35, 0.35))
             .secs(secs)
     };
-    // Smooth descent clear above the knoll's eastern shoulder down to eye height in front of the
-    // seismic thumper on Pad 2.
-    let leveler_look = [48.5, 0.2, 11.2];
+    let leveler_look = [50.0, 0.5, 10.8];
+    let mid_air = [57.2, -1.5, 5.4];
+    let lake_mid = [56.0, -3.5, -4.0];
     let at_thumper = lowered([56.4, 2.5, 4.8]);
-    let to_thumper = [
-        on_knoll(KNOLL_ARC[1]),
-        lowered([55.8, 7.6, 4.6]),
-        at_thumper,
-    ];
 
     film.fade_in(1.5)
         .shot(
-            dolly(over_pit, on_knoll(KNOLL_ARC[0]))
-                .look(Look::Pan(PIT_LOOK, MIDDLE))
-                .ease(speeds(1.5, 0.75))
-                .secs(5.0),
+            dolly(entry, on_leveler(LEVELER_ARC[0]))
+                .look(Look::Pan(MIDDLE, leveler_look))
+                .ease(speeds(1.5, 0.35))
+                .secs(4.5),
         )
         .title("cogwork.film.survey", 4.0)
         .cue("survey")
-        .shot(round(KNOLL_ARC[0], 218.0, 3.0))
-        .shot(round(218.0, 231.0, 3.0))
+        .shot(round(LEVELER_ARC[0], -38.0, 3.0).look_at(leveler_look))
+        .shot(round(-38.0, -34.0, 3.0).look_at(leveler_look))
         .cue("leveler")
         .title("cogwork.film.wrench", 4.0)
-        .shot(round(231.0, 244.0, 3.0))
+        .shot(round(-34.0, -30.0, 3.0).look_at(leveler_look))
         .cue("wrench")
-        .shot(round(244.0, 250.0, 1.5))
+        .shot(round(-30.0, -28.0, 1.5).look_at(leveler_look))
         .title("cogwork.film.level", 5.0)
-        .shot(round(250.0, 272.0, 5.5).look(Look::Pan(MIDDLE, leveler_look)))
+        .shot(round(-28.0, -20.0, 5.5).look_at(leveler_look))
         .menu("cogwork:leveler", LEVELER_AT, 4.0)
-        .shot(round(272.0, KNOLL_ARC[1], 6.0).look_at(leveler_look))
+        .shot(round(-20.0, LEVELER_ARC[1], 6.0).look_at(leveler_look))
         .shot(
-            flyby(&to_thumper)
-                .look(Look::Pan(leveler_look, THUMPER_LOOK))
-                .ease(speeds(0.75, 0.6))
-                .secs(7.5),
+            dolly(on_leveler(LEVELER_ARC[1]), mid_air)
+                .look(Look::Pan(leveler_look, lake_mid))
+                .ease(speeds(0.35, 0.9))
+                .secs(3.5),
+        )
+        .shot(
+            dolly(mid_air, at_thumper)
+                .look(Look::Pan(lake_mid, THUMPER_LOOK))
+                .ease(speeds(0.9, 0.6))
+                .secs(4.0),
         )
         .title("cogwork.film.t5_thumper", 5.0)
         .menu("cogwork:seismic_thumper", lowered_block(THUMPER_AT), 4.5)

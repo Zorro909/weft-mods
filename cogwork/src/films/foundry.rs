@@ -62,9 +62,9 @@ const HAMMER_CHEST: Pos = Pos::new(38, FLOOR, 34);
 pub const CREOSOTE_Z: i32 = 28;
 pub const SHAFT_Z: i32 = 32;
 
-/// Where S3 hands the camera off to S4, heading east.
-pub const END_EYE: [f64; 3] = lowered([39.5, FLOOR as f64 + 2.1, 37.8]);
-pub const END_LOOK: [f64; 3] = lowered([36.0, FLOOR as f64 + 0.8, 34.0]);
+/// Where S3 hands the camera off to S4, out in the open gravel away from the south retaining wall.
+pub const END_EYE: [f64; 3] = lowered([43.2, FLOOR as f64 + 2.4, 36.0]);
+pub const END_LOOK: [f64; 3] = lowered([41.5, FLOOR as f64 + 0.8, 33.5]);
 
 pub fn build(set: &Set) {
     coke_oven(set);
@@ -211,13 +211,15 @@ pub fn shots(film: Film) -> Film {
     let anvil_look = lowered(above(ANVIL_AT, 0.2));
     let boiler_look = lowered([30.5, f + 1.0, 33.0]);
     let engine_look = lowered(above(STEAM_ENGINE_AT, 0.2));
+    let hammer_look = lowered(above(HAMMER_AT, 0.3));
 
-    let at_coke = lowered([18.8, f + 2.0, 37.4]);
-    let at_blast = lowered([23.5, f + 2.2, 37.4]);
-    let at_anvil = lowered([26.8, f + 1.8, 37.4]);
-    let at_firebox = lowered([30.2, f + 1.9, 37.5]);
-    let at_boiler = lowered([32.4, f + 1.9, 37.5]);
-    let at_engine = lowered([35.5, f + 1.9, 37.6]);
+    let at_coke = lowered([18.8, f + 2.0, 37.2]);
+    let at_blast = lowered([23.5, f + 2.2, 37.2]);
+    let at_anvil = lowered([26.8, f + 1.8, 37.2]);
+    let at_firebox = lowered([30.2, f + 1.9, 37.2]);
+    let at_boiler = lowered([32.4, f + 1.9, 37.2]);
+    let at_engine = lowered([35.5, f + 2.0, 37.0]);
+    let at_hammer = lowered([39.2, f + 2.2, 36.8]);
 
     film.cue("noon_1")
         .title("cogwork.film.t2_coke", 5.5)
@@ -267,15 +269,15 @@ pub fn shots(film: Film) -> Film {
         .title("cogwork.film.t2_hammer", 5.0)
         .menu("cogwork:steam_engine", lowered_block(STEAM_ENGINE_AT), 3.5)
         .shot(
-            dolly(at_engine, END_EYE)
-                .look(Look::Pan(engine_look, END_LOOK))
+            dolly(at_engine, at_hammer)
+                .look(Look::Pan(engine_look, hammer_look))
                 .ease(speeds(0.8, 0.9))
                 .secs(4.5),
         )
         .menu("cogwork:trip_hammer", lowered_block(HAMMER_AT), 3.5)
         .shot(
-            dolly(END_EYE, lowered([43.5, f + 2.2, 38.0]))
-                .look_at(END_LOOK)
+            dolly(at_hammer, END_EYE)
+                .look(Look::Pan(hammer_look, END_LOOK))
                 .ease(speeds(0.9, 1.0))
                 .secs(4.0),
         )

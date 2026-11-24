@@ -38,38 +38,37 @@ const EMBER_MENU_AT: Pos = Pos::new(-8, FLOOR + 1, 35);
 const QUARRY_CHEST: Pos = Pos::new(-1, FLOOR, 35);
 const PIT_DEPTH: i32 = 3;
 
-/// Connected driven ore processing line along z = 35, all facing south with no foreground chests.
-const SHAKER_IN: Pos = Pos::new(1, FLOOR, 35);
-const SHAKER_PULL: Pos = Pos::new(2, FLOOR, 35);
-const SHAKER_PULL_ENGINE: Pos = Pos::new(2, FLOOR, 34);
-const SHAKER_AT: Pos = Pos::new(3, FLOOR, 35);
-const VOID_AT: Pos = Pos::new(2, FLOOR, 36);
+/// Connected driven ore processing line along z = 32, with all item tubes running behind the
+/// machines along z = 31 so the entire south apron stays open to the camera.
+const SHAKER_IN: Pos = Pos::new(1, FLOOR, 32);
+const SHAKER_PULL: Pos = Pos::new(2, FLOOR, 32);
+const SHAKER_PULL_ENGINE: Pos = Pos::new(2, FLOOR, 31);
+const SHAKER_AT: Pos = Pos::new(3, FLOOR, 32);
+const VOID_AT: Pos = Pos::new(3, FLOOR, 30);
 
-const WASHER_AT: Pos = Pos::new(6, FLOOR, 35);
-const MILL_AT: Pos = Pos::new(9, FLOOR, 35);
-const FURNACE_AT: Pos = Pos::new(11, FLOOR, 35);
-const BELLOWS_AT: Pos = Pos::new(12, FLOOR, 35);
+const WASHER_AT: Pos = Pos::new(6, FLOOR, 32);
+const MILL_AT: Pos = Pos::new(9, FLOOR, 32);
+const FURNACE_AT: Pos = Pos::new(11, FLOOR, 32);
+const BELLOWS_AT: Pos = Pos::new(12, FLOOR, 32);
 
 /// Water tank tucked behind the washer and grinding mill.
 const WATER_TANK: Area = Area {
-    lo: Pos::new(7, FLOOR, 32),
-    hi: Pos::new(8, FLOOR + 1, 32),
+    lo: Pos::new(7, FLOOR, 29),
+    hi: Pos::new(8, FLOOR + 1, 29),
 };
 
-/// Ember engines driving the shaker and bellows directly behind them, plus two driving the washer
-/// and grinding mill via short buried shafts so the back row stays free for water tubes.
-const DIRECT_ENGINES: [(Pos, Dir); 2] = [
-    (Pos::new(3, FLOOR, 34), Dir::South),
-    (Pos::new(12, FLOOR, 34), Dir::South),
-];
-const UNDER_ENGINES: [(Pos, Dir); 2] = [
-    (Pos::new(6, FLOOR, 32), Dir::Down),
-    (Pos::new(9, FLOOR, 32), Dir::Down),
+/// Ember engine driving the bellows directly behind it, plus three driving the shaker, washer and
+/// grinding mill via buried shafts so the rear stays open for item and water tubes.
+const DIRECT_ENGINES: [(Pos, Dir); 1] = [(Pos::new(12, FLOOR, 31), Dir::South)];
+const UNDER_ENGINES: [(Pos, Pos); 3] = [
+    (Pos::new(4, FLOOR, 29), SHAKER_AT),
+    (Pos::new(6, FLOOR, 29), WASHER_AT),
+    (Pos::new(10, FLOOR, 29), MILL_AT),
 ];
 
 /// Where S2 hands the camera off to S3, heading east.
-pub const END_EYE: [f64; 3] = lowered([14.2, FLOOR as f64 + 1.8, 37.8]);
-pub const END_LOOK: [f64; 3] = lowered([11.8, FLOOR as f64 + 0.5, 35.0]);
+pub const END_EYE: [f64; 3] = lowered([14.2, FLOOR as f64 + 2.3, 37.2]);
+pub const END_LOOK: [f64; 3] = lowered([11.8, FLOOR as f64 + 0.6, 32.5]);
 
 pub fn build(set: &Set) {
     iron_quarry(set);
@@ -99,40 +98,39 @@ fn iron_quarry(set: &Set) {
     world.fill(Shape::cuboid(lo, hi), BlockState::AIR.id());
 }
 
-/// Cantilevered timber awning supported only along the back row (z = 31) so no post ever sits in
-/// mid-frame.
+/// Cantilevered timber awning supported only by end posts behind the line (x = 0 and x = 14 on
+/// z = 28) so no post stands mid-frame or between the camera and the machines.
 fn shed(set: &Set) {
     let roof_y = FLOOR + 4;
-    for x in [1, 7, 13] {
+    for x in [0, 14] {
         set.fill(
-            area(Pos::new(x, FLOOR, 31), Pos::new(x, roof_y - 1, 31)),
+            area(Pos::new(x, FLOOR, 28), Pos::new(x, roof_y - 1, 28)),
             BlockState::of(&OAK_LOG),
         );
     }
     set.fill(
-        area(Pos::new(1, roof_y, 31), Pos::new(13, roof_y, 35)),
+        area(Pos::new(0, roof_y, 28), Pos::new(14, roof_y, 33)),
         OAK_SLAB.with(&[("type", "bottom")]).into(),
     );
 }
 
-/// Continuous tube-linked processing line: shaker + void tube -> washer -> grinding mill ->
-/// furnace + driven bellows, with water and power supplied from behind.
+/// Continuous tube-linked processing line along z = 32: shaker + rear void tube -> washer ->
+/// grinding mill -> furnace + driven bellows, with item tubes, water and power all behind.
 fn processing_line(set: &Set) {
     set.place(SHAKER_IN, BlockState::of(&CHEST));
     set.place(SHAKER_PULL, BlockState::of(&TIMBER_TUBE));
     engine(set, SHAKER_PULL_ENGINE, Dir::South);
-    set.place(SHAKER_AT, SHAKER_SCREEN.with(&[("facing", "south")]).into());
+    set.place(SHAKER_AT, SHAKER_SCREEN.with(&[("facing", "north")]).into());
     set.place(VOID_AT, BlockState::of(&VOID_TUBE));
-    tubes(set, Pos::new(3, FLOOR, 36), Pos::new(5, FLOOR, 36));
-    tubes(set, Pos::new(5, FLOOR, 35), Pos::new(5, FLOOR, 35));
+    tubes(set, Pos::new(3, FLOOR, 31), Pos::new(5, FLOOR, 31));
+    tubes(set, Pos::new(5, FLOOR, 32), Pos::new(5, FLOOR, 32));
 
-    set.place(WASHER_AT, WASHER.with(&[("facing", "south")]).into());
-    tubes(set, Pos::new(6, FLOOR, 36), Pos::new(8, FLOOR, 36));
-    tubes(set, Pos::new(8, FLOOR, 35), Pos::new(8, FLOOR, 35));
+    set.place(WASHER_AT, WASHER.with(&[("facing", "north")]).into());
+    tubes(set, Pos::new(6, FLOOR, 31), Pos::new(8, FLOOR, 31));
+    tubes(set, Pos::new(8, FLOOR, 32), Pos::new(8, FLOOR, 32));
 
-    set.place(MILL_AT, GRINDING_MILL.with(&[("facing", "south")]).into());
-    tubes(set, Pos::new(9, FLOOR, 36), Pos::new(10, FLOOR, 36));
-    tubes(set, Pos::new(10, FLOOR, 35), Pos::new(10, FLOOR, 35));
+    set.place(MILL_AT, GRINDING_MILL.with(&[("facing", "east")]).into());
+    tubes(set, Pos::new(10, FLOOR, 32), Pos::new(10, FLOOR, 32));
 
     set.place(FURNACE_AT, FURNACE.with(&[("facing", "south")]).into());
     set.place(
@@ -146,35 +144,47 @@ fn processing_line(set: &Set) {
     for (at, toward) in DIRECT_ENGINES {
         engine(set, at, toward);
     }
-    for (at, toward) in UNDER_ENGINES {
-        engine(set, at, toward);
+    for (at, target) in UNDER_ENGINES {
+        engine(set, at, Dir::Down);
         shafts(
             set,
-            Pos::new(at.x, FLOOR - 1, 32),
-            Pos::new(at.x, FLOOR - 1, 35),
+            Pos::new(at.x, FLOOR - 1, at.z),
+            Pos::new(at.x, FLOOR - 1, target.z),
         );
+        if at.x != target.x {
+            let (lo, hi) = (at.x.min(target.x), at.x.max(target.x));
+            shafts(
+                set,
+                Pos::new(lo, FLOOR - 1, target.z),
+                Pos::new(hi, FLOOR - 1, target.z),
+            );
+        }
     }
 }
 
+/// Water from the rear tank bridges over the washer's rear item tube into its east side, and runs
+/// straight into the grinding mill's north side.
 fn water_line() -> Vec<Pos> {
     vec![
-        Pos::new(7, FLOOR, 33),
-        Pos::new(7, FLOOR, 34),
-        Pos::new(6, FLOOR, 34),
-        Pos::new(8, FLOOR, 33),
-        Pos::new(8, FLOOR, 34),
-        Pos::new(9, FLOOR, 34),
+        Pos::new(7, FLOOR + 1, 30),
+        Pos::new(7, FLOOR + 1, 31),
+        Pos::new(7, FLOOR + 1, 32),
+        Pos::new(7, FLOOR, 32),
+        Pos::new(9, FLOOR, 29),
+        Pos::new(9, FLOOR, 30),
+        Pos::new(9, FLOOR, 31),
     ]
 }
 
 /// Fuels every engine, prefills the water tank, stocks rubble and ore rubble, and starts the
 /// Iron Quarry.
 pub fn start(set: &Set) {
-    for (at, _) in QUARRY_ENGINES
+    for at in QUARRY_ENGINES
         .into_iter()
-        .chain(DIRECT_ENGINES)
-        .chain(UNDER_ENGINES)
-        .chain([(SHAKER_PULL_ENGINE, Dir::South)])
+        .map(|(at, _)| at)
+        .chain(DIRECT_ENGINES.into_iter().map(|(at, _)| at))
+        .chain(UNDER_ENGINES.into_iter().map(|(at, _)| at))
+        .chain([SHAKER_PULL_ENGINE])
     {
         fuel(set, at);
     }
@@ -196,14 +206,14 @@ pub fn start(set: &Set) {
     prefill(set, water_blocks, "base:water", [1, 1]);
 }
 
-/// Close glide east past the Iron Quarry and along the driven ore processing line, opening each
-/// machine's screen over it.
+/// Eye-height glide east past the Iron Quarry and 4.5 blocks in front of the driven ore line,
+/// opening each machine's screen over it.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
     let quarry_look = lowered([-6.0, f + 1.2, 33.5]);
-    let shaker_look = lowered(above(SHAKER_AT, 0.2));
-    let washer_look = lowered(above(WASHER_AT, 0.2));
-    let mill_look = lowered(above(MILL_AT, 0.2));
+    let shaker_look = lowered(above(SHAKER_AT, 0.3));
+    let washer_look = lowered(above(WASHER_AT, 0.3));
+    let mill_look = lowered(above(MILL_AT, 0.3));
 
     let at_engines = lowered([-9.2, f + 3.0, 38.2]);
     let over_step = [
@@ -211,11 +221,11 @@ pub fn shots(film: Film) -> Film {
         lowered([-13.0, f + 5.6, 38.2]),
         at_engines,
     ];
-    let at_quarry = lowered([-3.5, f + 2.8, 38.4]);
-    let past_quarry = lowered([0.5, f + 2.0, 38.0]);
-    let at_shaker = lowered([3.5, f + 1.7, 37.8]);
-    let at_washer = lowered([6.5, f + 1.7, 37.8]);
-    let at_mill = lowered([9.8, f + 1.7, 37.8]);
+    let at_quarry = lowered([-3.5, f + 2.8, 38.2]);
+    let past_quarry = lowered([0.8, f + 2.5, 37.2]);
+    let at_shaker = lowered([3.5, f + 2.3, 37.2]);
+    let at_washer = lowered([6.5, f + 2.3, 37.2]);
+    let at_mill = lowered([9.5, f + 2.3, 37.2]);
 
     film.title("cogwork.film.t1_iron", 5.5)
         .shot(
