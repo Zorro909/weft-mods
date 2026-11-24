@@ -34,19 +34,19 @@ pub const MIDDLE: [f64; 3] = [46.5, HEIGHT as f64, 13.5];
 
 /// Seismic thumper on Pad 2's south-west apron (in works coordinates), its ember engines, and the
 /// three survey markers beside it.
-pub const THUMPER_AT: Pos = Pos::new(58, 1, 4);
+pub const THUMPER_AT: Pos = Pos::new(59, 1, 4);
 const THUMPER_ENGINES: [(Pos, Dir); 2] = [
-    (Pos::new(59, 1, 4), Dir::West),
-    (Pos::new(58, 1, 3), Dir::South),
+    (Pos::new(60, 1, 4), Dir::West),
+    (Pos::new(59, 1, 3), Dir::South),
 ];
-const THUMPER_MARKERS: [Pos; 3] = [Pos::new(58, 1, 5), Pos::new(63, 1, 5), Pos::new(58, 1, 8)];
+const THUMPER_MARKERS: [Pos; 3] = [Pos::new(59, 1, 5), Pos::new(64, 1, 5), Pos::new(59, 1, 8)];
 
 /// Camera orbit around the knoll and close eye-height framing on the seismic thumper's west front.
 const KNOLL_ARC: [f64; 2] = [205.0, 295.0];
 const KNOLL_OUT: [f64; 2] = [6.6, 6.2];
 const KNOLL_UP: [f64; 2] = [3.6, 3.0];
 pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
-pub const END_EYE: [f64; 3] = lowered([55.6, 2.6, 3.0]);
+pub const END_EYE: [f64; 3] = lowered([56.6, 2.6, 3.0]);
 
 pub fn build(set: &Set) {
     for marker in MARKERS {
@@ -149,10 +149,10 @@ pub fn shots(film: Film) -> Film {
     // Smooth descent clear above the knoll's eastern shoulder down to eye height in front of the
     // seismic thumper on Pad 2.
     let leveler_look = [48.5, 0.2, 11.2];
-    let at_thumper = lowered([55.4, 2.5, 4.8]);
+    let at_thumper = lowered([56.4, 2.5, 4.8]);
     let to_thumper = [
         on_knoll(KNOLL_ARC[1]),
-        lowered([54.6, 7.6, 4.6]),
+        lowered([55.8, 7.6, 4.6]),
         at_thumper,
     ];
 
