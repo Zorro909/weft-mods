@@ -13,7 +13,7 @@ pub mod merge;
 mod shape;
 
 pub use blocks::Tank;
-use blocks::joins;
+use blocks::{joins, may_join};
 use merge::{MOST, forms_box, grow, part};
 pub use shape::{BASE, GLASS};
 use weft_sdk::{Block, BlockEvent, Dir, Registry, Use, Verdict, World, abi, actions, tool_tier};
@@ -156,15 +156,13 @@ fn join(world: &World, holders: &mut Holders, cells: &[Pos]) {
     tank.settle(holders, held);
 }
 
-/// Whether the blocks at `cells` hold no more than one liquid between them.
+/// Whether the blocks at `cells` hold no more than one liquid between them (`blocks::may_join`).
 fn one_liquid(world: &World, holders: &Holders, cells: &[Pos]) -> bool {
-    let mut liquids = cells
+    let shares: Vec<Held> = cells
         .iter()
         .map(|&cell| holders.get(world.block_entity(cell)))
-        .filter(|share| !share.is_empty_in(CELL_CAPACITY))
-        .map(|share| share.liquid);
-    let first = liquids.next();
-    liquids.all(|liquid| Some(liquid) == first)
+        .collect();
+    may_join(&shares)
 }
 
 /// A block beside changed. A tank whose block beside is gone regroups, by a player or any other

@@ -20,6 +20,7 @@ short overview of the mod, see the [README](../README.md).
 | [Rubble, ore grades, sifting, washing and grinding](processing.md) | What quarries bring up, what each grade of Ore Rubble is worth, and sifting and grinding by hand (sieve, millstone) and with engines (shaker screen, grinding mill), and washing (washer) |
 | [Bellows](bellows.md) | The hand and driven bellows that make a furnace cook twice as fast |
 | [Steel](steel.md) | The coke oven (coke, sulfur, creosote), the blast furnace and its draft, the forge anvil and hammer, and steel |
+| [Steam](steam.md) | The firebox and the boiler on it, steam, the steam engine and the trip hammer |
 | [Oil engine](oil-engine.md) | Building the big engine, feeding it oil and water, and taking its energy |
 | [Working with other mods](other-mods.md) | Slot groups, energy, tags: how Cogwork meets other mods' content |
 

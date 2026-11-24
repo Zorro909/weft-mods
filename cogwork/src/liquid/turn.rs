@@ -16,7 +16,7 @@ use weft_sdk::{SystemBatch, World};
 
 use super::flow::LOSS;
 use super::vessel::{Holders, Kind, Vessel};
-use super::{Held, Level, MOST_A_TURN, NO_LIQUID, flow};
+use super::{Held, MOST_A_TURN, NO_LIQUID, flow};
 use crate::lib::{Pos, TypedWorld};
 use crate::liquid_tube::LIQUID_TUBE;
 
@@ -120,15 +120,16 @@ fn turn(holders: &mut Holders, found: &mut Found, id: u64, pos: Pos) {
         return;
     }
     let neighbours = || sides.iter().filter_map(|side| side.beside.as_ref());
-    let pushed = neighbours()
-        .map(|met| met.vessel.head_now(holders, met.id) - LOSS)
-        .max()
-        .unwrap_or(i64::MIN);
+    let rises = |vessel: &Vessel| super::rises(vessel.held(holders).liquid);
+    let mine = rises(&me);
+    let heads = neighbours().map(|met| (rises(&met.vessel), met.vessel.head_now(holders, met.id)));
+    let pushed = push_on(mine, heads);
     let mut moved = false;
     for to in own.filter_map(|side| side.beside.as_ref()) {
         moved |= pass(holders, &me, pushed, to);
     }
-    let head = me.head(me.held(holders).amount, pushed);
+    let held = me.held(holders);
+    let head = me.level(held.liquid, held.amount, pushed).head;
     let changed = head != holders.get(id).head;
     if changed {
         me.tell(holders, head);
@@ -140,6 +141,17 @@ fn turn(holders: &mut Holders, found: &mut Found, id: u64, pos: Pos) {
     } else {
         sleep(holders, id);
     }
+}
+
+/// The push coming into a holder from beside: the highest head of its `neighbours`, each with
+/// whether it holds steam, less `LOSS`. Steam's heads have no height to them (`flow::pressure`),
+/// so only neighbours on the same side of that, steam or not as the holder's own liquid, push it.
+fn push_on(rises: bool, neighbours: impl Iterator<Item = (bool, i64)>) -> i64 {
+    neighbours
+        .filter(|&(theirs, _)| theirs == rises)
+        .map(|(_, head)| head - LOSS)
+        .max()
+        .unwrap_or(i64::MIN)
 }
 
 fn sleep(holders: &mut Holders, id: u64) {
@@ -169,14 +181,8 @@ fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
     } else {
         0
     };
-    let higher = Level {
-        head: from.head(giving.amount, pushed),
-        per_block: from.per_block(),
-    };
-    let lower = Level {
-        head: to.head(had, told),
-        per_block: to.per_block(),
-    };
+    let higher = from.level(giving.liquid, giving.amount, pushed);
+    let lower = to.level(giving.liquid, had, told);
     let room = to.capacity().saturating_sub(had);
     let amount = flow(higher, lower, MOST_A_TURN)
         .min(room)
@@ -190,125 +196,4 @@ fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::cell::Cell;
-
-    use super::*;
-
-    fn at(x: i32) -> Pos {
-        Pos { x, y: 0, z: 0 }
-    }
-
-    fn tube(id: u64, pos: Pos) -> Vessel {
-        Vessel::One {
-            id,
-            pos,
-            capacity: 1000,
-            kind: Kind::Tube,
-        }
-    }
-
-    #[test]
-    fn a_driven_timber_tube_pushes_as_the_pump_does() {
-        let pos = Pos { x: 0, y: 10, z: 0 };
-        let driven = Vessel::One {
-            id: 1,
-            pos,
-            capacity: 1000,
-            kind: Kind::Driven,
-        };
-        let lift = (10 + super::super::flow::LIFT) * super::super::flow::UNIT;
-        assert_eq!(driven.head(500, 0), lift, "half full, it pushes");
-        assert!(tube(1, pos).head(500, 0) < lift, "undriven, it doesn't");
-        assert!(
-            Kind::Driven.pushes() && !Kind::Tube.pushes(),
-            "nor takes when it does"
-        );
-    }
-
-    #[test]
-    fn an_intake_takes_only_what_an_oil_engine_burns() {
-        let intake = Vessel::One {
-            id: 1,
-            pos: at(0),
-            capacity: 1000,
-            kind: Kind::Intake,
-        };
-        let named = super::super::key_named;
-        assert!(intake.admits(named("cogwork:oil")), "oil");
-        assert!(intake.admits(named("base:water")), "water for vapor");
-        assert!(!intake.admits(named("base:lava")), "nothing else");
-        assert!(
-            tube(1, at(0)).admits(named("base:lava")),
-            "a tube takes any liquid"
-        );
-    }
-
-    #[test]
-    fn a_grinding_mill_or_washer_takes_only_water_and_keeps_it() {
-        let mill = Vessel::One {
-            id: 1,
-            pos: at(0),
-            capacity: 1000,
-            kind: Kind::Mill,
-        };
-        let named = super::super::key_named;
-        assert!(mill.admits(named("base:water")), "water for its grinds");
-        assert!(!mill.admits(named("cogwork:oil")), "not oil");
-        assert!(
-            Kind::Mill.keeps() && Kind::Intake.keeps(),
-            "hands nothing on"
-        );
-        assert!(!Kind::Tube.keeps(), "a tube does");
-    }
-
-    #[test]
-    fn a_coke_oven_drain_hands_on_and_takes_nothing() {
-        let drain = Vessel::One {
-            id: 1,
-            pos: at(0),
-            capacity: 1000,
-            kind: Kind::Drain,
-        };
-        let named = super::super::key_named;
-        assert!(
-            !drain.admits(named("cogwork:creosote")),
-            "not even creosote"
-        );
-        assert!(!drain.admits(named("base:water")), "nor water");
-        assert!(
-            !Kind::Drain.keeps() && !Kind::Drain.pushes(),
-            "it hands on by height, as a tube"
-        );
-    }
-
-    #[test]
-    fn a_holder_is_looked_up_once_a_tick() {
-        let looked = Cell::new(0);
-        let find = |pos| {
-            looked.set(looked.get() + 1);
-            Some(tube(7, pos))
-        };
-        let mut found = Found::default();
-        let first = found.at(at(1), find).expect("a tube is there");
-        let again = found.at(at(1), find).expect("and still is");
-        assert_eq!(looked.get(), 1, "the second time it is known");
-        assert!(Rc::ptr_eq(&first.vessel, &again.vessel), "the same holder");
-        assert_eq!(again.id, 7, "met at its block");
-    }
-
-    #[test]
-    fn a_block_that_holds_nothing_is_looked_up_once_too() {
-        let looked = Cell::new(0);
-        let find = |_| {
-            looked.set(looked.get() + 1);
-            None
-        };
-        let mut found = Found::default();
-        assert!(found.at(at(1), find).is_none(), "nothing there");
-        assert!(found.at(at(1), find).is_none(), "nor the second time");
-        assert_eq!(looked.get(), 1, "known to hold nothing");
-        assert!(found.at(at(2), find).is_none(), "another block");
-        assert_eq!(looked.get(), 2, "is another question");
-    }
-}
+mod tests;

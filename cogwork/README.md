@@ -7,7 +7,8 @@ tubes you can see into, engines and water wheels drive the machines, and three m
 over the big jobs: quarries that mine out a whole area, an assembly bench that crafts on its own, and a
 leveler that makes land flat. A pump brings up oil from deep underground, liquid tubes and
 tanks carry and store it, and an oil engine burns it for far more energy than the small engines.
-A coke oven, a blast furnace and a forge anvil make steel.
+A coke oven, a blast furnace and a forge anvil make steel, and a boiler on a firebox makes steam
+for a steam engine and a trip hammer.
 
 Cogwork needs the base game (`base`) and is built on the SDK and `base_api` only, so it works
 with other mods' chests, machines, cables and materials without knowing about them.
@@ -87,6 +88,13 @@ every eighth coal leaves a sulfur. The blast furnace, a tower of fire bricks, sm
 coke into steel blooms while a driven bellows blows into it, roaring and spitting sparks. On the
 forge anvil a hammer beats each glowing bloom into a steel ingot, for the steel drill bit and
 what comes after.
+
+### Steam
+
+A firebox burns fuel, or lava, under a boiler, which boils water from liquid tubes into steam.
+Steam spreads through liquid tubes up as easily as down, to a steam engine, whose piston and
+flywheel chuff out four times an ember engine's energy, or to a trip hammer, which forges steel
+blooms from tubes into ingots by itself, booming and throwing sparks at every strike.
 
 ### Keeping the world loaded
 

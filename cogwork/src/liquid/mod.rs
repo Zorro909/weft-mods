@@ -2,7 +2,8 @@
 //! liquid and how many millibuckets of it, and liquid moves between holders that touch, from
 //! where it stands or pushes higher to where it stands lower (`flow`). A full holder passes on
 //! the push of what fills it, so liquid stands in a tube before it rises, and a pump pushes it
-//! up. Holders that have settled sleep until a neighbour changes (`turn`).
+//! up. Steam rises instead: it spreads to where holders are emptier, whatever their height.
+//! Holders that have settled sleep until a neighbour changes (`turn`).
 //!
 //! A liquid is kept by the key of its name, as ghosts keep items: a liquid's item is named like
 //! it, so `ghost::item_of` finds that item again.
@@ -37,8 +38,12 @@ pub fn is_full(amount: u32, capacity: u32) -> bool {
 }
 
 /// A holder with less than this left takes another liquid, the rest of the old one lost: so a
-/// little left behind never blocks a line. A big holder may keep more (`dribble`).
+/// little left behind never blocks a line. A big holder may keep more (`dribble`). Steam and
+/// another liquid are the exception (`Held::takes`).
 pub const DRIBBLE: u32 = 10;
+
+/// The head of a holder that has told none for what it holds now: no push to anyone.
+pub const NO_HEAD: i64 = i64::MIN;
 
 value! {
     /// What one holder keeps: `liquid` (`NO_LIQUID` for none), `amount` millibuckets of it,
@@ -69,18 +74,20 @@ impl Held {
     }
 
     /// Whether `liquid` may go into a holder of `capacity` holding this: the same liquid, or
-    /// it is as good as empty there.
+    /// it is as good as empty there. Steam never takes the place of another liquid, nor another
+    /// liquid that of steam, while a millibucket of the one is left: it would be lost unseen.
     pub fn takes(&self, liquid: LiquidKey, capacity: u32) -> bool {
-        self.liquid == liquid || self.is_empty_in(capacity)
+        let kept_apart = self.amount > 0 && rises(self.liquid) != rises(liquid);
+        self.liquid == liquid || self.is_empty_in(capacity) && !kept_apart
     }
 
     /// Puts `amount` of `liquid` in, which `takes` allowed, and wakes it.
     pub fn add(&mut self, liquid: LiquidKey, amount: u32) {
         if self.liquid != liquid {
-            // What its fill shows is of the old liquid: shown anew.
+            // What its fill shows and the head it told are of the old liquid.
             *self = Held {
                 liquid,
-                head: self.head,
+                head: NO_HEAD,
                 ..Held::default()
             };
         }
@@ -123,6 +130,12 @@ pub fn key_named(name: &str) -> LiquidKey {
 /// Whether `liquid` is water, all the grinding mill and the washer take.
 pub fn is_water(liquid: LiquidKey) -> bool {
     liquid == key_named("base:water")
+}
+
+/// Whether `liquid` rises: steam, which stands in a holder by how full it is, not how high
+/// (`flow::pressure`).
+pub fn rises(liquid: LiquidKey) -> bool {
+    liquid == crate::steam::key()
 }
 
 /// The liquid the block `block_state` is, and whether it is a source of it.
@@ -178,6 +191,41 @@ mod tests {
             };
             assert!(left.takes(OIL, capacity), "{stuck} mB stuck in {capacity}");
         }
+    }
+
+    fn holding(liquid: LiquidKey, amount: u32) -> Held {
+        Held {
+            liquid,
+            amount,
+            ..Held::default()
+        }
+    }
+
+    #[test]
+    fn steam_never_takes_the_place_of_another_liquid_nor_it_of_steam() {
+        let tube = crate::liquid_tube::CAPACITY;
+        let steam = crate::steam::key();
+        assert!(!holding(WATER, 9).takes(steam, tube), "9 mB of water stays");
+        assert!(!holding(steam, 1).takes(WATER, tube), "1 mB of steam stays");
+        assert!(holding(WATER, 0).takes(steam, tube), "none left");
+        assert!(holding(NO_LIQUID, 0).takes(WATER, tube), "an empty tube");
+        assert!(
+            holding(OIL, 9).takes(WATER, tube),
+            "oil gives way as before"
+        );
+    }
+
+    #[test]
+    fn a_new_liquid_forgets_the_head_told_of_the_old() {
+        let mut tube = Held {
+            head: 40 * flow::UNIT,
+            ..Held::default()
+        };
+        tube.add(crate::steam::key(), 1_000);
+        assert_eq!(tube.head, NO_HEAD, "steam has no height");
+        tube.head = flow::UNIT;
+        tube.add(crate::steam::key(), 1);
+        assert_eq!(tube.head, flow::UNIT, "more of the same keeps its head");
     }
 
     #[test]

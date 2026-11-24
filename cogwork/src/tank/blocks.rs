@@ -15,7 +15,7 @@ use super::merge::spread;
 use super::{CELL_CAPACITY, LIQUID_TANK, joined_cells};
 use crate::fill::{self, TANK_LEVELS};
 use crate::lib::{BlockState, Pos, TypedWorld};
-use crate::liquid::{DRIBBLE, Held, Holders, NO_LIQUID};
+use crate::liquid::{DRIBBLE, Held, Holders, LiquidKey, NO_HEAD, NO_LIQUID};
 
 /// One tank: its blocks.
 pub struct Tank {
@@ -117,17 +117,38 @@ impl Tank {
         let shares = spread(&self.layers, held.amount, CELL_CAPACITY);
         let world = *holders.world();
         for (index, (cell, &amount)) in self.cells.iter().zip(&shares).enumerate() {
-            let mut share = holders.get(cell.id);
-            share.amount = amount;
-            share.liquid = if amount == 0 { NO_LIQUID } else { held.liquid };
-            // Its liquid is laid out anew: every block takes a turn again.
-            share.asleep = 0;
+            let mut share = laid_share(holders.get(cell.id), held.liquid, amount);
             let covered = self.above[index].is_some_and(|above| shares[above] >= DRIBBLE);
             show(&world, cell, &mut share, covered);
             holders.set(cell.id, share);
         }
         self.all.set(Some(laid(held, self.capacity())));
     }
+}
+
+/// What a block that held `was` holds with `amount` of `liquid` laid in it. Its liquid is laid
+/// out anew, so it takes a turn again; the head it told is forgotten when its liquid changed.
+fn laid_share(was: Held, liquid: LiquidKey, amount: u32) -> Held {
+    let liquid = if amount == 0 { NO_LIQUID } else { liquid };
+    let head = if liquid == was.liquid {
+        was.head
+    } else {
+        NO_HEAD
+    };
+    Held {
+        liquid,
+        amount,
+        head,
+        asleep: 0,
+        ..was
+    }
+}
+
+/// Whether blocks holding `shares` may be one tank: each holds the liquid they keep `together`,
+/// or what it holds gives way to that (`Held::takes`).
+pub(super) fn may_join(shares: &[Held]) -> bool {
+    let kept = together(shares.iter().copied()).liquid;
+    shares.iter().all(|share| share.takes(kept, CELL_CAPACITY))
 }
 
 /// The liquid of a tank whose blocks hold `shares`: the liquid of its biggest share, all of that
@@ -236,6 +257,44 @@ mod tests {
             amount,
             ..Held::default()
         }
+    }
+
+    #[test]
+    fn steam_and_another_liquid_never_join_while_any_of_either_is_left() {
+        let steam = crate::steam::key();
+        assert!(
+            !may_join(&[held(WATER, 8000), held(steam, 3)]),
+            "3 mB of steam"
+        );
+        assert!(
+            !may_join(&[held(steam, 8000), held(WATER, 3)]),
+            "3 mB of water"
+        );
+        assert!(
+            may_join(&[held(OIL, 8000), held(WATER, 3)]),
+            "a dribble of water gives way to oil"
+        );
+        assert!(
+            !may_join(&[held(OIL, 800), held(WATER, 800)]),
+            "two liquids"
+        );
+        assert!(
+            may_join(&[held(steam, 8000), held(NO_LIQUID, 0)]),
+            "an empty block"
+        );
+    }
+
+    #[test]
+    fn a_share_of_a_new_liquid_forgets_the_head_told_of_the_old() {
+        let told = Held {
+            head: 40,
+            ..held(NO_LIQUID, 0)
+        };
+        let steam = laid_share(told, crate::steam::key(), CELL_CAPACITY);
+        assert_eq!(steam.head, NO_HEAD, "steam has no height");
+        let more = laid_share(Held { head: 7, ..steam }, steam.liquid, 1);
+        assert_eq!(more.head, 7, "the same liquid keeps its head");
+        assert_eq!(more.asleep, 0, "and takes a turn");
     }
 
     #[test]
