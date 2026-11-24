@@ -180,7 +180,7 @@ pub fn shots(film: Film) -> Film {
             flyby(&to_thumper)
                 .look(Look::Pan(leveler_look, THUMPER_LOOK))
                 .ease(speeds(0.75, 0.6))
-                .secs(6.0),
+                .secs(7.5),
         )
         .title("cogwork.film.t5_thumper", 5.0)
         .menu("cogwork:seismic_thumper", lowered_block(THUMPER_AT), 4.5)
