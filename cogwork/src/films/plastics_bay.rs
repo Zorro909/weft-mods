@@ -45,11 +45,21 @@ const ACID_WATER: Area = Area {
     hi: Pos::new(21, FLOOR + 1, 16),
 };
 
-/// Ember engines assisting the torque shaft behind the row.
-const ENGINES: [(Pos, Dir); 3] = [
+/// Ember engines driving Pad P's dedicated torque shaft (12 × 40 = 480 energy/tick against the
+/// 370 energy/tick drawn by all five machines together).
+const ENGINES: [(Pos, Dir); 12] = [
+    (Pos::new(14, FLOOR, 15), Dir::East),
     (Pos::new(15, FLOOR, 16), Dir::North),
+    (Pos::new(16, FLOOR, 16), Dir::North),
+    (Pos::new(17, FLOOR, 16), Dir::North),
     (Pos::new(18, FLOOR, 16), Dir::North),
+    (Pos::new(19, FLOOR, 16), Dir::North),
+    (Pos::new(20, FLOOR, 16), Dir::North),
+    (Pos::new(22, FLOOR, 16), Dir::North),
     (Pos::new(23, FLOOR, 16), Dir::North),
+    (Pos::new(24, FLOOR, 15), Dir::West),
+    (Pos::new(15, FLOOR + 1, 15), Dir::Down),
+    (Pos::new(23, FLOOR + 1, 15), Dir::Down),
 ];
 
 /// Where S8 hands the camera off to S9, high over Pad P's gravel (5+ blocks above the north-east
@@ -58,10 +68,8 @@ pub const END_EYE: [f64; 3] = lowered([24.4, FLOOR as f64 + 5.2, 11.4]);
 pub const END_LOOK: [f64; 3] = lowered(above(LEACH_VAT_AT, 0.2));
 
 pub fn build(set: &Set) {
-    // Power backbone behind the row, climbing cleanly from the hall's torque shaft up to Pad P.
-    shafts(set, Pos::new(14, 0, 6), Pos::new(14, 0, 7));
-    shafts(set, Pos::new(14, -1, 7), Pos::new(14, -1, 15));
-    shafts(set, Pos::new(14, 0, 15), Pos::new(14, FLOOR, 15));
+    // Dedicated power backbone behind the row, kept separate from the hall/excavator shaft so
+    // Pad P's 370 energy/tick load is never starved.
     shafts(set, Pos::new(15, FLOOR, 15), Pos::new(23, FLOOR, 15));
     for (at, toward) in ENGINES {
         engine(set, at, toward);
@@ -116,8 +124,9 @@ fn acid_line() -> Vec<Pos> {
 }
 
 /// Fuels Pad P's engines, stocks catalysts, molds, pellets, sheets, steel, sulfur and Rich Ore
-/// Rubble, and prefills gas, water and sulfuric acid. Fired during S7's benches shot (~15 s before
-/// S8 arrives) so every machine is mid-cycle on camera.
+/// Rubble, and prefills gas, water and sulfuric acid. Fired at the start of S8 (~10 s before the
+/// polymerizer menu and ~15 s before the molding press menu) so every machine is mid-cycle and the
+/// 64-use molds still have ~30 uses left on camera.
 pub fn start(set: &Set) {
     for (at, _) in ENGINES {
         fuel(set, at);
@@ -180,24 +189,24 @@ pub fn start(set: &Set) {
     stock_rubble(set, LEACH_VAT_AT, "input", "iron", Grade::Rich, 3);
 }
 
-/// Slides east inside the hall well above the bench row to the center of the 5-block-wide bay
-/// between the x = 16 and x = 22 posts, flies straight south above Pad P's retaining wall (keeping
-/// both posts 3 blocks away and outside the frame), then glides west onto Pad P's polymerizer and
-/// sweeps east past all five machines.
+/// Slides east inside the hall well above the bench row and chests to the center of the
+/// 5-block-wide bay between the x = 16 and x = 22 posts, climbs cleanly over Pad P's retaining
+/// wall (keeping posts and chests 2+ blocks clear and the wall in the lower third at most), then
+/// glides west onto Pad P's polymerizer and sweeps east past all five machines.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let bay_look = lowered([19.5, 5.6, 14.5]);
-    let press_mid = lowered([19.5, f + 0.8, 14.5]);
+    let bay_look = lowered([19.5, 6.2, 14.5]);
+    let press_high = lowered([19.5, f + 1.6, 14.5]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
 
-    let bay_entry = lowered([19.5, 3.8, 2.0]);
-    let outside = lowered([19.5, 6.4, 11.4]);
+    let bay_entry = lowered([19.5, 4.3, 2.5]);
+    let outside = lowered([19.5, 7.2, 11.4]);
     let through_bay = [
         bay_entry,
-        lowered([19.5, 4.9, 7.0]),
-        lowered([19.5, 6.0, 9.2]),
+        lowered([19.5, 4.6, 7.0]),
+        lowered([19.5, 6.2, 9.2]),
         outside,
     ];
     let at_poly_start = lowered([15.6, f + 2.0, 11.4]);
@@ -205,53 +214,54 @@ pub fn shots(film: Film) -> Film {
     let at_press = lowered([20.0, f + 2.0, 11.4]);
     let at_acid = lowered([21.8, f + 2.2, 11.4]);
 
-    film.shot(
-        dolly(crafting::end_eye(), bay_entry)
-            .look(Look::Pan(crafting::BENCH_LOOK, bay_look))
-            .ease(speeds(0.25, 1.4))
-            .secs(3.2),
-    )
-    .shot(
-        flyby(&through_bay)
-            .look(Look::Pan(bay_look, press_mid))
-            .ease(speeds(1.4, 1.0))
-            .secs(3.5),
-    )
-    .shot(
-        dolly(outside, at_poly_start)
-            .look(Look::Pan(press_mid, poly_look))
-            .ease(speeds(1.0, 0.8))
-            .secs(3.2),
-    )
-    .title("cogwork.film.t5_plastics", 5.5)
-    .menu("cogwork:polymerizer", lowered_block(POLYMERIZER_AT), 4.0)
-    .shot(
-        dolly(at_poly_start, at_poly)
-            .look(Look::Pan(poly_look, press_look))
-            .ease(speeds(0.8, 0.6))
-            .secs(5.2),
-    )
-    .menu("cogwork:molding_press", lowered_block(PANEL_PRESS_AT), 4.0)
-    .shot(
-        dolly(at_poly, at_press)
-            .look(Look::Pan(press_look, acid_look))
-            .ease(speeds(0.6, 0.6))
-            .secs(5.2),
-    )
-    .title("cogwork.film.t5_acid", 4.5)
-    .menu("cogwork:acid_tank", lowered_block(ACID_TANK_AT), 4.0)
-    .shot(
-        dolly(at_press, at_acid)
-            .look(Look::Pan(acid_look, END_LOOK))
-            .ease(speeds(0.6, 0.6))
-            .secs(5.2),
-    )
-    .title("cogwork.film.t5_leach", 5.0)
-    .menu("cogwork:leaching_vat", lowered_block(LEACH_VAT_AT), 4.0)
-    .shot(
-        dolly(at_acid, END_EYE)
-            .look_at(END_LOOK)
-            .ease(speeds(0.6, 0.8))
-            .secs(5.0),
-    )
+    film.cue("start_plastics")
+        .shot(
+            dolly(crafting::end_eye(), bay_entry)
+                .look(Look::Pan(crafting::BENCH_LOOK, bay_look))
+                .ease(speeds(0.25, 1.4))
+                .secs(3.2),
+        )
+        .shot(
+            flyby(&through_bay)
+                .look(Look::Pan(bay_look, press_high))
+                .ease(speeds(1.4, 1.0))
+                .secs(3.5),
+        )
+        .shot(
+            dolly(outside, at_poly_start)
+                .look(Look::Pan(press_high, poly_look))
+                .ease(speeds(1.0, 0.8))
+                .secs(3.2),
+        )
+        .title("cogwork.film.t5_plastics", 5.5)
+        .menu("cogwork:polymerizer", lowered_block(POLYMERIZER_AT), 4.0)
+        .shot(
+            dolly(at_poly_start, at_poly)
+                .look(Look::Pan(poly_look, press_look))
+                .ease(speeds(0.8, 0.6))
+                .secs(5.2),
+        )
+        .menu("cogwork:molding_press", lowered_block(PANEL_PRESS_AT), 4.0)
+        .shot(
+            dolly(at_poly, at_press)
+                .look(Look::Pan(press_look, acid_look))
+                .ease(speeds(0.6, 0.6))
+                .secs(5.2),
+        )
+        .title("cogwork.film.t5_acid", 4.5)
+        .menu("cogwork:acid_tank", lowered_block(ACID_TANK_AT), 4.0)
+        .shot(
+            dolly(at_press, at_acid)
+                .look(Look::Pan(acid_look, END_LOOK))
+                .ease(speeds(0.6, 0.6))
+                .secs(5.2),
+        )
+        .title("cogwork.film.t5_leach", 5.0)
+        .menu("cogwork:leaching_vat", lowered_block(LEACH_VAT_AT), 4.0)
+        .shot(
+            dolly(at_acid, END_EYE)
+                .look_at(END_LOOK)
+                .ease(speeds(0.6, 0.8))
+                .secs(5.0),
+        )
 }

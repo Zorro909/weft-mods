@@ -214,16 +214,16 @@ pub fn start(set: &Set) {
 /// opening each machine's screen over it.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let quarry_look = lowered([-6.0, f + 1.2, 33.5]);
+    let quarry_look = lowered([-6.0, f + 1.6, 33.0]);
     let shaker_look = lowered(above(SHAKER_AT, 0.3));
     let washer_look = lowered(above(WASHER_AT, 0.3));
     let mill_look = lowered(above(MILL_AT, 0.3));
 
-    let at_engines = lowered([-9.2, f + 3.4, 37.8]);
+    let at_engines = lowered([-9.2, f + 3.9, 38.0]);
     let leave_camp = lowered([-13.5, f + 8.5, 37.2]);
     let over_slope = [leave_camp, lowered([-10.5, f + 7.2, 37.4]), at_engines];
-    let at_quarry = lowered([-3.5, f + 2.8, 38.2]);
-    let past_quarry = lowered([0.8, f + 2.5, 37.2]);
+    let at_quarry = lowered([-3.5, f + 3.8, 38.2]);
+    let past_quarry = lowered([0.8, f + 2.9, 37.6]);
     let at_shaker = lowered([3.5, f + 2.3, 37.2]);
     let at_washer = lowered([6.5, f + 2.3, 37.2]);
     let at_mill = lowered([9.5, f + 2.3, 37.2]);

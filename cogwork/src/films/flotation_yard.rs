@@ -215,15 +215,15 @@ pub fn start(set: &Set) {
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
     let core_look = lowered(above(CORE_DRILL_AT, 0.3));
-    let steel_look = lowered([52.0, f + 1.8, 32.0]);
+    let steel_look = lowered([52.0, f + 2.0, 31.5]);
     let float_look = lowered(above(FLOTATION_AT, 0.2));
     let clarifier_look = lowered([64.0, f + 0.5, 32.5]);
 
     let at_core = lowered([43.8, f + 2.3, 36.6]);
-    let at_steel = lowered([53.5, f + 3.5, 38.4]);
-    let past_sw_corner = [at_core, lowered([48.5, f + 3.3, 38.2]), at_steel];
+    let at_steel = lowered([53.5, f + 5.2, 38.4]);
+    let past_sw_corner = [at_core, lowered([48.2, f + 4.4, 38.2]), at_steel];
     let at_float = lowered([61.5, f + 2.4, 37.4]);
-    let past_se_corner = [at_steel, lowered([58.5, f + 3.0, 38.4]), at_float];
+    let past_se_corner = [at_steel, lowered([58.5, f + 4.2, 38.4]), at_float];
     let at_clarifier = lowered([63.8, f + 2.3, 37.2]);
     let end_eye = lowered([65.0, f + 2.4, 37.2]);
 

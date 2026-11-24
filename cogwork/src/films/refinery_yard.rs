@@ -6,12 +6,10 @@
 //! the hall's oil engine tank), and gas (piped south of the hall to Pad P's polymerizer).
 
 use showcase_api::{Film, Look, Set, flyby, orbit};
-use weft_sdk::Dir;
 
 use super::camera::{on_orbit, speeds};
 use super::parts::{
-    CHEST, area, engine, fuel, fuel_item, liquid_tubes, prefill, pressure_tubes, sealed_tubes,
-    tubes,
+    CHEST, area, fuel_item, liquid_tubes, prefill, pressure_tubes, sealed_tubes, tubes,
 };
 use super::seep;
 use super::site::{PAD_P_TOP, above, lowered, lowered_block};
@@ -20,6 +18,7 @@ use crate::firebox::{BOILER, FIREBOX};
 use crate::lib::{Area, BlockState, Pos};
 use crate::refinery::parts::REFINERY_CASING;
 use crate::refinery::{REFINERY, REFINERY_CONDENSER, REFINERY_HEATER, REFINERY_TAP};
+use crate::steam_engine::STEAM_ENGINE;
 use crate::tank::LIQUID_TANK;
 use crate::timber_liquid_tube::TIMBER_LIQUID_TUBE;
 
@@ -30,7 +29,7 @@ const COLUMN: Area = Area {
     hi: Pos::new(-10, 5, -4),
 };
 const HEATERS: [Pos; 2] = [Pos::new(-12, 0, -6), Pos::new(-12, 0, -5)];
-const CONDENSER: Pos = Pos::new(-10, 5, -6);
+const CONDENSER: Pos = Pos::new(-11, 5, -6);
 const TAR_TAP: Pos = Pos::new(-10, 1, -4);
 const LUBE_TAP: Pos = Pos::new(-10, 2, -6);
 const DIESEL_TAP: Pos = Pos::new(-10, 3, -5);
@@ -59,13 +58,14 @@ const BOILERS: [Pos; 3] = [
     Pos::new(-14, 1, -7),
 ];
 
-/// Cooling water supply: tank fed by the jetty branch, timber liquid tube lift, and sealed riser.
+/// Cooling water supply: tank fed by the jetty branch, steam-driven timber liquid tube lift, and
+/// sealed riser up the middle of the north face (clear of the east-side lubricant line).
 pub const COOLING_TANK: Area = Area {
-    lo: Pos::new(-10, 0, -10),
-    hi: Pos::new(-9, 1, -9),
+    lo: Pos::new(-11, 0, -10),
+    hi: Pos::new(-10, 1, -9),
 };
-const WATER_LIFT: Pos = Pos::new(-10, 0, -8);
-const WATER_LIFT_ENGINE: Pos = Pos::new(-11, 0, -8);
+const WATER_LIFT: Pos = Pos::new(-11, 0, -8);
+const WATER_LIFT_ENGINE: Pos = Pos::new(-12, 0, -8);
 
 /// Product buffer tanks on the east side, each separated by air so no two liquids meet.
 const TAR_TANK: Area = Area {
@@ -182,19 +182,26 @@ fn steam_pressure_line() -> Vec<Pos> {
         Pos::new(-13, 1, -6),
         Pos::new(-13, 0, -6),
         Pos::new(-13, 0, -5),
+        Pos::new(-13, 0, -7),
+        Pos::new(-13, 0, -8),
     ]
 }
 
-/// Cooling water tank, timber liquid tube lift, and vertical sealed liquid tube riser to y = 5.
+/// Cooling water tank, timber liquid tube lift driven by a steam engine off the boiler line
+/// (160 E/t, lifting up to 100 mB/t against the condenser's 50 mB/t draw without overheating),
+/// and vertical sealed liquid tube riser to y = 5.
 fn cooling_riser(set: &Set) {
     set.fill(COOLING_TANK, BlockState::of(&LIQUID_TANK));
     set.place(WATER_LIFT, BlockState::of(&TIMBER_LIQUID_TUBE));
-    engine(set, WATER_LIFT_ENGINE, Dir::East);
+    set.place(
+        WATER_LIFT_ENGINE,
+        STEAM_ENGINE.with(&[("facing", "south")]).into(),
+    );
     sealed_tubes(set, &sealed_riser());
 }
 
 fn sealed_riser() -> Vec<Pos> {
-    (0..=5).map(|y| Pos::new(-10, y, -7)).collect()
+    (0..=5).map(|y| Pos::new(-11, y, -7)).collect()
 }
 
 /// Four product tanks and distribution lines: tar, lubricant to DIGGER, diesel to hall, gas to Pad P.
@@ -276,7 +283,6 @@ pub fn start(set: &Set) {
     for firebox in FIREBOXES {
         fuel_item(set, firebox, "cogwork:coke");
     }
-    fuel(set, WATER_LIFT_ENGINE);
 
     prefill(
         set,
@@ -295,7 +301,10 @@ pub fn start(set: &Set) {
     );
     prefill(
         set,
-        steam_pressure_line().into_iter().chain(HEATERS),
+        steam_pressure_line()
+            .into_iter()
+            .chain(HEATERS)
+            .chain([WATER_LIFT_ENGINE]),
         "cogwork:steam",
         [1, 1],
     );
