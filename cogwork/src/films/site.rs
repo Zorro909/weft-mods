@@ -15,10 +15,13 @@ pub const SITE: Pos = Pos::new(16, 76, -76);
 /// the seep, each set into the land where it now lies. Their sections build in blocks from
 /// `works`; the jetty and the knoll stand on the site's own count.
 pub const WORKS_DOWN: i32 = 8;
-/// Surface height of the southern valley pads (S1 to S4), in blocks from the works.
+/// Surface height of the timber camp on the west shoulder of the south valley, in blocks from the
+/// works.
+pub const S1_TOP: i32 = 10;
+/// Surface height of the lower south valley terraces (S2 to S4), in blocks from the works.
 pub const VALLEY_TOP: i32 = 7;
-/// Surface height of the plastics and acid annex (Pad P), in blocks from the works.
-pub const PAD_P_TOP: i32 = 0;
+/// Surface height of the plastics and acid terrace (Pad P) on the slope south of the hall.
+pub const PAD_P_TOP: i32 = 3;
 
 /// The middle of `block`, `up` blocks higher: where the camera looks to have it in view.
 pub const fn above(block: Pos, up: f64) -> [f64; 3] {

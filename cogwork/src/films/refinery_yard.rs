@@ -254,7 +254,8 @@ fn diesel_line() -> Vec<Pos> {
 }
 
 fn gas_line() -> Vec<Pos> {
-    // Runs overhead at y = 6 so the camera entering the hall at y = 3..4 passes well underneath.
+    // Runs overhead at y = 6 so the camera entering the hall at y = 3..4 passes well underneath,
+    // arriving directly atop Pad P's gas tank at (13, PAD_P_TOP + 3, 14).
     let mut blocks = vec![
         Pos::new(-9, 4, -4),
         Pos::new(-8, 4, -4),
@@ -262,10 +263,10 @@ fn gas_line() -> Vec<Pos> {
         Pos::new(-6, 6, -4),
     ];
     blocks.extend((-3..=8).map(|z| Pos::new(-6, 6, z)));
-    blocks.extend((-5..=12).map(|x| Pos::new(x, 6, 8)));
-    blocks.extend((9..=14).map(|z| Pos::new(12, 6, z)));
+    blocks.extend((-5..=13).map(|x| Pos::new(x, 6, 8)));
+    blocks.extend((9..=14).map(|z| Pos::new(13, 6, z)));
     let pad_top_tank = PAD_P_TOP + 2;
-    blocks.extend((pad_top_tank + 1..=5).rev().map(|y| Pos::new(12, y, 14)));
+    blocks.extend((pad_top_tank + 1..=5).rev().map(|y| Pos::new(13, y, 14)));
     blocks
 }
 

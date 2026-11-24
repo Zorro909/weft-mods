@@ -57,7 +57,7 @@ const DRIVE: Pos = Pos::new(9, 1, -6);
 /// Between the engine's water intake and the water tank.
 const WATER_FEED: Pos = Pos::new(11, 0, ROW_Z);
 /// The shaft: up behind the drive, and across the hall to the row the benches' shaft runs in.
-pub const SHAFT_HEIGHT: i32 = 5;
+const SHAFT_HEIGHT: i32 = 5;
 pub const SHAFT_X: i32 = 9;
 const SHAFT_BACK: i32 = -7;
 

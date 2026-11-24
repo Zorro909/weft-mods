@@ -30,23 +30,22 @@ const LINE: [(i32, i32); 3] = [(-31, -13), (-18, -5), (-17, -5)];
 /// The path beside the line: its rows along z, and its ends along x.
 const PATH_Z: [i32; 2] = [-12, -11];
 const PATH_X: [i32; 2] = [-28, -21];
-/// The derrick: how far east of the pump its two legs stand, how far north and south of the
-/// pump's row, and the height of its top.
-const LEGS_EAST: i32 = 2;
-const LEGS_APART: i32 = 2;
-const DERRICK_TOP: i32 = 9;
+/// The gallows post: east of the pump on its own row so it never stands between the camera and
+/// the pump on the north-west-south orbit, carrying a jib and lamp overhead.
+const POST_EAST: i32 = 2;
+const DERRICK_TOP: i32 = 8;
 /// Blocks around the pump within which no tree is left standing, and within which tall grass is
 /// mown, which hid the pump.
-const CLEARING: i32 = 9;
-const MOWN: i32 = 4;
+const CLEARING: i32 = 11;
+const MOWN: i32 = 5;
 
 /// Camera orbit around the seep and handoff point heading east toward Pad R.
-pub const SEEP_LOOK: [f64; 3] = lowered(above(PUMP_AT, 1.0));
+pub const SEEP_LOOK: [f64; 3] = lowered(above(PUMP_AT, 0.7));
 const UP_BANK: [f64; 3] = [-17.0, -4.0, -16.0];
 const HALL_WEST: [f64; 3] = lowered([super::hall::WEST as f64, 3.0, 0.0]);
 const SEEP_ARC: [f64; 2] = [-90.0, -270.0];
-const SEEP_OUT: f64 = 7.0;
-const SEEP_UP: [f64; 2] = [3.0, 3.4];
+const SEEP_OUT: f64 = 5.6;
+const SEEP_UP: [f64; 2] = [2.4, 2.8];
 
 pub fn end_eye() -> [f64; 3] {
     on_orbit(SEEP_LOOK, SEEP_OUT, SEEP_UP[1], SEEP_ARC[1])
@@ -84,26 +83,19 @@ fn field(set: &Set) {
     set.world().fill(ball, OIL.id()).keep("core:air");
 }
 
-/// Two legs east of the pump, a beam across their tops, and from its middle a jib out over
-/// the pump with a lamp under it: all on the side the camera does not come round.
+/// Single gallows post straight east of the pump with a jib and lamp overhanging it, keeping the
+/// entire north-west-south camera arc unobstructed.
 fn derrick(set: &Set) {
     let (x, z) = (PUMP_AT.x, PUMP_AT.z);
-    let legs_x = x + LEGS_EAST;
-    for leg_z in [z - LEGS_APART, z + LEGS_APART] {
-        let foot = Pos::new(legs_x, ground_top(set, legs_x, leg_z) + 1, leg_z);
-        set.fill(
-            area(foot, foot.with_y(DERRICK_TOP)),
-            BlockState::of(&OAK_LOG),
-        );
-    }
-    let across = area(
-        Pos::new(legs_x, DERRICK_TOP, z - LEGS_APART + 1),
-        Pos::new(legs_x, DERRICK_TOP, z + LEGS_APART - 1),
+    let post_x = x + POST_EAST;
+    let foot = Pos::new(post_x, ground_top(set, post_x, z) + 1, z);
+    set.fill(
+        area(foot, foot.with_y(DERRICK_TOP)),
+        BlockState::of(&OAK_LOG),
     );
-    set.fill(across, OAK_LOG.with(&[("axis", "z")]).into());
     let jib = area(
-        Pos::new(x - 1, DERRICK_TOP, z),
-        Pos::new(legs_x - 1, DERRICK_TOP, z),
+        Pos::new(x, DERRICK_TOP, z),
+        Pos::new(post_x - 1, DERRICK_TOP, z),
     );
     set.fill(jib, OAK_LOG.with(&[("axis", "x")]).into());
     set.place(Pos::new(x, DERRICK_TOP - 1, z), BlockState::of(&GLOWSTONE));
@@ -123,7 +115,7 @@ pub fn shots(film: Film) -> Film {
         between(SEEP_UP, part)
     };
     let north = on_orbit(SEEP_LOOK, SEEP_OUT, SEEP_UP[0], SEEP_ARC[0]);
-    let to_seep = [UP_BANK, [-25.0, -2.0, -18.5], north];
+    let to_seep = [UP_BANK, [-24.0, -2.0, -21.0], north];
     let round = |from: f64, to: f64, secs: f32| {
         orbit(SEEP_LOOK, SEEP_OUT)
             .arc(from, to)

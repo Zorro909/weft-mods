@@ -5,7 +5,7 @@
 //! the knoll, the powered seismic thumper stands ready beside its own marked area, and its screen
 //! opens before the camera continues to the composite-frame Gantry Excavator.
 
-use showcase_api::{Film, Look, Set, dolly, orbit};
+use showcase_api::{Film, Look, Set, dolly, flyby, orbit};
 use weft_sdk::{Dir, Item, ItemStack, Output};
 
 use super::camera::{between, on_orbit, speeds};
@@ -41,12 +41,12 @@ const THUMPER_ENGINES: [(Pos, Dir); 2] = [
 ];
 const THUMPER_MARKERS: [Pos; 3] = [Pos::new(58, 1, 5), Pos::new(63, 1, 5), Pos::new(58, 1, 8)];
 
-/// Camera orbit around the knoll and handoff point leaving the seismic thumper toward BUILDER.
+/// Camera orbit around the knoll and close eye-height framing on the seismic thumper's west front.
 const KNOLL_ARC: [f64; 2] = [205.0, 300.0];
-const KNOLL_OUT: [f64; 2] = [9.5, 9.0];
-const KNOLL_UP: [f64; 2] = [6.5, 4.5];
-pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.4));
-pub const END_EYE: [f64; 3] = lowered([55.5, 5.5, 3.0]);
+const KNOLL_OUT: [f64; 2] = [6.6, 6.0];
+const KNOLL_UP: [f64; 2] = [3.6, 2.8];
+pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
+pub const END_EYE: [f64; 3] = lowered([54.4, 2.5, 3.2]);
 
 pub fn build(set: &Set) {
     for marker in MARKERS {
@@ -146,10 +146,13 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.75, 0.75))
             .secs(secs)
     };
-    // Sweep the look around the south-east on the way down so it never crosses the camera.
-    let mid_eye = [53.2, 1.8, 4.2];
-    let mid_look = [52.5, -2.5, 10.5];
-    let over_thumper = lowered([54.8, 6.4, 4.8]);
+    // Smooth descent from the knoll's east edge straight to eye height in front of the thumper.
+    let at_thumper = lowered([54.2, 2.3, 5.0]);
+    let to_thumper = [
+        on_knoll(KNOLL_ARC[1]),
+        lowered([53.2, 4.6, 7.2]),
+        at_thumper,
+    ];
 
     film.fade_in(1.5)
         .shot(
@@ -172,23 +175,17 @@ pub fn shots(film: Film) -> Film {
         .menu("cogwork:leveler", LEVELER_AT, 4.0)
         .shot(round(272.0, KNOLL_ARC[1], 6.0))
         .shot(
-            dolly(on_knoll(KNOLL_ARC[1]), mid_eye)
-                .look(Look::Pan(MIDDLE, mid_look))
-                .ease(speeds(0.75, 0.85))
-                .secs(3.5),
+            flyby(&to_thumper)
+                .look(Look::Pan(MIDDLE, THUMPER_LOOK))
+                .ease(speeds(0.75, 0.6))
+                .secs(5.5),
         )
-        .title("cogwork.film.t5_thumper", 5.5)
-        .shot(
-            dolly(mid_eye, over_thumper)
-                .look(Look::Pan(mid_look, THUMPER_LOOK))
-                .ease(speeds(0.85, 0.7))
-                .secs(3.5),
-        )
+        .title("cogwork.film.t5_thumper", 5.0)
         .menu("cogwork:seismic_thumper", lowered_block(THUMPER_AT), 4.5)
         .shot(
-            dolly(over_thumper, END_EYE)
+            dolly(at_thumper, END_EYE)
                 .look_at(THUMPER_LOOK)
-                .ease(speeds(0.7, 1.0))
-                .secs(5.0),
+                .ease(speeds(0.6, 1.0))
+                .secs(5.5),
         )
 }

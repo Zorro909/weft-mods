@@ -1,8 +1,8 @@
-//! Section 8 (Tier 5a): plastics, sulfuric acid and ore leaching on Pad P, across the asphalt
-//! avenue south of the hall's east end. All five machines face north toward the road and camera:
-//! a polymerizer turning refinery gas into plastic pellets, two molding presses making plastic
-//! sheets and composite panels, an acid tank brewing sulfuric acid into pressure tubes, and a
-//! bubbling leaching vat turning Rich Ore Rubble into Pure.
+//! Section 8 (Tier 5a): plastics, sulfuric acid and ore leaching on Pad P, terraced into the
+//! slope south of the hall's east end. All five machines stand in one tight row facing north
+//! toward the hall and camera, with chests tucked inline so nothing blocks the lens: a
+//! polymerizer, two molding presses, an acid tank brewing sulfuric acid into glowing pressure
+//! tubes, and a bubbling leaching vat.
 
 use showcase_api::{Film, Look, Set, dolly, flyby};
 use weft_sdk::Dir;
@@ -25,57 +25,59 @@ use crate::tank::LIQUID_TANK;
 /// Floor height above Pad P's gravel, in blocks from the works.
 const FLOOR: i32 = PAD_P_TOP + 1;
 
-/// Five machines standing along z = 14, all facing north toward the asphalt road.
-const POLYMERIZER_AT: Pos = Pos::new(14, FLOOR, 14);
+/// Five machines standing along z = 14 facing north, with output chests tucked inline so nothing
+/// sits between the camera and the machines.
+const POLYMERIZER_AT: Pos = Pos::new(15, FLOOR, 14);
 const SHEET_PRESS_AT: Pos = Pos::new(17, FLOOR, 14);
 const PANEL_PRESS_AT: Pos = Pos::new(19, FLOOR, 14);
-const PANEL_CHEST: Pos = Pos::new(19, FLOOR, 12);
+const PANEL_CHEST: Pos = Pos::new(20, FLOOR, 14);
 const ACID_TANK_AT: Pos = Pos::new(21, FLOOR, 14);
 const LEACH_VAT_AT: Pos = Pos::new(23, FLOOR, 14);
-const PURE_CHEST: Pos = Pos::new(24, FLOOR, 13);
+const PURE_CHEST: Pos = Pos::new(24, FLOOR, 14);
 
-/// Local gas and water buffer tanks behind the row.
+/// Local gas buffer tank on the west end and water tank directly behind the acid tank.
 const GAS_TANK: Area = Area {
-    lo: Pos::new(12, FLOOR, 14),
-    hi: Pos::new(12, FLOOR + 1, 14),
+    lo: Pos::new(13, FLOOR, 14),
+    hi: Pos::new(13, FLOOR + 1, 14),
 };
 const ACID_WATER: Area = Area {
-    lo: Pos::new(20, FLOOR, 16),
-    hi: Pos::new(20, FLOOR + 1, 16),
+    lo: Pos::new(21, FLOOR, 16),
+    hi: Pos::new(21, FLOOR + 1, 16),
 };
 
 /// Ember engines assisting the torque shaft behind the row.
 const ENGINES: [(Pos, Dir); 3] = [
     (Pos::new(15, FLOOR, 16), Dir::North),
     (Pos::new(18, FLOOR, 16), Dir::North),
-    (Pos::new(22, FLOOR, 16), Dir::North),
+    (Pos::new(23, FLOOR, 16), Dir::North),
 ];
 
-/// Where S8 hands the camera off to S9, curving north-east toward the sorting tube.
-pub const END_EYE: [f64; 3] = lowered([25.2, FLOOR as f64 + 2.2, 9.5]);
+/// Where S8 hands the camera off to S9, gliding smoothly north-east over the terrace edge toward
+/// the sorting tube on one heading.
+pub const END_EYE: [f64; 3] = lowered([24.2, FLOOR as f64 + 1.8, 10.6]);
 pub const END_LOOK: [f64; 3] = lowered(above(LEACH_VAT_AT, 0.2));
 
 pub fn build(set: &Set) {
-    // Power backbone behind the row, tapped off the hall's torque shaft under the asphalt road.
-    shafts(set, Pos::new(13, 0, 6), Pos::new(13, 0, 7));
-    shafts(set, Pos::new(13, -1, 7), Pos::new(13, -1, 15));
-    shafts(set, Pos::new(13, 0, 15), Pos::new(13, FLOOR, 15));
-    shafts(set, Pos::new(14, FLOOR, 15), Pos::new(23, FLOOR, 15));
+    // Power backbone behind the row, climbing cleanly from the hall's torque shaft up to Pad P.
+    shafts(set, Pos::new(14, 0, 6), Pos::new(14, 0, 7));
+    shafts(set, Pos::new(14, -1, 7), Pos::new(14, -1, 15));
+    shafts(set, Pos::new(14, 0, 15), Pos::new(14, FLOOR, 15));
+    shafts(set, Pos::new(15, FLOOR, 15), Pos::new(23, FLOOR, 15));
     for (at, toward) in ENGINES {
         engine(set, at, toward);
     }
 
     // Polymerizer and gas buffer tank.
     set.fill(GAS_TANK, BlockState::of(&LIQUID_TANK));
-    liquid_tubes(set, &[Pos::new(13, FLOOR, 14)]);
+    liquid_tubes(set, &[Pos::new(14, FLOOR, 14)]);
     set.place(
         POLYMERIZER_AT,
         POLYMERIZER.with(&[("facing", "north")]).into(),
     );
-    tubes(set, Pos::new(14, FLOOR, 13), Pos::new(16, FLOOR, 13));
+    tubes(set, Pos::new(15, FLOOR, 13), Pos::new(16, FLOOR, 13));
     tubes(set, Pos::new(16, FLOOR, 14), Pos::new(16, FLOOR, 14));
 
-    // Sheet molding press -> panel molding press -> composite panel chest.
+    // Sheet molding press -> panel molding press -> inline composite panel chest.
     set.place(
         SHEET_PRESS_AT,
         MOLDING_PRESS.with(&[("facing", "north")]).into(),
@@ -86,19 +88,22 @@ pub fn build(set: &Set) {
         PANEL_PRESS_AT,
         MOLDING_PRESS.with(&[("facing", "north")]).into(),
     );
-    tubes(set, Pos::new(19, FLOOR, 13), Pos::new(19, FLOOR, 13));
+    tubes(set, Pos::new(19, FLOOR, 13), Pos::new(20, FLOOR, 13));
     set.place(PANEL_CHEST, BlockState::of(&CHEST));
 
-    // Acid tank, water tank, glowing pressure tube of sulfuric acid, and bubbling leaching vat.
+    // Acid tank, rear water tank bridged over the shaft, glowing pressure tube, and leaching vat.
     set.fill(ACID_WATER, BlockState::of(&LIQUID_TANK));
-    liquid_tubes(set, &[Pos::new(20, FLOOR, 15), Pos::new(20, FLOOR, 14)]);
+    liquid_tubes(
+        set,
+        &[Pos::new(21, FLOOR + 1, 15), Pos::new(21, FLOOR + 1, 14)],
+    );
     set.place(ACID_TANK_AT, ACID_TANK.with(&[("facing", "north")]).into());
     pressure_tubes(set, &acid_line());
     set.place(
         LEACH_VAT_AT,
         LEACHING_VAT.with(&[("facing", "north")]).into(),
     );
-    tubes(set, Pos::new(23, FLOOR, 13), Pos::new(23, FLOOR, 13));
+    tubes(set, Pos::new(23, FLOOR, 13), Pos::new(24, FLOOR, 13));
     set.place(PURE_CHEST, BlockState::of(&CHEST));
 }
 
@@ -121,7 +126,7 @@ pub fn start(set: &Set) {
         set,
         GAS_TANK
             .blocks()
-            .chain([Pos::new(13, FLOOR, 14), POLYMERIZER_AT]),
+            .chain([Pos::new(14, FLOOR, 14), POLYMERIZER_AT]),
         "cogwork:gas",
         [1, 1],
     );
@@ -152,7 +157,7 @@ pub fn start(set: &Set) {
         set,
         ACID_WATER
             .blocks()
-            .chain([Pos::new(20, FLOOR, 15), Pos::new(20, FLOOR, 14)]),
+            .chain([Pos::new(21, FLOOR + 1, 15), Pos::new(21, FLOOR + 1, 14)]),
         "base:water",
         [1, 1],
     );
@@ -175,8 +180,8 @@ pub fn start(set: &Set) {
     stock_rubble(set, LEACH_VAT_AT, "input", "iron", Grade::Rich, 3);
 }
 
-/// Exits the hall south-east between its east posts, then glides strictly east along the asphalt
-/// avenue past the polymerizer, molding presses, acid tank and leaching vat.
+/// Exits the hall cleanly down the center of the open bay between the x = 14 and x = 18 posts,
+/// rising onto the Pad P terrace and gliding close past all five machines.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
@@ -185,12 +190,12 @@ pub fn shots(film: Film) -> Film {
 
     let exit = [
         crafting::end_eye(),
-        lowered([16.4, f + 1.5, 5.4]),
-        lowered([16.0, f + 2.0, 10.2]),
+        lowered([16.3, 2.3, 6.8]),
+        lowered([16.2, f + 1.5, 10.8]),
     ];
-    let at_poly = lowered([17.5, f + 2.0, 10.2]);
-    let at_press = lowered([20.0, f + 2.0, 10.2]);
-    let at_acid = lowered([22.8, f + 2.0, 10.2]);
+    let at_poly = lowered([17.6, f + 1.5, 10.8]);
+    let at_press = lowered([20.0, f + 1.5, 10.8]);
+    let at_acid = lowered([22.4, f + 1.6, 10.8]);
 
     film.shot(
         flyby(&exit)

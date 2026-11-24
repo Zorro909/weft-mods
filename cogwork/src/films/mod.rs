@@ -36,41 +36,42 @@ use weft_sdk::Registry;
 
 use self::ground::Pad;
 use self::parts::{GRASS, GRAVEL};
-use self::site::{PAD_P_TOP, VALLEY_TOP, at_site, at_works, from_site, on_site, works};
+use self::site::{PAD_P_TOP, S1_TOP, VALLEY_TOP, at_site, at_works, from_site, on_site, works};
 
-/// The terraces in blocks from the works: four contiguous South Valley pads (S1–S4), Pad R for
-/// the refinery, Pad 0 for the hall, Pad P for plastics and acid, Pad 1 for the deep digger, and
-/// Pad 2 for the seismic thumper and composite-frame builder.
+/// The terraces in blocks from the works: four compact South Valley pads stepping down the ridge
+/// (S1–S4), Pad R for the refinery, Pad 0 for the hall, Pad P stepped up on the slope south of
+/// the hall for plastics and acid, Pad 1 for the deep digger, and Pad 2 for the seismic thumper
+/// and composite-frame builder.
 const PADS: [Pad; 9] = [
     Pad {
-        west: -38,
-        north: 24,
-        east: -13,
-        south: 43,
-        top: VALLEY_TOP,
+        west: -35,
+        north: 27,
+        east: -16,
+        south: 38,
+        top: S1_TOP,
         surface: &GRASS,
     },
     Pad {
-        west: -12,
-        north: 24,
-        east: 14,
-        south: 43,
+        west: -11,
+        north: 25,
+        east: 13,
+        south: 38,
         top: VALLEY_TOP,
         surface: &GRAVEL,
     },
     Pad {
-        west: 15,
-        north: 24,
-        east: 42,
-        south: 43,
+        west: 16,
+        north: 27,
+        east: 39,
+        south: 38,
         top: VALLEY_TOP,
         surface: &GRAVEL,
     },
     Pad {
         west: 43,
-        north: 24,
-        east: 74,
-        south: 43,
+        north: 25,
+        east: 69,
+        south: 38,
         top: VALLEY_TOP,
         surface: &GRAVEL,
     },
@@ -91,10 +92,10 @@ const PADS: [Pad; 9] = [
         surface: &GRAVEL,
     },
     Pad {
-        west: 12,
-        north: 10,
-        east: 27,
-        south: 19,
+        west: 13,
+        north: 11,
+        east: 25,
+        south: 17,
         top: PAD_P_TOP,
         surface: &GRAVEL,
     },
@@ -102,7 +103,7 @@ const PADS: [Pad; 9] = [
         west: 26,
         north: -12,
         east: 41,
-        south: 9,
+        south: 6,
         top: -1,
         surface: &GRAVEL,
     },

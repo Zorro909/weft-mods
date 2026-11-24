@@ -11,7 +11,7 @@ use showcase_api::{Film, Look, Set, dolly};
 use weft_sdk::{Dir, Item};
 
 use super::camera::{halfway, on_orbit, speeds};
-use super::engine_bay::{self, SHAFT_HEIGHT, SHAFT_X as ENGINE_SHAFT_X};
+use super::engine_bay::{self, SHAFT_X as ENGINE_SHAFT_X};
 use super::parts::{CHEST, engine, fuel, shafts, stock, tubes};
 use super::site::{above, lowered, lowered_block};
 use crate::bench::{ASSEMBLY_BENCH, set_ghost};
@@ -49,8 +49,8 @@ const MIDDLE: u32 = 4;
 
 /// Camera look targets and handoff point leaving the second bench toward Pad P.
 pub const BENCH_LOOK: [f64; 3] = lowered(above(STONE_COGS, 0.1));
-const SHAFT_LOOK: [f64; 3] = lowered(above(Pos::new(ENGINE_SHAFT_X, SHAFT_HEIGHT, 0), -0.5));
-const SHAFT_FOOT_LOOK: [f64; 3] = lowered(above(Pos::new(ENGINE_SHAFT_X, 1, SHAFT_Z), 0.0));
+const SHAFT_LOOK: [f64; 3] = lowered([ENGINE_SHAFT_X as f64 + 1.5, 2.2, SHAFT_Z as f64 - 0.5]);
+const SHAFT_FOOT_LOOK: [f64; 3] = lowered(above(Pos::new(ENGINE_SHAFT_X + 2, 1, ROW_Z), 0.2));
 const BENCH_OUT: f64 = 3.6;
 const BENCH_FROM: f64 = -130.0;
 const BENCH_UP: [f64; 2] = [2.1, 1.0];

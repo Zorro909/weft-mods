@@ -1,17 +1,18 @@
-//! Section 1 (Tier 0): the timber camp in the south valley. Hand-worked tools (a rubble pile,
-//! loaded sieve, wet millstone, and a furnace beside hand bellows) stand in front of a wound
-//! spring engine driving the first timber, stone and directing tubes. East of them, a stone
-//! millrace turns a water wheel whose wooden axles power a Timber Quarry inside its lashed frame.
+//! Section 1 (Tier 0): the timber camp on the upper south valley shoulder. Hand-worked tools (a
+//! rubble pile, loaded sieve, wet millstone, and a furnace beside hand bellows) stand directly in
+//! front of a wound spring engine driving the first timber, stone and directing tubes. Right
+//! beside them, a stone millrace turns a water wheel whose wooden axles power a Timber Quarry
+//! inside its lashed frame.
 
 use showcase_api::{Film, Look, Set, dolly, flyby};
 use weft_sdk::{Dir, Shape};
 
 use super::camera::speeds;
 use super::parts::{
-    CHEST, COBBLESTONE, FURNACE, OAK_LOG, STONE_BRICKS, WATER, area, axles, build_frame, fit_bit,
-    fuel, spring_engine, start_quarry, stock, stock_group, tubes, wind_spring,
+    CHEST, COBBLESTONE, FURNACE, STONE_BRICKS, WATER, area, axles, build_frame, fit_bit, fuel,
+    spring_engine, start_quarry, stock, stock_group, tubes, wind_spring,
 };
-use super::site::{VALLEY_TOP, above, lowered, lowered_block};
+use super::site::{S1_TOP, above, lowered, lowered_block};
 use crate::bellows::HAND_BELLOWS;
 use crate::excavator::kind::rows::TIMBER;
 use crate::excavator::{Frame, LASHED_FRAME, TIMBER_QUARRY};
@@ -23,36 +24,36 @@ use crate::tube::{DIRECTING_TUBE, TIMBER_TUBE};
 use crate::water_wheel::WATER_WHEEL;
 
 /// Floor height above the grass surface of Pad S1, in blocks from the works.
-const FLOOR: i32 = VALLEY_TOP + 1;
+const FLOOR: i32 = S1_TOP + 1;
 
-/// Hand-work camp positions along the front row.
-const SIEVE_AT: Pos = Pos::new(-34, FLOOR, 34);
+/// Compact hand-work camp along the front row.
+const SIEVE_AT: Pos = Pos::new(-33, FLOOR, 34);
 const MILLSTONE_AT: Pos = Pos::new(-32, FLOOR, 34);
 const FURNACE_AT: Pos = Pos::new(-30, FLOOR, 34);
 const BELLOWS_AT: Pos = Pos::new(-29, FLOOR, 34);
 
-/// First item tube line driven by a wound spring engine.
-const TUBE_IN: Pos = Pos::new(-35, FLOOR, 31);
-const PULL_TUBE: Pos = Pos::new(-34, FLOOR, 31);
-const SPRING_AT: Pos = Pos::new(-34, FLOOR + 1, 31);
-const DIRECTING_AT: Pos = Pos::new(-31, FLOOR, 31);
-const SIDE_CHEST: Pos = Pos::new(-31, FLOOR, 30);
-const TUBE_OUT: Pos = Pos::new(-29, FLOOR, 31);
+/// First item tube line directly behind the hand tools, driven by a wound spring engine.
+const TUBE_IN: Pos = Pos::new(-34, FLOOR, 32);
+const PULL_TUBE: Pos = Pos::new(-33, FLOOR, 32);
+const SPRING_AT: Pos = Pos::new(-33, FLOOR + 1, 32);
+const DIRECTING_AT: Pos = Pos::new(-31, FLOOR, 32);
+const SIDE_CHEST: Pos = Pos::new(-31, FLOOR, 31);
+const TUBE_OUT: Pos = Pos::new(-29, FLOOR, 32);
 
-/// Millrace and water wheel driving the Timber Quarry.
+/// Millrace and water wheel driving the Timber Quarry right beside the camp.
 const WHEEL_AT: Pos = Pos::new(-25, FLOOR, 33);
-const WATER_SOURCE: Pos = Pos::new(-27, VALLEY_TOP, 33);
+const WATER_SOURCE: Pos = Pos::new(-27, S1_TOP, 33);
 const MILLRACE_X: [i32; 2] = [-27, -23];
-const CATCH_PIT: Pos = Pos::new(-22, VALLEY_TOP - 1, 33);
+const CATCH_PIT: Pos = Pos::new(-22, S1_TOP - 1, 33);
 
 /// Timber Quarry and its pre-built 5 by 5 lashed frame behind it.
-pub const QUARRY_AT: Pos = Pos::new(-19, FLOOR, 35);
-const QUARRY_CHEST: Pos = Pos::new(-18, FLOOR, 35);
+pub const QUARRY_AT: Pos = Pos::new(-20, FLOOR, 35);
+const QUARRY_CHEST: Pos = Pos::new(-19, FLOOR, 35);
 const PIT_DEPTH: i32 = 2;
 
-/// Where S1 hands the camera off to S2, heading east.
-pub const END_EYE: [f64; 3] = lowered([-16.5, FLOOR as f64 + 3.5, 40.5]);
-pub const END_LOOK: [f64; 3] = lowered([-19.0, FLOOR as f64 + 1.5, 32.0]);
+/// Where S1 hands the camera off to S2, gliding east down the shoulder.
+pub const END_EYE: [f64; 3] = lowered([-16.8, FLOOR as f64 + 2.6, 38.4]);
+pub const END_LOOK: [f64; 3] = lowered([-20.0, FLOOR as f64 + 1.2, 33.0]);
 
 pub fn build(set: &Set) {
     hand_camp(set);
@@ -61,19 +62,12 @@ pub fn build(set: &Set) {
     quarry(set);
 }
 
-/// Rubble pile, sieve, millstone, furnace, hand bellows, and low timber posts behind the camp.
+/// Rubble pile, sieve, millstone, furnace and hand bellows set close together.
 fn hand_camp(set: &Set) {
-    for post_x in [-36, -29] {
-        set.fill(
-            area(Pos::new(post_x, FLOOR, 29), Pos::new(post_x, FLOOR + 2, 29)),
-            BlockState::of(&OAK_LOG),
-        );
-    }
     let rubble = [
-        Pos::new(-36, FLOOR, 34),
-        Pos::new(-36, FLOOR, 33),
-        Pos::new(-35, FLOOR, 33),
-        Pos::new(-36, FLOOR + 1, 33),
+        Pos::new(-34, FLOOR, 34),
+        Pos::new(-34, FLOOR, 33),
+        Pos::new(-34, FLOOR + 1, 33),
     ];
     for at in rubble {
         set.place(at, BlockState::of(&RUBBLE));
@@ -91,32 +85,32 @@ fn spring_line(set: &Set) {
     }
     set.place(PULL_TUBE, BlockState::of(&TIMBER_TUBE));
     spring_engine(set, SPRING_AT, Dir::Down);
-    tubes(set, Pos::new(-33, FLOOR, 31), Pos::new(-32, FLOOR, 31));
+    tubes(set, Pos::new(-32, FLOOR, 32), Pos::new(-32, FLOOR, 32));
     set.place(DIRECTING_AT, DIRECTING_TUBE.with(&[("out", "east")]).into());
-    tubes(set, Pos::new(-30, FLOOR, 31), Pos::new(-30, FLOOR, 31));
+    tubes(set, Pos::new(-30, FLOOR, 32), Pos::new(-30, FLOOR, 32));
 }
 
 /// Recessed stone channel carrying flowing water under the water wheel, and wooden axles to the
 /// quarry's west face.
 fn millrace_and_wheel(set: &Set) {
     let bed = area(
-        Pos::new(MILLRACE_X[0], VALLEY_TOP - 1, 32),
-        Pos::new(CATCH_PIT.x, VALLEY_TOP - 1, 34),
+        Pos::new(MILLRACE_X[0], S1_TOP - 1, 32),
+        Pos::new(CATCH_PIT.x, S1_TOP - 1, 34),
     );
     set.fill(bed, BlockState::of(&COBBLESTONE));
     for curb_z in [32, 34] {
         set.fill(
             area(
-                Pos::new(MILLRACE_X[0], VALLEY_TOP, curb_z),
-                Pos::new(MILLRACE_X[1], VALLEY_TOP, curb_z),
+                Pos::new(MILLRACE_X[0], S1_TOP, curb_z),
+                Pos::new(MILLRACE_X[1], S1_TOP, curb_z),
             ),
             BlockState::of(&STONE_BRICKS),
         );
     }
     set.fill(
         area(
-            Pos::new(MILLRACE_X[0], VALLEY_TOP, 33),
-            Pos::new(MILLRACE_X[1], VALLEY_TOP, 33),
+            Pos::new(MILLRACE_X[0], S1_TOP, 33),
+            Pos::new(MILLRACE_X[1], S1_TOP, 33),
         ),
         BlockState::AIR,
     );
@@ -125,10 +119,10 @@ fn millrace_and_wheel(set: &Set) {
     set.place(CATCH_PIT.add_y(1), BlockState::AIR);
     set.place(WATER_SOURCE, BlockState::of(&WATER));
     set.place(WHEEL_AT, WATER_WHEEL.with(&[("facing", "south")]).into());
-    // Axles leave the wheel's north end, then wrap west of the 7 by 7 lashed frame into the quarry.
-    axles(set, Pos::new(-25, FLOOR, 32), Pos::new(-23, FLOOR, 32));
-    axles(set, Pos::new(-23, FLOOR, 33), Pos::new(-23, FLOOR, 35));
-    axles(set, Pos::new(-22, FLOOR, 35), Pos::new(-20, FLOOR, 35));
+    // Axles leave the wheel's north end and turn into the quarry's west side.
+    axles(set, Pos::new(-25, FLOOR, 32), Pos::new(-24, FLOOR, 32));
+    axles(set, Pos::new(-24, FLOOR, 33), Pos::new(-24, FLOOR, 35));
+    axles(set, Pos::new(-23, FLOOR, 35), Pos::new(-21, FLOOR, 35));
 }
 
 /// Timber Quarry facing south, its lashed frame pre-built and its pit started.
@@ -172,50 +166,50 @@ pub fn start(set: &Set) {
     start_quarry(set, QUARRY_AT, Dir::South, &TIMBER, FLOOR - PIT_DEPTH - 1);
 }
 
-/// Opening swoop into the timber camp, then a steady glide east past the hand tools, spring tubes,
+/// Opening swoop into the timber camp, then a close glide east past the hand tools, spring tubes,
 /// water wheel, and Timber Quarry.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let camp_mid = lowered([-27.0, f + 1.0, 33.0]);
+    let camp_mid = lowered([-26.5, f + 0.8, 33.0]);
     let hand_look = lowered(above(MILLSTONE_AT, 0.2));
     let spring_look = lowered(above(DIRECTING_AT, 0.3));
     let wheel_look = lowered(above(WHEEL_AT, 0.3));
 
     let entry = [
-        lowered([-37.5, f + 9.0, 42.0]),
-        lowered([-36.5, f + 5.5, 40.8]),
-        lowered([-35.5, f + 2.5, 39.5]),
+        lowered([-35.0, f + 5.8, 38.6]),
+        lowered([-34.0, f + 3.2, 37.9]),
+        lowered([-33.0, f + 1.6, 37.3]),
     ];
-    let past_hand = lowered([-30.5, f + 2.2, 39.0]);
-    let past_spring = lowered([-24.5, f + 2.4, 39.5]);
-    let at_quarry = lowered([-19.5, f + 3.2, 40.2]);
+    let past_hand = lowered([-29.8, f + 1.6, 37.3]);
+    let past_spring = lowered([-25.2, f + 1.7, 37.5]);
+    let at_quarry = lowered([-20.5, f + 2.3, 38.0]);
 
     film.title("mod.cogwork.name", 4.0)
         .shot(
             flyby(&entry)
                 .look(Look::Pan(camp_mid, hand_look))
-                .ease(speeds(3.0, 1.0))
+                .ease(speeds(2.6, 0.9))
                 .secs(5.5),
         )
         .title("cogwork.film.t0_hand", 5.5)
         .shot(
             dolly(entry[2], past_hand)
                 .look(Look::Pan(hand_look, spring_look))
-                .ease(speeds(1.0, 0.9))
+                .ease(speeds(0.9, 0.8))
                 .secs(6.0),
         )
         .title("cogwork.film.t0_spring", 4.5)
         .shot(
             dolly(past_hand, past_spring)
                 .look(Look::Pan(spring_look, wheel_look))
-                .ease(speeds(0.9, 0.9))
-                .secs(6.5),
+                .ease(speeds(0.8, 0.8))
+                .secs(6.0),
         )
         .title("cogwork.film.t0_timber", 5.5)
         .shot(
             dolly(past_spring, at_quarry)
                 .look(Look::Pan(wheel_look, END_LOOK))
-                .ease(speeds(0.9, 0.6))
+                .ease(speeds(0.8, 0.6))
                 .secs(6.0),
         )
         .menu("cogwork:timber_quarry", lowered_block(QUARRY_AT), 4.0)

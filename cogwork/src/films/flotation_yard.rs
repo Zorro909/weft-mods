@@ -1,10 +1,10 @@
 //! Section 4 (Tier 3): prospecting, steel excavation, and closed-loop ore flotation on Pad S4.
 //! A core drill stands beside a Steel Excavator powered by the torque shaft from S3's steam
-//! engine. Beyond it, creosote piped from S3's coke oven enters a frothing flotation cell whose
-//! muddy water drains back into two turning clarifiers, which return clear water to the cell.
-//! Closes Part 1 with a clean fade to black.
+//! engine. Beyond it, creosote piped from S3's coke oven enters a frothing flotation cell standing
+//! beside two turning clarifiers: one straight rear pipe carries muddy water east to both
+//! clarifiers, and one straight low front pipe returns clear water west to the cell.
 
-use showcase_api::{Film, Look, Set, dolly, flyby};
+use showcase_api::{Film, Look, Set, dolly};
 use weft_sdk::{Dir, Shape};
 
 use super::camera::speeds;
@@ -27,31 +27,32 @@ use crate::tank::LIQUID_TANK;
 const FLOOR: i32 = VALLEY_TOP + 1;
 
 /// Core drill and Steel Excavator.
-const CORE_DRILL_AT: Pos = Pos::new(46, FLOOR, 36);
-pub const EXCAVATOR_AT: Pos = Pos::new(54, FLOOR, 36);
-const EXCAVATOR_CHEST: Pos = Pos::new(56, FLOOR, 36);
+const CORE_DRILL_AT: Pos = Pos::new(45, FLOOR, 35);
+pub const EXCAVATOR_AT: Pos = Pos::new(52, FLOOR, 35);
+const EXCAVATOR_CHEST: Pos = Pos::new(54, FLOOR, 35);
 const PIT_DEPTH: i32 = 3;
 
-/// Flotation cell, its ember engines, and the two clarifiers reclaiming its muddy water.
-const FLOTATION_AT: Pos = Pos::new(64, FLOOR, 35);
-const FLOTATION_CHEST: Pos = Pos::new(64, FLOOR, 37);
-const FLOTATION_ENGINES: [(Pos, Dir); 2] = [
-    (Pos::new(61, FLOOR, 35), Dir::East),
-    (Pos::new(62, FLOOR + 1, 35), Dir::Down),
-];
+/// Straight-line flotation and clarifier loop along z = 34, all facing south with tanks and chests
+/// inline or to the side so nothing stands between the camera and the machines.
 const CREOSOTE_TANK: Area = Area {
-    lo: Pos::new(62, FLOOR, 28),
-    hi: Pos::new(62, FLOOR + 1, 28),
+    lo: Pos::new(59, FLOOR, 33),
+    hi: Pos::new(59, FLOOR + 1, 33),
 };
-const CLARIFIERS: [Pos; 2] = [Pos::new(66, FLOOR, 31), Pos::new(68, FLOOR, 31)];
-const CLAY_CHESTS: [Pos; 2] = [Pos::new(67, FLOOR, 31), Pos::new(69, FLOOR, 31)];
+const FLOTATION_AT: Pos = Pos::new(61, FLOOR, 34);
+const FLOTATION_CHEST: Pos = Pos::new(60, FLOOR, 35);
+const FLOTATION_ENGINES: [(Pos, Dir); 2] = [
+    (Pos::new(60, FLOOR, 32), Dir::Down),
+    (Pos::new(61, FLOOR, 32), Dir::Down),
+];
+const CLARIFIERS: [Pos; 2] = [Pos::new(63, FLOOR, 34), Pos::new(65, FLOOR, 34)];
+const CLAY_CHESTS: [Pos; 2] = [Pos::new(64, FLOOR, 34), Pos::new(66, FLOOR, 34)];
 const WATER_TANK: Area = Area {
-    lo: Pos::new(69, FLOOR, 35),
-    hi: Pos::new(69, FLOOR + 1, 35),
+    lo: Pos::new(67, FLOOR, 34),
+    hi: Pos::new(67, FLOOR + 1, 34),
 };
 
 /// Where S3's last shot hands the camera off to S4.
-const START_EYE: [f64; 3] = lowered([45.5, FLOOR as f64 + 2.9, 40.2]);
+const START_EYE: [f64; 3] = lowered([43.5, FLOOR as f64 + 2.2, 38.0]);
 
 pub fn build(set: &Set) {
     set.place(
@@ -71,15 +72,15 @@ fn steel_excavator(set: &Set) {
     shafts(
         set,
         Pos::new(43, FLOOR, SHAFT_Z),
-        Pos::new(48, FLOOR, SHAFT_Z),
+        Pos::new(47, FLOOR, SHAFT_Z),
     );
     shafts(
         set,
-        Pos::new(48, FLOOR, SHAFT_Z + 1),
-        Pos::new(48, FLOOR, 36),
+        Pos::new(47, FLOOR, SHAFT_Z + 1),
+        Pos::new(47, FLOOR, 35),
     );
-    shafts(set, Pos::new(49, FLOOR, 36), Pos::new(53, FLOOR, 36));
-    tubes(set, Pos::new(55, FLOOR, 36), Pos::new(55, FLOOR, 36));
+    shafts(set, Pos::new(48, FLOOR, 35), Pos::new(51, FLOOR, 35));
+    tubes(set, Pos::new(53, FLOOR, 35), Pos::new(53, FLOOR, 35));
     set.place(EXCAVATOR_CHEST, BlockState::of(&CHEST));
 
     let world = set.world();
@@ -91,22 +92,27 @@ fn steel_excavator(set: &Set) {
     world.fill(Shape::cuboid(lo, hi), BlockState::AIR.id());
 }
 
-/// Flotation cell fed creosote from S3 and reclaimed water from two clarifiers behind it.
+/// Side-by-side flotation cell and two clarifiers linked by two straight parallel pipe runs:
+/// muddy water behind along z = 33, clear water returning low in front along z = 35.
 fn flotation_loop(set: &Set) {
     set.place(
         FLOTATION_AT,
         FLOTATION_CELL.with(&[("facing", "south")]).into(),
     );
-    tubes(set, Pos::new(64, FLOOR, 36), Pos::new(64, FLOOR, 36));
+    tubes(set, Pos::new(61, FLOOR, 35), Pos::new(61, FLOOR, 35));
     set.place(FLOTATION_CHEST, BlockState::of(&CHEST));
 
-    // Power comes under the gravel from two ember engines west of the creosote line.
+    // Power comes under the gravel from two ember engines tucked behind the cell.
     shafts(
         set,
-        Pos::new(62, FLOOR - 1, 35),
-        Pos::new(64, FLOOR - 1, 35),
+        Pos::new(60, FLOOR - 1, 32),
+        Pos::new(61, FLOOR - 1, 32),
     );
-    shafts(set, Pos::new(62, FLOOR, 35), Pos::new(62, FLOOR, 35));
+    shafts(
+        set,
+        Pos::new(61, FLOOR - 1, 33),
+        Pos::new(61, FLOOR - 1, 34),
+    );
     for (at, toward) in FLOTATION_ENGINES {
         engine(set, at, toward);
     }
@@ -126,39 +132,23 @@ fn flotation_loop(set: &Set) {
 }
 
 fn creosote_line() -> Vec<Pos> {
-    let mut blocks: Vec<Pos> = (43..=63).map(|x| Pos::new(x, FLOOR, CREOSOTE_Z)).collect();
-    blocks.extend((CREOSOTE_Z + 1..=35).map(|z| Pos::new(63, FLOOR, z)));
+    let mut blocks: Vec<Pos> = (43..=59).map(|x| Pos::new(x, FLOOR, CREOSOTE_Z)).collect();
+    blocks.extend((CREOSOTE_Z + 1..=32).map(|z| Pos::new(59, FLOOR, z)));
+    blocks.extend([Pos::new(59, FLOOR, 34), Pos::new(60, FLOOR, 34)]);
     blocks
 }
 
-/// Muddy water runs north along x = 64, kept an air block west of the clear water return on x = 66.
+/// One straight muddy water header behind the flotation cell and both clarifiers along z = 33.
 fn muddy_line() -> Vec<Pos> {
-    vec![
-        Pos::new(64, FLOOR, 34),
-        Pos::new(64, FLOOR, 33),
-        Pos::new(64, FLOOR, 32),
-        Pos::new(64, FLOOR, 31),
-        Pos::new(64, FLOOR, 30),
-        Pos::new(65, FLOOR, 30),
-        Pos::new(66, FLOOR, 30),
-        Pos::new(67, FLOOR, 30),
-        Pos::new(68, FLOOR, 30),
-    ]
+    (61..=65).map(|x| Pos::new(x, FLOOR, 33)).collect()
 }
 
+/// One straight clear water return along z = 35 from the water tank and both clarifiers back into
+/// the flotation cell's east side at (62, FLOOR, 34).
 fn clear_water_line() -> Vec<Pos> {
-    vec![
-        Pos::new(66, FLOOR, 32),
-        Pos::new(68, FLOOR, 32),
-        Pos::new(66, FLOOR, 33),
-        Pos::new(67, FLOOR, 33),
-        Pos::new(68, FLOOR, 33),
-        Pos::new(66, FLOOR, 34),
-        Pos::new(66, FLOOR, 35),
-        Pos::new(67, FLOOR, 35),
-        Pos::new(68, FLOOR, 35),
-        Pos::new(65, FLOOR, 35),
-    ]
+    let mut blocks: Vec<Pos> = (62..=67).map(|x| Pos::new(x, FLOOR, 35)).collect();
+    blocks.push(Pos::new(62, FLOOR, 34));
+    blocks
 }
 
 /// Starts the Steel Excavator, fuels the flotation engines, and prefills creosote, water and
@@ -194,56 +184,53 @@ pub fn start(set: &Set) {
     );
 }
 
-/// Glides past the core drill and Steel Excavator, then curves north-east round the flotation cell
-/// and clarifiers before fading out Part 1.
+/// Glides close past the core drill, Steel Excavator, flotation cell and clarifiers before fading
+/// out Part 1.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let core_look = lowered(above(CORE_DRILL_AT, 0.3));
-    let steel_look = lowered([54.0, f + 2.0, 32.5]);
-    let float_look = lowered(above(FLOTATION_AT, 0.3));
-    let clarifier_look = lowered([67.0, f + 0.8, 31.5]);
+    let core_look = lowered(above(CORE_DRILL_AT, 0.2));
+    let steel_look = lowered([52.0, f + 1.8, 32.0]);
+    let float_look = lowered(above(FLOTATION_AT, 0.2));
+    let clarifier_look = lowered([64.5, f + 0.5, 34.0]);
 
-    let at_core = lowered([49.5, f + 3.2, 40.8]);
-    let at_steel = lowered([57.5, f + 4.4, 41.5]);
-    let at_float = lowered([65.5, f + 3.4, 39.8]);
-    let round_clarifier = [
-        at_float,
-        lowered([69.8, f + 3.8, 38.2]),
-        lowered([72.2, f + 4.2, 34.5]),
-    ];
+    let at_core = lowered([47.0, f + 2.0, 38.2]);
+    let at_steel = lowered([55.2, f + 3.4, 39.2]);
+    let at_float = lowered([61.5, f + 2.0, 38.2]);
+    let at_clarifier = lowered([65.0, f + 2.1, 38.0]);
+    let end_eye = lowered([67.2, f + 2.2, 37.8]);
 
     film.title("cogwork.film.t3_core", 4.0)
         .shot(
             dolly(START_EYE, at_core)
                 .look(Look::Pan(foundry::END_LOOK, core_look))
-                .ease(speeds(1.0, 1.0))
+                .ease(speeds(1.0, 0.9))
                 .secs(4.5),
         )
         .title("cogwork.film.t3_steel", 5.5)
         .shot(
             dolly(at_core, at_steel)
                 .look(Look::Pan(core_look, steel_look))
-                .ease(speeds(1.0, 1.0))
+                .ease(speeds(0.9, 0.9))
                 .secs(6.5),
         )
         .menu("cogwork:steel_excavator", lowered_block(EXCAVATOR_AT), 4.0)
         .shot(
             dolly(at_steel, at_float)
                 .look(Look::Pan(steel_look, float_look))
-                .ease(speeds(1.0, 0.9))
+                .ease(speeds(0.9, 0.7))
                 .secs(7.0),
         )
         .title("cogwork.film.t3_float", 6.0)
         .menu("cogwork:flotation_cell", lowered_block(FLOTATION_AT), 4.0)
         .shot(
-            flyby(&round_clarifier)
+            dolly(at_float, at_clarifier)
                 .look(Look::Pan(float_look, clarifier_look))
-                .ease(speeds(0.9, 0.6))
-                .secs(7.5),
+                .ease(speeds(0.7, 0.6))
+                .secs(6.5),
         )
-        .menu("cogwork:clarifier", lowered_block(CLARIFIERS[1]), 3.5)
+        .menu("cogwork:clarifier", lowered_block(CLARIFIERS[0]), 3.5)
         .shot(
-            dolly(round_clarifier[2], lowered([72.8, f + 4.4, 31.8]))
+            dolly(at_clarifier, end_eye)
                 .look_at(clarifier_look)
                 .ease(speeds(0.6, 0.3))
                 .secs(4.5),
