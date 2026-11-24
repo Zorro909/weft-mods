@@ -51,8 +51,8 @@ pub const QUARRY_AT: Pos = Pos::new(-20, FLOOR, 35);
 const QUARRY_CHEST: Pos = Pos::new(-19, FLOOR, 35);
 const PIT_DEPTH: i32 = 2;
 
-/// Where S1 hands the camera off to S2, gliding east down the shoulder.
-pub const END_EYE: [f64; 3] = lowered([-16.8, FLOOR as f64 + 2.6, 38.4]);
+/// Where S1 hands the camera off to S2, already climbing high above the grass slope between pads.
+pub const END_EYE: [f64; 3] = lowered([-16.8, FLOOR as f64 + 4.4, 37.8]);
 pub const END_LOOK: [f64; 3] = lowered([-20.0, FLOOR as f64 + 1.2, 33.0]);
 
 pub fn build(set: &Set) {

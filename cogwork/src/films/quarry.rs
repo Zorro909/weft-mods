@@ -163,14 +163,13 @@ pub fn raise_frame(set: &Set) {
 pub fn sorting_and_digging_shots(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
     let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
-    // High route over Pad 0 and Pad 1's open gravel, clearing both the hall's south-east eaves
-    // and the grassy bank until north of z = 6.
-    let to_sorter = [
-        plastics_bay::END_EYE,
-        lowered([25.2, 8.8, 7.4]),
-        lowered([25.0, 5.4, 5.4]),
-        at_sorter,
-    ];
+    // Cross north at y = 9.2..9.0 (5+ blocks above the bank and clear of the hall's south-east
+    // eaves), swinging the look smoothly east then north-east so turn rate stays well under
+    // 75 deg/s, then descend cleanly over open gravel onto the sorting tube.
+    let mid_north = lowered([24.4, 9.1, 8.2]);
+    let over_yard = lowered([24.4, 9.0, 4.8]);
+    let east_sky = lowered([38.0, 4.5, 11.4]);
+    let far_lake = lowered([34.0, 2.5, -6.0]);
     let by_magazine = [
         leave_sorter,
         lowered([31.2, 2.8, 5.4]),
@@ -190,10 +189,22 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
 
     film.cue("noon_3")
         .shot(
-            flyby(&to_sorter)
-                .look(Look::Pan(plastics_bay::END_LOOK, SORTER_LOOK))
-                .ease(speeds(0.9, 0.5))
-                .secs(6.0),
+            dolly(plastics_bay::END_EYE, mid_north)
+                .look(Look::Pan(plastics_bay::END_LOOK, east_sky))
+                .ease(speeds(0.8, 1.0))
+                .secs(3.5),
+        )
+        .shot(
+            dolly(mid_north, over_yard)
+                .look(Look::Pan(east_sky, far_lake))
+                .ease(speeds(1.0, 1.0))
+                .secs(3.0),
+        )
+        .shot(
+            dolly(over_yard, at_sorter)
+                .look(Look::Pan(far_lake, SORTER_LOOK))
+                .ease(speeds(1.0, 0.5))
+                .secs(3.5),
         )
         .title("cogwork.film.sorting", 4.5)
         .shot(round(SORTER_ARC[0], 110.0, speeds(0.5, 0.15), 2.5))

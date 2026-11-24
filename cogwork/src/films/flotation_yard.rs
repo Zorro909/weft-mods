@@ -28,9 +28,9 @@ const FLOOR: i32 = VALLEY_TOP + 1;
 
 /// Core drill and Steel Excavator, with the excavator's output chest tucked beside its west frame
 /// edge away from the camera path.
-const CORE_DRILL_AT: Pos = Pos::new(45, FLOOR, 33);
-pub const EXCAVATOR_AT: Pos = Pos::new(53, FLOOR, 35);
-const EXCAVATOR_CHEST: Pos = Pos::new(47, FLOOR, 33);
+const CORE_DRILL_AT: Pos = Pos::new(44, FLOOR, 33);
+pub const EXCAVATOR_AT: Pos = Pos::new(52, FLOOR, 35);
+const EXCAVATOR_CHEST: Pos = Pos::new(46, FLOOR, 33);
 const PIT_DEPTH: i32 = 3;
 
 /// Flotation cell and two clarifiers along z = 32, with every chest and tank tucked behind them
@@ -71,25 +71,25 @@ fn steel_excavator(set: &Set) {
     shafts(
         set,
         Pos::new(43, FLOOR, SHAFT_Z),
-        Pos::new(46, FLOOR, SHAFT_Z),
+        Pos::new(45, FLOOR, SHAFT_Z),
     );
     shafts(
         set,
-        Pos::new(46, FLOOR, SHAFT_Z + 1),
-        Pos::new(46, FLOOR, 34),
+        Pos::new(45, FLOOR, SHAFT_Z + 1),
+        Pos::new(45, FLOOR, 34),
     );
     shafts(
         set,
-        Pos::new(46, FLOOR - 1, 34),
+        Pos::new(45, FLOOR - 1, 34),
+        Pos::new(45, FLOOR - 1, 35),
+    );
+    shafts(
+        set,
         Pos::new(46, FLOOR - 1, 35),
+        Pos::new(52, FLOOR - 1, 35),
     );
-    shafts(
-        set,
-        Pos::new(47, FLOOR - 1, 35),
-        Pos::new(53, FLOOR - 1, 35),
-    );
-    tubes(set, Pos::new(47, FLOOR, 35), Pos::new(52, FLOOR, 35));
-    tubes(set, Pos::new(47, FLOOR, 34), Pos::new(47, FLOOR, 34));
+    tubes(set, Pos::new(46, FLOOR, 35), Pos::new(51, FLOOR, 35));
+    tubes(set, Pos::new(46, FLOOR, 34), Pos::new(46, FLOOR, 34));
     set.place(EXCAVATOR_CHEST, BlockState::of(&CHEST));
 
     let world = set.world();
@@ -215,16 +215,17 @@ pub fn start(set: &Set) {
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
     let core_look = lowered(above(CORE_DRILL_AT, 0.3));
-    let steel_look = lowered([53.0, f + 1.8, 32.0]);
+    let steel_look = lowered([52.0, f + 1.8, 32.0]);
     let float_look = lowered(above(FLOTATION_AT, 0.2));
     let clarifier_look = lowered([64.0, f + 0.5, 32.5]);
 
-    let at_core = lowered([44.6, f + 2.3, 36.6]);
-    let at_steel = lowered([54.2, f + 3.5, 38.2]);
-    let past_frame_corner = [at_core, lowered([49.0, f + 3.2, 38.0]), at_steel];
-    let at_float = lowered([60.5, f + 2.3, 37.0]);
-    let at_clarifier = lowered([63.5, f + 2.3, 37.0]);
-    let end_eye = lowered([65.0, f + 2.4, 37.0]);
+    let at_core = lowered([43.8, f + 2.3, 36.6]);
+    let at_steel = lowered([53.5, f + 3.5, 38.4]);
+    let past_sw_corner = [at_core, lowered([48.5, f + 3.3, 38.2]), at_steel];
+    let at_float = lowered([61.5, f + 2.4, 37.4]);
+    let past_se_corner = [at_steel, lowered([58.5, f + 3.0, 38.4]), at_float];
+    let at_clarifier = lowered([63.8, f + 2.3, 37.2]);
+    let end_eye = lowered([65.0, f + 2.4, 37.2]);
 
     film.title("cogwork.film.t3_core", 4.0)
         .shot(
@@ -235,14 +236,14 @@ pub fn shots(film: Film) -> Film {
         )
         .title("cogwork.film.t3_steel", 5.5)
         .shot(
-            flyby(&past_frame_corner)
+            flyby(&past_sw_corner)
                 .look(Look::Pan(core_look, steel_look))
                 .ease(speeds(0.9, 0.9))
                 .secs(6.5),
         )
         .menu("cogwork:steel_excavator", lowered_block(EXCAVATOR_AT), 4.0)
         .shot(
-            dolly(at_steel, at_float)
+            flyby(&past_se_corner)
                 .look(Look::Pan(steel_look, float_look))
                 .ease(speeds(0.9, 0.7))
                 .secs(7.0),

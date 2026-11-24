@@ -52,10 +52,10 @@ const ENGINES: [(Pos, Dir); 3] = [
     (Pos::new(23, FLOOR, 16), Dir::North),
 ];
 
-/// Where S8 hands the camera off to S9, high over Pad P's gravel and already looking north-east
-/// into the open gravel sorting courtyard, clear of the hall's south-east eaves.
-pub const END_EYE: [f64; 3] = lowered([24.6, FLOOR as f64 + 3.4, 11.2]);
-pub const END_LOOK: [f64; 3] = lowered([28.5, 2.2, 4.5]);
+/// Where S8 hands the camera off to S9, high over Pad P's gravel (5+ blocks above the north-east
+/// bank) while holding on the leaching vat.
+pub const END_EYE: [f64; 3] = lowered([24.4, FLOOR as f64 + 5.2, 11.4]);
+pub const END_LOOK: [f64; 3] = lowered(above(LEACH_VAT_AT, 0.2));
 
 pub fn build(set: &Set) {
     // Power backbone behind the row, climbing cleanly from the hall's torque shaft up to Pad P.
@@ -186,20 +186,24 @@ pub fn start(set: &Set) {
 /// sweeps east past all five machines.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let bay_look = lowered([19.5, 3.8, 13.5]);
+    let bay_look = lowered([19.5, 5.6, 14.5]);
     let press_mid = lowered([19.5, f + 0.8, 14.5]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
-    let leach_look = lowered(above(LEACH_VAT_AT, 0.2));
 
-    let bay_entry = lowered([19.5, 3.6, 2.0]);
-    let outside = lowered([19.5, 6.0, 10.6]);
-    let through_bay = [bay_entry, lowered([19.5, 4.4, 7.0]), outside];
-    let at_poly_start = lowered([15.6, f + 1.8, 10.6]);
-    let at_poly = lowered([17.6, f + 1.8, 10.6]);
-    let at_press = lowered([20.0, f + 1.8, 10.6]);
-    let at_acid = lowered([21.8, f + 2.2, 10.6]);
+    let bay_entry = lowered([19.5, 3.8, 2.0]);
+    let outside = lowered([19.5, 6.4, 11.4]);
+    let through_bay = [
+        bay_entry,
+        lowered([19.5, 4.9, 7.0]),
+        lowered([19.5, 6.0, 9.2]),
+        outside,
+    ];
+    let at_poly_start = lowered([15.6, f + 2.0, 11.4]);
+    let at_poly = lowered([17.6, f + 2.0, 11.4]);
+    let at_press = lowered([20.0, f + 2.0, 11.4]);
+    let at_acid = lowered([21.8, f + 2.2, 11.4]);
 
     film.shot(
         dolly(crafting::end_eye(), bay_entry)
@@ -238,7 +242,7 @@ pub fn shots(film: Film) -> Film {
     .menu("cogwork:acid_tank", lowered_block(ACID_TANK_AT), 4.0)
     .shot(
         dolly(at_press, at_acid)
-            .look(Look::Pan(acid_look, leach_look))
+            .look(Look::Pan(acid_look, END_LOOK))
             .ease(speeds(0.6, 0.6))
             .secs(5.2),
     )
@@ -246,8 +250,8 @@ pub fn shots(film: Film) -> Film {
     .menu("cogwork:leaching_vat", lowered_block(LEACH_VAT_AT), 4.0)
     .shot(
         dolly(at_acid, END_EYE)
-            .look(Look::Pan(leach_look, END_LOOK))
-            .ease(speeds(0.6, 0.9))
+            .look_at(END_LOOK)
+            .ease(speeds(0.6, 0.8))
             .secs(5.0),
     )
 }

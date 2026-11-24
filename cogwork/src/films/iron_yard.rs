@@ -3,7 +3,7 @@
 //! awning runs one continuous driven ore line: a shaker screen with a void tube for waste, linked
 //! by stone tubes into a washer, a grinding mill, and a furnace blown by a driven bellows.
 
-use showcase_api::{Film, Look, Set, dolly};
+use showcase_api::{Film, Look, Set, dolly, flyby};
 use weft_sdk::{Dir, Shape};
 
 use super::camera::speeds;
@@ -35,7 +35,7 @@ const QUARRY_ENGINES: [(Pos, Dir); 3] = [
     (Pos::new(-7, FLOOR + 1, 35), Dir::Down),
 ];
 const EMBER_MENU_AT: Pos = Pos::new(-8, FLOOR + 1, 35);
-const QUARRY_CHEST: Pos = Pos::new(-1, FLOOR, 35);
+const QUARRY_CHEST: Pos = Pos::new(-1, FLOOR, 31);
 const PIT_DEPTH: i32 = 3;
 
 /// Connected driven ore processing line along z = 32, with all item tubes running behind the
@@ -85,7 +85,11 @@ fn iron_quarry(set: &Set) {
     }
     tubes(set, Pos::new(-5, FLOOR, 35), Pos::new(-5, FLOOR, 35));
     set.fill(
-        area(Pos::new(-4, FLOOR, 35), Pos::new(-2, FLOOR, 35)),
+        area(Pos::new(-4, FLOOR, 35), Pos::new(-1, FLOOR, 35)),
+        BlockState::of(&GILDED_TUBE),
+    );
+    set.fill(
+        area(Pos::new(-1, FLOOR, 32), Pos::new(-1, FLOOR, 34)),
         BlockState::of(&GILDED_TUBE),
     );
     set.place(QUARRY_CHEST, BlockState::of(&CHEST));
@@ -215,8 +219,9 @@ pub fn shots(film: Film) -> Film {
     let washer_look = lowered(above(WASHER_AT, 0.3));
     let mill_look = lowered(above(MILL_AT, 0.3));
 
-    let at_engines = lowered([-9.2, f + 3.0, 38.2]);
-    let leave_camp = lowered([-14.5, f + 5.8, 38.3]);
+    let at_engines = lowered([-9.2, f + 3.4, 37.8]);
+    let leave_camp = lowered([-13.5, f + 8.5, 37.2]);
+    let over_slope = [leave_camp, lowered([-10.5, f + 7.2, 37.4]), at_engines];
     let at_quarry = lowered([-3.5, f + 2.8, 38.2]);
     let past_quarry = lowered([0.8, f + 2.5, 37.2]);
     let at_shaker = lowered([3.5, f + 2.3, 37.2]);
@@ -231,7 +236,7 @@ pub fn shots(film: Film) -> Film {
                 .secs(2.2),
         )
         .shot(
-            dolly(leave_camp, at_engines)
+            flyby(&over_slope)
                 .look_at(quarry_look)
                 .ease(speeds(1.3, 0.9))
                 .secs(3.3),
