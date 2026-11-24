@@ -15,6 +15,10 @@ pub const SITE: Pos = Pos::new(16, 76, -76);
 /// the seep, each set into the land where it now lies. Their sections build in blocks from
 /// `works`; the jetty and the knoll stand on the site's own count.
 pub const WORKS_DOWN: i32 = 8;
+/// Surface height of the southern valley pads (S1 to S4), in blocks from the works.
+pub const VALLEY_TOP: i32 = 2;
+/// Surface height of the plastics and acid annex (Pad P), in blocks from the works.
+pub const PAD_P_TOP: i32 = 0;
 
 /// The middle of `block`, `up` blocks higher: where the camera looks to have it in view.
 pub const fn above(block: Pos, up: f64) -> [f64; 3] {

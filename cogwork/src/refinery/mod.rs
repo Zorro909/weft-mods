@@ -11,7 +11,7 @@
 
 mod column;
 pub mod heat;
-mod parts;
+pub(crate) mod parts;
 pub mod products;
 mod work;
 
