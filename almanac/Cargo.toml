@@ -1,0 +1,34 @@
+[package]
+name = "almanac"
+version = "0.1.0"
+edition = "2024"
+# As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
+rust-version = "1.95"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+weft_sdk.workspace = true
+almanac_api = { path = "api" }
+
+[dev-dependencies]
+# Writes the mod's GUI pictures (`src/pictures.rs`).
+png = "0.18"
+
+[features]
+# Two chapters that show every part of the book, for trying it out: `--features demo`.
+demo = []
+
+# Its own cargo root. `cargo build` and `cargo test` here cover `almanac_api` too.
+[workspace]
+members = ["api"]
+default-members = [".", "api"]
+
+# The Weft release the mod and its API crate build against, from the game's repository as the
+# mod index wants it; `init.sh` checks out the newest one any mod names into `Weft/`.
+[workspace.dependencies]
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.4" }
+
+[profile.release]
+debug = "line-tables-only"

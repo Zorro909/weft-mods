@@ -1,0 +1,78 @@
+language.name = English
+mod.almanac.name = Almanac
+mod.almanac.description = A quest book that other mods add chapters to. Do what a quest asks and claim its rewards from the book.
+mod.almanac.authors = Zorro909
+key.almanac.open = Almanac
+
+almanac.title = Almanac
+almanac.progress = {0} of {1} done
+almanac.no_chapters = No mod has written a chapter yet.
+almanac.no_quests = This chapter has no quests yet.
+almanac.tab = {0} {1}
+almanac.todo = To do
+almanac.rewards = Rewards
+almanac.count = {0}
+almanac.first = {#6b6f86}First: {0}{/}
+almanac.previous = <
+almanac.next = >
+almanac.rewards_wait = Rewards wait in the Almanac {key:almanac:open}
+
+almanac.tile.tip = {color:title}{0}{/}
+    {color:dim}{1}{/}
+    {2}
+almanac.reward.tip = {0} x{1}
+almanac.state.locked = {#6b6f86}Locked{/}
+almanac.state.open = In progress
+almanac.state.ready = {#7fdc6a}Rewards waiting{/}
+almanac.state.claimed = {#7fdc6a}Done{/}
+almanac.claim.locked = Locked
+almanac.claim.open = In progress
+almanac.claim.ready = Claim rewards
+almanac.claim.claimed = Claimed
+
+almanac.task.have = Have {0}
+almanac.task.place = Place {0}
+almanac.task.dig = Break {0}
+almanac.task.kill = Defeat {0}
+almanac.task.use = Use {0}
+almanac.task.count = {0}
+
+almanac.toast = Quest done!
+almanac.toast.box = {img:base:advancement_toast}
+
+command.almanac.reset = Your almanac is empty again
+command.almanac.no_quest = There is no quest {0}
+command.almanac.finished = Finished: {0}
+command.almanac.already = {0} was finished already
+
+# The chapters of `--features demo`.
+chapter.almanac.first_steps = First Steps
+chapter.almanac.workshop = Workshop
+almanac.demo.workshop = From ore to edge
+quest.almanac.timber = Timber
+quest.almanac.timber.desc = Wood comes first. Fell a tree.
+quest.almanac.timber.logs = Break logs
+quest.almanac.workbench = A Place to Work
+quest.almanac.workbench.desc = Planks make a crafting table.{if:almanac:done(almanac:timber)} You have the wood for it.{/if}
+quest.almanac.pickaxe = Pick It Up
+quest.almanac.pickaxe.desc = Any pickaxe will do for now.
+quest.almanac.pickaxe.any = Have a pickaxe
+quest.almanac.lit = Light the Way
+quest.almanac.lit.desc = Torches keep the dark, and what lives in it, away.
+quest.almanac.fed = A Square Meal
+quest.almanac.fed.desc = Bread keeps you going.
+quest.almanac.fed.done = That hit the spot.
+quest.almanac.fed.cheer = Well fed!
+quest.almanac.toughened = Toughened
+quest.almanac.toughened.desc = Take a few hits and give one back.
+quest.almanac.toughened.hits = Get hurt
+quest.almanac.toughened.hostile = Defeat a monster
+quest.almanac.stockpile = Stockpile
+quest.almanac.stockpile.desc = Coal for the long nights.
+quest.almanac.smelter = Smelter
+quest.almanac.smelter.desc = A furnace turns ore into metal.
+quest.almanac.ironworks = Ironworks
+quest.almanac.ironworks.desc = Three ingots are a good start.
+quest.almanac.blade = An Edge
+quest.almanac.blade.desc = Any sword will do.
+quest.almanac.blade.any = Have a sword

@@ -1,0 +1,13 @@
+[package]
+name = "almanac_api"
+version = "0.1.0"
+edition = "2024"
+# As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
+rust-version = "1.95"
+
+[dependencies]
+weft_sdk.workspace = true
+# The names of task kinds and quest states.
+strum = { version = "0.28", features = ["derive"] }
+# XXH3 alone, for the keys quests are saved under.
+twox-hash = { version = "2.1", default-features = false, features = ["xxhash3_64"] }
