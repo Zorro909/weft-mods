@@ -4,7 +4,7 @@
 use weft_sdk::*;
 
 use super::{LEVELER, Level, Stage, Status};
-use crate::harvest::{Harvest, cost, harvest};
+use crate::harvest::{Harvest, Keep, cost, harvest};
 use crate::lib::{Area, BlockState, Pos, TypedWorld};
 use crate::machine::{self, Payment};
 use crate::markers::{square_behind, take_area};
@@ -96,7 +96,7 @@ fn clear_next(world: &World, id: u64, level: &mut Level) {
     if !pay(world, id, level, cost) {
         return;
     }
-    match harvest(world, id, cell, block_state) {
+    match harvest(world, id, cell, block_state, Keep::Clean) {
         Harvest::Full => {
             // Paid for already: it stays paid until there is room.
             level.set_status(Status::Full);

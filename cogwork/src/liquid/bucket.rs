@@ -48,7 +48,7 @@ pub fn use_bucket(holders: &mut Holders, vessel: &Vessel, player: u64) -> bool {
 }
 
 /// Swaps one of `held` in `slot` of `player` for `next`; a player in creative keeps the bucket.
-fn hand_over(world: &World, player: u64, slot: u32, held: ItemStack, next: u32) {
+pub fn hand_over(world: &World, player: u64, slot: u32, held: ItemStack, next: u32) {
     if world.creative(player) {
         return;
     }

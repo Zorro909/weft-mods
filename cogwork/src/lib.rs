@@ -1,13 +1,15 @@
 //! Cogwork: item tubes that show what they carry, engines that drive them, machines for the big
 //! jobs (an excavator, an assembly bench and a leveler), cuboid loaders that keep them running
-//! with nobody near, and oil: pumped up from fields underground, carried in liquid tubes, kept
-//! in tanks and burnt in the oil engine. Everything goes through `weft_sdk` and `base_api`.
+//! with nobody near, oil: pumped up from fields underground, carried in liquid tubes, kept in
+//! tanks and burnt in the oil engine, and the rubble quarries bring up, sifted and ground by hand
+//! at the sieve and the millstone. Everything goes through `weft_sdk` and `base_api`.
 
 mod arms;
 #[cfg(test)]
 mod art;
 mod bench;
 mod boxes;
+mod chance;
 mod cogs;
 mod engines;
 mod excavator;
@@ -31,12 +33,15 @@ mod liquid_tube;
 mod loading;
 mod machine;
 mod markers;
+mod millstone;
 mod oil;
 mod oil_engine;
 mod owned;
 mod pump;
 mod recipes;
+mod rubble;
 mod shaft;
+mod sieve;
 mod sounds;
 mod store;
 mod tank;
@@ -75,6 +80,9 @@ fn init(r: &mut Registry) {
     tank::register(r);
     pump::register(r);
     oil_engine::register(r);
+    rubble::register(r);
+    millstone::register(r);
+    sieve::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]
     films::register(r);
@@ -85,6 +93,17 @@ fn init(r: &mut Registry) {
 fn has_asset(path: &str) -> bool {
     let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
     assets.join(path).is_file()
+}
+
+/// The English text of `key`, empty without one.
+#[cfg(test)]
+fn lang_line(key: &str) -> String {
+    let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/lang/en_us.lang");
+    let text = std::fs::read_to_string(file).expect("cogwork has no en_us.lang");
+    let line = text
+        .lines()
+        .find_map(|line| line.strip_prefix(key)?.strip_prefix(" = "));
+    line.unwrap_or_default().to_string()
 }
 
 /// Whether every language file of the mod has `key`.
