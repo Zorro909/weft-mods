@@ -31,7 +31,10 @@ water, and hands nothing on either. A [coke oven's](steel.md#creosote) door and 
 the creosote the oven makes, and take nothing. A [firebox](steam.md#firebox) takes only lava, a
 [boiler](steam.md#boiler) only water, and a [steam engine](steam.md#steam-engine) or
 [trip hammer](steam.md#trip-hammer) only steam; none of them hands anything on, but a boiler lets
-its steam out of its top.
+its steam out of its top. A [flotation cell](processing.md#flotation-cell) takes only water, and
+draws creosote itself out of a tube, tank or coke oven drain beside it; it lets its
+[muddy water](processing.md#muddy-water) out of its back. A [clarifier](processing.md#clarifier)
+takes only muddy water, and lets the clear water it settles out of its front.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.

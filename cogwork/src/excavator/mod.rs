@@ -1,9 +1,9 @@
 //! Quarries: each builds a frame around its area, then a drill on a gantry across the frame
 //! mines the area out layer by layer from the top of the frame down as deep as its kind and the
 //! world's settings let it (`kind`, `depth`), handing everything it mines to the tubes and chests
-//! beside it. The Timber and Iron Quarries dig with a drill bit (`bit`) and build their frames of
-//! logs and string, or of iron ingots; the Gantry Excavator, block `excavator`, digs with no bit
-//! and builds with energy alone.
+//! beside it. The Timber and Iron Quarries and the Steel Excavator dig with a drill bit (`bit`)
+//! and build their frames of logs and string, of iron ingots or of steel ingots; the Gantry
+//! Excavator, block `excavator`, digs with no bit and builds with energy alone.
 
 mod area;
 mod bit;
@@ -26,9 +26,10 @@ use weft_sdk::{
 pub static EXCAVATOR: Block = Block::named("excavator");
 pub static TIMBER_QUARRY: Block = Block::named("timber_quarry");
 pub static IRON_QUARRY: Block = Block::named("iron_quarry");
+pub static STEEL_EXCAVATOR: Block = Block::named("steel_excavator");
 pub use area::Frame;
 use depth::Floor;
-pub use frames::{GANTRY_FRAME, IRON_FRAME, LASHED_FRAME};
+pub use frames::{GANTRY_FRAME, IRON_FRAME, LASHED_FRAME, STEEL_FRAME};
 use kind::{KINDS, Kind};
 
 use crate::lib::{Pos, TypedWorld};
@@ -39,7 +40,8 @@ value! {
     /// blocks put up, `cursor` is the next block to mine, `spent` the energy put into the job
     /// under way, and `waited` the ticks the cursor's block has been unloaded. `head` is where
     /// the drill's tip is, in the world. `refused` counts the tries running at breaking what
-    /// stands where the next frame block goes that were refused.
+    /// stands where the next frame block goes that were refused. `paid_ahead` counts the frame
+    /// blocks the materials already taken pay for (`materials`).
     #[derive(Default)]
     pub struct Dig {
         pub stage: u32,
@@ -54,6 +56,11 @@ value! {
         pub waited: u32,
         // Last, so excavators saved before it load with it 0.
         pub refused: u32,
+        // The padding of the 80 bytes excavators were saved in until `paid_ahead` came: never
+        // read, as those saves may hold anything there.
+        saved_padding: u32,
+        // Past the old 80 bytes, so excavators saved before it load with it 0.
+        pub paid_ahead: u32,
     }
 }
 pub static DIG: Component<Dig> = Component::named("cogwork:dig");
@@ -320,6 +327,12 @@ mod tests {
             "after stage and status, as `lo` was"
         );
         assert_eq!(offset_of!(Dig, cursor), 32, "after `lo` and `hi`");
+        assert_eq!(offset_of!(Dig, refused), 72, "the last field saved before");
+        assert_eq!(
+            offset_of!(Dig, paid_ahead),
+            80,
+            "past the 80 bytes saved before, not in their padding"
+        );
     }
 
     #[test]

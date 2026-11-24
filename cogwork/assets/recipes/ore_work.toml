@@ -1,0 +1,27 @@
+# The steel age's quarry and ore work: the Steel Excavator and its diamond-tipped bit, the
+# flotation cell and the clarifier, and the hand core drill.
+
+[[shaped]]
+result = "steel_excavator"
+pattern = ["scs", "cIc", "sss"]
+key = { s = "#ingots/steel", c = "#cogs/iron", I = "iron_quarry" }
+
+[[shaped]]
+result = "diamond_bit"
+pattern = [" d ", "dbd", " s "]
+key = { d = "#gems/diamond", b = "steel_bit", s = "#ingots/steel" }
+
+[[shaped]]
+result = "flotation_cell"
+pattern = ["s s", "sWs", "scs"]
+key = { s = "#ingots/steel", W = "washer", c = "#cogs/iron" }
+
+[[shaped]]
+result = "clarifier"
+pattern = ["ici", "S S", "SSS"]
+key = { i = "#ingots/iron", c = "#cogs/iron", S = "#smooth_stone" }
+
+[[shaped]]
+result = "core_drill"
+pattern = ["ici", " s ", "i i"]
+key = { i = "#ingots/iron", c = "#cogs/iron", s = "#ingots/steel" }

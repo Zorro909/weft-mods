@@ -4,13 +4,14 @@
 //! once the wash is done and its Common Ore Rubble is in the output; Ore Rubble already washed
 //! goes on to the output as it is.
 
-use weft_sdk::{SlotGroup, StackData, SystemBatch, World};
+use weft_sdk::{StackData, SystemBatch, World};
 
 use super::{Status, WASHER, Wash, paddle};
 use crate::lib::{Pos, TypedWorld};
 use crate::liquid::HELD;
 use crate::machine::{self, Payment};
-use crate::rubble::{Grade, Ore, ore_of, ore_rubble};
+use crate::rubble::raise::{pass_on, waiting};
+use crate::rubble::{Grade, ore_rubble};
 
 /// Millibuckets of water one wash takes.
 pub const WATER_PER_WASH: u32 = 250;
@@ -36,14 +37,6 @@ pub fn tick(batch: &mut SystemBatch<Wash>) {
         show_water(&world, pos, water(&world, id) > 0);
         paddle::show(&world, id, pos, front, wash);
     }
-}
-
-/// The first Ore Rubble waiting in `input`: its slot, its metal and its grade.
-fn waiting(input: &SlotGroup) -> Option<(u32, Ore, Grade)> {
-    (0..input.len()).find_map(|slot| {
-        let (ore, grade) = ore_of(&input.get(slot))?;
-        Some((slot, ore, grade))
-    })
 }
 
 /// The grade washing Ore Rubble of `grade` gives: Poor washes into Common, and any other is
@@ -74,7 +67,11 @@ fn work(world: &World, id: u64, wash: &mut Wash) -> Status {
     };
     let output = || inventory.group("output");
     let Some(grade) = washed(grade) else {
-        return pass_on(&input, slot, output());
+        return if pass_on(&input, slot, output()) {
+            Status::Idle
+        } else {
+            Status::Full
+        };
     };
     let product = ore_rubble(ore, grade, 1);
     let room = crate::store::insert_into(output(), product, true).is_empty();
@@ -91,18 +88,6 @@ fn work(world: &World, id: u64, wash: &mut Wash) -> Status {
     use_water(world, id);
     wash.spent = 0;
     Status::Washing
-}
-
-/// Moves the Ore Rubble in `slot` of `input`, washed already, into `output` as far as it fits.
-fn pass_on(input: &SlotGroup, slot: u32, output: SlotGroup<'static>) -> Status {
-    let stack = input.get(slot);
-    let left = crate::store::insert_into(output, stack, false);
-    input.set(slot, left);
-    if left == stack {
-        Status::Full
-    } else {
-        Status::Idle
-    }
 }
 
 /// Uses up a wash's water in the washer `id`.

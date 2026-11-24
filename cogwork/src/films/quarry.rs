@@ -10,7 +10,7 @@ use weft_sdk::{Dir, Item, Shape};
 
 use super::parts::{CHEST, area, engine, fuel, shafts, tubes};
 use super::site::{SITE, WORKS_DOWN};
-use crate::excavator::kind::GANTRY;
+use crate::excavator::kind::rows::GANTRY;
 use crate::excavator::{DIG, EXCAVATOR, Frame, GANTRY_FRAME, Stage, Status};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};

@@ -1,11 +1,15 @@
 //! The blocks quarries build their frames of. The Gantry's is a plain lattice cube that drops
-//! nothing. The others, the Timber Quarry's lashed logs and the Iron Quarry's bars, are poles
-//! joined toward the frame blocks beside them, drawn from a hub-and-arm model (`arms`), and give
-//! back what they were built of when broken.
+//! nothing. The Steel Excavator's is a cube of riveted steel lattice, built of a steel ingot for
+//! every four blocks: the block that took the ingot is marked `paid` and gives it back when
+//! broken, the same on every try, so a machine with a full output can't break it for nothing.
+//! The others, the Timber
+//! Quarry's lashed logs and the Iron Quarry's bars, are poles joined toward the frame blocks
+//! beside them, drawn from a hub-and-arm model (`arms`), and give back what they were built of
+//! when broken.
 
 use std::sync::LazyLock;
 
-use weft_sdk::{Block, Dir, Props, Registry, State, World, tool_tier};
+use weft_sdk::{Block, Cond, Dir, Pool, Props, Registry, State, World, tool_tier};
 
 use crate::arms::{Arm, HubAndArms};
 use crate::lib::{BlockState, Pos, TypedWorld};
@@ -13,6 +17,10 @@ use crate::lib::{BlockState, Pos, TypedWorld};
 pub static GANTRY_FRAME: Block = Block::named("gantry_frame");
 pub static LASHED_FRAME: Block = Block::named("lashed_frame");
 pub static IRON_FRAME: Block = Block::named("iron_frame");
+pub static STEEL_FRAME: Block = Block::named("steel_frame");
+
+/// The property of a frame block paid for in batches that marks the one that took its batch.
+const PAID: &str = "paid";
 
 /// A frame block of poles: the block, its model, and the item it drops when broken.
 struct Poles {
@@ -50,9 +58,33 @@ pub fn register(r: &mut Registry) {
         .mined_by("pickaxe", tool_tier::HAND)
         .drops_nothing()
         .no_item();
+    register_steel(r);
     for poles in &POLES {
         register_poles(r, poles);
     }
+}
+
+/// The steel lattice, whose block that took an ingot gives it back.
+fn register_steel(r: &mut Registry) {
+    r.block(&STEEL_FRAME)
+        .prop(PAID, ["false", "true"])
+        .texture("steel_frame")
+        .cutout()
+        .hardness(1.5)
+        .mined_by("pickaxe", tool_tier::HAND)
+        .sound_group("base:block.stone")
+        .no_item();
+    r.loot(&STEEL_FRAME).pool(
+        Pool::new()
+            .when(Cond::harvested())
+            .when(paid())
+            .item("steel_ingot"),
+    );
+}
+
+/// Whether the frame block broken is the one that took its batch.
+fn paid() -> Cond {
+    Cond::state(&format!("{PAID}=true"))
 }
 
 fn register_poles(r: &mut Registry, poles: &'static Poles) {
@@ -96,9 +128,11 @@ fn runs_straight(joins: impl Fn(Dir) -> bool) -> bool {
     matches!(arms[..], [a, b] if a.opposite() == b)
 }
 
-/// Puts a frame block of `frame` at `cell`, joined to the frame blocks beside it.
-pub fn put(world: &World, cell: Pos, frame: &Block) {
-    world.set_block_typed(cell, BlockState::of(frame));
+/// Puts a frame block of `frame` at `cell`, joined to the frame blocks beside it, and marked
+/// `paid` if it took its batch and its block is paid for in batches.
+pub fn put(world: &World, cell: Pos, frame: &Block, paid: bool) {
+    let block_state = BlockState::of(frame).with_flag(PAID, paid);
+    world.set_block_typed(cell, block_state);
     refresh(world, cell, frame);
 }
 
@@ -133,6 +167,19 @@ mod tests {
             "a post's foot"
         );
         assert!(!runs_straight(along(&[Dir::East])), "an end");
+    }
+
+    #[test]
+    fn a_steel_frame_block_gives_the_same_back_on_every_try() {
+        assert_eq!(
+            paid().text(),
+            "state(paid=true)",
+            "the block that took the ingot, never a roll a full output could wait out"
+        );
+        assert!(
+            crate::has_asset("textures/block/steel_frame.png"),
+            "its look"
+        );
     }
 
     #[test]
