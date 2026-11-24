@@ -75,6 +75,16 @@
   over its floor: 900 mB of water from every 1,000, and a one in ten chance of a clay ball.
 - The core drill, for prospecting: crank it sixteen times and it reports in chat how many blocks
   of each ore lie in the 16 by 16 below it, in bands of 16 layers down to 128 below.
+- The refinery, a steel column 3 by 3 and 6 high, distils 10 mB of crude oil a tick, heated by
+  40 mB of steam or 300 energy a tick in a heater at its foot and cooled by 50 mB of water a tick
+  in a condenser on top. In its temperature band a bucket of crude gives 200 mB of gas, 400 of
+  diesel, 200 of lubricant, 200 of tar and a sulfur, out of the taps on each product's layer; too
+  cold it all goes to tar, too hot the gas vents. Its screen shows the band.
+- Gas, diesel, lubricant and tar, new liquids, with their buckets.
+- The oil engine burns diesel, 1 mB a tick for its 600 energy, ahead of oil.
+- Lubricant led into a quarry by liquid tube makes each block cost a fifth less energy and wears
+  its bit half as fast, at 1 mB a block.
+- Asphalt, a road block of tar, gravel and sand that you walk on a fifth faster.
 
 ### Changed
 
@@ -86,6 +96,7 @@
   redstone signal now holds it like a brake. Their recipe takes an iron ingot instead of a
   piston.
 - The steel drill bit also fits the Steel Excavator.
+- Liquid tubes now join quarries, which take lubricant.
 - Ember engines no longer burn lava: their fuel slot refuses lava buckets. A lava bucket already
   in one stays in its slot unburnt until taken out. Lava burns in the firebox instead.
 

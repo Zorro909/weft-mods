@@ -9,7 +9,7 @@
 
 use weft_sdk::{ENERGY, SystemBatch, World};
 
-use super::fuel::{Lack, oil, water};
+use super::fuel::{Lack, diesel, oil, water};
 use super::parts::{DRIVE_HOLDS, part_at, show_controller, show_formed};
 use super::pattern::{self, Cube, Layout};
 use super::{OIL_ENGINE_CONTROLLER, OilEngine, Status, rig};
@@ -67,16 +67,19 @@ fn run(engine: &mut OilEngine, ticks: u32) -> bool {
     ran > 0
 }
 
-/// Takes the oil and water the intakes hold into the engine's stores, as far as they have room.
+/// Takes the oil, diesel and water the intakes hold into the engine's stores, as far as they
+/// have room.
 fn take_in(world: &World, engine: &mut OilEngine, layout: &Layout) {
-    let (oil, water) = (oil(), water());
+    let (oil, diesel, water) = (oil(), diesel(), water());
     for &intake in &layout.intakes {
         let Some(held) = world.component_mut(world.block_entity(intake), &HELD) else {
             continue;
         };
         let (oil_room, water_room) = engine.room();
+        let diesel_room = engine.diesel_room();
         let (store, room) = match held.liquid {
             liquid if liquid == oil => (&mut engine.oil, oil_room),
+            liquid if liquid == diesel => (&mut engine.diesel, diesel_room),
             liquid if liquid == water => (&mut engine.water, water_room),
             _ => continue,
         };
@@ -126,7 +129,8 @@ fn show(
     running: bool,
     time: u64,
 ) {
-    show_controller(world, pos, engine.oil, engine.water, running);
+    let fuel = engine.oil.max(engine.diesel);
+    show_controller(world, pos, fuel, engine.water, running);
     engine.keep_stroke(running, time);
     if engine.status().is_built() {
         rig::show(world, id, cube, engine, time);

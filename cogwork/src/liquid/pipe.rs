@@ -29,7 +29,7 @@ pub fn pour(world: &World, from: Pos, side: Dir, liquid: LiquidKey, most: u32) -
 }
 
 /// Draws up to `most` of `liquid` into the machine at `into` out of the holder toward `side`: a
-/// liquid tube, a tank or a coke oven's door or drain that reaches back and holds that liquid.
+/// liquid tube, a tank, a coke oven's door or drain or a refinery's tap that reaches back and holds that liquid.
 /// The millibuckets it gave.
 pub fn draw(world: &World, into: Pos, side: Dir, liquid: LiquidKey, most: u32) -> u32 {
     let at = into.toward(side);
@@ -73,6 +73,8 @@ mod tests {
             Kind::Firebox,
             Kind::Steam,
             Kind::Settler,
+            Kind::Still,
+            Kind::Lubed,
         ] {
             assert!(!gives_up(kind), "{kind:?} keeps what it holds");
         }
