@@ -58,8 +58,9 @@ iBi       B = base:bucket
 | Output | 9 slots for what it bores through |
 | Mined with | pickaxe |
 
-While it works, the lamp on its sides glows. Its screen shows its energy, what it is doing and
-how deep its hose goes, and how much of which liquid it holds.
+While it works, the lamp on its sides glows. Its screen shows its energy, what it used in the
+last tick ([energy readouts](power.md#energy-readouts)), what it is doing and how deep its hose
+goes, and how much of which liquid it holds.
 
 - **Boring.** It breaks each block below its hose into its output, as a pickaxe would, and puts
   hose in its place. Chests, tubes and machines beside it take the output away; with nowhere to

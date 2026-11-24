@@ -78,6 +78,7 @@ pub fn register(r: &mut Registry) {
             entity
                 .attach(&BENCH)
                 .attach_with(&ENERGY, crate::machine::energy(4_000, 200))
+                .attach(&crate::machine::METER)
                 // The grid, then the output.
                 .inventory(9 + 3)
         })
@@ -107,6 +108,7 @@ pub fn register(r: &mut Registry) {
 /// | [ ][ ][ ]                            |
 /// | [#####.....]                         |  stored energy
 /// | 1200 / 4000 energy                   |
+/// | Using 30 energy a tick               |  drawn last tick, and how short
 /// | Crafting                             |  status
 /// |                                      |
 /// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]          |  the player's inventory
@@ -137,6 +139,7 @@ fn screen(ui: &mut Ui) {
         // As wide as the inventory whatever it says, so the cells don't move under the cursor.
         ui.column(S::column().gap(3.0).w(INVENTORY_WIDTH), |ui| {
             crate::machine::power_bar(ui);
+            crate::machine::meter_line(ui);
             ui.text_bind_styled(S::column().no_wrap(), |view, out| {
                 let bench = view.menu_component(&BENCH).unwrap_or_default();
                 let status: &str = bench.status().into();

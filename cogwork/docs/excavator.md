@@ -117,7 +117,9 @@ Depth counts at once for excavators already digging; one that has finished stays
 
 ## Its screen
 
-The screen shows the stored energy, the area and its standby, and what it is doing:
+The screen shows the stored energy, what it used in the last tick (standby, work and the drill's
+travel) and how short of what it wanted it fell ([energy readouts](power.md#energy-readouts)),
+the area and its standby, and what it is doing:
 
 | Status | Meaning |
 |---|---|

@@ -47,6 +47,10 @@ tick. Unlike the excavator it has no standby: a weak supply only makes it slower
 
 ## Its screen
 
+It shows the stored energy, what the leveler used in the last tick and how short of what it
+wanted it fell ([energy readouts](power.md#energy-readouts)), what it is doing, its area and its
+stock.
+
 | Status | Meaning |
 |---|---|
 | Waiting to start | |

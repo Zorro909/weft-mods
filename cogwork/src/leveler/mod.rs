@@ -119,6 +119,7 @@ pub fn register(r: &mut Registry) {
             entity
                 .attach(&LEVEL)
                 .attach_with(&ENERGY, crate::machine::energy(10_000, 1_000))
+                .attach(&crate::machine::METER)
                 // The input, then the output.
                 .inventory(18 + 9)
         })
@@ -137,7 +138,8 @@ pub fn register(r: &mut Registry) {
 /// | Leveler                                                         |
 /// | [#####.....]                              [ ][ ][ ]             |  stored energy, output
 /// | 4000 / 10000 energy                       [ ][ ][ ]             |
-/// | Clearing layer 72                         [ ][ ][ ]             |  status
+/// | Using 100 energy a tick, short 20         [ ][ ][ ]             |  drawn last tick
+/// | Clearing layer 72                                               |  status
 /// | Area 9 x 9, flat at height 64                                   |
 /// | Stock                                                           |
 /// | [ ][ ][ ][ ][ ][ ][ ][ ][ ]                                     |  blocks to fill with
@@ -150,6 +152,7 @@ fn screen(ui: &mut Ui) {
         ui.row(S::row().gap(10.0), |ui| {
             ui.column(S::column().gap(3.0), |ui| {
                 crate::machine::power_bar(ui);
+                crate::machine::meter_line(ui);
                 ui.text_bind(|view, out| {
                     let level = view.menu_component(&LEVEL).unwrap_or_default();
                     let status: &str = level.status().into();

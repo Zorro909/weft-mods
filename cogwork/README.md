@@ -31,7 +31,8 @@ and overheats when nothing takes it. Engines push energy into the block their tr
 and torque shafts carry it further, joining any mod's cables. The oil engine, a cube of 27
 blocks built around a combustion chamber, burns oil with water for 600 energy a tick, its two
 pistons and flywheel turning on top and its exhaust hazing the air round it: about 4 hours on a
-medium oil field.
+medium oil field. Every machine's screen shows what it used last tick and how short its supply
+fell; the oil engine's what it gave out.
 
 ### Oil and liquids
 
@@ -130,7 +131,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `timber_liquid_tube/` | The timber liquid tube: its pull out of tanks (`pull.rs`) and its paddle wheel (`wheel.rs`) |
 | `liquid_tube.rs`, `tank/` | The liquid tube; the tank, how its blocks make one tank (`merge.rs`), its liquid across them (`blocks.rs`) and its shape for each set of joined sides (`shape.rs`) |
 | `fill.rs` | The liquid shown standing in a liquid tube or tank, for every liquid of any mod |
-| `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar |
+| `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar and the meter of what went through it last tick |
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |
 | `harvest.rs` | Breaking a block by machine into its output |
 | `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
