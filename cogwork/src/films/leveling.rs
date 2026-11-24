@@ -148,8 +148,8 @@ pub fn shots(film: Film) -> Film {
             .secs(secs)
     };
     let leveler_look = [50.0, 0.5, 10.8];
-    let mid_air = [57.2, -1.5, 5.4];
-    let lake_mid = [56.0, -3.5, -4.0];
+    let mid_air = [58.8, 0.2, 4.2];
+    let lake_mid = [65.0, -1.0, -9.0];
     let at_thumper = lowered([56.4, 2.5, 4.8]);
 
     film.fade_in(1.5)
@@ -176,7 +176,7 @@ pub fn shots(film: Film) -> Film {
             dolly(on_leveler(LEVELER_ARC[1]), mid_air)
                 .look(Look::Pan(leveler_look, lake_mid))
                 .ease(speeds(0.35, 0.9))
-                .secs(3.5),
+                .secs(5.5),
         )
         .shot(
             dolly(mid_air, at_thumper)

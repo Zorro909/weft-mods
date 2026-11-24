@@ -163,9 +163,14 @@ pub fn raise_frame(set: &Set) {
 pub fn sorting_and_digging_shots(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
     let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
-    // High curve north-east off Pad P, staying well clear above the grassy bank and east of the
-    // hall's south-east corner post.
-    let to_sorter = [plastics_bay::END_EYE, lowered([25.8, 6.2, 7.2]), at_sorter];
+    // High route over Pad 0 and Pad 1's open gravel, clearing both the hall's south-east eaves
+    // and the grassy bank until north of z = 6.
+    let to_sorter = [
+        plastics_bay::END_EYE,
+        lowered([25.2, 8.8, 7.4]),
+        lowered([25.0, 5.4, 5.4]),
+        at_sorter,
+    ];
     let by_magazine = [
         leave_sorter,
         lowered([31.2, 2.8, 5.4]),

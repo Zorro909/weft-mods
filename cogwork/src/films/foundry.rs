@@ -47,23 +47,24 @@ const BLAST_ENGINES: [(Pos, Dir); 4] = [
 /// Forge anvil loaded with a hot bloom right beside the blast furnace.
 const ANVIL_AT: Pos = Pos::new(26, FLOOR, 34);
 
-/// Compact steam plant: water tank behind, two firebox+boiler pairs, steam engine and trip hammer.
+/// Compact steam plant: water tank behind, two firebox+boiler pairs, steam engine and trip hammer
+/// along z = 33, with the trip hammer's output chest tucked behind it at z = 31.
 const STEAM_WATER: Area = Area {
     lo: Pos::new(29, FLOOR, 31),
     hi: Pos::new(30, FLOOR + 1, 31),
 };
 const FIREBOXES: [Pos; 2] = [Pos::new(29, FLOOR, 33), Pos::new(30, FLOOR, 33)];
 const BOILERS: [Pos; 2] = [Pos::new(29, FLOOR + 1, 33), Pos::new(30, FLOOR + 1, 33)];
-const STEAM_ENGINE_AT: Pos = Pos::new(33, FLOOR, 34);
-const HAMMER_AT: Pos = Pos::new(36, FLOOR, 34);
-const HAMMER_CHEST: Pos = Pos::new(38, FLOOR, 34);
+const STEAM_ENGINE_AT: Pos = Pos::new(33, FLOOR, 33);
+const HAMMER_AT: Pos = Pos::new(36, FLOOR, 33);
+const HAMMER_CHEST: Pos = Pos::new(37, FLOOR, 31);
 
 /// Row where creosote leaves S3 east toward S4, and where the steam engine's shaft leaves east.
 pub const CREOSOTE_Z: i32 = 28;
-pub const SHAFT_Z: i32 = 32;
+pub const SHAFT_Z: i32 = 30;
 
 /// Where S3 hands the camera off to S4, out in the open gravel away from the south retaining wall.
-pub const END_EYE: [f64; 3] = lowered([43.2, FLOOR as f64 + 2.4, 36.0]);
+pub const END_EYE: [f64; 3] = lowered([42.5, FLOOR as f64 + 2.4, 36.2]);
 pub const END_LOOK: [f64; 3] = lowered([41.5, FLOOR as f64 + 0.8, 33.5]);
 
 pub fn build(set: &Set) {
@@ -135,13 +136,13 @@ fn steam_plant(set: &Set) {
         STEAM_ENGINE_AT,
         STEAM_ENGINE.with(&[("facing", "south")]).into(),
     );
-    // Steel block base flush beneath the trip hammer.
+    // Steel block base flush beneath the trip hammer; output chest tucked behind at z = 31.
     set.place(HAMMER_AT.add_y(-1), BlockState::of(&STEEL_BLOCK));
     set.place(HAMMER_AT, TRIP_HAMMER.with(&[("facing", "south")]).into());
-    tubes(set, Pos::new(37, FLOOR, 34), Pos::new(37, FLOOR, 34));
+    tubes(set, Pos::new(37, FLOOR, 33), Pos::new(37, FLOOR, 32));
     set.place(HAMMER_CHEST, BlockState::of(&CHEST));
     // Torque shaft out the steam engine's east flywheel axle and behind the trip hammer to S4.
-    shafts(set, Pos::new(34, FLOOR, 34), Pos::new(34, FLOOR, SHAFT_Z));
+    shafts(set, Pos::new(34, FLOOR, 33), Pos::new(34, FLOOR, SHAFT_Z));
     shafts(
         set,
         Pos::new(35, FLOOR, SHAFT_Z),
@@ -153,17 +154,18 @@ fn boiler_water_line() -> Vec<Pos> {
     vec![Pos::new(29, FLOOR + 1, 32), Pos::new(30, FLOOR + 1, 32)]
 }
 
-/// Steam leaves both boilers' tops, steps east clear of the water line, and runs low behind the
-/// steam engine and trip hammer at `FLOOR + 1`.
+/// Steam leaves both boilers' tops, steps north behind the line at `FLOOR + 1`, and drops into the
+/// backs of the steam engine and trip hammer.
 fn steam_line() -> Vec<Pos> {
     let mut blocks = vec![
         Pos::new(29, FLOOR + 2, 33),
         Pos::new(30, FLOOR + 2, 33),
         Pos::new(31, FLOOR + 2, 33),
         Pos::new(32, FLOOR + 2, 33),
+        Pos::new(32, FLOOR + 2, 32),
     ];
-    blocks.extend((32..=36).map(|x| Pos::new(x, FLOOR + 1, 33)));
-    blocks.extend([Pos::new(33, FLOOR, 33), Pos::new(36, FLOOR, 33)]);
+    blocks.extend((32..=36).map(|x| Pos::new(x, FLOOR + 1, 32)));
+    blocks.extend([Pos::new(33, FLOOR, 32), Pos::new(36, FLOOR, 32)]);
     blocks
 }
 
@@ -217,9 +219,9 @@ pub fn shots(film: Film) -> Film {
     let at_blast = lowered([23.5, f + 2.2, 37.2]);
     let at_anvil = lowered([26.8, f + 1.8, 37.2]);
     let at_firebox = lowered([30.2, f + 1.9, 37.2]);
-    let at_boiler = lowered([32.4, f + 1.9, 37.2]);
-    let at_engine = lowered([35.5, f + 2.0, 37.0]);
-    let at_hammer = lowered([39.2, f + 2.2, 36.8]);
+    let at_boiler = lowered([32.4, f + 2.0, 37.2]);
+    let at_engine = lowered([34.5, f + 2.2, 37.2]);
+    let at_hammer = lowered([38.2, f + 2.3, 37.0]);
 
     film.cue("noon_1")
         .title("cogwork.film.t2_coke", 5.5)
