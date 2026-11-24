@@ -1,0 +1,86 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"particle": "block/forge_anvil",
+		"iron": "block/forge_anvil",
+		"log": "base:block/log_oak",
+		"log_top": "base:block/log_oak_top",
+		"bloom": "block/steel_bloom_hot"
+	},
+	"elements": [
+		{
+			"name": "stump",
+			"from": [3, 0, 3],
+			"to": [13, 5, 13],
+			"faces": {
+				"north": {"uv": [3, 11, 13, 16], "texture": "#log"},
+				"east": {"uv": [3, 11, 13, 16], "texture": "#log"},
+				"south": {"uv": [3, 11, 13, 16], "texture": "#log"},
+				"west": {"uv": [3, 11, 13, 16], "texture": "#log"},
+				"up": {"uv": [3, 3, 13, 13], "texture": "#log_top"},
+				"down": {"uv": [3, 3, 13, 13], "texture": "#log_top"}
+			}
+		},
+		{
+			"name": "foot",
+			"from": [3, 5, 4],
+			"to": [13, 7, 12],
+			"faces": {
+				"north": {"uv": [3, 9, 13, 11], "texture": "#iron"},
+				"east": {"uv": [4, 9, 12, 11], "texture": "#iron"},
+				"south": {"uv": [3, 9, 13, 11], "texture": "#iron"},
+				"west": {"uv": [4, 9, 12, 11], "texture": "#iron"},
+				"up": {"uv": [3, 4, 13, 12], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "waist",
+			"from": [5, 7, 6],
+			"to": [11, 10, 10],
+			"faces": {
+				"north": {"uv": [5, 6, 11, 9], "texture": "#iron"},
+				"east": {"uv": [6, 6, 10, 9], "texture": "#iron"},
+				"south": {"uv": [5, 6, 11, 9], "texture": "#iron"},
+				"west": {"uv": [6, 6, 10, 9], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "face",
+			"from": [2, 10, 5],
+			"to": [14, 14, 11],
+			"faces": {
+				"north": {"uv": [2, 2, 14, 6], "texture": "#iron"},
+				"east": {"uv": [5, 2, 11, 6], "texture": "#iron"},
+				"south": {"uv": [2, 2, 14, 6], "texture": "#iron"},
+				"west": {"uv": [5, 2, 11, 6], "texture": "#iron"},
+				"up": {"uv": [2, 5, 14, 11], "texture": "#iron"},
+				"down": {"uv": [2, 5, 14, 11], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "horn",
+			"from": [0, 11, 6],
+			"to": [2, 14, 10],
+			"faces": {
+				"north": {"uv": [14, 2, 16, 5], "texture": "#iron"},
+				"south": {"uv": [0, 2, 2, 5], "texture": "#iron"},
+				"west": {"uv": [6, 2, 10, 5], "texture": "#iron"},
+				"up": {"uv": [0, 6, 2, 10], "texture": "#iron"},
+				"down": {"uv": [0, 6, 2, 10], "texture": "#iron"}
+			}
+		},
+		{
+			"name": "bloom",
+			"from": [4, 14, 7],
+			"to": [12, 15, 9],
+			"faces": {
+				"north": {"uv": [4, 1, 12, 2], "texture": "#bloom"},
+				"east": {"uv": [7, 1, 9, 2], "texture": "#bloom"},
+				"south": {"uv": [4, 1, 12, 2], "texture": "#bloom"},
+				"west": {"uv": [7, 1, 9, 2], "texture": "#bloom"},
+				"up": {"uv": [4, 7, 12, 9], "texture": "#bloom"}
+			}
+		}
+	]
+}

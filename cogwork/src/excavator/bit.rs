@@ -30,8 +30,14 @@ pub static IRON_BIT: Bit = Bit {
     lasts: 2_000,
     look: EntityKind::named("iron_drill_bit"),
 };
+pub static STEEL_BIT: Bit = Bit {
+    item: Item::named("steel_bit"),
+    tier: tool_tier::DIAMOND,
+    lasts: 8_000,
+    look: EntityKind::named("steel_drill_bit"),
+};
 /// Every bit, for registering and for finding one by its item.
-pub static BITS: [&Bit; 2] = [&STONE_BIT, &IRON_BIT];
+pub static BITS: [&Bit; 3] = [&STONE_BIT, &IRON_BIT, &STEEL_BIT];
 
 /// The slot group a quarry keeps its bit in.
 pub const GROUP: &str = "bit";
@@ -97,6 +103,12 @@ mod tests {
         assert!(gold <= IRON_BIT.tier, "an iron bit takes it");
         let iron = needs(Some(tool_tier::STONE));
         assert!(iron <= STONE_BIT.tier, "a stone bit takes iron ore");
+        let diamond = needs(Some(tool_tier::IRON));
+        assert!(
+            diamond <= STEEL_BIT.tier,
+            "a steel bit takes what iron takes"
+        );
+        assert!(STEEL_BIT.tier > IRON_BIT.tier, "and more");
         assert_eq!(needs(None), tool_tier::WOOD, "dirt needs nothing");
     }
 

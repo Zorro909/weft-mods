@@ -80,9 +80,13 @@ class BlockbenchPage {
         return Buffer.from(reply.data, 'base64');
     }
 
+    // Set up includes the database of its backups, which it opens a moment later: closing a
+    // project before that fails with "Cannot read properties of null (reading 'transaction')".
     waitUntilSetUp(deadline) {
         const isSetUp = () =>
-            typeof Blockbench !== 'undefined' && Blockbench.setup_successful === true;
+            typeof Blockbench !== 'undefined' &&
+            Blockbench.setup_successful === true &&
+            Boolean(AutoBackup.db);
         const failure = 'Blockbench did not finish starting';
         return eventually(() => this.evaluate(isSetUp), deadline, failure);
     }

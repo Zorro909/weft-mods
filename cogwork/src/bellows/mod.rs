@@ -13,6 +13,7 @@
 mod driven;
 mod hand;
 
+pub use driven::BLAST_DRAW;
 use weft_sdk::{
     Block, BlockBuilder, Facings, Modify, Output, Particle, Registry, Toward, Vec3, World, phase,
     tool_tier,
@@ -78,11 +79,21 @@ fn pumped_into(world: &World, target: Pos) -> bool {
         .any(|(bellows, id)| bellows == Kind::Hand && hand::blowing(world, id))
 }
 
-/// Whether a driven bellows blows into the block at `target`: what a furnace that can't work
-/// without a steady draft asks.
-pub fn driven_into(world: &World, target: Pos) -> bool {
+/// Whether a driven bellows blows into the block at `target`.
+fn driven_into(world: &World, target: Pos) -> bool {
     pointing_at(world, target)
         .any(|(bellows, id)| bellows == Kind::Driven && driven::blowing(world, id))
+}
+
+/// Takes up to `wanted` ticks of draft from the driven bellows blowing into the block at
+/// `target`: what a furnace that can't work without one does. Each tick of draft a bellows paid
+/// for is taken once, so one bellows works one furnace.
+pub fn take_draft(world: &World, target: Pos, wanted: u32) -> u32 {
+    let mut taken = 0;
+    for (_, id) in pointing_at(world, target).filter(|&(bellows, _)| bellows == Kind::Driven) {
+        taken += driven::take(world, id, wanted - taken);
+    }
+    taken
 }
 
 /// Which bellows it is.

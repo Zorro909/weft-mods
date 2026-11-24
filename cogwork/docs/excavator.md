@@ -9,7 +9,7 @@ goes to the tubes and chests beside it. There are three:
 | Frame | [lashed frame](#lashed-frame): a log and a string a block | [iron frame](#iron-frame): an iron ingot a block | gantry frame, free |
 | Inside of its area | 5 by 5, up to 7 by 7 with markers | 9 by 9, up to 17 by 17 with markers | 9 by 9, up to 255 by 255 with markers |
 | Digs down to | 16 below itself | 64 below itself | as deep as the world's [settings](#world-settings) let it |
-| Digs with | a [drill bit](#drill-bits), 12 or 18 energy a tick | an iron [drill bit](#drill-bits), 60 energy a tick | its own drill, 120 a tick and more deep down |
+| Digs with | a [drill bit](#drill-bits), 12 or 18 energy a tick | an iron or steel [drill bit](#drill-bits), 60 or 90 energy a tick | its own drill, 120 a tick and more deep down |
 | Standby a tick | 4 | 12, and 1 per block along each side | 12, and 1 per block along each side |
 | Ore Rubble per ore block | 1 | 1.25 | 2 |
 
@@ -107,18 +107,19 @@ An iron frame block broken gives its ingot back, so a quarry's frame is iron len
 ## Drill bits
 
 A Timber or Iron Quarry digs with the bit in its bit slot, and without one waits ("Needs a drill
-bit"). The Iron Quarry takes only iron bits: a stone bit doesn't go into its slot.
+bit"). The Iron Quarry takes iron and steel bits, the Timber Quarry stone and iron ones: a bit
+that doesn't fit doesn't go into the slot.
 A bit breaks what a pickaxe of its kind breaks, and wears by one for each block mined, until it
 is used up. A block the bit can't break, gold ore under a stone bit say, is left standing, so a
 pillar of it stays in the pit to be mined by hand. The Gantry Excavator digs with its own drill
 and has no bit slot.
 
-| | Stone Drill Bit | Iron Drill Bit |
-|---|---|---|
-| Breaks like | a stone pickaxe | an iron pickaxe |
-| Lasts | 400 blocks | 2,000 blocks |
-| Most a Timber Quarry puts into a block a tick | 12 | 18 |
-| Most an Iron Quarry puts into a block a tick | | 60 |
+| | Stone Drill Bit | Iron Drill Bit | Steel Drill Bit |
+|---|---|---|---|
+| Breaks like | a stone pickaxe | an iron pickaxe | a diamond pickaxe |
+| Lasts | 400 blocks | 2,000 blocks | 8,000 blocks |
+| Most a Timber Quarry puts into a block a tick | 12 | 18 | |
+| Most an Iron Quarry puts into a block a tick | | 60 | 90 |
 
 ```
  k        k = #stick           t = base:string         s = #cobblestone
@@ -187,12 +188,12 @@ and a Gantry Excavator's is 12, and 1 more per block across the area, along each
 Standby is drawn for as long as it works, also while it waits for room in its output. Short of
 standby, the quarry doesn't run at all, and the energy it had is used up all the same, so a
 weak supply can't save up to run in bursts. What comes in beyond standby pays for the work, up
-to its bit's 12 or 18 a tick for a Timber Quarry, 60 for an Iron Quarry, and for a Gantry
+to its bit's 12 or 18 a tick for a Timber Quarry, 60 or 90 for an Iron Quarry, and for a Gantry
 Excavator up to 120 a tick
 near the top and more deep down (see [Mining](#mining)), so the more engines drive it, the
 faster it digs. One water wheel (12 a tick) runs a Timber Quarry with a stone bit at a little
-under its full pace. A 9 by 9 Iron Quarry wants 90 a tick, three ember engines (40 a tick
-each) with some to spare. One ember engine runs a 9 by 9 Gantry area slowly; add more to go
+under its full pace. A 9 by 9 Iron Quarry wants 90 a tick with an iron bit, three ember engines (40 a tick
+each) with some to spare, and 120 with a steel bit. One ember engine runs a 9 by 9 Gantry area slowly; add more to go
 faster.
 
 It stores 20 ticks of its standby and of the most it puts into a block, and never less than

@@ -21,7 +21,8 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
 
 An oil engine's intake takes only oil or water, one at a time, and hands nothing on. A
 [grinding mill](processing.md#grinding-mill) or a [washer](processing.md#washer) takes only
-water, and hands nothing on either.
+water, and hands nothing on either. A [coke oven's](steel.md#creosote) door and drains hand on
+the creosote the oven makes, and take nothing.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.

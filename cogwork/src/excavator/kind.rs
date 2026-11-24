@@ -6,7 +6,7 @@
 
 use weft_sdk::{Block, Item, ItemStack, Menu, Sound, Tag};
 
-use super::bit::{Bit, IRON_BIT, STONE_BIT};
+use super::bit::{Bit, IRON_BIT, STEEL_BIT, STONE_BIT};
 use super::depth::Floor;
 use super::rig::{GANTRY_RIG, IRON_RIG, RigLook, TIMBER_RIG};
 use super::{EXCAVATOR, Frame, GANTRY_FRAME, IRON_FRAME, IRON_QUARRY, LASHED_FRAME, TIMBER_QUARRY};
@@ -157,10 +157,16 @@ pub static IRON: Kind = Kind {
         largest: Some(17),
     },
     depth: Depth::Below(64),
-    bits: &[Fit {
-        bit: &IRON_BIT,
-        draw: 60,
-    }],
+    bits: &[
+        Fit {
+            bit: &IRON_BIT,
+            draw: 60,
+        },
+        Fit {
+            bit: &STEEL_BIT,
+            draw: 90,
+        },
+    ],
     bare: None,
     rubble_per_ore: 1.25,
     rig: &IRON_RIG,
@@ -326,7 +332,7 @@ mod tests {
     fn frames_go_up_at_the_best_drill_s_pace() {
         assert_eq!(GANTRY.build_draw(), 120, "as today");
         assert_eq!(TIMBER.build_draw(), 18, "an iron bit's, bit or none");
-        assert_eq!(IRON.build_draw(), 60, "an iron bit's in an iron quarry");
+        assert_eq!(IRON.build_draw(), 90, "a steel bit's in an iron quarry");
     }
 
     #[test]
@@ -339,6 +345,12 @@ mod tests {
         let iron = IRON.drill(Some(&IRON_BIT)).expect("an iron bit fits");
         assert_eq!(iron.draw, 60, "it works an iron bit harder");
         assert_eq!(iron.tier, IRON_BIT.tier, "and breaks what it breaks");
+        let steel = IRON.drill(Some(&STEEL_BIT)).expect("a steel bit fits");
+        assert_eq!(steel.draw, 90, "harder still with steel");
+        assert!(
+            TIMBER.drill(Some(&STEEL_BIT)).is_none(),
+            "too much for timber"
+        );
     }
 
     #[test]

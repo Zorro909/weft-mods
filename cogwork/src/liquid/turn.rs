@@ -263,6 +263,26 @@ mod tests {
     }
 
     #[test]
+    fn a_coke_oven_drain_hands_on_and_takes_nothing() {
+        let drain = Vessel::One {
+            id: 1,
+            pos: at(0),
+            capacity: 1000,
+            kind: Kind::Drain,
+        };
+        let named = super::super::key_named;
+        assert!(
+            !drain.admits(named("cogwork:creosote")),
+            "not even creosote"
+        );
+        assert!(!drain.admits(named("base:water")), "nor water");
+        assert!(
+            !Kind::Drain.keeps() && !Kind::Drain.pushes(),
+            "it hands on by height, as a tube"
+        );
+    }
+
+    #[test]
     fn a_holder_is_looked_up_once_a_tick() {
         let looked = Cell::new(0);
         let find = |pos| {
