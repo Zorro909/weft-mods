@@ -35,8 +35,6 @@ const PILE_DEPTH: i32 = 3;
 /// The line, from behind the pump to the block against the hall's water tank, and the
 /// highest block it climbs to: a block over the hall's terrace.
 const LINE: [(i32, i32); 2] = [(MIDDLE_X, HEAD_Z + 2), (MIDDLE_X, -7)];
-/// Branch west from the shore line to Pad R's cooling water tank at (-10, -10).
-const REFINERY_BRANCH: [(i32, i32); 3] = [(MIDDLE_X - 1, -12), (-10, -12), (-10, -11)];
 const LINE_TOP: i32 = 1 - WORKS_DOWN;
 /// How full the hall's water tank is when the film starts: two thirds.
 const TANK_FULL: [u32; 2] = [2, 3];
@@ -70,20 +68,16 @@ pub fn build(set: &Set) {
     );
     set.place(SMALL_LOADER, BlockState::of(&CUBOID_LOADER));
     liquid_tubes(set, &over_ground(set, &route(&LINE)));
-    liquid_tubes(set, &over_ground(set, &route(&REFINERY_BRANCH)));
 }
 
-/// Lights the pump's engines, with both water lines and the hall's tank already holding what it
+/// Lights the pump's engines, with the water line and the hall's tank already holding what it
 /// would have pumped by now.
 pub fn pump(set: &Set) {
     for side in ENGINE_SIDES {
         fuel(set, PUMP_AT.toward(side));
     }
     let tank = WATER_TANK.blocks().map(lowered_block);
-    let blocks = line(set, &LINE)
-        .into_iter()
-        .chain(line(set, &REFINERY_BRANCH))
-        .chain(tank);
+    let blocks = line(set, &LINE).into_iter().chain(tank);
     prefill(set, blocks, "base:water", TANK_FULL);
 }
 
@@ -105,7 +99,6 @@ pub fn shots(film: Film) -> Film {
     let round_jetty = [[17.0, -3.0, -39.0], [7.5, -7.0, -30.5], [3.5, -6.8, -23.0]];
     let past_loader = [[3.5, -6.8, -23.0], [-1.0, -6.2, -18.0], PAST_JETTY];
     film.cue("noon_2")
-        .cue("start_north")
         .fade_in(1.5)
         .shot(
             flyby(&approach)

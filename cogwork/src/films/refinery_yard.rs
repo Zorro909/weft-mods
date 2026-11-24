@@ -29,7 +29,7 @@ const COLUMN: Area = Area {
     hi: Pos::new(-10, 5, -4),
 };
 const HEATERS: [Pos; 2] = [Pos::new(-12, 0, -6), Pos::new(-12, 0, -5)];
-const CONDENSER: Pos = Pos::new(-11, 5, -6);
+const CONDENSERS: [Pos; 2] = [Pos::new(-12, 5, -6), Pos::new(-10, 5, -6)];
 const TAR_TAP: Pos = Pos::new(-10, 1, -4);
 const LUBE_TAP: Pos = Pos::new(-10, 2, -6);
 const DIESEL_TAP: Pos = Pos::new(-10, 3, -5);
@@ -58,14 +58,15 @@ const BOILERS: [Pos; 3] = [
     Pos::new(-14, 1, -7),
 ];
 
-/// Cooling water supply: tank fed by the jetty branch, steam-driven timber liquid tube lift, and
-/// sealed riser up the middle of the north face (clear of the east-side lubricant line).
+/// Self-contained cooling water supply: 3 by 2 by 2 prefilled tank (192,000 mB), a steam engine
+/// driving two timber liquid tubes into two non-touching sealed risers (clear of both steam and
+/// lubricant) so >= 50 mB/tick reaches the two condensers every tick regardless of tick order.
 pub const COOLING_TANK: Area = Area {
-    lo: Pos::new(-11, 0, -10),
-    hi: Pos::new(-10, 1, -9),
+    lo: Pos::new(-12, 0, -11),
+    hi: Pos::new(-10, 1, -10),
 };
-const WATER_LIFT: Pos = Pos::new(-11, 0, -8);
-const WATER_LIFT_ENGINE: Pos = Pos::new(-12, 0, -8);
+const WATER_LIFTS: [Pos; 2] = [Pos::new(-12, 0, -9), Pos::new(-10, 0, -9)];
+const WATER_LIFT_ENGINE: Pos = Pos::new(-11, 0, -9);
 
 /// Product buffer tanks on the east side, each separated by air so no two liquids meet.
 const TAR_TANK: Area = Area {
@@ -127,7 +128,9 @@ fn column(set: &Set) {
     for at in HEATERS {
         set.place(at, BlockState::of(&REFINERY_HEATER));
     }
-    set.place(CONDENSER, BlockState::of(&REFINERY_CONDENSER));
+    for at in CONDENSERS {
+        set.place(at, BlockState::of(&REFINERY_CONDENSER));
+    }
     for at in [TAR_TAP, LUBE_TAP, DIESEL_TAP, GAS_TAP] {
         set.place(at, BlockState::of(&REFINERY_TAP));
     }
@@ -182,26 +185,39 @@ fn steam_pressure_line() -> Vec<Pos> {
         Pos::new(-13, 1, -6),
         Pos::new(-13, 0, -6),
         Pos::new(-13, 0, -5),
-        Pos::new(-13, 0, -7),
-        Pos::new(-13, 0, -8),
+        // Buried steam branch under the gravel into the water-lift steam engine at (-11, 0, -9).
+        Pos::new(-13, -1, -6),
+        Pos::new(-13, -1, -7),
+        Pos::new(-12, -1, -7),
+        Pos::new(-11, -1, -7),
+        Pos::new(-11, -1, -8),
+        Pos::new(-11, -1, -9),
     ]
 }
 
-/// Cooling water tank, timber liquid tube lift driven by a steam engine off the boiler line
-/// (160 E/t, lifting up to 100 mB/t against the condenser's 50 mB/t draw without overheating),
-/// and vertical sealed liquid tube riser to y = 5.
+/// Cooling water tank, two timber liquid tube lifts driven directly by the steam engine between
+/// them (160 E/t, never overheating), and two non-touching sealed risers up to the condensers.
 fn cooling_riser(set: &Set) {
     set.fill(COOLING_TANK, BlockState::of(&LIQUID_TANK));
-    set.place(WATER_LIFT, BlockState::of(&TIMBER_LIQUID_TUBE));
+    for at in WATER_LIFTS {
+        set.place(at, BlockState::of(&TIMBER_LIQUID_TUBE));
+    }
     set.place(
         WATER_LIFT_ENGINE,
         STEAM_ENGINE.with(&[("facing", "south")]).into(),
     );
-    sealed_tubes(set, &sealed_riser());
+    sealed_tubes(set, &sealed_risers());
 }
 
-fn sealed_riser() -> Vec<Pos> {
-    (0..=5).map(|y| Pos::new(-11, y, -7)).collect()
+/// Two non-touching 7-step sealed risers at x = -12 and x = -10 (separated by air at x = -11 so
+/// sideways turns cannot steal head), delivering >= 56 mB/tick across all tick orders.
+fn sealed_risers() -> Vec<Pos> {
+    let mut blocks = Vec::with_capacity(14);
+    for x in [-12, -10] {
+        blocks.extend((0..=5).map(|y| Pos::new(x, y, -8)));
+        blocks.push(Pos::new(x, 5, -7));
+    }
+    blocks
 }
 
 /// Four product tanks and distribution lines: tar, lubricant to DIGGER, diesel to hall, gas to Pad P.
@@ -277,8 +293,9 @@ fn gas_line() -> Vec<Pos> {
     blocks
 }
 
-/// Fuels the refinery's boilers and water lift and prefills crude, steam, water and product lines.
-/// Fired at the start of S5 (~42 s before S6 arrives) so the column warms into its band naturally.
+/// Fuels the refinery's boilers and prefills crude, steam, cooling water and product lines.
+/// Fired ~9.4 s before S6 starts (~16.4 s before the refinery screen opens) so the column warms
+/// into its 320-380 C band (350 C steady) on self-contained cooling water.
 pub fn start(set: &Set) {
     for firebox in FIREBOXES {
         fuel_item(set, firebox, "cogwork:coke");
@@ -312,9 +329,9 @@ pub fn start(set: &Set) {
         set,
         COOLING_TANK
             .blocks()
-            .chain([WATER_LIFT])
-            .chain(sealed_riser())
-            .chain([CONDENSER]),
+            .chain(WATER_LIFTS)
+            .chain(sealed_risers())
+            .chain(CONDENSERS),
         "base:water",
         [1, 1],
     );

@@ -44,6 +44,9 @@ const ACID_WATER: Area = Area {
     lo: Pos::new(21, FLOOR, 16),
     hi: Pos::new(21, FLOOR + 1, 16),
 };
+/// 16,000 mB sulfuric acid buffer tank between the acid tank and leaching vat so the acid tank
+/// brews continuously on camera instead of filling its internal 4,000 mB store before its shot.
+const ACID_BUFFER: Pos = Pos::new(22, FLOOR, 13);
 
 /// Ember engines driving Pad P's dedicated torque shaft (12 × 40 = 480 energy/tick against the
 /// 370 energy/tick drawn by all five machines together).
@@ -99,13 +102,15 @@ pub fn build(set: &Set) {
     tubes(set, Pos::new(19, FLOOR, 13), Pos::new(20, FLOOR, 13));
     set.place(PANEL_CHEST, BlockState::of(&CHEST));
 
-    // Acid tank, rear water tank bridged over the shaft, glowing pressure tube, and leaching vat.
+    // Acid tank, rear water tank bridged over the shaft, glowing pressure tubes + acid buffer tank,
+    // and leaching vat.
     set.fill(ACID_WATER, BlockState::of(&LIQUID_TANK));
     liquid_tubes(
         set,
         &[Pos::new(21, FLOOR + 1, 15), Pos::new(21, FLOOR + 1, 14)],
     );
     set.place(ACID_TANK_AT, ACID_TANK.with(&[("facing", "north")]).into());
+    set.place(ACID_BUFFER, BlockState::of(&LIQUID_TANK));
     pressure_tubes(set, &acid_line());
     set.place(
         LEACH_VAT_AT,
@@ -116,11 +121,7 @@ pub fn build(set: &Set) {
 }
 
 fn acid_line() -> Vec<Pos> {
-    vec![
-        Pos::new(21, FLOOR, 13),
-        Pos::new(22, FLOOR, 13),
-        Pos::new(22, FLOOR, 14),
-    ]
+    vec![Pos::new(21, FLOOR, 13), Pos::new(22, FLOOR, 14)]
 }
 
 /// Fuels Pad P's engines, stocks catalysts, molds, pellets, sheets, steel, sulfur and Rich Ore
@@ -177,11 +178,17 @@ pub fn start(set: &Set) {
         "cogwork:sulfuric_acid",
         [1, 1],
     );
+    prefill(
+        set,
+        [ACID_BUFFER].into_iter(),
+        "cogwork:sulfuric_acid",
+        [1, 8],
+    );
 
     let world = set.world();
     if let Some(brew) = world.component_mut(world.block_entity(set.at(ACID_TANK_AT)), &BREW) {
         brew.water = 2_000;
-        brew.acid = 1_500;
+        brew.acid = 0;
     }
     if let Some(leach) = world.component_mut(world.block_entity(set.at(LEACH_VAT_AT)), &LEACH) {
         leach.acid = 1_200;

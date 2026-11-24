@@ -126,7 +126,7 @@ pub fn register(r: &mut Registry) {
         .on_cue("noon_1", at_site(parts::noon))
         .on_cue("noon_2", at_site(parts::noon))
         .on_cue("noon_3", at_site(parts::noon))
-        .on_cue("start_north", at_works(start_north))
+        .on_cue("start_refinery", at_works(refinery_yard::start))
         .on_cue("bore", at_works(seep::bore))
         .on_cue("lift", at_works(lift))
         .on_cue("start_plastics", at_works(plastics_bay::start))
@@ -154,11 +154,6 @@ fn start(set: &Set) {
     crafting::start(&works);
     quarry::start(&works);
     leveling::start_thumper(&works);
-}
-
-/// Starts the refinery boilers at the beginning of Part 2 so the column warms naturally before S6.
-fn start_north(set: &Set) {
-    refinery_yard::start(set);
 }
 
 /// Seals the oil engine controller, lifts diesel into it, and watches for it to start running.

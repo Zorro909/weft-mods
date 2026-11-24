@@ -117,6 +117,7 @@ pub fn shots(film: Film) -> Film {
     .shot(round(SEEP_ARC[0], -114.0, 2.5))
     .menu("cogwork:pump", lowered_block(PUMP_AT), 9.0)
     .shot(round(-114.0, -178.0, 6.5))
+    .cue("start_refinery")
     .title("cogwork.film.field", 5.0)
     .shot(round(-178.0, SEEP_ARC[1], 9.4))
 }
