@@ -191,7 +191,7 @@ pub fn shots(film: Film) -> Film {
 
     let exit = [
         crafting::end_eye(),
-        lowered([16.2, 4.4, 6.2]),
+        lowered([16.0, 4.6, 7.8]),
         lowered([16.2, f + 1.6, 10.8]),
     ];
     let at_poly = lowered([17.6, f + 1.5, 10.8]);
