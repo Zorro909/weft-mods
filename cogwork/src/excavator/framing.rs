@@ -125,7 +125,7 @@ fn clear_for_frame(
     }
     let mined = mine_block(world, quarry, dig, cell, block_state, drill.draw);
     if matches!(mined, Mined::Done) {
-        wear_down(world, quarry, dig);
+        wear_down(world, quarry, dig, drill);
     }
     let status = cleared(dig, mined);
     dig.set_status(status);

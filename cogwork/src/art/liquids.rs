@@ -6,7 +6,7 @@ use super::{CLEAR, GLASS_METAL, GLINT, IRON, OIL, Picture, Rgba, noise};
 /// Frames of the oil's sheen, one every `oil_still.anim`'s frametime.
 const OIL_FRAMES: usize = 8;
 /// Where the edges of a liquid tube lie in its picture: its hub is 4 to 12.
-const TUBE_EDGES: [usize; 2] = [4, 11];
+pub(super) const TUBE_EDGES: [usize; 2] = [4, 11];
 
 pub fn all() -> Vec<(&'static str, Picture)> {
     vec![
@@ -73,7 +73,7 @@ fn soaked(ground: &[Rgba; 4], salt: u32) -> Picture {
 /// The liquid tube's glass: clear, a thin iron edge along both sides of every arm and around
 /// the hub, and one streak of metallic sheen with a glint across each, so it reads as
 /// reinforced glass without hiding the liquid.
-fn liquid_tube() -> Picture {
+pub(super) fn liquid_tube() -> Picture {
     let inside = |at: usize| (TUBE_EDGES[0]..=TUBE_EDGES[1]).contains(&at);
     let mut picture = Picture::filled(CLEAR);
     picture.each(|x, y, _| {
@@ -106,7 +106,7 @@ fn liquid_tube() -> Picture {
 }
 
 /// The hub: the tube's glass, held at its corners by iron brackets with a rivet each.
-fn liquid_tube_hub() -> Picture {
+pub(super) fn liquid_tube_hub() -> Picture {
     let mut picture = liquid_tube();
     let bracket = Picture::drawn(&["mmm", "mr.", "m.."], &[('m', IRON[1]), ('r', IRON[2])]);
     let [low, high] = TUBE_EDGES;

@@ -1,0 +1,19 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.molding_press_ram.press": {
+			"loop": false,
+			"animation_length": 0.6,
+			"bones": {
+				"ram": {
+					"position": {
+						"0.0": [0, 0, 0],
+						"0.12": [0, -3, 0],
+						"0.3": [0, -3, 0],
+						"0.6": [0, 0, 0]
+					}
+				}
+			}
+		}
+	}
+}

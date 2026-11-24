@@ -6,10 +6,11 @@ use weft_sdk::{Item, Menu, Tag};
 use super::super::bit::{DIAMOND_BIT, IRON_BIT, STEEL_BIT, STONE_BIT};
 use super::super::rig::{GANTRY_RIG, IRON_RIG, STEEL_RIG, TIMBER_RIG};
 use super::super::{
-    EXCAVATOR, GANTRY_FRAME, IRON_FRAME, IRON_QUARRY, LASHED_FRAME, STEEL_EXCAVATOR, STEEL_FRAME,
-    TIMBER_QUARRY,
+    COMPOSITE_FRAME, EXCAVATOR, GANTRY_FRAME, IRON_FRAME, IRON_QUARRY, LASHED_FRAME,
+    STEEL_EXCAVATOR, STEEL_FRAME, TIMBER_QUARRY,
 };
 use super::{Cost, Depth, Fit, Inside, Kind, Material, Standby};
+use crate::plastics::COMPOSITE_PANEL;
 use crate::sounds;
 
 static LOGS: Tag = Tag::named("logs");
@@ -27,6 +28,7 @@ pub static TIMBER: Kind = Kind {
     sound_group: "base:block.wood",
     menu: &TIMBER_MENU,
     frame: &LASHED_FRAME,
+    old_frame: None,
     frame_cost: &[
         Cost {
             material: Material::Tagged(&LOGS),
@@ -69,6 +71,7 @@ pub static IRON: Kind = Kind {
     sound_group: "base:block.stone",
     menu: &IRON_MENU,
     frame: &IRON_FRAME,
+    old_frame: None,
     frame_cost: &[Cost {
         material: Material::Tagged(&IRON_INGOTS),
         count: 1,
@@ -106,6 +109,7 @@ pub static STEEL: Kind = Kind {
     sound_group: "base:block.stone",
     menu: &STEEL_MENU,
     frame: &STEEL_FRAME,
+    old_frame: None,
     frame_cost: &[Cost {
         material: Material::Tagged(&STEEL_INGOTS),
         count: 1,
@@ -134,22 +138,32 @@ pub static STEEL: Kind = Kind {
     frame_sound: &sounds::FRAME_PLACE,
 };
 
-/// Today's excavator, the Gantry: it digs as it always has with no bit.
+/// The last quarry, the Gantry Excavator: a frame of composite panels on steel, a composite panel
+/// for every four of its blocks (the plain lattice it built before stays its own), as large and
+/// deep as the world's settings let it, and twice the Ore Rubble. With no bit it digs as
+/// excavators always have; a diamond-tipped bit digs twice as hard.
 pub static GANTRY: Kind = Kind {
     block: &EXCAVATOR,
     hardness: 4.0,
     sound_group: "base:block.stone",
     menu: &EXCAVATOR_MENU,
-    frame: &GANTRY_FRAME,
-    frame_cost: &[],
-    frame_batch: 1,
+    frame: &COMPOSITE_FRAME,
+    old_frame: Some(&GANTRY_FRAME),
+    frame_cost: &[Cost {
+        material: Material::Item(&COMPOSITE_PANEL),
+        count: 1,
+    }],
+    frame_batch: 4,
     standby: Standby::BySides,
     inside: Inside {
         default: 9,
         largest: None,
     },
     depth: Depth::World,
-    bits: &[],
+    bits: &[Fit {
+        bit: &DIAMOND_BIT,
+        draw: 240,
+    }],
     bare: Some(120),
     rubble_per_ore: 2.0,
     rig: &GANTRY_RIG,
@@ -183,6 +197,26 @@ mod tests {
     }
 
     #[test]
+    fn a_diamond_tipped_bit_works_the_gantry_twice_as_hard() {
+        let diamond = GANTRY.drill(Some(&DIAMOND_BIT)).expect("it fits");
+        assert_eq!(diamond.draw, 240, "twice the bare draw");
+        assert_eq!(diamond.tier, DIAMOND_BIT.tier, "and breaks what it breaks");
+        assert!(
+            GANTRY
+                .drill(Some(&STEEL_BIT))
+                .is_some_and(|bare| bare.bit.is_none()),
+            "a steel bit is no Gantry bit: it digs bare"
+        );
+        assert_eq!(GANTRY.rubble_per_ore, 2.0, "twice the Ore Rubble");
+    }
+
+    #[test]
+    fn a_composite_panel_pays_for_four_gantry_frame_blocks() {
+        assert_eq!(GANTRY.frame_batch, 4, "four blocks a panel");
+        assert_eq!(GANTRY.frame_cost.len(), 1, "panels only");
+    }
+
+    #[test]
     fn a_bit_that_does_not_fit_is_no_bit() {
         assert!(
             !GANTRY
@@ -196,7 +230,7 @@ mod tests {
 
     #[test]
     fn frames_go_up_at_the_best_drill_s_pace() {
-        assert_eq!(GANTRY.build_draw(), 120, "as today");
+        assert_eq!(GANTRY.build_draw(), 240, "a diamond-tipped bit's");
         assert_eq!(TIMBER.build_draw(), 18, "an iron bit's, bit or none");
         assert_eq!(IRON.build_draw(), 90, "a steel bit's in an iron quarry");
         assert_eq!(STEEL.build_draw(), 160, "a diamond-tipped bit's");
@@ -301,6 +335,7 @@ mod tests {
         assert_eq!(TIMBER.material_rule(), "#logs base:string");
         assert_eq!(IRON.material_rule(), "#ingots/iron");
         assert_eq!(STEEL.material_rule(), "#ingots/steel");
+        assert!(GANTRY.material_rule().ends_with(":composite_panel"));
         // Outside the game an item's mod is not known: only the names after it.
         let rule = TIMBER.bit_rule();
         let bits: Vec<&str> = rule.split(' ').collect();

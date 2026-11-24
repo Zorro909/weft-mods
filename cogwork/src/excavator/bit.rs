@@ -82,10 +82,10 @@ pub fn of(stack: ItemStack) -> Option<&'static Bit> {
         .find(|bit| !stack.is_empty() && stack.item == bit.item.id())
 }
 
-/// The bit fitted in the quarry `id`; none in an empty slot or one without a bit group.
-pub fn fitted(world: &World, id: u64) -> Option<&'static Bit> {
-    let group = world.inventory(id).find_group(GROUP)?;
-    of(group.get(0))
+/// What is in the bit slot of the quarry `id`: nothing for one without a bit group.
+pub fn fitted(world: &World, id: u64) -> ItemStack {
+    let group = world.inventory(id).find_group(GROUP);
+    group.map_or(ItemStack::EMPTY, |group| group.get(0))
 }
 
 /// Wears the bit fitted in the quarry `id` by one block; a worn-out bit is gone.

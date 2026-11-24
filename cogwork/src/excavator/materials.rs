@@ -48,8 +48,8 @@ pub fn take(world: &World, quarry: Quarry, simulate: bool) -> bool {
 }
 
 /// `slots` after taking each of `cost` from the stacks that `is` says are its material; none
-/// when one isn't there in full.
-fn taken(
+/// when one isn't there in full. The molding press takes its inputs the same way.
+pub fn taken(
     slots: &[ItemStack],
     cost: &[Cost],
     is: impl Fn(&Cost, u32) -> bool,

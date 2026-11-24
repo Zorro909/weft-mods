@@ -43,11 +43,14 @@ pub static FLOTATION: Sound = Sound::named("flotation_cell.bubble");
 pub static CORE_DRILL: Sound = Sound::named("core_drill.grind");
 pub static REFINERY_RUMBLE: Sound = Sound::named("refinery.rumble");
 pub static REFINERY_VENT: Sound = Sound::named("refinery.vent");
+pub static POLYMERIZER: Sound = Sound::named("polymerizer.bubble");
+pub static PRESS: Sound = Sound::named("molding_press.thump");
+pub static BIT_SWAP: Sound = Sound::named("bit_magazine.swap");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
 /// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
 /// carry (fading out on the way there): heavy machinery far, small parts close.
-static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 40] = [
+static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 43] = [
     (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
     (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
     (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
@@ -102,6 +105,9 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 40] = [
     (&CORE_DRILL, "core_drill/grind", 0.8, 0.92, 1.08, 24.0),
     (&REFINERY_RUMBLE, "refinery/rumble", 1.0, 0.95, 1.05, 48.0),
     (&REFINERY_VENT, "refinery/vent", 0.9, 0.9, 1.1, 40.0),
+    (&POLYMERIZER, "polymerizer/bubble", 0.9, 0.9, 1.1, 32.0),
+    (&PRESS, "molding_press/thump", 1.0, 0.92, 1.05, 48.0),
+    (&BIT_SWAP, "bit_magazine/swap", 0.8, 0.95, 1.05, 20.0),
 ];
 
 pub fn register(r: &mut Registry) {

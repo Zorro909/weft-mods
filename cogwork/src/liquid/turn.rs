@@ -16,9 +16,8 @@ use weft_sdk::{SystemBatch, World};
 
 use super::flow::LOSS;
 use super::vessel::{Holders, Kind, Vessel};
-use super::{Held, MOST_A_TURN, NO_LIQUID, flow};
+use super::{Held, NO_LIQUID, flow};
 use crate::lib::{Pos, TypedWorld};
-use crate::liquid_tube::LIQUID_TUBE;
 
 /// A holder as met at one of its blocks: `id`, that block's entity, keeps the head it told
 /// there. A tank tells all its blocks the same head, but blocks it joined since may keep another.
@@ -95,7 +94,7 @@ pub fn tick(batch: &mut SystemBatch<Held>) {
         let pos = Pos::from(entity.block_pos());
         turn(&mut holders, &mut found, id, pos);
         // A timber liquid tube shows its own, after its pump (`timber_liquid_tube`).
-        if world.block_typed(pos).is(&LIQUID_TUBE) {
+        if crate::liquid_tube::shows_own_fill(world.block_typed(pos)) {
             let mut held = holders.get(id);
             crate::liquid_tube::show(&world, pos, &mut held, NO_LIQUID);
             holders.set(id, held);
@@ -122,7 +121,10 @@ fn turn(holders: &mut Holders, found: &mut Found, id: u64, pos: Pos) {
     let neighbours = || sides.iter().filter_map(|side| side.beside.as_ref());
     let rises = |vessel: &Vessel| super::rises(vessel.held(holders).liquid);
     let mine = rises(&me);
-    let heads = neighbours().map(|met| (rises(&met.vessel), met.vessel.head_now(holders, met.id)));
+    let heads = neighbours().map(|met| {
+        let head = met.vessel.head_now(holders, met.id, me.kind());
+        (rises(&met.vessel), head)
+    });
     let pushed = push_on(mine, heads);
     let mut moved = false;
     for to in own.filter_map(|side| side.beside.as_ref()) {
@@ -160,20 +162,53 @@ fn sleep(holders: &mut Holders, id: u64) {
     holders.set(id, held);
 }
 
-/// Hands from `from`, pushed by `pushed`, to `to` what evens out their heads; whether any went.
-/// A holder that pushes never takes: liquid run back into it would only be pushed out again. A
-/// driven timber liquid tube hands nothing to a tank: it pulls from there. An intake or a
-/// grinding mill hands nothing on, and takes only what its machine uses.
+/// Hands from `from`, pushed by `pushed`, to `to` what evens out their heads (`share`); whether
+/// any went.
 fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
     let (to, told) = (&*to.vessel, holders.get(to.id).head);
-    let into_source = from.kind() == Kind::Driven && matches!(to, Vessel::Tank(_));
-    if to.kind().pushes() || into_source || from.kind().keeps() {
+    let (giving, taking) = (from.held(holders), to.held(holders));
+    let amount = share(Party::of(from, giving, pushed), Party::of(to, taking, told));
+    if amount == 0 {
         return false;
     }
-    let (giving, taking) = (from.held(holders), to.held(holders));
-    let admitted = to.admits(giving.liquid) && taking.takes(giving.liquid, to.capacity());
+    from.take(holders, amount);
+    to.put(holders, giving.liquid, amount);
+    true
+}
+
+/// A holder on either end of a turn's share: what it is, what it keeps, and the push into it.
+struct Party<'v> {
+    vessel: &'v Vessel,
+    held: Held,
+    pushed: i64,
+}
+
+impl<'v> Party<'v> {
+    fn of(vessel: &'v Vessel, held: Held, pushed: i64) -> Party<'v> {
+        Party {
+            vessel,
+            held,
+            pushed,
+        }
+    }
+}
+
+/// Millibuckets that go from `from` to `to` in a turn: what evens out their heads, at most what
+/// `from` has, what `to` has room for, and a turn's worth of the faster of the two (a pressure
+/// tube's is twice a tube's). A holder that pushes never takes: liquid run back into it would only
+/// be pushed out again. A driven timber liquid tube hands nothing to a tank: it pulls from there.
+/// A machine's holder hands nothing on, and takes only what its machine uses. Steam never takes
+/// the place of another liquid, nor another liquid that of steam (`Held::takes`).
+fn share(from: Party, to: Party) -> u32 {
+    let (giving, taking) = (from.held, to.held);
+    let (into, kind) = (to.vessel, to.vessel.kind());
+    let into_source = from.vessel.kind() == Kind::Driven && matches!(into, Vessel::Tank(_));
+    if kind.pushes() || into_source || from.vessel.kind().keeps() {
+        return 0;
+    }
+    let admitted = into.admits(giving.liquid) && taking.takes(giving.liquid, into.capacity());
     if giving.is_empty() || !admitted {
-        return false;
+        return 0;
     }
     // A dribble of another liquid counts for nothing: it goes when this comes in.
     let had = if taking.liquid == giving.liquid {
@@ -181,18 +216,13 @@ fn pass(holders: &mut Holders, from: &Vessel, pushed: i64, to: &Met) -> bool {
     } else {
         0
     };
-    let higher = from.level(giving.liquid, giving.amount, pushed);
-    let lower = to.level(giving.liquid, had, told);
-    let room = to.capacity().saturating_sub(had);
-    let amount = flow(higher, lower, MOST_A_TURN)
-        .min(room)
-        .min(giving.amount);
-    if amount == 0 {
-        return false;
-    }
-    from.take(holders, amount);
-    to.put(holders, giving.liquid, amount);
-    true
+    let higher = from
+        .vessel
+        .level_into(giving.liquid, giving.amount, from.pushed, kind);
+    let lower = into.level(giving.liquid, had, to.pushed);
+    let room = into.capacity().saturating_sub(had);
+    let most = from.vessel.kind().most_a_turn().max(kind.most_a_turn());
+    flow(higher, lower, most).min(room).min(giving.amount)
 }
 
 #[cfg(test)]

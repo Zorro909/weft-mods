@@ -17,8 +17,9 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
   stays full while it delivers.
 - **Pumps push.** A pump holding liquid pushes it up to 16 blocks above itself, and so does a
   [timber liquid tube](#timber-liquid-tube) an engine drives. Each full tube or tank on the way
-  loses a sixteenth of a block of that push, so a long line lifts less. Liquid never runs back
-  into a pump. Without a pump, liquid rises no higher than where it stands.
+  loses a sixteenth of a block of that push, so a long line lifts less. Into a
+  [sealed liquid tube](#sealed-liquid-tube) a pump pushes twice as high, 32 blocks. Liquid never
+  runs back into a pump. Without a pump, liquid rises no higher than where it stands.
 - **Two liquids** don't mix: one waits until the other has moved on. What is left of a liquid
   once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
   Steam is the exception: steam and any other liquid wait for each other down to the last
@@ -38,7 +39,8 @@ takes only muddy water, and lets the clear water it settles out of its front. A
 [refinery's](refinery.md) controller takes only crude oil, its heaters only steam and its
 condensers only water, and none hands anything on; its taps hand on what the column makes, by
 height as a tube does, and take nothing, and a bucket fills from them. A [quarry](excavator.md#lubricant)
-takes only lubricant, and hands nothing on.
+takes only lubricant, and a [polymerizer](plastics.md#polymerizer) only gas; neither hands
+anything on. A [pressure tube](#pressure-tube) carries only steam.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.
@@ -56,6 +58,35 @@ whenever it holds any.
 
 ```
 gig       g = base:glass       i = #ingots/iron       (makes 8)
+```
+
+## Sealed Liquid Tube
+
+A liquid tube sleeved in plastic, which holds a pump's full push: a pump or a driven timber
+liquid tube pushes liquid into it 32 blocks above itself, against 16 into a plain liquid tube.
+In a line of them each tube still loses a sixteenth of a block, so a pump's water reaches 30
+blocks up a column of sealed tubes and 15 up a column of plain ones. It is otherwise a liquid
+tube: it holds a bucket, carries any liquid and shows how full it is.
+
+The push is the pump's: what counts is the tube the pump pushes into, so put sealed tubes at the
+bottom of a tall column, next to the pump.
+
+```
+ttt       t = cogwork:liquid_tube   P = #plates/plastic    (makes 8)
+tPt
+ttt
+```
+
+## Pressure Tube
+
+A slate-grey plastic pipe for [steam](steam.md#steam), with a window in its middle to see how
+full it is. It carries steam and nothing else, and twice as much a tick as a liquid tube: up to
+200 mB to each neighbour, enough for all a [boiler](steam.md#boiler) lets out. Between a pressure
+tube and a liquid tube, a tank or a machine, steam moves at the pressure tube's pace. It holds a
+bucket like a liquid tube, and steam and other liquids never take each other's place in it.
+
+```
+pGp       p = #pipes/plastic   G = base:glass       (makes 3)
 ```
 
 ## Timber Liquid Tube

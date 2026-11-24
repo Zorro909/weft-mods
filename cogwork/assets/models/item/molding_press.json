@@ -1,0 +1,76 @@
+{
+	"format_version": "26.3",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"plate": "block/composite_plate",
+		"particle": "block/steel_plate",
+		"steel": "block/steel_plate"
+	},
+	"elements": [
+		{
+			"name": "bed",
+			"from": [0, 0, 0],
+			"to": [16, 4, 16],
+			"faces": {
+				"north": {"uv": [0, 12, 16, 16], "texture": "#steel"},
+				"east": {"uv": [0, 12, 16, 16], "texture": "#steel"},
+				"south": {"uv": [0, 12, 16, 16], "texture": "#steel"},
+				"west": {"uv": [0, 12, 16, 16], "texture": "#steel"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#steel"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#steel"}
+			}
+		},
+		{
+			"name": "die",
+			"from": [4, 4, 4],
+			"to": [12, 6, 12],
+			"faces": {
+				"north": {"uv": [4, 10, 12, 12], "texture": "#steel"},
+				"east": {"uv": [4, 10, 12, 12], "texture": "#steel"},
+				"south": {"uv": [4, 10, 12, 12], "texture": "#steel"},
+				"west": {"uv": [4, 10, 12, 12], "texture": "#steel"},
+				"up": {"uv": [4, 4, 12, 12], "texture": "#steel"},
+				"down": {"uv": [4, 4, 12, 12], "texture": "#steel"}
+			}
+		},
+		{
+			"name": "column_west",
+			"from": [1, 4, 6],
+			"to": [3, 12, 10],
+			"faces": {
+				"north": {"uv": [13, 4, 15, 12], "texture": "#steel"},
+				"east": {"uv": [6, 4, 10, 12], "texture": "#steel"},
+				"south": {"uv": [1, 4, 3, 12], "texture": "#steel"},
+				"west": {"uv": [6, 4, 10, 12], "texture": "#steel"},
+				"up": {"uv": [1, 6, 3, 10], "texture": "#steel"},
+				"down": {"uv": [1, 6, 3, 10], "texture": "#steel"}
+			}
+		},
+		{
+			"name": "column_east",
+			"from": [13, 4, 6],
+			"to": [15, 12, 10],
+			"faces": {
+				"north": {"uv": [1, 4, 3, 12], "texture": "#steel"},
+				"east": {"uv": [6, 4, 10, 12], "texture": "#steel"},
+				"south": {"uv": [13, 4, 15, 12], "texture": "#steel"},
+				"west": {"uv": [6, 4, 10, 12], "texture": "#steel"},
+				"up": {"uv": [13, 6, 15, 10], "texture": "#steel"},
+				"down": {"uv": [13, 6, 15, 10], "texture": "#steel"}
+			}
+		},
+		{
+			"name": "crosshead",
+			"from": [0, 12, 4],
+			"to": [16, 16, 12],
+			"faces": {
+				"north": {"uv": [0, 0, 16, 4], "texture": "#plate"},
+				"east": {"uv": [4, 0, 12, 4], "texture": "#plate"},
+				"south": {"uv": [0, 0, 16, 4], "texture": "#plate"},
+				"west": {"uv": [4, 0, 12, 4], "texture": "#plate"},
+				"up": {"uv": [0, 4, 16, 12], "texture": "#plate"},
+				"down": {"uv": [0, 4, 16, 12], "texture": "#plate"}
+			}
+		}
+	]
+}
