@@ -2,20 +2,24 @@
 
 A quarry mines out a whole area. It builds a frame around the area, then lowers a drill on it
 and mines everything inside, a layer at a time, from the top of the frame down. What it mines
-goes to the tubes and chests beside it. There are two:
+goes to the tubes and chests beside it. There are three:
 
-| | Timber Quarry | Gantry Excavator |
-|---|---|---|
-| Frame | [lashed frame](#lashed-frame): a log and a string a block | gantry frame, free |
-| Inside of its area | 5 by 5, up to 7 by 7 with markers | 9 by 9, up to 255 by 255 with markers |
-| Digs down to | 16 below itself | as deep as the world's [settings](#world-settings) let it |
-| Digs with | a [drill bit](#drill-bits), 12 or 18 energy a tick | its own drill, 120 a tick and more deep down |
-| Standby a tick | 4 | 12, and 1 per block along each side |
-| Ore Rubble per ore block | 1 | 2 |
+| | Timber Quarry | Iron Quarry | Gantry Excavator |
+|---|---|---|---|
+| Frame | [lashed frame](#lashed-frame): a log and a string a block | [iron frame](#iron-frame): an iron ingot a block | gantry frame, free |
+| Inside of its area | 5 by 5, up to 7 by 7 with markers | 9 by 9, up to 17 by 17 with markers | 9 by 9, up to 255 by 255 with markers |
+| Digs down to | 16 below itself | 64 below itself | as deep as the world's [settings](#world-settings) let it |
+| Digs with | a [drill bit](#drill-bits), 12 or 18 energy a tick | an iron [drill bit](#drill-bits), 60 energy a tick | its own drill, 120 a tick and more deep down |
+| Standby a tick | 4 | 12, and 1 per block along each side | 12, and 1 per block along each side |
+| Ore Rubble per ore block | 1 | 1.25 | 2 |
 
 The Timber Quarry is the first one: wood, string and a little stone, run by a
-[water wheel](power.md#water-wheel) or a [spring engine](power.md#spring-engine). The Gantry
-Excavator is the big one.
+[water wheel](power.md#water-wheel) or a [spring engine](power.md#spring-engine). The Iron Quarry
+comes next: wider, four times as deep, and a quarter more Ore Rubble, for a couple of ember
+engines. The Gantry Excavator is the big one.
+
+Every quarry brings up its Ore Rubble Poor: a better quarry brings up more of it, and
+[washing and the steps after it](processing.md) make it richer.
 
 ### Timber Quarry
 
@@ -23,6 +27,14 @@ Excavator is the big one.
 ptp       p = #planks          t = base:string
 cpc       c = #cogs/wood       s = #cobblestone
 sts
+```
+
+### Iron Quarry
+
+```
+ici       i = #ingots/iron     c = #cogs/iron
+cTc       T = cogwork:timber_quarry
+iii
 ```
 
 ### Gantry Excavator
@@ -39,8 +51,8 @@ dcd       d = #cogs/diamond    c = base:chest
 2. Put a chest or a tube beside it for what it mines.
 3. Drive it with engines on any side, or through [torque shafts](power.md#torque-shaft) or
    [wooden axles](power.md#wooden-axle).
-4. A Timber Quarry also needs logs and string in its frame slots, which tubes can fill, and a
-   drill bit in its bit slot, put in by hand.
+4. A Timber or Iron Quarry also needs what its frame is built of in its frame slots, which
+   tubes can fill, and a drill bit in its bit slot, put in by hand.
 
 It works out its area as soon as it is placed, and starts once enough energy comes in. Put
 [survey markers](survey-markers.md) down before the quarry: markers placed afterwards are
@@ -55,12 +67,12 @@ applies:
    marked rectangle: the frame goes on that rectangle. The quarry must be outside it, and
    takes the corner markers down (they drop as items). How far apart markers may stand is the
    world's [survey marker reach](#world-settings), 64 blocks unless changed. A Timber Quarry
-   takes at most 7 by 7 of it inside, the end nearest to it.
+   takes at most 7 by 7 of it inside, an Iron Quarry 17 by 17, the end nearest to it.
 2. **A standing frame.** Placed against the bottom of its own kind of frame that is still
    standing, it takes up that frame's area again. This is how a quarry that was broken and put
    back carries on where it was. One block may be missing from the frame's ring.
-3. **Otherwise** an area right behind it: 5 by 5 for a Timber Quarry, 9 by 9 for a Gantry
-   Excavator.
+3. **Otherwise** an area right behind it: 5 by 5 for a Timber Quarry, 9 by 9 for an Iron
+   Quarry or a Gantry Excavator.
 
 The frame stands on the quarry's own height and is five blocks high. Only its inside gets
 mined. With markers, the frame stands on the marked rectangle's edge, so the mined area is one
@@ -69,10 +81,11 @@ block smaller on every side than the rectangle; without them, the frame goes aro
 ## Building the frame
 
 The quarry puts up the frame from the bottom up, for 100 energy a block, as fast as it digs:
-a Gantry Excavator a block a tick, a Timber Quarry one every 6 ticks or so. Whatever stands in
-the way is mined first, like any other block. A Timber Quarry mines it with its bit, which wears
-as it does in the pit: without a bit it waits ("Needs a drill bit"), and a block its bit can't
-break is left standing in the frame's ring, as a pillar is in the pit. When breaking it is refused three times in a row
+a Gantry Excavator a block a tick, an Iron Quarry one every 2 ticks, a Timber Quarry one every 6
+ticks or so. Whatever stands in the way is mined first, like any other block. A quarry with a
+drill bit mines it with its bit, which wears as it does in the pit: without a bit it waits
+("Needs a drill bit"), and a block its bit can't break is left standing in the frame's ring, as
+a pillar is in the pit. When breaking it is refused three times in a row
 (a protected area, say), the quarry is jammed: it tries again only every 5 seconds, so it
 doesn't pay for the block over and over, and goes on once the block is gone. Gantry frame
 blocks drop nothing when broken, and can't be had as items.
@@ -84,9 +97,17 @@ takes one log (anything tagged `logs`) and one `base:string` from the quarry's s
 with none there, it waits ("Needs what its frame is built of"). A 5 by 5 inside takes 60 of
 each. A lashed frame block broken gives back an oak log; the string is lost.
 
+### Iron frame
+
+An Iron Quarry builds its frame of thin iron bars, riveted where they meet. Each block takes one
+iron ingot (anything tagged `ingots/iron`) from the quarry's six frame slots; with none there, it
+waits ("Needs what its frame is built of"). A 9 by 9 inside takes 92 ingots, a 17 by 17 one 156.
+An iron frame block broken gives its ingot back, so a quarry's frame is iron lent, not spent.
+
 ## Drill bits
 
-A Timber Quarry digs with the bit in its bit slot, and without one waits ("Needs a drill bit").
+A Timber or Iron Quarry digs with the bit in its bit slot, and without one waits ("Needs a drill
+bit"). The Iron Quarry takes only iron bits: a stone bit doesn't go into its slot.
 A bit breaks what a pickaxe of its kind breaks, and wears by one for each block mined, until it
 is used up. A block the bit can't break, gold ore under a stone bit say, is left standing, so a
 pillar of it stays in the pit to be mined by hand. The Gantry Excavator digs with its own drill
@@ -97,6 +118,7 @@ and has no bit slot.
 | Breaks like | a stone pickaxe | an iron pickaxe |
 | Lasts | 400 blocks | 2,000 blocks |
 | Most a Timber Quarry puts into a block a tick | 12 | 18 |
+| Most an Iron Quarry puts into a block a tick | | 60 |
 
 ```
  k        k = #stick           t = base:string         s = #cobblestone
@@ -116,7 +138,8 @@ Once the frame stands, the drill starts at a corner of the inside at the top of 
 mines along rows, back and forth, then the next layer down. It skips air, liquids and blocks
 that can't be broken. A Gantry Excavator stops at the first layer that stays unloaded for ten
 seconds, which is where a world with a bottom ends, or below the world's lowest layer when its
-depth is limited; a Timber Quarry 16 layers below itself, or sooner where the world ends.
+depth is limited; a Timber Quarry 16 layers below itself and an Iron Quarry 64, or sooner where
+the world ends.
 
 While it mines, it keeps its own cube and the eight around it loaded, and the cubes of the
 layer it mines all the way across the frame, so it digs on with nobody near; see
@@ -124,7 +147,8 @@ layer it mines all the way across the frame, so it digs on with nobody near; see
 stay near until it stands.
 
 A block costs 400 energy and 400 more per point of hardness: stone (1.5) takes 1,000, so a
-Timber Quarry with a stone bit at its full 12 a tick takes about four seconds a block. Down to
+Timber Quarry with a stone bit at its full 12 a tick takes about four seconds a block, an Iron
+Quarry at its full 60 under a second. Down to
 64 blocks below the quarry that is all; past that, the cost doubles every 160 blocks deeper:
 
 | Below the quarry | Cost | Most put into a block a tick |
@@ -140,15 +164,16 @@ block takes as long at any depth: depth costs energy, not time.
 
 The drill also pays 80 energy per block it travels, at any depth. What a block drops is what a
 diamond pickaxe would get, except that stone comes up as Rubble and metal ore as Poor Ore
-Rubble, and other ores bring up more than their drops: twice from a Gantry Excavator, as many
-from a Timber Quarry; see [rubble and ore grades](processing.md). It goes into the quarry's 3 by
+Rubble, and other ores bring up more than their drops: twice from a Gantry Excavator, a quarter
+more from an Iron Quarry (a chance of one more each), as many from a Timber Quarry; see
+[rubble and ore grades](processing.md). It goes into the quarry's 3 by
 3 output. Each tick the quarry hands a stack from its output to a tube, chest or machine beside
 it.
 
 ## Energy
 
-Holding up the frame costs a standby draw every tick. A Timber Quarry's is 4. A Gantry
-Excavator's is 12, and 1 more per block across the area, along each side.
+Holding up the frame costs a standby draw every tick. A Timber Quarry's is 4. An Iron Quarry's
+and a Gantry Excavator's is 12, and 1 more per block across the area, along each side.
 
 | Area | Standby per tick |
 |---|---|
@@ -162,14 +187,16 @@ Excavator's is 12, and 1 more per block across the area, along each side.
 Standby is drawn for as long as it works, also while it waits for room in its output. Short of
 standby, the quarry doesn't run at all, and the energy it had is used up all the same, so a
 weak supply can't save up to run in bursts. What comes in beyond standby pays for the work, up
-to its bit's 12 or 18 a tick for a Timber Quarry, and for a Gantry Excavator up to 120 a tick
+to its bit's 12 or 18 a tick for a Timber Quarry, 60 for an Iron Quarry, and for a Gantry
+Excavator up to 120 a tick
 near the top and more deep down (see [Mining](#mining)), so the more engines drive it, the
 faster it digs. One water wheel (12 a tick) runs a Timber Quarry with a stone bit at a little
-under its full pace. One ember engine (40 a tick) runs a 9 by 9 Gantry area slowly; add more to
-go faster.
+under its full pace. A 9 by 9 Iron Quarry wants 90 a tick, three ember engines (40 a tick
+each) with some to spare. One ember engine runs a 9 by 9 Gantry area slowly; add more to go
+faster.
 
 It stores 20 ticks of its standby and of the most it puts into a block, and never less than
-20,000 energy: a Timber Quarry holds 20,000, a 255 by 255 Gantry area 20,000 near the top and 20,040 at 384 below, and a 9 by 9
+20,000 energy: a Timber or Iron Quarry holds 20,000, a 255 by 255 Gantry area 20,000 near the top and 20,040 at 384 below, and a 9 by 9
 area 154,200 at 1,024 below. It takes in as much a tick as it stores, from any number of engines.
 
 ## World settings
@@ -183,23 +210,23 @@ Three settings of the world, under Cogwork in Mod Settings or with `/rule`:
 | `excavator_lowest_y` | -64 | While depth is limited, the last layer quarries mine, from 0 down. |
 
 Depth counts at once for quarries already digging; one that has finished stays finished. A
-Timber Quarry stops 16 below itself whatever they say, and never below `excavator_lowest_y`
-while depth is limited.
+Timber Quarry stops 16 below itself and an Iron Quarry 64 whatever they say, and never below
+`excavator_lowest_y` while depth is limited.
 
 ## Its screen
 
 The screen shows the stored energy, what it used in the last tick (standby, work and the drill's
 travel) and how short of what it wanted it fell ([energy readouts](power.md#energy-readouts)),
-the area and its standby, and what it is doing. A Timber Quarry's screen has its bit slot and
-its six frame slots under its output.
+the area and its standby, and what it is doing. A Timber or Iron Quarry's screen has its bit
+slot and its six frame slots beside its output.
 
 | Status | Meaning |
 |---|---|
 | Waiting to start | It has not worked out its area yet. |
 | Not enough energy | Less than standby comes in, or nothing to pay the work with. |
 | Building the frame | |
-| Needs what its frame is built of | A Timber Quarry is out of logs or string for its frame. |
-| Needs a drill bit | A Timber Quarry has no bit, or its bit is used up. |
+| Needs what its frame is built of | A Timber Quarry is out of logs or string, an Iron Quarry out of iron ingots. |
+| Needs a drill bit | A Timber or Iron Quarry has no bit, or its bit is used up. |
 | Mining layer *y* | |
 | Output full | Nothing beside it takes what it mined: connect a tube or a chest. |
 | Waiting for the area to load | Part of the area is not loaded. |

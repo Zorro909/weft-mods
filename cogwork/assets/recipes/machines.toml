@@ -21,6 +21,11 @@ pattern = ["ptp", "cpc", "sts"]
 key = { p = "#planks", t = "base:string", c = "#cogs/wood", s = "#cobblestone" }
 
 [[shaped]]
+result = "iron_quarry"
+pattern = ["ici", "cTc", "iii"]
+key = { i = "#ingots/iron", c = "#cogs/iron", T = "timber_quarry" }
+
+[[shaped]]
 result = "stone_bit"
 pattern = [" k ", "sts", " s "]
 key = { k = "#stick", t = "base:string", s = "#cobblestone" }

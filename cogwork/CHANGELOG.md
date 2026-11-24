@@ -33,6 +33,13 @@
   cook twice as fast for a minute.
 - The driven bellows does the same for as long as an engine feeds it 20 energy a tick, its cogs
   pumping the bag.
+- The Iron Quarry, the quarry after the Timber Quarry: it builds a frame of iron bars, an iron
+  ingot a block that comes back when the frame is broken, around a 9 by 9 area (up to 17 by 17
+  with markers) and digs it 64 deep with an iron drill bit at up to 60 energy a tick, bringing up
+  a quarter more Ore Rubble than the Timber Quarry.
+- The washer washes Poor Ore Rubble into Common with engine energy and water, its paddle wheel
+  churning the trough: tubes bring the Ore Rubble, a liquid tube the water, and the washed
+  rubble leaves by its front.
 
 ### Changed
 
