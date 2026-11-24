@@ -152,7 +152,7 @@ pub fn shots(film: Film) -> Film {
     let at_thumper = lowered([55.4, 2.5, 4.8]);
     let to_thumper = [
         on_knoll(KNOLL_ARC[1]),
-        lowered([53.2, 8.6, 4.8]),
+        lowered([54.6, 7.6, 4.6]),
         at_thumper,
     ];
 
