@@ -2,13 +2,54 @@
 //! piston). Each belongs to an owner, moves where its owner puts it, and leaves when the owner
 //! is gone or no longer counts it as its own.
 
-use weft_sdk::*;
+use weft_sdk::{
+    Component, Dir, EntityBuilder, EntityKind, EntityTick, Registry, Spawn, Vec3, World,
+    component_flags, value,
+};
 
 /// The block entity an owned entity belongs to.
 static OWNER: Component<u64> = Component::named("cogwork:owner");
 
+value! {
+    /// The looping clip an owner last told its `entity` to play, and whether it `runs`. Never
+    /// saved, so a loaded block starts its clip again.
+    #[derive(Default)]
+    pub struct Looping {
+        entity: u64,
+        runs: u32,
+    }
+}
+/// What an owner's entity loops, on an owner that keeps a clip going while it works.
+pub static LOOPING: Component<Looping> = Component::named("cogwork:looping");
+
 pub fn register(r: &mut Registry) {
     r.entity_component(&OWNER, 0u64, component_flags::SAVE);
+    r.entity_component(&LOOPING, Looping::default(), 0);
+}
+
+/// Keeps the looping `clip` of `owner`'s entity `id` going while `runs`, and stops it otherwise;
+/// the entity is told only when that changes.
+pub fn keep_looping(world: &World, owner: u64, id: u64, clip: &str, runs: bool) {
+    let now = Looping {
+        entity: id,
+        runs: u32::from(runs),
+    };
+    if world.component(owner, &LOOPING).unwrap_or_default() == now {
+        return;
+    }
+    world.action_play(id, if runs { clip } else { "" }, runs);
+    world.set_component(owner, &LOOPING, now);
+}
+
+/// The yaw, in degrees, that turns a model whose front is its north to face `front`: a quarter
+/// turn takes it west.
+pub fn yaw(front: Dir) -> f32 {
+    match front {
+        Dir::West => 90.0,
+        Dir::South => 180.0,
+        Dir::East => -90.0,
+        _ => 0.0,
+    }
 }
 
 /// Whether the block entity `owner` still counts the entity `id` as its own.

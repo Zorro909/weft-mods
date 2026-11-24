@@ -7,7 +7,7 @@ use super::{CLEAR, Picture, Rgba, Unwrap, noise};
 
 /// Broken stone, dark to light: the gaps between chunks, then a chunk's shaded edge, its
 /// middle and its lit edge.
-const STONE: [Rgba; 4] = [
+pub(super) const STONE: [Rgba; 4] = [
     [0x4a, 0x4a, 0x4c, 255],
     [0x76, 0x76, 0x78, 255],
     [0x8c, 0x8c, 0x8e, 255],
@@ -20,7 +20,7 @@ const FLECK: [Rgba; 3] = [
     [0xff, 0xff, 0xff, 255],
 ];
 /// Oak, dark to light, as base's planks have it.
-const OAK: [Rgba; 4] = [
+pub(super) const OAK: [Rgba; 4] = [
     [0x7e, 0x5d, 0x31, 255],
     [0x94, 0x70, 0x3f, 255],
     [0xad, 0x85, 0x50, 255],
@@ -29,7 +29,7 @@ const OAK: [Rgba; 4] = [
 /// String, shaded and lit.
 const STRING: [Rgba; 2] = [[0xc8, 0xc8, 0xc0, 255], [0xec, 0xec, 0xe4, 255]];
 /// The runner's granite, dark to light.
-const GRANITE: [Rgba; 4] = [
+pub(super) const GRANITE: [Rgba; 4] = [
     [0x5c, 0x5a, 0x58, 255],
     [0x72, 0x70, 0x6c, 255],
     [0x84, 0x82, 0x7e, 255],
@@ -66,52 +66,22 @@ const ORE_ROCKS: &str = "dfaeicg";
 
 /// The runner's texture and where its model's unwrap puts each box.
 const RUNNER_SIZE: (usize, usize) = (64, 32);
-const RUNNER_CORE: Unwrap = Unwrap {
-    at: (0, 0),
-    size: (8, 4, 6),
-};
+const RUNNER_CORE: Unwrap = Unwrap::new((0, 0), (8, 4, 6));
 const RUNNER_CAPS: [Unwrap; 2] = [
-    Unwrap {
-        at: (0, 12),
-        size: (6, 4, 1),
-    },
-    Unwrap {
-        at: (16, 12),
-        size: (6, 4, 1),
-    },
+    Unwrap::new((0, 12), (6, 4, 1)),
+    Unwrap::new((16, 12), (6, 4, 1)),
 ];
-const SPINDLE: Unwrap = Unwrap {
-    at: (32, 0),
-    size: (2, 2, 2),
-};
-const HANDLE: Unwrap = Unwrap {
-    at: (40, 0),
-    size: (2, 5, 2),
-};
+const SPINDLE: Unwrap = Unwrap::new((32, 0), (2, 2, 2));
+const HANDLE: Unwrap = Unwrap::new((40, 0), (2, 5, 2));
 /// The tray's texture and its unwrap: four rims and the mesh.
 const TRAY_SIZE: (usize, usize) = (64, 64);
 const TRAY_RIMS: [Unwrap; 4] = [
-    Unwrap {
-        at: (0, 0),
-        size: (14, 3, 1),
-    },
-    Unwrap {
-        at: (0, 4),
-        size: (14, 3, 1),
-    },
-    Unwrap {
-        at: (30, 0),
-        size: (1, 3, 12),
-    },
-    Unwrap {
-        at: (30, 15),
-        size: (1, 3, 12),
-    },
+    Unwrap::new((0, 0), (14, 3, 1)),
+    Unwrap::new((0, 4), (14, 3, 1)),
+    Unwrap::new((30, 0), (1, 3, 12)),
+    Unwrap::new((30, 15), (1, 3, 12)),
 ];
-const TRAY_MESH: Unwrap = Unwrap {
-    at: (0, 32),
-    size: (12, 1, 12),
-};
+const TRAY_MESH: Unwrap = Unwrap::new((0, 32), (12, 1, 12));
 
 pub fn all() -> Vec<(&'static str, Picture)> {
     let mut all = vec![
@@ -254,7 +224,7 @@ fn mesh(size: usize) -> Picture {
 }
 
 /// Oak grain: lengthwise streaks by row.
-fn oak(x: usize, y: usize) -> Rgba {
+pub(super) fn oak(x: usize, y: usize) -> Rgba {
     let streak = noise(x / 4, y, 127) % 4;
     OAK[streak as usize]
 }

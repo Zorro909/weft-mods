@@ -29,11 +29,13 @@ pub static TIMBER_DIG: Sound = Sound::named("timber_quarry.dig");
 pub static TIMBER_FRAME: Sound = Sound::named("timber_quarry.frame_place");
 pub static WATER_WHEEL: Sound = Sound::named("water_wheel.creak");
 pub static WIND: Sound = Sound::named("engine.wind");
+pub static SHAKER_SCREEN: Sound = Sound::named("shaker_screen.rattle");
+pub static GRINDING_MILL: Sound = Sound::named("grinding_mill.grind");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
 /// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
 /// carry (fading out on the way there): heavy machinery far, small parts close.
-static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 26] = [
+static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 28] = [
     (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
     (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
     (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
@@ -74,6 +76,8 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 26] = [
     ),
     (&WATER_WHEEL, "water_wheel/creak", 0.6, 0.85, 1.1, 24.0),
     (&WIND, "engine/wind", 0.7, 0.95, 1.1, 12.0),
+    (&SHAKER_SCREEN, "shaker_screen/rattle", 0.8, 0.9, 1.1, 40.0),
+    (&GRINDING_MILL, "grinding_mill/grind", 1.0, 0.9, 1.05, 40.0),
 ];
 
 pub fn register(r: &mut Registry) {

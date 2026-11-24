@@ -19,6 +19,7 @@ mod films;
 #[cfg(test)]
 mod generated;
 mod ghost;
+mod grinding_mill;
 mod harvest;
 mod leveler;
 /// The types the whole mod builds on: helpers for points in the world, in `src/lib/`, and block
@@ -41,6 +42,7 @@ mod pump;
 mod recipes;
 mod rubble;
 mod shaft;
+mod shaker_screen;
 mod sieve;
 mod sounds;
 mod store;
@@ -84,6 +86,8 @@ fn init(r: &mut Registry) {
     rubble::register(r);
     millstone::register(r);
     sieve::register(r);
+    shaker_screen::register(r);
+    grinding_mill::register(r);
     water_wheel::register(r);
     recipes::register(r);
     #[cfg(feature = "showcase")]

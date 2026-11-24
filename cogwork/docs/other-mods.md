@@ -20,7 +20,8 @@ of its slot groups:
 
 The base game's furnace has `input`, `fuel` and `output`, and its chest has `chest`, so tubes
 fill and empty both. An inventory that names none of these groups, such as a dispenser's, counts
-as one big chest. An assembly bench takes only what its pattern asks for.
+as one big chest. An assembly bench takes only what its pattern asks for, a shaker screen only
+Rubble, and a grinding mill only Ore Rubble (into `input`) and sand (into its `sand` group).
 
 An item that burns always goes into a `fuel` group when the machine has one. Logs sent into a
 furnace by tube therefore end up as its fuel, never in its input.

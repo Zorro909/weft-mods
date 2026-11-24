@@ -23,18 +23,9 @@ const FRAME_WIDTH: usize = 2;
 /// Bedrock layout of a box `w` wide, `h` high and `d` deep: a row of its top and bottom `d` high,
 /// then a row of its four sides `h` high).
 const WHEEL_SIZE: (usize, usize) = (64, 32);
-const UPRIGHT_PADDLE: Unwrap = Unwrap {
-    at: (0, 0),
-    size: (2, 8, 8),
-};
-const LEVEL_PADDLE: Unwrap = Unwrap {
-    at: (0, 16),
-    size: (8, 2, 8),
-};
-const AXLE: Unwrap = Unwrap {
-    at: (32, 0),
-    size: (3, 3, 9),
-};
+const UPRIGHT_PADDLE: Unwrap = Unwrap::new((0, 0), (2, 8, 8));
+const LEVEL_PADDLE: Unwrap = Unwrap::new((0, 16), (8, 2, 8));
+const AXLE: Unwrap = Unwrap::new((32, 0), (3, 3, 9));
 
 pub fn all() -> Vec<(&'static str, Picture)> {
     vec![

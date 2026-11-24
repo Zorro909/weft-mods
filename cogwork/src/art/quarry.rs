@@ -36,26 +36,11 @@ const COBBLE: [Rgba; 4] = [
 ];
 
 /// The rig's pieces, as the Gantry's models unwrap them.
-const CARRIAGE: Unwrap = Unwrap {
-    at: (0, 0),
-    size: (14, 8, 14),
-};
-const SHAFT: Unwrap = Unwrap {
-    at: (0, 0),
-    size: (4, 64, 4),
-};
-const BEAM: Unwrap = Unwrap {
-    at: (0, 0),
-    size: (64, 4, 4),
-};
-const BIT: Unwrap = Unwrap {
-    at: (0, 0),
-    size: (8, 12, 8),
-};
-const TIP: Unwrap = Unwrap {
-    at: (32, 0),
-    size: (4, 4, 4),
-};
+const CARRIAGE: Unwrap = Unwrap::new((0, 0), (14, 8, 14));
+const SHAFT: Unwrap = Unwrap::new((0, 0), (4, 64, 4));
+const BEAM: Unwrap = Unwrap::new((0, 0), (64, 4, 4));
+const BIT: Unwrap = Unwrap::new((0, 0), (8, 12, 8));
+const TIP: Unwrap = Unwrap::new((32, 0), (4, 4, 4));
 /// Texels between the string bands round a pole, and how wide a band is.
 const BAND_EVERY: usize = 16;
 const BAND: usize = 3;

@@ -13,7 +13,7 @@ use weft_sdk::{
 };
 
 use crate::lib::{Pos, TypedWorld};
-use crate::liquid::{HELD, Held};
+use crate::liquid::HELD;
 
 pub static PUMP: Block = Block::named("pump");
 pub static PUMP_HOSE: Block = Block::named("pump_hose");
@@ -171,31 +171,11 @@ fn screen(ui: &mut Ui) {
                     let depth = Arg::Int(pump.depth as i64);
                     out.set(&format!("cogwork.pump.{status}"), &[depth]);
                 });
-                tank_bar(ui);
+                crate::machine::tank_bar(ui, CAPACITY);
             });
             ui.group("output");
         });
         ui.player_inventory(true);
-    });
-}
-
-/// The pump's tank on its screen: a bar, and how much of which liquid.
-fn tank_bar(ui: &mut Ui) {
-    ui.progress_bind("cogwork:tank", S::default().size(80.0, 8.0), |view| {
-        let held = view.menu_component(&HELD).unwrap_or_default();
-        held.amount as f32 / CAPACITY as f32
-    });
-    ui.text_bind(|view, out| {
-        let held: Held = view.menu_component(&HELD).unwrap_or_default();
-        let amount = Arg::Int(held.amount as i64);
-        let capacity = Arg::Int(CAPACITY as i64);
-        match crate::liquid::name(held.liquid).filter(|_| !held.is_empty()) {
-            Some(liquid) => {
-                let name = format!("item:{liquid}");
-                out.set("cogwork.liquid.held", &[amount, capacity, Arg::Name(&name)]);
-            }
-            None => out.set("cogwork.liquid.empty", &[capacity]),
-        }
     });
 }
 
