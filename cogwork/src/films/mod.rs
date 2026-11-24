@@ -54,7 +54,7 @@ const PADS: [Pad; 9] = [
     Pad {
         west: -11,
         north: 25,
-        east: 13,
+        east: 15,
         south: 38,
         top: VALLEY_TOP,
         surface: &GRAVEL,
@@ -62,7 +62,7 @@ const PADS: [Pad; 9] = [
     Pad {
         west: 16,
         north: 27,
-        east: 39,
+        east: 42,
         south: 38,
         top: VALLEY_TOP,
         surface: &GRAVEL,
@@ -108,7 +108,7 @@ const PADS: [Pad; 9] = [
         surface: &GRAVEL,
     },
     Pad {
-        west: 56,
+        west: 55,
         north: -10,
         east: 71,
         south: 8,

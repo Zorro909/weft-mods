@@ -42,11 +42,11 @@ const THUMPER_ENGINES: [(Pos, Dir); 2] = [
 const THUMPER_MARKERS: [Pos; 3] = [Pos::new(58, 1, 5), Pos::new(63, 1, 5), Pos::new(58, 1, 8)];
 
 /// Camera orbit around the knoll and close eye-height framing on the seismic thumper's west front.
-const KNOLL_ARC: [f64; 2] = [205.0, 300.0];
-const KNOLL_OUT: [f64; 2] = [6.6, 6.0];
-const KNOLL_UP: [f64; 2] = [3.6, 2.8];
+const KNOLL_ARC: [f64; 2] = [205.0, 295.0];
+const KNOLL_OUT: [f64; 2] = [6.6, 6.2];
+const KNOLL_UP: [f64; 2] = [3.6, 3.0];
 pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
-pub const END_EYE: [f64; 3] = lowered([54.4, 2.5, 3.2]);
+pub const END_EYE: [f64; 3] = lowered([55.6, 2.6, 3.0]);
 
 pub fn build(set: &Set) {
     for marker in MARKERS {
@@ -146,11 +146,13 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.75, 0.75))
             .secs(secs)
     };
-    // Smooth descent from the knoll's east edge straight to eye height in front of the thumper.
-    let at_thumper = lowered([54.2, 2.3, 5.0]);
+    // Smooth descent clear above the knoll's eastern shoulder down to eye height in front of the
+    // seismic thumper on Pad 2.
+    let leveler_look = [48.5, 0.2, 11.2];
+    let at_thumper = lowered([55.4, 2.5, 4.8]);
     let to_thumper = [
         on_knoll(KNOLL_ARC[1]),
-        lowered([53.2, 4.6, 7.2]),
+        lowered([51.8, 7.8, 4.6]),
         at_thumper,
     ];
 
@@ -171,14 +173,14 @@ pub fn shots(film: Film) -> Film {
         .cue("wrench")
         .shot(round(244.0, 250.0, 1.5))
         .title("cogwork.film.level", 5.0)
-        .shot(round(250.0, 272.0, 5.5))
+        .shot(round(250.0, 272.0, 5.5).look(Look::Pan(MIDDLE, leveler_look)))
         .menu("cogwork:leveler", LEVELER_AT, 4.0)
-        .shot(round(272.0, KNOLL_ARC[1], 6.0))
+        .shot(round(272.0, KNOLL_ARC[1], 6.0).look_at(leveler_look))
         .shot(
             flyby(&to_thumper)
-                .look(Look::Pan(MIDDLE, THUMPER_LOOK))
+                .look(Look::Pan(leveler_look, THUMPER_LOOK))
                 .ease(speeds(0.75, 0.6))
-                .secs(5.5),
+                .secs(6.0),
         )
         .title("cogwork.film.t5_thumper", 5.0)
         .menu("cogwork:seismic_thumper", lowered_block(THUMPER_AT), 4.5)

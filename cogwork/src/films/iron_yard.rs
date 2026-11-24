@@ -3,7 +3,7 @@
 //! awning runs one continuous driven ore line: a shaker screen with a void tube for waste, linked
 //! by stone tubes into a washer, a grinding mill, and a furnace blown by a driven bellows.
 
-use showcase_api::{Film, Look, Set, dolly};
+use showcase_api::{Film, Look, Set, dolly, flyby};
 use weft_sdk::{Dir, Shape};
 
 use super::camera::speeds;
@@ -205,16 +205,21 @@ pub fn shots(film: Film) -> Film {
     let washer_look = lowered(above(WASHER_AT, 0.2));
     let mill_look = lowered(above(MILL_AT, 0.2));
 
-    let at_engines = lowered([-9.2, f + 2.8, 39.2]);
-    let at_quarry = lowered([-3.5, f + 2.8, 39.2]);
-    let past_quarry = lowered([0.5, f + 2.0, 38.2]);
+    let at_engines = lowered([-9.2, f + 3.0, 38.2]);
+    let over_step = [
+        timber_camp::END_EYE,
+        lowered([-13.0, f + 5.6, 38.2]),
+        at_engines,
+    ];
+    let at_quarry = lowered([-3.5, f + 2.8, 38.4]);
+    let past_quarry = lowered([0.5, f + 2.0, 38.0]);
     let at_shaker = lowered([3.5, f + 1.7, 37.8]);
     let at_washer = lowered([6.5, f + 1.7, 37.8]);
     let at_mill = lowered([9.8, f + 1.7, 37.8]);
 
     film.title("cogwork.film.t1_iron", 5.5)
         .shot(
-            dolly(timber_camp::END_EYE, at_engines)
+            flyby(&over_step)
                 .look(Look::Pan(timber_camp::END_LOOK, quarry_look))
                 .ease(speeds(1.2, 0.9))
                 .secs(5.5),

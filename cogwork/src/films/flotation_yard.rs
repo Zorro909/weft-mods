@@ -39,7 +39,7 @@ const CREOSOTE_TANK: Area = Area {
     hi: Pos::new(59, FLOOR + 1, 33),
 };
 const FLOTATION_AT: Pos = Pos::new(61, FLOOR, 34);
-const FLOTATION_CHEST: Pos = Pos::new(60, FLOOR, 35);
+const FLOTATION_CHEST: Pos = Pos::new(59, FLOOR, 35);
 const FLOTATION_ENGINES: [(Pos, Dir); 2] = [
     (Pos::new(60, FLOOR, 32), Dir::Down),
     (Pos::new(61, FLOOR, 32), Dir::Down),
@@ -99,7 +99,7 @@ fn flotation_loop(set: &Set) {
         FLOTATION_AT,
         FLOTATION_CELL.with(&[("facing", "south")]).into(),
     );
-    tubes(set, Pos::new(61, FLOOR, 35), Pos::new(61, FLOOR, 35));
+    tubes(set, Pos::new(60, FLOOR, 35), Pos::new(61, FLOOR, 35));
     set.place(FLOTATION_CHEST, BlockState::of(&CHEST));
 
     // Power comes under the gravel from two ember engines tucked behind the cell.

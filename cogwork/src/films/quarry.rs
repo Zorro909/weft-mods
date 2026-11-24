@@ -164,8 +164,9 @@ pub fn raise_frame(set: &Set) {
 pub fn sorting_and_digging_shots(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
     let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
-    // One continuous curve north-east off the elevated Pad P terrace down to the sorting tube.
-    let to_sorter = [plastics_bay::END_EYE, lowered([25.4, 5.2, 8.2]), at_sorter];
+    // One continuous curve north-east off the elevated Pad P terrace, staying west of the look line
+    // so the camera sweeps smoothly across the courtyard onto the sorting tube.
+    let to_sorter = [plastics_bay::END_EYE, lowered([23.0, 4.8, 7.6]), at_sorter];
     let by_magazine = [
         leave_sorter,
         lowered([31.2, 2.8, 5.4]),

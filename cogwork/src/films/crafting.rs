@@ -49,7 +49,7 @@ const MIDDLE: u32 = 4;
 
 /// Camera look targets and handoff point leaving the second bench toward Pad P.
 pub const BENCH_LOOK: [f64; 3] = lowered(above(STONE_COGS, 0.1));
-const SHAFT_LOOK: [f64; 3] = lowered([ENGINE_SHAFT_X as f64 + 1.5, 2.2, SHAFT_Z as f64 - 0.5]);
+const SHAFT_LOOK: [f64; 3] = lowered([ENGINE_SHAFT_X as f64 - 0.5, 2.2, 1.0]);
 const SHAFT_FOOT_LOOK: [f64; 3] = lowered(above(Pos::new(ENGINE_SHAFT_X + 2, 1, ROW_Z), 0.2));
 const BENCH_OUT: f64 = 3.6;
 const BENCH_FROM: f64 = -130.0;
@@ -110,7 +110,7 @@ pub fn shots(film: Film) -> Film {
             dolly(from_engine, under_shaft)
                 .look(Look::Pan(engine_bay::END_LOOK, SHAFT_LOOK))
                 .ease(speeds(0.15, 0.5))
-                .secs(4.0),
+                .secs(4.8),
         )
         .shot(
             dolly(under_shaft, over_bench)

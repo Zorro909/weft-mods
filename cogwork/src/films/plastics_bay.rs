@@ -54,8 +54,8 @@ const ENGINES: [(Pos, Dir); 3] = [
 
 /// Where S8 hands the camera off to S9, gliding smoothly north-east over the terrace edge toward
 /// the sorting tube on one heading.
-pub const END_EYE: [f64; 3] = lowered([24.2, FLOOR as f64 + 1.8, 10.6]);
-pub const END_LOOK: [f64; 3] = lowered(above(LEACH_VAT_AT, 0.2));
+pub const END_EYE: [f64; 3] = lowered([24.0, FLOOR as f64 + 1.8, 10.6]);
+pub const END_LOOK: [f64; 3] = lowered([27.2, FLOOR as f64 + 0.5, 11.2]);
 
 pub fn build(set: &Set) {
     // Power backbone behind the row, climbing cleanly from the hall's torque shaft up to Pad P.
@@ -187,11 +187,12 @@ pub fn shots(film: Film) -> Film {
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
+    let leach_look = lowered(above(LEACH_VAT_AT, 0.2));
 
     let exit = [
         crafting::end_eye(),
-        lowered([16.3, 2.3, 6.8]),
-        lowered([16.2, f + 1.5, 10.8]),
+        lowered([16.2, 4.4, 6.2]),
+        lowered([16.2, f + 1.6, 10.8]),
     ];
     let at_poly = lowered([17.6, f + 1.5, 10.8]);
     let at_press = lowered([20.0, f + 1.5, 10.8]);
@@ -222,7 +223,7 @@ pub fn shots(film: Film) -> Film {
     .menu("cogwork:acid_tank", lowered_block(ACID_TANK_AT), 4.0)
     .shot(
         dolly(at_press, at_acid)
-            .look(Look::Pan(acid_look, END_LOOK))
+            .look(Look::Pan(acid_look, leach_look))
             .ease(speeds(0.6, 0.6))
             .secs(5.2),
     )
@@ -230,7 +231,7 @@ pub fn shots(film: Film) -> Film {
     .menu("cogwork:leaching_vat", lowered_block(LEACH_VAT_AT), 4.0)
     .shot(
         dolly(at_acid, END_EYE)
-            .look_at(END_LOOK)
+            .look(Look::Pan(leach_look, END_LOOK))
             .ease(speeds(0.6, 0.9))
             .secs(5.0),
     )
