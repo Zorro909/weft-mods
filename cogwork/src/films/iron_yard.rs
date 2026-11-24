@@ -98,11 +98,12 @@ fn iron_quarry(set: &Set) {
     world.fill(Shape::cuboid(lo, hi), BlockState::AIR.id());
 }
 
-/// Light open-fronted timber canopy over the processing line, posts clear of every machine front.
+/// Open-fronted timber awning over the processing line, with posts set behind the machines so
+/// nothing ever crosses in front of them.
 fn shed(set: &Set) {
     let roof_y = FLOOR + 4;
     for x in [1, 14] {
-        for z in [30, 36] {
+        for z in [30, 33] {
             set.fill(
                 area(Pos::new(x, FLOOR, z), Pos::new(x, roof_y - 1, z)),
                 BlockState::of(&OAK_LOG),
@@ -110,7 +111,7 @@ fn shed(set: &Set) {
         }
     }
     set.fill(
-        area(Pos::new(1, roof_y, 30), Pos::new(14, roof_y, 36)),
+        area(Pos::new(1, roof_y, 30), Pos::new(14, roof_y, 35)),
         OAK_SLAB.with(&[("type", "bottom")]).into(),
     );
 }
@@ -226,7 +227,7 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.9, 0.8))
                 .secs(5.0),
         )
-        .title("cogwork.film.t1_sift", 5.5)
+        .title("cogwork.film.t1_sift", 4.5)
         .menu("cogwork:shaker_screen", lowered_block(SHAKER_AT), 3.5)
         .shot(
             dolly(past_quarry, at_shaker)

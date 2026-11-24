@@ -185,12 +185,12 @@ pub fn shots(film: Film) -> Film {
 
     let exit = [
         crafting::end_eye(),
-        lowered([15.4, f + 1.4, 5.8]),
-        lowered([15.0, f + 2.0, 9.8]),
+        lowered([16.4, f + 1.5, 5.4]),
+        lowered([16.0, f + 2.0, 10.2]),
     ];
-    let at_poly = lowered([17.0, f + 2.0, 9.9]);
-    let at_press = lowered([19.8, f + 2.0, 9.9]);
-    let at_acid = lowered([22.5, f + 2.0, 9.9]);
+    let at_poly = lowered([17.5, f + 2.0, 10.2]);
+    let at_press = lowered([20.0, f + 2.0, 10.2]);
+    let at_acid = lowered([22.8, f + 2.0, 10.2]);
 
     film.shot(
         flyby(&exit)
@@ -213,7 +213,7 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.6, 0.6))
             .secs(5.2),
     )
-    .title("cogwork.film.t5_acid", 5.0)
+    .title("cogwork.film.t5_acid", 4.5)
     .menu("cogwork:acid_tank", lowered_block(ACID_TANK_AT), 4.0)
     .shot(
         dolly(at_press, at_acid)

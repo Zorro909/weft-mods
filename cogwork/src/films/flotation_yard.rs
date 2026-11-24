@@ -46,8 +46,8 @@ const CREOSOTE_TANK: Area = Area {
 const CLARIFIERS: [Pos; 2] = [Pos::new(66, FLOOR, 31), Pos::new(68, FLOOR, 31)];
 const CLAY_CHESTS: [Pos; 2] = [Pos::new(67, FLOOR, 31), Pos::new(69, FLOOR, 31)];
 const WATER_TANK: Area = Area {
-    lo: Pos::new(69, FLOOR, 33),
-    hi: Pos::new(69, FLOOR + 1, 33),
+    lo: Pos::new(69, FLOOR, 35),
+    hi: Pos::new(69, FLOOR + 1, 35),
 };
 
 /// Where S3's last shot hands the camera off to S4.
@@ -155,6 +155,8 @@ fn clear_water_line() -> Vec<Pos> {
         Pos::new(68, FLOOR, 33),
         Pos::new(66, FLOOR, 34),
         Pos::new(66, FLOOR, 35),
+        Pos::new(67, FLOOR, 35),
+        Pos::new(68, FLOOR, 35),
         Pos::new(65, FLOOR, 35),
     ]
 }
@@ -206,11 +208,11 @@ pub fn shots(film: Film) -> Film {
     let at_float = lowered([65.5, f + 3.4, 39.8]);
     let round_clarifier = [
         at_float,
-        lowered([70.0, f + 3.6, 37.8]),
-        lowered([72.0, f + 4.0, 33.5]),
+        lowered([69.8, f + 3.8, 38.2]),
+        lowered([72.2, f + 4.2, 34.5]),
     ];
 
-    film.title("cogwork.film.t3_core", 4.5)
+    film.title("cogwork.film.t3_core", 4.0)
         .shot(
             dolly(START_EYE, at_core)
                 .look(Look::Pan(foundry::END_LOOK, core_look))
@@ -241,7 +243,7 @@ pub fn shots(film: Film) -> Film {
         )
         .menu("cogwork:clarifier", lowered_block(CLARIFIERS[1]), 3.5)
         .shot(
-            dolly(round_clarifier[2], lowered([72.5, f + 4.2, 31.0]))
+            dolly(round_clarifier[2], lowered([72.8, f + 4.4, 31.8]))
                 .look_at(clarifier_look)
                 .ease(speeds(0.6, 0.3))
                 .secs(4.5),

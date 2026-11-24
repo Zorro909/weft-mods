@@ -122,13 +122,14 @@ fn blast_furnace(set: &Set) {
     set.place(BLAST_CHEST, BlockState::of(&CHEST));
 }
 
-/// Forge anvil loaded with a hot bloom, flanked by steel blocks.
+/// Forge anvil loaded with a hot bloom, flanked by steel blocks kept low on the west so the
+/// blast furnace behind stays clear.
 fn anvil_area(set: &Set) {
     set.place(ANVIL_AT, FORGE_ANVIL.with(&[("facing", "south")]).into());
     for at in [
         Pos::new(24, FLOOR, 35),
-        Pos::new(24, FLOOR + 1, 35),
         Pos::new(28, FLOOR, 35),
+        Pos::new(28, FLOOR + 1, 35),
     ] {
         set.place(at, BlockState::of(&STEEL_BLOCK));
     }
@@ -206,8 +207,12 @@ pub fn start(set: &Set) {
         .chain(boiler_water_line())
         .chain(BOILERS);
     prefill(set, water, "base:water", [1, 1]);
-    let steam = steam_line().into_iter().chain([STEAM_ENGINE_AT, HAMMER_AT]);
-    prefill(set, steam, "cogwork:steam", [1, 1]);
+    prefill(
+        set,
+        [STEAM_ENGINE_AT, HAMMER_AT].into_iter(),
+        "cogwork:steam",
+        [1, 1],
+    );
     stock_group(set, HAMMER_AT, "input", &[("cogwork:steel_bloom", 64); 3]);
 }
 
@@ -243,7 +248,7 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.8, 0.8))
                 .secs(5.0),
         )
-        .title("cogwork.film.t2_blast", 5.0)
+        .title("cogwork.film.t2_blast", 4.0)
         .menu("cogwork:blast_furnace", lowered_block(BLAST_DOOR), 3.5)
         .shot(
             dolly(at_blast, at_anvil)
@@ -251,7 +256,7 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.8, 0.8))
                 .secs(4.5),
         )
-        .title("cogwork.film.t2_anvil", 4.5)
+        .title("cogwork.film.t2_anvil", 4.0)
         .shot(
             dolly(at_anvil, at_firebox)
                 .look(Look::Pan(anvil_look, boiler_look))

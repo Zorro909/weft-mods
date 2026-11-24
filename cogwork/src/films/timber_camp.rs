@@ -182,8 +182,8 @@ pub fn shots(film: Film) -> Film {
     let wheel_look = lowered(above(WHEEL_AT, 0.3));
 
     let entry = [
-        lowered([-44.0, f + 8.5, 45.0]),
-        lowered([-39.5, f + 4.8, 41.8]),
+        lowered([-37.5, f + 9.0, 42.0]),
+        lowered([-36.5, f + 5.5, 40.8]),
         lowered([-35.5, f + 2.5, 39.5]),
     ];
     let past_hand = lowered([-30.5, f + 2.2, 39.0]);

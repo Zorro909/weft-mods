@@ -5,7 +5,7 @@
 //! the knoll, the powered seismic thumper stands ready beside its own marked area, and its screen
 //! opens before the camera continues to the composite-frame Gantry Excavator.
 
-use showcase_api::{Film, Look, Set, dolly, flyby, orbit};
+use showcase_api::{Film, Look, Set, dolly, orbit};
 use weft_sdk::{Dir, Item, ItemStack, Output};
 
 use super::camera::{between, on_orbit, speeds};
@@ -146,12 +146,10 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.75, 0.75))
             .secs(secs)
     };
-    let to_thumper = [
-        on_knoll(KNOLL_ARC[1]),
-        [53.5, 1.0, 6.2],
-        lowered([54.5, 6.0, 6.5]),
-        END_EYE,
-    ];
+    // Sweep the look around the south-east on the way down so it never crosses the camera.
+    let mid_eye = [53.2, 1.8, 4.2];
+    let mid_look = [52.5, -2.5, 10.5];
+    let over_thumper = lowered([54.8, 6.4, 4.8]);
 
     film.fade_in(1.5)
         .shot(
@@ -165,7 +163,7 @@ pub fn shots(film: Film) -> Film {
         .shot(round(KNOLL_ARC[0], 218.0, 3.0))
         .shot(round(218.0, 231.0, 3.0))
         .cue("leveler")
-        .title("cogwork.film.wrench", 4.5)
+        .title("cogwork.film.wrench", 4.0)
         .shot(round(231.0, 244.0, 3.0))
         .cue("wrench")
         .shot(round(244.0, 250.0, 1.5))
@@ -173,18 +171,24 @@ pub fn shots(film: Film) -> Film {
         .shot(round(250.0, 272.0, 5.5))
         .menu("cogwork:leveler", LEVELER_AT, 4.0)
         .shot(round(272.0, KNOLL_ARC[1], 6.0))
+        .shot(
+            dolly(on_knoll(KNOLL_ARC[1]), mid_eye)
+                .look(Look::Pan(MIDDLE, mid_look))
+                .ease(speeds(0.75, 0.85))
+                .secs(3.5),
+        )
         .title("cogwork.film.t5_thumper", 5.5)
         .shot(
-            flyby(&to_thumper[..3])
-                .look(Look::Pan(MIDDLE, THUMPER_LOOK))
-                .ease(speeds(0.75, 0.8))
-                .secs(5.0),
+            dolly(mid_eye, over_thumper)
+                .look(Look::Pan(mid_look, THUMPER_LOOK))
+                .ease(speeds(0.85, 0.7))
+                .secs(3.5),
         )
         .menu("cogwork:seismic_thumper", lowered_block(THUMPER_AT), 4.5)
         .shot(
-            dolly(to_thumper[2], END_EYE)
+            dolly(over_thumper, END_EYE)
                 .look_at(THUMPER_LOOK)
-                .ease(speeds(0.8, 1.0))
+                .ease(speeds(0.7, 1.0))
                 .secs(5.0),
         )
 }

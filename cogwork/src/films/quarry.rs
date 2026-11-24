@@ -164,10 +164,13 @@ pub fn raise_frame(set: &Set) {
 pub fn sorting_and_digging_shots(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
     let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
+    // Sweep the look around the east side on the way north so it never crosses the camera.
+    let turn_east_eye = lowered([24.5, 3.6, 7.4]);
+    let turn_east_look = lowered([31.5, 2.0, 8.0]);
     let by_magazine = [
         leave_sorter,
-        lowered([31.5, 2.2, 6.8]),
-        lowered([35.0, 2.6, 6.2]),
+        lowered([31.2, 3.0, 5.5]),
+        lowered([35.0, 3.2, 5.4]),
     ];
     let over_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[0], PIT_ARC[0]);
     let west_of_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[1], PIT_ARC[1]);
@@ -183,10 +186,16 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
 
     film.cue("noon_3")
         .shot(
-            dolly(plastics_bay::END_EYE, at_sorter)
-                .look(Look::Pan(plastics_bay::END_LOOK, SORTER_LOOK))
-                .ease(speeds(0.9, 0.5))
-                .secs(4.5),
+            dolly(plastics_bay::END_EYE, turn_east_eye)
+                .look(Look::Pan(plastics_bay::END_LOOK, turn_east_look))
+                .ease(speeds(0.9, 0.8))
+                .secs(3.0),
+        )
+        .shot(
+            dolly(turn_east_eye, at_sorter)
+                .look(Look::Pan(turn_east_look, SORTER_LOOK))
+                .ease(speeds(0.8, 0.5))
+                .secs(3.0),
         )
         .title("cogwork.film.sorting", 4.5)
         .shot(round(SORTER_ARC[0], 110.0, speeds(0.5, 0.15), 2.5))

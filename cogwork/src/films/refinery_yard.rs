@@ -77,15 +77,15 @@ const LUBE_TANK: Area = Area {
     hi: Pos::new(-8, 2, -7),
 };
 const GAS_TANK: Area = Area {
-    lo: Pos::new(-6, 4, -2),
-    hi: Pos::new(-6, 5, -2),
+    lo: Pos::new(-7, 4, -4),
+    hi: Pos::new(-7, 5, -4),
 };
 
 /// Refinery orbit geometry and handoff point heading east into the hall.
 pub const ORBIT_CENTER: [f64; 3] = lowered([-11.0, 2.5, -5.0]);
-const ORBIT_OUT: f64 = 7.8;
-const ORBIT_ARC: [f64; 2] = [135.0, 50.0];
-const ORBIT_UP: [f64; 2] = [1.3, 1.8];
+const ORBIT_OUT: f64 = 7.4;
+const ORBIT_ARC: [f64; 2] = [135.0, 52.0];
+const ORBIT_UP: [f64; 2] = [2.2, 1.3];
 
 pub fn end_eye() -> [f64; 3] {
     on_orbit(ORBIT_CENTER, ORBIT_OUT, ORBIT_UP[1], ORBIT_ARC[1])
@@ -254,18 +254,18 @@ fn diesel_line() -> Vec<Pos> {
 }
 
 fn gas_line() -> Vec<Pos> {
+    // Runs overhead at y = 6 so the camera entering the hall at y = 3..4 passes well underneath.
     let mut blocks = vec![
         Pos::new(-9, 4, -4),
         Pos::new(-8, 4, -4),
-        Pos::new(-7, 4, -4),
-        Pos::new(-6, 4, -4),
-        Pos::new(-6, 4, -3),
+        Pos::new(-7, 6, -4),
+        Pos::new(-6, 6, -4),
     ];
-    blocks.extend((-1..=8).map(|z| Pos::new(-6, 4, z)));
-    blocks.extend((-5..=12).map(|x| Pos::new(x, 4, 8)));
-    blocks.extend((9..=14).map(|z| Pos::new(12, 4, z)));
+    blocks.extend((-3..=8).map(|z| Pos::new(-6, 6, z)));
+    blocks.extend((-5..=12).map(|x| Pos::new(x, 6, 8)));
+    blocks.extend((9..=14).map(|z| Pos::new(12, 6, z)));
     let pad_top_tank = PAD_P_TOP + 2;
-    blocks.extend((pad_top_tank + 1..=3).rev().map(|y| Pos::new(12, y, 14)));
+    blocks.extend((pad_top_tank + 1..=5).rev().map(|y| Pos::new(12, y, 14)));
     blocks
 }
 
@@ -336,8 +336,8 @@ pub fn shots(film: Film) -> Film {
     let meet_orbit = on_orbit(ORBIT_CENTER, ORBIT_OUT, ORBIT_UP[0], ORBIT_ARC[0]);
     let approach = [
         from_seep,
-        lowered([-24.0, 5.2, -3.0]),
-        lowered([-19.5, 4.2, -0.5]),
+        lowered([-24.0, 7.2, -3.5]),
+        lowered([-19.5, 6.2, -1.0]),
         meet_orbit,
     ];
     let refinery_look = lowered(above(REFINERY_AT, 1.6));
@@ -354,7 +354,7 @@ pub fn shots(film: Film) -> Film {
         .shot(
             orbit(ORBIT_CENTER, ORBIT_OUT)
                 .arc(ORBIT_ARC[0], 92.0)
-                .height(ORBIT_UP[0], 1.55)
+                .height(ORBIT_UP[0], 1.75)
                 .ease(speeds(0.9, 0.8))
                 .secs(7.5),
         )
@@ -362,7 +362,7 @@ pub fn shots(film: Film) -> Film {
         .shot(
             orbit(ORBIT_CENTER, ORBIT_OUT)
                 .arc(92.0, ORBIT_ARC[1])
-                .height(1.55, ORBIT_UP[1])
+                .height(1.75, ORBIT_UP[1])
                 .ease(speeds(0.8, 0.9))
                 .secs(7.0),
         )

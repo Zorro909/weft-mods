@@ -16,7 +16,7 @@ pub const SITE: Pos = Pos::new(16, 76, -76);
 /// `works`; the jetty and the knoll stand on the site's own count.
 pub const WORKS_DOWN: i32 = 8;
 /// Surface height of the southern valley pads (S1 to S4), in blocks from the works.
-pub const VALLEY_TOP: i32 = 2;
+pub const VALLEY_TOP: i32 = 7;
 /// Surface height of the plastics and acid annex (Pad P), in blocks from the works.
 pub const PAD_P_TOP: i32 = 0;
 
