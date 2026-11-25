@@ -102,36 +102,36 @@ fn flotation_loop(set: &Set) {
     tubes(set, Pos::new(59, FLOOR, 31), Pos::new(59, FLOOR, 32));
     set.place(FLOTATION_CHEST, BlockState::of(&CHEST));
 
-    // Power runs horizontally at FLOOR - 2 under solid gravel and rises to FLOOR - 1 only under
-    // the two engines and the flotation cell (zero exposed gravel slots under creosote tubes).
+    // Power runs horizontally at FLOOR - 3 so solid dirt/stone supports every falling `base:gravel`
+    // cell at FLOOR - 1, rising to FLOOR - 1 only beneath the two engines and flotation cell.
     shafts(
         set,
-        Pos::new(59, FLOOR - 2, 28),
+        Pos::new(59, FLOOR - 3, 28),
         Pos::new(59, FLOOR - 1, 28),
     );
     shafts(
         set,
-        Pos::new(59, FLOOR - 2, 29),
+        Pos::new(59, FLOOR - 3, 29),
         Pos::new(59, FLOOR - 1, 29),
     );
     shafts(
         set,
-        Pos::new(59, FLOOR - 2, 28),
-        Pos::new(59, FLOOR - 2, 29),
+        Pos::new(59, FLOOR - 3, 28),
+        Pos::new(59, FLOOR - 3, 29),
     );
     shafts(
         set,
-        Pos::new(59, FLOOR - 2, 29),
-        Pos::new(60, FLOOR - 2, 29),
+        Pos::new(59, FLOOR - 3, 29),
+        Pos::new(60, FLOOR - 3, 29),
     );
     shafts(
         set,
-        Pos::new(60, FLOOR - 2, 29),
-        Pos::new(60, FLOOR - 2, 32),
+        Pos::new(60, FLOOR - 3, 29),
+        Pos::new(60, FLOOR - 3, 32),
     );
     shafts(
         set,
-        Pos::new(60, FLOOR - 2, 32),
+        Pos::new(60, FLOOR - 3, 32),
         Pos::new(60, FLOOR - 1, 32),
     );
     for (at, toward) in FLOTATION_ENGINES {
