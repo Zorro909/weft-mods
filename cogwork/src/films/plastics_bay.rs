@@ -72,9 +72,9 @@ const STEAM_ENGINES: [Pos; 3] = [
     Pos::new(24, FLOOR, 16),
 ];
 
-/// Where S8 hands the camera off to S9, high over Pad P's gravel while holding on the leaching
-/// vat.
-pub const END_EYE: [f64; 3] = lowered([26.2, FLOOR as f64 + 5.2, 11.4]);
+/// Where S8 hands the camera off to S9, high over Pad P's gravel (4+ blocks above the adjacent
+/// grass terraces) while holding on the leaching vat.
+pub const END_EYE: [f64; 3] = lowered([25.5, FLOOR as f64 + 8.5, 11.8]);
 pub const END_LOOK: [f64; 3] = lowered(above(LEACH_VAT_AT, 0.2));
 
 pub fn build(set: &Set) {
@@ -232,38 +232,41 @@ pub fn start(set: &Set) {
 /// unobstructed machines with every title clear of its screen.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let east_look = lowered([27.5, 5.0, 12.0]);
+    let east_look = lowered([34.0, 4.5, 7.5]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
 
-    let east_door = lowered([25.2, 3.4, 3.6]);
+    // Climb inside the hall under the y = 6 east beam and exit straight east through the open
+    // gable well north of the SE post (z = 7) and cut bank (z = 9), then climb high over Pad 1
+    // gravel before crossing south above the roof eave and grass bank onto Pad P.
+    let east_door = lowered([25.6, 4.6, 1.8]);
     let at_poly_start = lowered([15.6, f + 2.2, 11.2]);
     let over_wall = [
         east_door,
-        lowered([27.5, 10.2, 7.2]),
-        lowered([22.5, 10.6, 11.2]),
+        lowered([27.2, 11.8, 5.2]),
+        lowered([22.2, 12.0, 11.4]),
         at_poly_start,
     ];
     let to_poly = lowered([16.4, f + 2.0, 11.2]);
     let at_poly = lowered([18.0, f + 2.0, 11.2]);
-    let to_acid = lowered([20.4, f + 2.0, 11.2]);
-    let at_acid = lowered([22.0, f + 2.0, 11.2]);
-    let to_leach = lowered([24.2, f + 2.2, 11.2]);
-    let at_leach = lowered([25.2, f + 2.4, 11.2]);
+    let to_acid = lowered([20.4, f + 2.4, 11.5]);
+    let at_acid = lowered([22.0, f + 2.5, 11.5]);
+    let to_leach = lowered([24.2, f + 2.6, 11.6]);
+    let at_leach = lowered([25.0, f + 2.8, 11.6]);
 
     film.cue("start_plastics")
         .shot(
             dolly(crafting::end_eye(), east_door)
                 .look(Look::Pan(crafting::BENCH_LOOK, east_look))
                 .ease(speeds(0.25, 1.3))
-                .secs(4.5),
+                .secs(4.8),
         )
         .shot(
             flyby(&over_wall)
                 .look(Look::Pan(east_look, poly_look))
                 .ease(speeds(1.3, 0.8))
-                .secs(6.4),
+                .secs(7.0),
         )
         .title("cogwork.film.t5_plastics", 3.0)
         .shot(

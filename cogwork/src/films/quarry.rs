@@ -201,12 +201,12 @@ pub fn raise_frame(set: &Set) {
 pub fn sorting_and_digging_shots(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
     let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
-    // Cross north well east of the hall's brick gable (x = 22) and high above the grass bank,
-    // looking north-east over the open quarry yard and lake, then descend cleanly onto the sorting
-    // tube from the south-east.
-    let mid_north = lowered([28.8, 16.5, 8.5]);
-    let over_yard = lowered([29.2, 14.0, 5.2]);
-    let east_sky = lowered([34.0, 13.5, 8.5]);
+    // Cross north well east of the hall's brick gable (x = 22) and 4+ blocks above every grass
+    // terrace, looking north-east over the open quarry yard and lake, then descend cleanly onto
+    // the sorting tube from the south-east.
+    let mid_north = lowered([28.5, 17.5, 8.5]);
+    let over_yard = lowered([29.2, 14.5, 5.2]);
+    let east_sky = lowered([34.5, 14.5, 8.5]);
     let far_lake = lowered([32.0, 6.5, -2.5]);
     let by_magazine = [
         leave_sorter,
@@ -285,21 +285,21 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
         .shot(
             flyby(&into_center)
                 .look(Look::Pan(PIT_LOOK, DOWN_PIT))
-                .ease(speeds(1.4, 4.0))
+                .ease(speeds(1.4, 6.0))
                 .secs(3.5),
         )
-        .title("cogwork.film.deep", 5.0)
+        .title("cogwork.film.deep", 4.2)
         .shot(
             dolly(INTO_PIT, at_drill)
                 .look_at(DRILL_LOOK)
-                .ease(speeds(4.0, 0.3))
-                .secs(6.5),
+                .ease(speeds(6.0, 0.4))
+                .secs(4.6),
         )
         .menu("cogwork:excavator", lowered_block(DIGGER), 4.0)
         .shot(
             dolly(at_drill, end_drill)
                 .look_at(DRILL_LOOK)
-                .ease(speeds(0.3, 0.2))
+                .ease(speeds(0.4, 0.2))
                 .secs(4.2),
         )
         .fade_out(0.5)
