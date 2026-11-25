@@ -150,6 +150,7 @@ fn start(set: &Set) {
     iron_yard::start(&works);
     foundry::start(&works);
     flotation_yard::start(&works);
+    seep::prefill_line(&works);
     engine_bay::stock_oil(&works);
     crafting::start(&works);
     quarry::start(&works);

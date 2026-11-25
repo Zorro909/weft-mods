@@ -165,6 +165,27 @@ pub fn fell_near(set: &Set, x: i32, z: i32, within: i32) {
     }
 }
 
+/// Clears all tree blocks (standing trunks, fallen logs, and leaf bushes) within `within` blocks
+/// of `(x, z)` above the ground.
+pub fn clear_trees_near(set: &Set, x: i32, z: i32, within: i32) {
+    let world = set.world();
+    for near_z in z - within..=z + within {
+        for near_x in x - within..=x + within {
+            let ground = ground_top(set, near_x, near_z);
+            for y in ground + 1..=ground + TREE_HEIGHT {
+                let pos = Pos::new(near_x, y, near_z);
+                if is_tree(world.block_typed(set.at(pos))) {
+                    set.place(pos, BlockState::AIR);
+                }
+            }
+            let foot = Pos::new(near_x, ground, near_z);
+            if world.block_typed(set.at(foot)).is(&DIRT) {
+                set.place(foot, BlockState::of(&GRASS));
+            }
+        }
+    }
+}
+
 /// Fells the tree whose trunk stands in the column, if one does; grass grows where it stood.
 fn fell_if_trunk(set: &Set, x: i32, z: i32) {
     let ground = ground_top(set, x, z);

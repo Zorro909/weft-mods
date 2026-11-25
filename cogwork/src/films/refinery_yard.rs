@@ -8,8 +8,10 @@
 use showcase_api::{Film, Look, Set, flyby, orbit};
 
 use super::camera::{on_orbit, speeds};
+use super::ground::clear_trees_near;
 use super::parts::{
-    CHEST, area, fuel_item, liquid_tubes, prefill, pressure_tubes, sealed_tubes, tubes,
+    CHEST, STONE_BRICKS, area, fuel_item, liquid_tubes, prefill, pressure_tubes, sealed_tubes,
+    tubes,
 };
 use super::seep;
 use super::site::{PAD_P_TOP, above, lowered, lowered_block};
@@ -35,12 +37,13 @@ const LUBE_TAP: Pos = Pos::new(-10, 2, -6);
 const DIESEL_TAP: Pos = Pos::new(-10, 3, -5);
 const GAS_TAP: Pos = Pos::new(-10, 4, -4);
 
-/// Crude oil buffer tank where the seep line arrives, and the sulfur chest out the front.
+/// Crude oil buffer tank where the seep line arrives, and the sulfur chest covering the buried
+/// crude tube cell at (-13, -1, -4) so no gravel trench shows.
 pub const CRUDE_TANK: Area = Area {
     lo: Pos::new(-16, 0, -5),
     hi: Pos::new(-16, 1, -5),
 };
-const SULFUR_CHEST: Pos = Pos::new(-13, 0, -3);
+const SULFUR_CHEST: Pos = Pos::new(-13, 0, -4);
 
 /// Steam supply: three firebox+boiler pairs and their water tank.
 const STEAM_WATER: Area = Area {
@@ -84,15 +87,16 @@ const GAS_TANK: Area = Area {
 
 /// Refinery orbit geometry and handoff point heading east into the hall.
 pub const ORBIT_CENTER: [f64; 3] = lowered([-11.0, 2.5, -5.0]);
-const ORBIT_OUT: f64 = 7.4;
-const ORBIT_ARC: [f64; 2] = [135.0, 52.0];
-const ORBIT_UP: [f64; 2] = [2.2, 1.3];
+const ORBIT_OUT: f64 = 8.2;
+const ORBIT_ARC: [f64; 2] = [135.0, 46.0];
+const ORBIT_UP: [f64; 2] = [2.2, 1.4];
 
 pub fn end_eye() -> [f64; 3] {
     on_orbit(ORBIT_CENTER, ORBIT_OUT, ORBIT_UP[1], ORBIT_ARC[1])
 }
 
 pub fn build(set: &Set) {
+    clear_trees_near(set, -24, -4, 8);
     asphalt_road(set);
     column(set);
     crude_and_sulfur(set);
@@ -136,11 +140,12 @@ fn column(set: &Set) {
     }
 }
 
-/// Crude oil tank feeding the controller from underneath, and sulfur output chest out the front.
+/// Crude oil tank feeding the controller from underneath, and sulfur output chest covering
+/// (-13, -1, -4) so every buried crude tube sits under a block.
 fn crude_and_sulfur(set: &Set) {
     set.fill(CRUDE_TANK, BlockState::of(&LIQUID_TANK));
     liquid_tubes(set, &crude_line());
-    tubes(set, Pos::new(-11, 0, -3), Pos::new(-12, 0, -3));
+    tubes(set, Pos::new(-11, 0, -3), Pos::new(-13, 0, -3));
     set.place(SULFUR_CHEST, BlockState::of(&CHEST));
 }
 
@@ -231,6 +236,11 @@ fn product_lines(set: &Set) {
     liquid_tubes(set, &diesel_line());
 
     set.fill(GAS_TANK, BlockState::of(&LIQUID_TANK));
+    // Solid stone-brick support column under the elevated gas tank so it never floats.
+    set.fill(
+        area(Pos::new(-7, 0, -4), Pos::new(-7, 3, -4)),
+        BlockState::of(&STONE_BRICKS),
+    );
     liquid_tubes(set, &gas_line());
 }
 
@@ -238,8 +248,9 @@ fn tar_line() -> Vec<Pos> {
     vec![Pos::new(-9, 1, -4), Pos::new(-9, 1, -3)]
 }
 
-/// Lubricant leaves the tank north to z = -10, bridges over the jetty water line at x = 12, then
-/// runs east around DIGGER's frame and enters its top at (33, 1, 2).
+/// Lubricant leaves the tank north to z = -10, bridges over the jetty water line at x = 12
+/// (ending low runs at x = 10 and x = 14 and crossing at y = 3 so water and lubricant never
+/// touch), then runs east around DIGGER's frame and enters its top at (33, 1, 2).
 pub fn lubricant_line() -> Vec<Pos> {
     let mut blocks = vec![
         Pos::new(-9, 2, -6),
@@ -248,16 +259,19 @@ pub fn lubricant_line() -> Vec<Pos> {
         Pos::new(-8, 0, -9),
         Pos::new(-8, 0, -10),
     ];
-    blocks.extend((-7..=11).map(|x| Pos::new(x, 0, -10)));
-    // Bridge two blocks over the lake water line at x = 12 so the two liquids never touch.
+    blocks.extend((-7..=10).map(|x| Pos::new(x, 0, -10)));
     blocks.extend([
-        Pos::new(11, 1, -10),
-        Pos::new(11, 2, -10),
-        Pos::new(12, 2, -10),
-        Pos::new(13, 2, -10),
-        Pos::new(13, 1, -10),
+        Pos::new(10, 1, -10),
+        Pos::new(10, 2, -10),
+        Pos::new(10, 3, -10),
+        Pos::new(11, 3, -10),
+        Pos::new(12, 3, -10),
+        Pos::new(13, 3, -10),
+        Pos::new(14, 3, -10),
+        Pos::new(14, 2, -10),
+        Pos::new(14, 1, -10),
     ]);
-    blocks.extend((13..=39).map(|x| Pos::new(x, 0, -10)));
+    blocks.extend((14..=39).map(|x| Pos::new(x, 0, -10)));
     blocks.extend((-9..=2).map(|z| Pos::new(39, 0, z)));
     blocks.extend((33..=39).rev().map(|x| Pos::new(x, 1, 2)));
     blocks
@@ -339,15 +353,15 @@ pub fn start(set: &Set) {
         set,
         tar_line().into_iter().chain(TAR_TANK.blocks()),
         "cogwork:tar",
-        [1, 3],
+        [1, 2],
     );
     prefill(
         set,
         lubricant_line().into_iter().chain(LUBE_TANK.blocks()),
         "cogwork:lubricant",
-        [1, 3],
+        [2, 3],
     );
-    prefill(set, diesel_line().into_iter(), "cogwork:diesel", [1, 2]);
+    prefill(set, diesel_line().into_iter(), "cogwork:diesel", [1, 1]);
     prefill(
         set,
         gas_line().into_iter().chain(GAS_TANK.blocks()),
@@ -357,14 +371,15 @@ pub fn start(set: &Set) {
 }
 
 /// Follows the oil line east from the seep to Pad R, then sweeps smoothly round the south of the
-/// refinery column, opening its screen and showing the asphalt road and diesel line into the hall.
+/// refinery column, timing each title clear of the refinery screen and bringing the asphalt road
+/// into view for its title.
 pub fn shots(film: Film) -> Film {
     let from_seep = seep::end_eye();
     let meet_orbit = on_orbit(ORBIT_CENTER, ORBIT_OUT, ORBIT_UP[0], ORBIT_ARC[0]);
     let approach = [
         from_seep,
-        lowered([-24.0, 7.2, -3.5]),
-        lowered([-19.5, 6.2, -1.0]),
+        lowered([-24.0, 8.2, -3.5]),
+        lowered([-19.5, 6.4, -0.5]),
         meet_orbit,
     ];
     let refinery_look = lowered(above(REFINERY_AT, 1.6));
@@ -373,24 +388,31 @@ pub fn shots(film: Film) -> Film {
         .shot(
             flyby(&approach)
                 .look(Look::Pan(seep::SEEP_LOOK, refinery_look))
-                .ease(speeds(1.2, 0.9))
+                .ease(speeds(1.1, 0.9))
                 .secs(7.0),
         )
-        .title("cogwork.film.t4_refinery", 5.5)
-        .menu("cogwork:refinery", lowered_block(REFINERY_AT), 5.0)
+        .title("cogwork.film.t4_refinery", 3.5)
         .shot(
             orbit(ORBIT_CENTER, ORBIT_OUT)
-                .arc(ORBIT_ARC[0], 92.0)
-                .height(ORBIT_UP[0], 1.75)
+                .arc(ORBIT_ARC[0], 112.0)
+                .height(ORBIT_UP[0], 1.95)
                 .ease(speeds(0.9, 0.8))
-                .secs(7.5),
+                .secs(3.8),
         )
-        .title("cogwork.film.t4_asphalt", 5.0)
+        .menu("cogwork:refinery", lowered_block(REFINERY_AT), 4.5)
         .shot(
             orbit(ORBIT_CENTER, ORBIT_OUT)
-                .arc(92.0, ORBIT_ARC[1])
-                .height(1.75, ORBIT_UP[1])
+                .arc(112.0, 84.0)
+                .height(1.95, 1.7)
+                .ease(speeds(0.8, 0.8))
+                .secs(5.0),
+        )
+        .title("cogwork.film.t4_asphalt", 4.5)
+        .shot(
+            orbit(ORBIT_CENTER, ORBIT_OUT)
+                .arc(84.0, ORBIT_ARC[1])
+                .height(1.7, ORBIT_UP[1])
                 .ease(speeds(0.8, 0.9))
-                .secs(7.0),
+                .secs(6.0),
         )
 }

@@ -10,7 +10,7 @@ use weft_sdk::Dir;
 use super::camera::speeds;
 use super::engine_bay::WATER_TANK;
 use super::ground::{over_ground, route};
-use super::parts::{OAK_LOG, OAK_PLANKS, STONE_BRICKS, area, engine, fuel, liquid_tubes, prefill};
+use super::parts::{OAK_LOG, OAK_PLANKS, area, engine, fuel, liquid_tubes, prefill};
 use super::site::{WORKS_DOWN, above, lowered, lowered_block};
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid_tube::LIQUID_TUBE;
@@ -25,8 +25,8 @@ const HEAD_Z: i32 = -25;
 const FOOT_Z: i32 = -15;
 /// The pump, a block in from the head, standing over the gap in the planks.
 pub const PUMP_AT: Pos = Pos::new(MIDDLE_X, DECK + 1, HEAD_Z + 1);
-/// Cuboid loader on a stone post beside the jetty's landward foot (in site coordinates).
-pub const SMALL_LOADER: Pos = Pos::new(MIDDLE_X - 2, DECK + 2, FOOT_Z);
+/// Cuboid loader standing directly on the jetty's landward oak deck (no plinth).
+pub const SMALL_LOADER: Pos = Pos::new(MIDDLE_X - 1, DECK + 1, FOOT_Z);
 /// The sides of the pump its engines stand on; its line leaves it to the south.
 const ENGINE_SIDES: [Dir; 3] = [Dir::West, Dir::East, Dir::North];
 /// Where its piles stand along z, and how far they go down into the lake.
@@ -42,7 +42,7 @@ const TANK_FULL: [u32; 2] = [2, 3];
 /// Look targets and handoff point leaving the jetty toward the oil seep.
 pub const JETTY_PUMP_LOOK: [f64; 3] = above(PUMP_AT, 0.0);
 pub const SMALL_LOADER_LOOK: [f64; 3] = above(SMALL_LOADER, 0.0);
-pub const PAST_JETTY: [f64; 3] = [-7.0, -5.5, -13.5];
+pub const PAST_JETTY: [f64; 3] = [-7.0, -3.8, -13.5];
 const WORKS_LOOK: [f64; 3] = lowered([22.0, 0.0, -8.0]);
 
 pub fn build(set: &Set) {
@@ -62,10 +62,6 @@ pub fn build(set: &Set) {
     for side in ENGINE_SIDES {
         engine(set, PUMP_AT.toward(side), side.opposite());
     }
-    set.fill(
-        area(SMALL_LOADER.with_y(DECK - 1), SMALL_LOADER.add_y(-1)),
-        BlockState::of(&STONE_BRICKS),
-    );
     set.place(SMALL_LOADER, BlockState::of(&CUBOID_LOADER));
     liquid_tubes(set, &over_ground(set, &route(&LINE)));
 }
@@ -96,8 +92,9 @@ fn line(set: &Set, corners: &[(i32, i32)]) -> Vec<Pos> {
 /// the shore cuboid loader on the way to the oil seep.
 pub fn shots(film: Film) -> Film {
     let approach = [[38.0, 19.0, -78.0], [27.0, 6.0, -56.0], [17.0, -3.0, -39.0]];
-    let round_jetty = [[17.0, -3.0, -39.0], [7.5, -7.0, -30.5], [3.5, -6.8, -23.0]];
-    let past_loader = [[3.5, -6.8, -23.0], [-1.0, -6.2, -18.0], PAST_JETTY];
+    let round_jetty = [[17.0, -3.0, -39.0], [7.5, -7.0, -30.5], [4.0, -6.5, -22.5]];
+    let to_loader = [[4.0, -6.5, -22.5], [1.5, -6.0, -18.5], [-1.0, -5.2, -16.5]];
+    let past_loader = [[-1.0, -5.2, -16.5], [-4.0, -4.5, -15.0], PAST_JETTY];
     film.cue("noon_2")
         .fade_in(1.5)
         .shot(
@@ -106,19 +103,25 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(5.0, 5.0))
                 .secs(8.0),
         )
-        .title("cogwork.film.water", 5.5)
+        .title("cogwork.film.water", 5.0)
         .shot(
             flyby(&round_jetty)
                 .look_at(JETTY_PUMP_LOOK)
                 .ease(speeds(5.0, 3.0))
                 .secs(5.5),
         )
-        .title("cogwork.film.t4_small_loader", 4.5)
-        .menu("cogwork:cuboid_loader", SMALL_LOADER, 3.5)
+        .title("cogwork.film.t4_small_loader", 2.8)
+        .shot(
+            flyby(&to_loader)
+                .look(Look::Pan(JETTY_PUMP_LOOK, SMALL_LOADER_LOOK))
+                .ease(speeds(3.0, 3.0))
+                .secs(3.0),
+        )
+        .menu("cogwork:cuboid_loader", SMALL_LOADER, 3.2)
         .shot(
             flyby(&past_loader)
-                .look(Look::Pan(JETTY_PUMP_LOOK, SMALL_LOADER_LOOK))
+                .look_at(SMALL_LOADER_LOOK)
                 .ease(speeds(3.0, 4.5))
-                .secs(5.0),
+                .secs(3.5),
         )
 }
