@@ -11,7 +11,7 @@ use weft_sdk::{Dir, Item, ItemStack, Output};
 
 use super::camera::{between, on_orbit, speeds};
 use super::ground::ground_top;
-use super::parts::{GRASS, engine, fuel};
+use super::parts::{COBBLESTONE, GRASS, engine, fuel};
 use super::seep;
 use super::site::{above, lowered, lowered_block};
 use crate::leveler::LEVELER;
@@ -21,6 +21,7 @@ use crate::seismic_thumper::{SEISMIC_THUMPER, SURVEY, Status, oil, survey};
 
 static DIRT: Block = Block::named("base:dirt");
 static COARSE_DIRT: Block = Block::named("base:coarse_dirt");
+static MOSSY_COBBLESTONE: Block = Block::named("base:mossy_cobblestone");
 
 /// The height the markers and the leveler stand at (site coordinates): matches the average ground
 /// across the knoll square so cut and fill balance with no plinths or dirt cliffs.
@@ -52,8 +53,8 @@ const THUMPER_MARKERS: [Pos; 3] = [Pos::new(59, 1, 6), Pos::new(64, 1, 6), Pos::
 /// eye-level western approach to the seismic thumper well clear of its north and east engines.
 const LEVELER_CENTER: [f64; 3] = above(LEVELER_AT, 0.0);
 const LEVELER_ARC: [f64; 2] = [-42.0, -12.0];
-const LEVELER_OUT: f64 = 8.2;
-const LEVELER_UP: [f64; 2] = [5.8, 4.2];
+const LEVELER_OUT: f64 = 8.4;
+const LEVELER_UP: [f64; 2] = [5.2, 4.8];
 pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
 pub const END_EYE: [f64; 3] = lowered([56.4, 3.2, 4.4]);
 
@@ -97,8 +98,20 @@ pub fn regrass_cut(set: &Set) {
 }
 
 /// Builds the seismic thumper, its ember engines and its three survey markers on Pad 2 (works
-/// coordinates).
+/// coordinates), and replaces grey retaining stone on Pad 2's cut bank with natural dirt under
+/// the grass rim.
 pub fn build_thumper(set: &Set) {
+    let world = set.world();
+    let bank_cols = (-10..=9).map(|z| (54, z)).chain((55..=71).map(|x| (x, 9)));
+    for (x, z) in bank_cols {
+        let top = ground_top(set, x, z);
+        for y in 1..top {
+            let block = world.block_typed(set.at(Pos::new(x, y, z)));
+            if block.is(&COBBLESTONE) || block.is(&MOSSY_COBBLESTONE) {
+                set.place(Pos::new(x, y, z), BlockState::of(&DIRT));
+            }
+        }
+    }
     set.place(
         THUMPER_AT,
         SEISMIC_THUMPER.with(&[("facing", "west")]).into(),
@@ -212,7 +225,9 @@ fn on_leveler(angle: f64) -> [f64; 3] {
 /// opening its screen right while it cuts and fills, then gliding straight to the seismic thumper
 /// from the west (clear of its engines and without staring at an empty pad).
 pub fn shots(film: Film) -> Film {
-    let entry = [49.0, 7.2, 1.5];
+    let entry = [51.0, 10.5, 4.0];
+    let over_square = [53.0, 9.5, 5.0];
+    let square_pan = [55.5, 8.2, 5.8];
     let round = |from: f64, to: f64, secs: f32| {
         let up = [from, to].map(|angle| between(LEVELER_UP, leveler_part(angle)));
         orbit(LEVELER_CENTER, LEVELER_OUT)
@@ -222,24 +237,33 @@ pub fn shots(film: Film) -> Film {
             .secs(secs)
     };
     let leveler_look = [47.2, HEIGHT as f64 + 0.2, 12.2];
-    let high_pad = lowered([57.0, 11.2, 3.0]);
+    let high_pad = lowered([57.0, 12.2, 1.8]);
     let to_thumper = lowered([56.2, 3.0, 5.5]);
     let at_thumper = lowered([56.8, 2.5, 5.5]);
 
     film.fade_in(0.5)
         .shot(
-            dolly(entry, on_leveler(LEVELER_ARC[0]))
-                .look(Look::Pan(MIDDLE, leveler_look))
-                .ease(speeds(1.5, 0.35))
-                .secs(4.5),
+            dolly(entry, over_square)
+                .look_at(MIDDLE)
+                .ease(speeds(1.5, 0.45))
+                .secs(4.2),
         )
         .title("cogwork.film.survey", 3.5)
         .cue("survey")
-        .shot(round(LEVELER_ARC[0], -38.0, 3.0).look_at(leveler_look))
-        .shot(round(-38.0, -34.0, 2.5).look_at(leveler_look))
+        .shot(
+            dolly(over_square, square_pan)
+                .look_at(MIDDLE)
+                .ease(speeds(0.45, 0.5))
+                .secs(5.5),
+        )
         .cue("leveler")
         .title("cogwork.film.wrench", 3.2)
-        .shot(round(-34.0, -30.0, 3.5).look_at(leveler_look))
+        .shot(
+            dolly(square_pan, on_leveler(-30.0))
+                .look(Look::Pan(MIDDLE, leveler_look))
+                .ease(speeds(0.5, 0.35))
+                .secs(3.8),
+        )
         .cue("wrench")
         .title("cogwork.film.level", 3.0)
         .shot(round(-30.0, -24.0, 3.2).look_at(leveler_look))

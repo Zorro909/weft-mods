@@ -14,20 +14,21 @@ use super::site::{above, lowered, lowered_block};
 use crate::lib::{BlockState, Pos};
 use crate::loading::{CUBOID_LENS, ULTRA_CUBOID_LOADER};
 
-/// The ultra cuboid loader standing 3 blocks inland on Pad 1's north-west gravel (no plinth, 2
-/// blocks west and 3 blocks north of the digger frame at x 28..38, z -9..1). Still sits in the
-/// same y = 64..79 cube so its 7 by 7 reach covers the whole campus.
-pub const LOADER: Pos = Pos::new(26, 0, -12);
+/// The ultra cuboid loader standing 4 blocks inland on the flush Pad 0 / Pad 1 gravel terrace
+/// (3 blocks west of DIGGER's frame at x 28..38, 2 blocks east of the hall's east overhang, and
+/// 4 blocks south of the z = -10 lakefront wall). Sits in the same y = 64..79 cube so its 7 by 7
+/// reach covers the whole campus without needing any jutting pad extension.
+pub const LOADER: Pos = Pos::new(25, 0, -6);
 
 /// Camera waypoints for the finale: high over the knoll and north of the digger frame to a
-/// north-west view of the loader (with the frame behind it), cuboid lens panorama, and a closer
-/// final look across the hall and campus.
+/// north-facing lake view of the loader (between the hall and digger frame), cuboid lens
+/// panorama, and a closer final look across the hall and campus.
 const OVER_KNOLL: [f64; 3] = [50.0, 9.5, 7.5];
-const PAST_DIGGER: [f64; 3] = lowered([42.0, 12.0, -16.0]);
+const PAST_DIGGER: [f64; 3] = lowered([40.0, 12.0, -16.0]);
 const BY_LOADER: [[f64; 3]; 3] = [
-    lowered([21.8, 3.6, -17.2]),
-    lowered([21.3, 3.9, -17.7]),
-    lowered([20.9, 4.3, -18.3]),
+    lowered([24.2, 4.2, -13.6]),
+    lowered([24.9, 4.4, -14.2]),
+    lowered([25.6, 4.6, -14.8]),
 ];
 const LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 0.2));
 const OVER_LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 1.8));
