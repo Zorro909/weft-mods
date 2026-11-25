@@ -63,12 +63,12 @@ pub const SHAFT_X: i32 = 10;
 const SHAFT_BACK: i32 = -7;
 
 /// Camera landmarks inside the hall, and where the haze shot hands off to the benches (clear of
-/// both the oil engine casing and the overhead x = 10 shaft).
-const IN_HALL: [f64; 3] = lowered([1.0, 2.6, -0.5]);
-const BY_TANK: [f64; 3] = lowered([3.8, 2.0, -1.2]);
+/// the hall posts, the oil engine casing and the overhead x = 10 shaft).
+const IN_HALL: [f64; 3] = lowered([1.0, 2.6, 1.2]);
+const BY_TANK: [f64; 3] = lowered([4.6, 2.1, 0.2]);
 const ENGINE_OUT: f64 = 5.5;
 const ENGINE_FROM: f64 = 130.0;
-const IN_HAZE: [[f64; 3]; 2] = [lowered([12.6, 4.1, -1.5]), lowered([12.8, 4.1, -1.2])];
+const IN_HAZE: [[f64; 3]; 2] = [lowered([13.0, 4.1, -0.2]), lowered([13.2, 4.0, 0.2])];
 pub const END_EYE: [f64; 3] = IN_HAZE[1];
 pub const END_LOOK: [f64; 3] = lowered([6.5, 2.8, -8.5]);
 

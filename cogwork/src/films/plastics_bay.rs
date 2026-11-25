@@ -232,17 +232,17 @@ pub fn start(set: &Set) {
 /// unobstructed machines with every title clear of its screen.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let east_look = lowered([24.0, 4.5, 9.0]);
+    let east_look = lowered([34.0, 4.0, 2.0]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
 
-    let east_door = lowered([26.2, 3.2, 1.2]);
+    let east_door = lowered([28.0, 3.0, 0.5]);
     let at_poly_start = lowered([15.6, f + 2.2, 11.2]);
     let over_wall = [
         east_door,
-        lowered([27.4, 8.8, 6.5]),
-        lowered([21.5, 8.6, 10.2]),
+        lowered([31.0, 10.2, 6.5]),
+        lowered([24.0, 10.8, 11.2]),
         at_poly_start,
     ];
     let to_poly = lowered([16.4, f + 2.0, 11.2]);
@@ -257,13 +257,13 @@ pub fn shots(film: Film) -> Film {
             dolly(crafting::end_eye(), east_door)
                 .look(Look::Pan(crafting::BENCH_LOOK, east_look))
                 .ease(speeds(0.25, 1.3))
-                .secs(4.2),
+                .secs(4.5),
         )
         .shot(
             flyby(&over_wall)
                 .look(Look::Pan(east_look, poly_look))
                 .ease(speeds(1.3, 0.8))
-                .secs(5.6),
+                .secs(6.4),
         )
         .title("cogwork.film.t5_plastics", 3.0)
         .shot(

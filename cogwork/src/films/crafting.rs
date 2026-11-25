@@ -104,7 +104,7 @@ pub fn start(set: &Set) {
 pub fn shots(film: Film) -> Film {
     let from_engine = engine_bay::END_EYE;
     let [over_bench, at_bench] = BENCH_UP.map(|up| on_orbit(BENCH_LOOK, BENCH_OUT, up, BENCH_FROM));
-    let clear_of_engine = lowered([13.4, 3.8, -0.2]);
+    let clear_of_engine = lowered([14.2, 3.7, 1.2]);
     let under_shaft = halfway(clear_of_engine, over_bench);
     film.shot(
         dolly(from_engine, clear_of_engine)
