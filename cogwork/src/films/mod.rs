@@ -134,8 +134,8 @@ pub fn register(r: &mut Registry) {
         .on_cue("survey", at_site(leveling::survey))
         .on_cue("leveler", at_site(leveling::place_leveler))
         .on_cue("wrench", at_site(leveling::turn_engines))
-        .on_cue("frame", at_works(quarry::raise_frame))
-        .on_cue("lens", at_works(loading::lens))
+        .on_cue("frame", at_site(raise_frame))
+        .on_cue("lens", at_site(lens))
         .on_cue("lens_away", at_works(loading::lens_away))
         .on_cue("unpack", at_site(kit::unpack));
     signals::register(r);
@@ -161,6 +161,19 @@ fn start(set: &Set) {
 fn lift(set: &Set) {
     engine_bay::lift(set);
     signals::watch(set);
+}
+
+/// Starts the composite frame builder and re-grasses any dirt the leveler just cut open.
+fn raise_frame(set: &Set) {
+    leveling::regrass_cut(set);
+    quarry::raise_frame(&works(set));
+}
+
+/// Hands the camera the cuboid lens and ensures the cleared leveler square stays green in the
+/// wide closing shots.
+fn lens(set: &Set) {
+    leveling::regrass_cut(set);
+    loading::lens(&works(set));
 }
 
 fn showcase(set: &Set) -> Film {

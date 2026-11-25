@@ -246,8 +246,14 @@ fn retain(set: &Set, pad: &Pad, pads: &[Pad]) {
                 };
                 wall(set, x, z, beside + 1, wall_top);
             } else {
-                // Its top block stays: grass over a stone face.
-                wall(set, beside_x, beside_z, pad.top + 1, beside - 1);
+                // Its top block stays: grass over a stone face. On grass pads, leave a block of
+                // earth below the grass rim so cobblestone never pokes through stepped edges.
+                let wall_top = if pad.surface.name() == GRASS.name() {
+                    beside - 2
+                } else {
+                    beside - 1
+                };
+                wall(set, beside_x, beside_z, pad.top + 1, wall_top);
             }
         }
     }

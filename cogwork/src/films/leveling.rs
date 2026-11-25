@@ -47,35 +47,18 @@ const THUMPER_ENGINES: [(Pos, Dir); 2] = [
 ];
 const THUMPER_MARKERS: [Pos; 3] = [Pos::new(59, 1, 6), Pos::new(64, 1, 6), Pos::new(59, 1, 8)];
 
-/// Elevated arc around the leveler so the entire marked square shows clearly behind it, plus an
+/// Elevated arc around the leveler and marked square so all three survey markers and the 10×10
+/// boundary read clearly from above and departure stays well clear of the leveler, plus an
 /// eye-level western approach to the seismic thumper well clear of its north and east engines.
 const LEVELER_CENTER: [f64; 3] = above(LEVELER_AT, 0.0);
 const LEVELER_ARC: [f64; 2] = [-42.0, -12.0];
-const LEVELER_OUT: f64 = 6.5;
-const LEVELER_UP: [f64; 2] = [3.2, 2.8];
+const LEVELER_OUT: f64 = 8.2;
+const LEVELER_UP: [f64; 2] = [5.8, 4.2];
 pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
 pub const END_EYE: [f64; 3] = lowered([56.4, 3.2, 4.4]);
 
 pub fn build(set: &Set) {
-    // Grass over any bare dirt/coarse_dirt patches on the knoll around the leveler so no brown
-    // patch lingers beside or inside the cut, and pre-grass every soil layer down to HEIGHT - 1
-    // inside the marked square so every step the leveler clears stays green grass.
-    let world = set.world();
-    for x in 35..=54 {
-        for z in 0..=20 {
-            let top = ground_top(set, x, z);
-            if (41..=50).contains(&x) && (9..=18).contains(&z) {
-                for y in (HEIGHT - 1)..=top {
-                    set.place(Pos::new(x, y, z), BlockState::of(&GRASS));
-                }
-            } else {
-                let block = world.block_typed(set.at(Pos::new(x, top, z)));
-                if block.is(&DIRT) || block.is(&COARSE_DIRT) {
-                    set.place(Pos::new(x, top, z), BlockState::of(&GRASS));
-                }
-            }
-        }
-    }
+    regrass_cut(set);
     for marker in MARKERS {
         earth_bed(set, marker);
         set.place(marker, BlockState::of(&SURVEY_MARKER));
@@ -85,6 +68,31 @@ pub fn build(set: &Set) {
         earth_bed(set, at);
         // Pointing away from where the leveler goes, until the wrench turns it.
         engine(set, at, into_leveler.opposite());
+    }
+}
+
+/// Replaces bare dirt/coarse_dirt on the knoll and inside the leveler's marked square down to
+/// `HEIGHT - 1` with grass. Called at build time and refreshed on later cues because `base:grass`
+/// smothers into dirt after ~68 s under solid blocks before the leveler cuts down to it.
+pub fn regrass_cut(set: &Set) {
+    let world = set.world();
+    for x in 35..=54 {
+        for z in 0..=20 {
+            let top = ground_top(set, x, z);
+            if (41..=50).contains(&x) && (9..=18).contains(&z) {
+                for y in (HEIGHT - 1)..=top {
+                    let block = world.block_typed(set.at(Pos::new(x, y, z)));
+                    if block.is(&DIRT) || block.is(&COARSE_DIRT) {
+                        set.place(Pos::new(x, y, z), BlockState::of(&GRASS));
+                    }
+                }
+            } else {
+                let block = world.block_typed(set.at(Pos::new(x, top, z)));
+                if block.is(&DIRT) || block.is(&COARSE_DIRT) {
+                    set.place(Pos::new(x, top, z), BlockState::of(&GRASS));
+                }
+            }
+        }
     }
 }
 
@@ -173,9 +181,10 @@ pub fn place_leveler(set: &Set) {
     set.place(LEVELER_AT, LEVELER.with(&[("facing", "east")]).into());
 }
 
-/// Fills the leveler's stock with grass blocks (so the filled ground stays green) and turns both
-/// engines into it.
+/// Fills the leveler's stock with grass blocks (so the filled ground stays green), refreshes the
+/// buried grass under the cut so freshly cleared layers stay green, and turns both engines into it.
 pub fn turn_engines(set: &Set) {
+    regrass_cut(set);
     let world = set.world();
     if let Some(grass) = Item::lookup("base:grass") {
         let stock = world.inventory(set.at(LEVELER_AT)).group("input");
@@ -203,7 +212,7 @@ fn on_leveler(angle: f64) -> [f64; 3] {
 /// opening its screen right while it cuts and fills, then gliding straight to the seismic thumper
 /// from the west (clear of its engines and without staring at an empty pad).
 pub fn shots(film: Film) -> Film {
-    let entry = [49.0, 4.5, 1.0];
+    let entry = [49.0, 7.2, 1.5];
     let round = |from: f64, to: f64, secs: f32| {
         let up = [from, to].map(|angle| between(LEVELER_UP, leveler_part(angle)));
         orbit(LEVELER_CENTER, LEVELER_OUT)
@@ -212,8 +221,8 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.35, 0.35))
             .secs(secs)
     };
-    let leveler_look = [48.2, HEIGHT as f64 + 0.4, 11.8];
-    let high_pad = lowered([55.2, 11.2, 3.8]);
+    let leveler_look = [47.2, HEIGHT as f64 + 0.2, 12.2];
+    let high_pad = lowered([57.0, 11.2, 3.0]);
     let to_thumper = lowered([56.2, 3.0, 5.5]);
     let at_thumper = lowered([56.8, 2.5, 5.5]);
 
