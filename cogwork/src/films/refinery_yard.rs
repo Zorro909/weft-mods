@@ -87,7 +87,7 @@ const GAS_TANK: Area = Area {
 /// Refinery orbit geometry and handoff point heading east into the hall (wide and south enough
 /// to stay clear of the gas riser at (-6, -2) and the hall's west posts at x = -2, z = ±7).
 pub const ORBIT_CENTER: [f64; 3] = lowered([-11.0, 2.5, -5.0]);
-const ORBIT_OUT: f64 = 8.8;
+const ORBIT_OUT: f64 = 8.0;
 const ORBIT_ARC: [f64; 2] = [135.0, 58.0];
 const ORBIT_UP: [f64; 2] = [2.4, 1.6];
 

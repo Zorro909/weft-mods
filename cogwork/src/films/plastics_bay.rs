@@ -240,7 +240,7 @@ pub fn shots(film: Film) -> Film {
     // Climb inside the hall under the y = 6 east beam and exit straight east through the open
     // gable well north of the SE post (z = 7) and cut bank (z = 9), then climb high over Pad 1
     // gravel before crossing south above the roof eave and grass bank onto Pad P.
-    let east_door = lowered([25.6, 4.6, 1.8]);
+    let east_door = lowered([24.8, 4.6, 2.4]);
     let at_poly_start = lowered([15.6, f + 2.2, 11.2]);
     let over_wall = [
         east_door,
