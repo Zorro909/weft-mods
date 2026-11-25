@@ -5,23 +5,37 @@
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use showcase_api::Set;
+use showcase_api::{Film, Look, Set, dolly, flyby};
 use weft_sdk::ItemStack;
 
-use super::parts::{STONE_BRICKS, area};
+use super::camera::speeds;
+use super::quarry::{self, FRAME_LOOK, PIT_LOOK};
+use super::site::{above, lowered, lowered_block};
 use crate::lib::{BlockState, Pos};
 use crate::loading::{CUBOID_LENS, ULTRA_CUBOID_LOADER};
 
-/// The loader, on top of its mast. It keeps the 7 by 7 cubes of the layer it stands in: this
-/// is the highest block of the layer the machines stand in, and from this cube the 7 by 7
-/// reach from the seep's pump in the west to the second excavator in the east.
-pub const LOADER: Pos = Pos::new(27, 3, -11);
-/// The lowest block of the mast, on the pad.
-const MAST_FOOT: i32 = 0;
+/// The ultra cuboid loader standing 4 blocks inland on the flush Pad 0 / Pad 1 gravel terrace
+/// (3 blocks west of DIGGER's frame at x 28..38, 2 blocks east of the hall's east overhang, and
+/// 4 blocks south of the z = -10 lakefront wall). Sits in the same y = 64..79 cube so its 7 by 7
+/// reach covers the whole campus without needing any jutting pad extension.
+pub const LOADER: Pos = Pos::new(25, 0, -6);
+
+/// Camera waypoints for the finale: high over the knoll and north of the digger frame to a
+/// north-facing lake view of the loader (between the hall and digger frame), cuboid lens
+/// panorama, and a closer final look across the hall and campus.
+const OVER_KNOLL: [f64; 3] = [50.0, 9.5, 7.5];
+const PAST_DIGGER: [f64; 3] = lowered([40.0, 12.0, -16.0]);
+const BY_LOADER: [[f64; 3]; 3] = [
+    lowered([24.2, 4.2, -13.6]),
+    lowered([24.9, 4.4, -14.2]),
+    lowered([25.6, 4.6, -14.8]),
+];
+const LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 0.2));
+const OVER_LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 1.8));
+const WORKS_LOOK: [f64; 3] = lowered([20.0, 1.5, -4.0]);
+const SHORE_LOOK: [f64; 3] = lowered([14.0, 2.5, -2.0]);
 
 pub fn build(set: &Set) {
-    let mast = area(LOADER.with_y(MAST_FOOT), LOADER.add_y(-1));
-    set.fill(mast, BlockState::of(&STONE_BRICKS));
     set.place(LOADER, BlockState::of(&ULTRA_CUBOID_LOADER));
 }
 
@@ -72,4 +86,70 @@ pub fn lens_away(set: &Set) {
     };
     let held = held_before.swap_remove(index);
     set.world().inventory(player).set(held.slot, held.stack);
+}
+
+/// Section 11 (Finale): over the levelled knoll to the ultra cuboid loader, then high out over
+/// the lake with the cuboid lens and back down to a wide final look along the works.
+pub fn shots(film: Film) -> Film {
+    let from_frame = quarry::frame_end_eye();
+    let down = [OVER_KNOLL, PAST_DIGGER, BY_LOADER[0]];
+    let over_lake = lowered([35.0, 14.0, -28.0]);
+    let north_east = lowered([62.0, 24.0, -32.0]);
+    let with_lens = [over_lake, lowered([48.0, 22.0, -38.0]), north_east];
+    let to_shore = [
+        north_east,
+        lowered([54.0, 14.0, -24.0]),
+        lowered([42.0, 7.5, -18.0]),
+    ];
+
+    film.shot(
+        dolly(from_frame, OVER_KNOLL)
+            .look(Look::Pan(FRAME_LOOK, PIT_LOOK))
+            .ease(speeds(2.0, 5.0))
+            .secs(3.2),
+    )
+    .shot(
+        flyby(&down)
+            .look(Look::Pan(PIT_LOOK, OVER_LOADER_LOOK))
+            .ease(speeds(5.0, 0.25))
+            .secs(6.0),
+    )
+    .title("cogwork.film.loader", 3.0)
+    .shot(
+        dolly(BY_LOADER[0], BY_LOADER[1])
+            .look_at(OVER_LOADER_LOOK)
+            .ease(speeds(0.25, 0.2))
+            .secs(3.2),
+    )
+    .menu("cogwork:ultra_cuboid_loader", lowered_block(LOADER), 4.0)
+    .shot(
+        dolly(BY_LOADER[1], BY_LOADER[2])
+            .look_at(OVER_LOADER_LOOK)
+            .ease(speeds(0.2, 0.3))
+            .secs(4.2),
+    )
+    .shot(
+        dolly(BY_LOADER[2], over_lake)
+            .look(Look::Pan(OVER_LOADER_LOOK, LOADER_LOOK))
+            .ease(speeds(0.3, 5.0))
+            .secs(4.0),
+    )
+    .cue("lens")
+    .title("cogwork.film.lens", 5.0)
+    .shot(
+        flyby(&with_lens)
+            .look(Look::Pan(LOADER_LOOK, WORKS_LOOK))
+            .ease(speeds(5.0, 4.5))
+            .secs(7.5),
+    )
+    .cue("lens_away")
+    .title("cogwork.film.end", 7.0)
+    .shot(
+        flyby(&to_shore)
+            .look(Look::Pan(WORKS_LOOK, SHORE_LOOK))
+            .ease(speeds(4.5, 0.3))
+            .secs(6.5),
+    )
+    .wait(1.5)
+    .cue("unpack")
 }

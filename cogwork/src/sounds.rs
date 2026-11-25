@@ -46,11 +46,13 @@ pub static REFINERY_VENT: Sound = Sound::named("refinery.vent");
 pub static POLYMERIZER: Sound = Sound::named("polymerizer.bubble");
 pub static PRESS: Sound = Sound::named("molding_press.thump");
 pub static BIT_SWAP: Sound = Sound::named("bit_magazine.swap");
+pub static THUMP: Sound = Sound::named("seismic_thumper.thump");
+pub static ACID_FIZZ: Sound = Sound::named("leaching_vat.fizz");
 pub static GHOST: Sound = Sound::named("ui.ghost");
 
 /// The sounds heard in the world: files, volume, lowest and highest pitch, and the blocks they
 /// carry (fading out on the way there): heavy machinery far, small parts close.
-static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 43] = [
+static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 45] = [
     (&SPRING_STROKE, "engine/spring_stroke", 0.5, 0.9, 1.1, 24.0),
     (&EMBER_STROKE, "engine/ember_stroke", 0.5, 0.9, 1.05, 40.0),
     (&EMBER_IGNITE, "engine/ember_ignite", 0.7, 0.9, 1.1, 24.0),
@@ -108,6 +110,8 @@ static IN_WORLD: [(&Sound, &str, f32, f32, f32, f32); 43] = [
     (&POLYMERIZER, "polymerizer/bubble", 0.9, 0.9, 1.1, 32.0),
     (&PRESS, "molding_press/thump", 1.0, 0.92, 1.05, 48.0),
     (&BIT_SWAP, "bit_magazine/swap", 0.8, 0.95, 1.05, 20.0),
+    (&THUMP, "seismic_thumper/thump", 1.0, 0.9, 1.05, 64.0),
+    (&ACID_FIZZ, "leaching_vat/fizz", 0.7, 0.9, 1.1, 20.0),
 ];
 
 pub fn register(r: &mut Registry) {

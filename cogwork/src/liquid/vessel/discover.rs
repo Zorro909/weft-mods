@@ -4,12 +4,14 @@
 use weft_sdk::{Dir, World};
 
 use super::{Kind, Vessel};
+use crate::acid_tank::ACID_TANK;
 use crate::clarifier::{self, CLARIFIER};
 use crate::coke_oven;
 use crate::excavator::kind::Kind as Quarry;
 use crate::firebox::{self, BOILER, FIREBOX};
 use crate::flotation::{self, FLOTATION_CELL};
 use crate::grinding_mill::{self, GRINDING_MILL};
+use crate::leaching_vat::LEACHING_VAT;
 use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::liquid_tube::{PRESSURE_TUBE, SEALED_LIQUID_TUBE, is_liquid_tube};
 use crate::oil_engine::OIL_INTAKE;
@@ -119,9 +121,11 @@ pub fn is_vessel(world: &World, pos: Pos) -> bool {
 /// Whether `block` is a machine that holds liquid for its work and reaches it on every side: an
 /// intake, a grinding mill, a washer, a coke oven's door or drain, a firebox, a boiler, a steam
 /// engine, a trip hammer, a flotation cell, a clarifier, a refinery's part that holds liquid, a
-/// quarry or a polymerizer.
+/// quarry or a polymerizer; or one that draws its liquid in and lets it out itself, keeping it in
+/// its own state (`liquid::draw`, `liquid::pour`) and so no holder: an acid tank or a
+/// leaching vat.
 fn is_machine(block: BlockState) -> bool {
-    let machines: [&weft_sdk::Block; 10] = [
+    let machines: [&weft_sdk::Block; 12] = [
         &OIL_INTAKE,
         &GRINDING_MILL,
         &WASHER,
@@ -132,6 +136,8 @@ fn is_machine(block: BlockState) -> bool {
         &FLOTATION_CELL,
         &CLARIFIER,
         &POLYMERIZER,
+        &ACID_TANK,
+        &LEACHING_VAT,
     ];
     machines.iter().any(|machine| block.is(machine))
         || coke_oven::creosote_capacity(block).is_some()

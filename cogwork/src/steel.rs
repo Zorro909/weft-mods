@@ -9,7 +9,7 @@ use weft_sdk::{Block, Item, Particle, Registry, WithComponents, tool_tier};
 pub static STEEL_BLOOM: Item = Item::named("steel_bloom");
 pub static SLAG: Item = Item::named("slag");
 pub static STEEL_INGOT: Item = Item::named("steel_ingot");
-static STEEL_BLOCK: Block = Block::named("steel_block");
+pub static STEEL_BLOCK: Block = Block::named("steel_block");
 /// Sparks of hot iron: out of a blast furnace's top, and off the anvil at each strike.
 pub static SPARK: Particle = Particle::named("forge_spark");
 

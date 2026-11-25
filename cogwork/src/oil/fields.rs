@@ -14,12 +14,12 @@ use weft_sdk::{Feature, Placed, Plan, Registry, Tag, abi::stage};
 use super::{OIL, OIL_SAND, OILY_DIRT};
 use crate::lib::{Area, Pos};
 
-static OIL_FIELD: Feature = Feature::named("oil_field");
+pub(super) static OIL_FIELD: Feature = Feature::named("oil_field");
 /// Base's grass, flowers and canes: a field comes after them, to clear them off its seep.
 static BASE_PLANTS: Feature = Feature::named("base:decoration");
 
 /// Blocks along each side of a square of the grid, and the squares there are to one field.
-const SPACING: i32 = 96;
+pub(super) const SPACING: i32 = 96;
 const SQUARES_TO_A_FIELD: f32 = 32.0;
 /// The radius of a field's ball, in blocks: 4 holds 389 buckets, 5 holds 739, 6 holds 1,189.
 const RADIUS: [i32; 2] = [4, 6];
@@ -187,9 +187,11 @@ fn plan(p: &mut Plan) {
         return;
     };
     let field = Field::of(p.random());
-    for row in field.rows(puddle.add_y(-field.depth)) {
+    let middle = puddle.add_y(-field.depth);
+    for row in field.rows(middle) {
         p.replace(row.lo, row.hi, NOT_AIR, OIL.id());
     }
+    super::known::note(p.seed(), p.dimension(), start, middle, field.radius);
     for (dx, dz) in field.seep() {
         soak(p, puddle, dx, dz);
     }

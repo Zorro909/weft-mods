@@ -29,7 +29,7 @@ pub fn tick(world: &World, id: u64, refinery: &mut Refinery, layout: &Layout) {
     let stop = stopped(world, id, refinery, layout, band, cut);
     let running = stop.is_none();
     let heating = if running {
-        draw_heat(world, &layout.heaters)
+        draw_heat(world, id, &layout.heaters)
     } else {
         Heating::Unheated
     };
@@ -185,9 +185,10 @@ fn take_crude(world: &World, id: u64) {
     }
 }
 
-/// Heats the column a tick from its `heaters`: by steam where they hold enough together, else by
-/// their burners' energy; or not at all.
-fn draw_heat(world: &World, heaters: &[Pos]) -> Heating {
+/// Heats the column of the controller `id` a tick from its `heaters`: by steam where they hold
+/// enough together, else by their burners' energy, which the controller's meter shows; or not at
+/// all.
+fn draw_heat(world: &World, id: u64, heaters: &[Pos]) -> Heating {
     if draw_liquid(world, heaters, crate::steam::key(), STEAM_A_TICK) {
         return Heating::Steam;
     }
@@ -198,16 +199,18 @@ fn draw_heat(world: &World, heaters: &[Pos]) -> Heating {
         .map(|energy| energy.stored)
         .sum();
     if stored < BURNER_A_TICK {
+        crate::machine::note_drawn(world, id, 0, BURNER_A_TICK);
         return Heating::Unheated;
     }
     let mut owed = BURNER_A_TICK;
-    for id in stores {
-        if let Some(energy) = world.component_mut(id, &ENERGY) {
+    for heater in stores {
+        if let Some(energy) = world.component_mut(heater, &ENERGY) {
             let taken = energy.stored.min(owed);
             energy.stored -= taken;
             owed -= taken;
         }
     }
+    crate::machine::note_drawn(world, id, BURNER_A_TICK, BURNER_A_TICK);
     Heating::Burner
 }
 

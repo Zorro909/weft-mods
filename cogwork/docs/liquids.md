@@ -2,7 +2,8 @@
 
 Liquid tubes carry liquid from a [pump](oil.md#pump) to tanks, an
 [oil engine's intakes](oil-engine.md#liquid-in) and on. They work with any liquid
-of any mod: water, lava, [oil](oil.md#oil) or another mod's. A tube or tank holds one liquid at a
+of any mod: water, lava, [oil](oil.md#oil), [sulfuric acid](acid.md#sulfuric-acid) or another
+mod's. A tube or tank holds one liquid at a
 time, and you can see how full it is: the liquid stands in it at its level, in its own colors.
 
 [Steam](steam.md#steam) is the exception to what follows: it doesn't fall, but spreads from fuller
@@ -22,9 +23,10 @@ falls down a tube and levels out sideways, and a pipe into a lower tank drains i
   runs back into a pump. Without a pump, liquid rises no higher than where it stands.
 - **Two liquids** don't mix: one waits until the other has moved on. What is left of a liquid
   once it has drained (less than a thousandth of a tank) gives way to the next liquid that comes.
-  Steam is the exception: steam and any other liquid wait for each other down to the last
-  millibucket, so a tube or tank that held water takes steam only once it is empty, or broken
-  and placed again, and the other way round.
+  Steam and [sulfuric acid](acid.md) are the exception: each of them and any other liquid wait
+  for each other down to the last millibucket, so a tube or tank that held water takes steam or
+  acid only once it is empty, or broken and placed again, and the other way round. A bucket
+  poured into it and tanks joined together keep to that as well.
 
 An oil engine's intake takes only oil, diesel or water, one at a time, and hands nothing on. A
 [grinding mill](processing.md#grinding-mill) or a [washer](processing.md#washer) takes only
@@ -40,7 +42,10 @@ takes only muddy water, and lets the clear water it settles out of its front. A
 condensers only water, and none hands anything on; its taps hand on what the column makes, by
 height as a tube does, and take nothing, and a bucket fills from them. A [quarry](excavator.md#lubricant)
 takes only lubricant, and a [polymerizer](plastics.md#polymerizer) only gas; neither hands
-anything on. A [pressure tube](#pressure-tube) carries only steam.
+anything on. An [acid tank](acid.md#acid-tank) draws water itself out of a tube or tank beside
+it and lets its acid out of its front, and a [leaching vat](acid.md#leaching-vat) draws acid
+itself and hands nothing on; both keep their liquids when broken. A
+[pressure tube](#pressure-tube) carries only steam and sulfuric acid.
 
 A tube, tank or pump where nothing moves rests until something beside it changes, so a full,
 still line costs almost nothing.
@@ -79,11 +84,14 @@ ttt
 
 ## Pressure Tube
 
-A slate-grey plastic pipe for [steam](steam.md#steam), with a window in its middle to see how
-full it is. It carries steam and nothing else, and twice as much a tick as a liquid tube: up to
-200 mB to each neighbour, enough for all a [boiler](steam.md#boiler) lets out. Between a pressure
-tube and a liquid tube, a tank or a machine, steam moves at the pressure tube's pace. It holds a
-bucket like a liquid tube, and steam and other liquids never take each other's place in it.
+A slate-grey plastic pipe for [steam](steam.md#steam) and
+[sulfuric acid](acid.md#sulfuric-acid), with a window in its middle to see how full it is. It
+carries those two and nothing else, and twice as much a tick as a liquid tube: up to 200 mB to
+each neighbour, enough for all a [boiler](steam.md#boiler) lets out. Between a pressure tube and a
+liquid tube, a tank or a machine, what it carries moves at the pressure tube's pace. It holds a
+bucket like a liquid tube. Acid falls and levels out in it like any liquid, and steam spreads;
+steam and acid never take each other's place in it, so a line that carried one takes the other
+only once it is empty, or broken and placed again.
 
 ```
 pGp       p = #pipes/plastic   G = base:glass       (makes 3)

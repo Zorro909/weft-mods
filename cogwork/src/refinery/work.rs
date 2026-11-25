@@ -36,6 +36,7 @@ pub fn tick(batch: &mut SystemBatch<Refinery>) {
         if !world.block_typed(pos).is(&REFINERY) {
             continue;
         }
+        crate::machine::start_meter(&world, id);
         let front = crate::machine::front(&world, pos);
         let shown_built = refinery.status() != Status::Unbuilt || refinery.checked == 0;
         refinery.checked = 1;

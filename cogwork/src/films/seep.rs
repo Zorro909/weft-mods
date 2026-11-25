@@ -1,78 +1,124 @@
-//! The oil seep west of the hall: a puddle of oil in oil-soaked ground, and its field 70 blocks
-//! below. The world's own fields are few and none lies here, so the film lays this one as the
-//! world would: on the ground as it generated, clear of trees and grass, its field within the
-//! world's 45 to 85 blocks under it. A pump stands on the puddle under a timber derrick,
-//! with ember engines on two sides and on top, its south side left clear for the camera; lit
-//! on camera, it bores down to the field and pumps. A line of liquid tubes carries the oil
-//! over the ground into the hall's oil tank, with a gravel path beside it.
+//! The oil seep west of the hall: a puddle of oil in oil-soaked ground (both oily dirt and oil
+//! sand on its sandy lake-side edge), and its field 70 blocks below. A pump stands on the puddle
+//! with ember engines on two sides and on top, its south side left clear for the camera; lit on
+//! camera, it bores down to the field and pumps. A line of liquid tubes carries the crude oil
+//! over the ground into Pad R's crude tank, with a gravel path beside it.
 
-use showcase_api::Set;
-use weft_sdk::{Dir, Shape};
+use showcase_api::{Film, Look, Set, dolly, flyby, orbit};
+use weft_sdk::{Block, Dir, ENERGY, Shape};
 
-use super::ground::{fell_near, ground_top, mow, over_ground, pave, route};
-use super::parts::{GLOWSTONE, GRAVEL, OAK_LOG, area, engine, fuel, liquid_tubes};
+use super::camera::{between, on_orbit, speeds};
+use super::ground::{clear_trees_near, ground_top, mow};
+use super::jetty;
+use super::parts::{GRASS, engine, fuel, liquid_tubes, prefill, shafts};
+use super::site::{above, lowered, lowered_block};
 use crate::lib::{BlockState, Pos};
-use crate::oil::{OIL, OILY_DIRT};
+use crate::oil::{OIL, OIL_SAND, OILY_DIRT};
 use crate::pump::PUMP;
+
+static DIRT: Block = Block::named("base:dirt");
 
 /// The pump, on the seep's puddle.
 pub const PUMP_AT: Pos = Pos::new(-32, 3, -13);
-/// The seep's soaked ground, as far from the puddle along x and z, and its field: how far
-/// under the puddle the middle of its ball of oil lies, and the ball's radius.
-const SOAKED: [(i32, i32); 8] = [
-    (-1, 0),
-    (-1, 1),
-    (0, -1),
-    (0, 1),
-    (0, 2),
-    (1, -1),
-    (1, 0),
-    (1, 1),
+/// The seep's soaked ground: oily dirt on the meadow side and oil sand on the north lake side.
+const SOAKED_DIRT: [(i32, i32); 4] = [(-1, 1), (0, 1), (0, 2), (1, 1)];
+const SOAKED_SAND: [(i32, i32); 4] = [(-1, 0), (0, -1), (1, -1), (1, 0)];
+pub const FIELD_DEPTH: i32 = 70;
+pub const FIELD_RADIUS: i32 = 6;
+/// Five ember engines (5 × 40 = 200 E/t = the pump's full `DRAW_RATE`) behind and above the pump,
+/// leaving the south face unobstructed for the camera: two directly on the pump (west and up) and
+/// three feeding a 1-block torque shaft on its north side.
+const DIRECT_ENGINES: [Dir; 2] = [Dir::West, Dir::Up];
+const NORTH_SHAFT: Pos = Pos::new(PUMP_AT.x, PUMP_AT.y, PUMP_AT.z - 1);
+const SHAFT_ENGINES: [(Pos, Dir); 3] = [
+    (Pos::new(PUMP_AT.x, PUMP_AT.y, PUMP_AT.z - 2), Dir::South),
+    (Pos::new(PUMP_AT.x - 1, PUMP_AT.y, PUMP_AT.z - 1), Dir::East),
+    (Pos::new(PUMP_AT.x + 1, PUMP_AT.y, PUMP_AT.z - 1), Dir::West),
 ];
-const FIELD_DEPTH: i32 = 70;
-const FIELD_RADIUS: i32 = 6;
-/// The sides of the pump its engines stand on; its line leaves it to the east.
-const ENGINE_SIDES: [Dir; 3] = [Dir::North, Dir::West, Dir::Up];
-/// The oil line, from beside the pump to the block against the hall's oil tank: east along
-/// the seep's row, then south to the hall's.
-const LINE: [(i32, i32); 4] = [(-31, -13), (-14, -6), (-13, -5), (3, -5)];
-/// The path beside the line: its rows along z, and its ends along x.
-const PATH_Z: [i32; 2] = [-12, -11];
-const PATH_X: [i32; 2] = [-28, -15];
-/// The derrick: how far east of the pump its two legs stand, how far north and south of the
-/// pump's row, and the height of its top.
-const LEGS_EAST: i32 = 2;
-const LEGS_APART: i32 = 2;
-const DERRICK_TOP: i32 = 9;
-/// Blocks around the pump within which no tree is left standing, and within which the tall
-/// grass is mown, which hid the pump.
-const CLEARING: i32 = 9;
-const MOWN: i32 = 4;
+/// Blocks around the pump within which all trees, stumps, hollow logs and bushes are cleared.
+const CLEARING: i32 = 24;
+const MOWN: i32 = 6;
+
+/// Camera orbit on the pump's open south face (120° SSW to 42° SE) heading east toward Pad R,
+/// kept wide enough that the lens never grazes the pump's engines.
+pub const SEEP_LOOK: [f64; 3] = lowered(above(PUMP_AT, 0.7));
+const UP_BANK: [f64; 3] = [-17.0, -2.0, -12.0];
+const HALL_WEST: [f64; 3] = lowered([super::hall::WEST as f64, 3.0, 0.0]);
+const SEEP_ARC: [f64; 2] = [120.0, 42.0];
+const SEEP_OUT: f64 = 6.8;
+const SEEP_UP: [f64; 2] = [3.6, 3.6];
+
+pub fn end_eye() -> [f64; 3] {
+    on_orbit(SEEP_LOOK, SEEP_OUT, SEEP_UP[1], SEEP_ARC[1])
+}
 
 pub fn build(set: &Set) {
-    fell_near(set, PUMP_AT.x, PUMP_AT.z, CLEARING);
+    clear_trees_near(set, PUMP_AT.x, PUMP_AT.z, CLEARING);
     mow(set, PUMP_AT.x, PUMP_AT.z, MOWN);
     // Before the pump and its engines stand there: it soaks the top of the ground.
     field(set);
     set.place(PUMP_AT, BlockState::of(&PUMP));
-    for side in ENGINE_SIDES {
+    for side in DIRECT_ENGINES {
         engine(set, PUMP_AT.toward(side), side.opposite());
     }
-    let path = (PATH_X[0]..=PATH_X[1]).flat_map(|x| PATH_Z.map(|z| (x, z)));
-    pave(set, path, &GRAVEL);
-    liquid_tubes(set, &over_ground(set, &route(&LINE)));
-    derrick(set);
+    shafts(set, NORTH_SHAFT, NORTH_SHAFT);
+    for (at, toward) in SHAFT_ENGINES {
+        engine(set, at, toward);
+    }
+    grade_pipe_berm(set);
+    liquid_tubes(set, &oil_line());
 }
 
-/// The puddle under the pump, the soaked ground round it, and the ball of oil far below, which
-/// the engine fills in as its cubes load: all but the air of a cave.
+/// Straight right-angle crude line from the seep pump at (-31, 3, -13) south to z = -4, east at
+/// constant y = 3 to Pad R's west wall, one vertical drop at x = -20, and straight east along
+/// Pad R's gravel into CRUDE_TANK at (-16, 0, -4).
+fn oil_line() -> Vec<Pos> {
+    let mut blocks: Vec<Pos> = (-13..=-4).map(|z| Pos::new(-31, 3, z)).collect();
+    blocks.extend((-30..=-21).map(|x| Pos::new(x, 3, -4)));
+    blocks.extend((0..=3).rev().map(|y| Pos::new(-20, y, -4)));
+    blocks.extend((-19..=-17).map(|x| Pos::new(x, 0, -4)));
+    blocks
+}
+
+/// Grades a flush grassy berm (y = 2) under the horizontal y = 3 stretch of `oil_line` so every
+/// tube rests on solid grass with no diagonal steps or floating gaps.
+fn grade_pipe_berm(set: &Set) {
+    let cols = (-12..=-4)
+        .map(|z| (-31, z))
+        .chain((-30..=-21).map(|x| (x, -4)));
+    for (x, z) in cols {
+        let top = ground_top(set, x, z);
+        if top < 2 {
+            for y in top..2 {
+                set.place(Pos::new(x, y, z), BlockState::of(&DIRT));
+            }
+            set.place(Pos::new(x, 2, z), BlockState::of(&GRASS));
+        } else if top > 2 {
+            for y in 3..=top + 1 {
+                set.place(Pos::new(x, y, z), BlockState::AIR);
+            }
+            set.place(Pos::new(x, 2, z), BlockState::of(&GRASS));
+        }
+    }
+}
+
+/// The puddle under the pump, the soaked dirt and oil sand round it (kept flush so no terrain step
+/// sticks up as a pillar), and the ball of oil below.
 fn field(set: &Set) {
     let puddle = PUMP_AT.add_y(-1);
     set.place(puddle, BlockState::of(&OIL));
-    for (dx, dz) in SOAKED {
-        let (x, z) = (puddle.x + dx, puddle.z + dz);
-        let ground = Pos::new(x, ground_top(set, x, z), z);
-        set.place(ground, BlockState::of(&OILY_DIRT));
+    for (offsets, block) in [(SOAKED_DIRT, &OILY_DIRT), (SOAKED_SAND, &OIL_SAND)] {
+        for (dx, dz) in offsets {
+            let (x, z) = (puddle.x + dx, puddle.z + dz);
+            let top = ground_top(set, x, z);
+            if top > puddle.y {
+                for y in puddle.y + 1..=top {
+                    set.place(Pos::new(x, y, z), BlockState::AIR);
+                }
+            }
+            let at_y = top.min(puddle.y);
+            set.place(Pos::new(x, at_y, z), BlockState::of(block));
+        }
     }
     let middle = set.at(puddle.add_y(-FIELD_DEPTH));
     // Half a block past its radius, the roundness of the world's own fields.
@@ -80,34 +126,62 @@ fn field(set: &Set) {
     set.world().fill(ball, OIL.id()).keep("core:air");
 }
 
-/// Two legs east of the pump, a beam across their tops, and from its middle a jib out over
-/// the pump with a lamp under it: all on the side the camera does not come round.
-fn derrick(set: &Set) {
-    let (x, z) = (PUMP_AT.x, PUMP_AT.z);
-    let legs_x = x + LEGS_EAST;
-    for leg_z in [z - LEGS_APART, z + LEGS_APART] {
-        let foot = Pos::new(legs_x, ground_top(set, legs_x, leg_z) + 1, leg_z);
-        set.fill(
-            area(foot, foot.with_y(DERRICK_TOP)),
-            BlockState::of(&OAK_LOG),
-        );
-    }
-    let across = area(
-        Pos::new(legs_x, DERRICK_TOP, z - LEGS_APART + 1),
-        Pos::new(legs_x, DERRICK_TOP, z + LEGS_APART - 1),
-    );
-    set.fill(across, OAK_LOG.with(&[("axis", "z")]).into());
-    let jib = area(
-        Pos::new(x - 1, DERRICK_TOP, z),
-        Pos::new(legs_x - 1, DERRICK_TOP, z),
-    );
-    set.fill(jib, OAK_LOG.with(&[("axis", "x")]).into());
-    set.place(Pos::new(x, DERRICK_TOP - 1, z), BlockState::of(&GLOWSTONE));
+/// Prefills the crude oil line from the seep to Pad R so its glass tubes appear joined from the
+/// first frame they enter view.
+pub fn prefill_line(set: &Set) {
+    prefill(set, oil_line().into_iter(), "cogwork:oil", [1, 1]);
 }
 
-/// Lights the pump's engines: it bores down to the field and pumps.
+/// Lights all five pump engines (200 E/t) and primes the pump's energy store so it never reads
+/// short of power while boring or pumping.
 pub fn bore(set: &Set) {
-    for side in ENGINE_SIDES {
+    for side in DIRECT_ENGINES {
         fuel(set, PUMP_AT.toward(side));
     }
+    for (at, _) in SHAFT_ENGINES {
+        fuel(set, at);
+    }
+    let world = set.world();
+    let id = world.block_entity(set.at(PUMP_AT));
+    if let Some(energy) = world.component_mut(id, &ENERGY) {
+        energy.stored = 8_000;
+    }
+}
+
+/// Up the bank from the jetty to the oil seep's open south face, orbiting west-to-east while it
+/// bores down, with every title clear of the pump screen.
+pub fn shots(film: Film) -> Film {
+    let up = |angle: f64| {
+        let part = (angle - SEEP_ARC[0]) / (SEEP_ARC[1] - SEEP_ARC[0]);
+        between(SEEP_UP, part)
+    };
+    let start_orbit = on_orbit(SEEP_LOOK, SEEP_OUT, SEEP_UP[0], SEEP_ARC[0]);
+    let to_seep = [UP_BANK, [-26.0, 2.0, -5.6], start_orbit];
+    let round = |from: f64, to: f64, secs: f32| {
+        orbit(SEEP_LOOK, SEEP_OUT)
+            .arc(from, to)
+            .height(up(from), up(to))
+            .ease(speeds(1.1, 1.1))
+            .secs(secs)
+    };
+    film.shot(
+        dolly(jetty::PAST_JETTY, UP_BANK)
+            .look(Look::Pan(jetty::SMALL_LOADER_LOOK, HALL_WEST))
+            .ease(speeds(4.5, 4.0))
+            .secs(3.0),
+    )
+    .shot(
+        flyby(&to_seep)
+            .look(Look::Pan(HALL_WEST, SEEP_LOOK))
+            .ease(speeds(4.0, 1.1))
+            .secs(6.0),
+    )
+    .cue("bore")
+    .title("cogwork.film.seep", 3.5)
+    .shot(round(SEEP_ARC[0], 98.0, 4.0))
+    .menu("cogwork:pump", lowered_block(PUMP_AT), 4.0)
+    .shot(round(98.0, 74.0, 4.5))
+    .cue("start_refinery")
+    .title("cogwork.film.field", 5.0)
+    .shot(round(74.0, SEEP_ARC[1], 9.4))
 }

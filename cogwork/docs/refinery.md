@@ -79,6 +79,7 @@ The controller's front lights while it distils, and the column rumbles.
 | Its temperature | "352 degrees (distils at 320 to 380)" |
 | Its status | What it does, or what stops it |
 | Heated by | Steam, its burner, or not heated, in the last tick |
+| Energy | What its heaters' burners used in the last tick, 300 or none, and how far short they fell when steam ran out ([readouts](power.md#energy-readouts)) |
 | Cooled | Whether its condensers cooled it in the last tick |
 | Oil | The crude its controller holds, of 4,000 mB |
 | Sulfur | Its output |
@@ -91,7 +92,7 @@ The controller's front lights while it distils, and the column rumbles.
 | Lubricant | Led into a [quarry](excavator.md#lubricant), it saves a fifth of the energy of each block and half the wear on its bit |
 | Tar | [Asphalt](#asphalt), a road to walk on |
 | Gas | The [polymerizer](plastics.md#polymerizer) makes plastic of it; or let it vent by leaving out the gas taps |
-| Sulfur | Like the coke oven's (`dusts/sulfur`) |
+| Sulfur | Like the coke oven's (`dusts/sulfur`): the [acid tank](acid.md#acid-tank) makes sulfuric acid of it |
 
 Each liquid comes in a bucket, which fills from a tap or a tank. Gas, diesel, lubricant and tar
 flow like oil, gas thinnest and tar thickest.

@@ -10,6 +10,7 @@ use super::parts::{COBBLESTONE, GRASS};
 use crate::lib::{BlockState, Pos, TypedWorld};
 
 static DIRT: Block = Block::named("base:dirt");
+static COARSE_DIRT: Block = Block::named("base:coarse_dirt");
 static TALL_GRASS: Block = Block::named("base:tall_grass");
 static MOSSY_COBBLESTONE: Block = Block::named("base:mossy_cobblestone");
 
@@ -78,12 +79,24 @@ pub fn ground_top(set: &Set, x: i32, z: i32) -> i32 {
 }
 
 fn is_ground(state: BlockState) -> bool {
-    !state.can_build_into() && !is_tree(state)
+    !state.can_build_into() && !is_tree(state) && !is_groundcover(state)
 }
 
 fn is_tree(state: BlockState) -> bool {
     let name = state.block_name();
-    name.ends_with("_log") || name.ends_with("_leaves")
+    name.contains("_log")
+        || name.ends_with("_wood")
+        || name.ends_with("_leaves")
+        || name == "base:bush_stem"
+}
+
+fn is_groundcover(state: BlockState) -> bool {
+    let name = state.block_name();
+    matches!(
+        name,
+        "base:clover" | "base:moss" | "base:dandelion" | "base:rose" | "base:fern" | "base:sapling"
+    ) || name.starts_with("base:tulip_")
+        || name.ends_with("_mushroom")
 }
 
 /// Makes the pads: each cut down or filled up to its height, the trees on and near it gone;
@@ -165,6 +178,28 @@ pub fn fell_near(set: &Set, x: i32, z: i32, within: i32) {
     }
 }
 
+/// Clears all tree blocks (standing trunks, fallen logs, bush stems and leaf bushes) within
+/// `within` blocks of `(x, z)` above the ground and re-grasses any exposed dirt/coarse dirt.
+pub fn clear_trees_near(set: &Set, x: i32, z: i32, within: i32) {
+    let world = set.world();
+    for near_z in z - within..=z + within {
+        for near_x in x - within..=x + within {
+            let ground = ground_top(set, near_x, near_z);
+            for y in ground..=ground + TREE_HEIGHT {
+                let pos = Pos::new(near_x, y, near_z);
+                if is_tree(world.block_typed(set.at(pos))) {
+                    set.place(pos, BlockState::AIR);
+                }
+            }
+            let foot = Pos::new(near_x, ground, near_z);
+            let foot_block = world.block_typed(set.at(foot));
+            if foot_block.is(&DIRT) || foot_block.is(&COARSE_DIRT) {
+                set.place(foot, BlockState::of(&GRASS));
+            }
+        }
+    }
+}
+
 /// Fells the tree whose trunk stands in the column, if one does; grass grows where it stood.
 fn fell_if_trunk(set: &Set, x: i32, z: i32) {
     let ground = ground_top(set, x, z);
@@ -175,7 +210,8 @@ fn fell_if_trunk(set: &Set, x: i32, z: i32) {
     }
     fell(set, x, z, ground);
     let foot = Pos::new(x, ground, z);
-    if world.block_typed(set.at(foot)).is(&DIRT) {
+    let foot_block = world.block_typed(set.at(foot));
+    if foot_block.is(&DIRT) || foot_block.is(&COARSE_DIRT) {
         set.place(foot, BlockState::of(&GRASS));
     }
 }
@@ -218,10 +254,21 @@ fn retain(set: &Set, pad: &Pad, pads: &[Pad]) {
             }
             let beside = ground_top(set, beside_x, beside_z);
             if beside < pad.top {
-                wall(set, x, z, beside + 1, pad.top);
+                let wall_top = if pad.surface.name() == GRASS.name() {
+                    pad.top - 1
+                } else {
+                    pad.top
+                };
+                wall(set, x, z, beside + 1, wall_top);
             } else {
-                // Its top block stays: grass over a stone face.
-                wall(set, beside_x, beside_z, pad.top + 1, beside - 1);
+                // Its top block stays: grass over a stone face. On grass pads, leave a block of
+                // earth below the grass rim so cobblestone never pokes through stepped edges.
+                let wall_top = if pad.surface.name() == GRASS.name() {
+                    beside - 2
+                } else {
+                    beside - 1
+                };
+                wall(set, beside_x, beside_z, pad.top + 1, wall_top);
             }
         }
     }
@@ -237,15 +284,6 @@ fn wall(set: &Set, x: i32, z: i32, from: i32, to: i32) {
             &COBBLESTONE
         };
         set.place(Pos::new(x, y, z), BlockState::of(stone));
-    }
-}
-
-/// Lays `surface` as the top block of the ground in each of `columns`, as it lies.
-pub fn pave(set: &Set, columns: impl Iterator<Item = (i32, i32)>, surface: &Block) {
-    for (x, z) in columns {
-        let ground = ground_top(set, x, z);
-        set.place(Pos::new(x, ground, z), BlockState::of(surface));
-        clear(set, x, z, ground + 1, ground + 1);
     }
 }
 

@@ -6,7 +6,7 @@
 
 mod cubes;
 mod lens;
-mod loader;
+pub(crate) mod loader;
 mod machines;
 mod tickets;
 

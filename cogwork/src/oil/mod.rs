@@ -1,7 +1,10 @@
 //! Oil: a thick black liquid found in pockets deep underground (`fields`), each under a seep of
 //! oil-soaked ground that gives it away. Pockets don't renew: once pumped dry, a field is gone.
+//! A seismic thumper finds fields from afar (`search`), with how deep each lies (`known`).
 
 mod fields;
+mod known;
+pub mod search;
 
 use weft_sdk::{Block, Item, Registry, WithComponents, tool_tier};
 

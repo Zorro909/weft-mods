@@ -9,7 +9,8 @@ use super::vessel::{Holders, Kind, Vessel, reaches};
 use crate::lib::Pos;
 
 /// Hands up to `most` of `liquid` from the machine at `from` into the holder toward `side`, where
-/// it reaches back and takes that liquid; the millibuckets it took. A pump never takes.
+/// it reaches back and takes that liquid (`Held::takes`); the millibuckets it took. A pump never
+/// takes.
 pub fn pour(world: &World, from: Pos, side: Dir, liquid: LiquidKey, most: u32) -> u32 {
     let at = from.toward(side);
     let Some(into) = Vessel::at(world, at).filter(|_| reaches(world, at, side.opposite())) else {

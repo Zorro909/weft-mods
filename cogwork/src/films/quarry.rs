@@ -1,26 +1,37 @@
-//! The two excavators east of the hall, both facing south with their areas behind them. The
-//! nearer one stands on the pad next to the hall's, its frame up and its pit dug down past
-//! y = -64 already, the depth old worlds ended at: the shaft from the hall drives it from its east side, and its output leaves it to
-//! the west through tubes, sped up by gilded ones, to a sorting tube with three chests by the
-//! hall's east end. The farther one, beyond the knoll, has ember engines of its own and puts
-//! up its frame on camera.
+//! The two Gantry Excavators east of the hall, both facing south with their areas behind them.
+//! The nearer one (`DIGGER`) stands on a legacy `gantry_frame` over a pit dug past y = -64, fed
+//! lubricant from Pad R into its top and backed by a Bit Magazine on its south face that swaps a
+//! worn diamond-tipped bit on camera; its output leaves west through gilded tubes to a sorting
+//! tube. The farther one (`BUILDER`), beyond the knoll, holds composite panels and builds its
+//! composite frame on camera.
 
-use showcase_api::Set;
+use showcase_api::{Ease, Film, Look, Set, dolly, flyby, orbit};
+use weft_sdk::Block;
 use weft_sdk::{Dir, Item, Shape};
 
-use super::parts::{CHEST, area, engine, fuel, shafts, tubes};
-use super::site::{SITE, WORKS_DOWN};
+use super::camera::{on_orbit, speeds};
+use super::leveling;
+use super::parts::{
+    CHEST, area, build_frame, engine, fit_bit, fuel, shafts, start_quarry, stock_group, tubes,
+};
+use super::plastics_bay;
+use super::site::{SITE, WORKS_DOWN, above, lowered, lowered_block};
+use crate::bit_magazine::BIT_MAGAZINE;
+use crate::excavator::bit::DIAMOND_BIT;
 use crate::excavator::kind::rows::GANTRY;
-use crate::excavator::{COMPOSITE_FRAME, DIG, EXCAVATOR, Frame, Stage, Status};
-use crate::lib::{BlockState, Pos, TypedWorld};
+use crate::excavator::{EXCAVATOR, Frame, GANTRY_FRAME};
+use crate::lib::{BlockState, Pos};
 use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
+
+static STONE: Block = Block::named("base:stone");
 
 /// The one digging, the height in the world of the layer it mines when the film starts, and
 /// so how deep its pit is then.
 pub const DIGGER: Pos = Pos::new(33, 0, 2);
-const MINING_Y: i32 = -70;
+pub const MAGAZINE_AT: Pos = Pos::new(33, 0, 3);
+const MINING_Y: i32 = -66;
 const PIT_DEPTH: i32 = DIGGER.y + SITE.y - WORKS_DOWN - MINING_Y - 1;
-/// The one that builds its frame while the camera watches, and the sides its engines are on.
+/// The one that builds its composite frame while the camera watches, and its engines' sides.
 const BUILDER: Pos = Pos::new(64, 1, 3);
 const BUILDER_ENGINES: [Dir; 2] = [Dir::Up, Dir::East];
 /// How far behind an excavator the middle of its 9 by 9 area lies.
@@ -39,10 +50,42 @@ const GILDED_X: [i32; 2] = [28, 30];
 const SHAFT_Z: i32 = super::crafting::SHAFT_Z;
 const SHAFT_X: i32 = DIGGER.x + 1;
 
+/// Camera landmarks shared with S11 (loader departure).
+pub const FRAME_LOOK: [f64; 3] = lowered(above(RAISED, 0.5));
+pub const PIT_LOOK: [f64; 3] = lowered(above(PIT, 0.5));
+const SORTER_LOOK: [f64; 3] = lowered(above(SORTER, 0.0));
+const DRILL_LOOK: [f64; 3] = lowered(above(DRILL, 0.0));
+const MAGAZINE_LOOK: [f64; 3] = lowered(above(MAGAZINE_AT, 0.3));
+
+const SORTER_OUT: f64 = 3.0;
+const SORTER_UP: f64 = 3.0;
+const SORTER_ARC: [f64; 2] = [92.0, 60.0];
+
+const PIT_OUT: f64 = 9.0;
+const PIT_UP: [f64; 2] = [10.0, 9.2];
+const PIT_ARC: [f64; 2] = [108.0, 170.0];
+
+const OVER_PIT_CENTER: [f64; 3] = lowered([32.0, 9.6, -2.5]);
+const INTO_PIT: [f64; 3] = lowered([32.0, 2.2, -2.5]);
+const DOWN_PIT: [f64; 3] = lowered([33.5, -14.0, -3.5]);
+const OVER_DRILL: f64 = 7.5;
+
+const FRAME_OUT: f64 = 13.5;
+const FRAME_UP: [f64; 2] = [8.5, 7.5];
+const FRAME_ARC: [f64; 2] = [225.0, 95.0];
+
+pub fn frame_end_eye() -> [f64; 3] {
+    on_orbit(FRAME_LOOK, FRAME_OUT, FRAME_UP[1], FRAME_ARC[1])
+}
+
 pub fn build(set: &Set) {
     for at in [DIGGER, BUILDER] {
         set.place(at, EXCAVATOR.with(&[("facing", "south")]).into());
     }
+    set.place(
+        MAGAZINE_AT,
+        BIT_MAGAZINE.with(&[("facing", "north")]).into(),
+    );
     frame_and_pit(set);
     let shaft_row = |x: i32| Pos::new(x, 0, SHAFT_Z);
     shafts(set, shaft_row(super::hall::EAST + 1), shaft_row(SHAFT_X));
@@ -59,17 +102,47 @@ pub fn build(set: &Set) {
     set.place(BUILDER.toward(Dir::South), BlockState::of(&CHEST));
 }
 
-/// The digger's frame, and the area inside it dug out `PIT_DEPTH` deep, as if it had been
-/// working a long while: one fill, which reaches the cubes far down as they load.
+/// The digger's legacy `gantry_frame` and deep pit, lining all four vertical pit walls with two
+/// blocks of solid stone down past `MINING_Y` (remembering `Shape::cuboid` is half-open `[lo, hi)`)
+/// and sealing any cave air pockets beneath the pit floor while keeping real stone and ores intact.
 fn frame_and_pit(set: &Set) {
     let world = set.world();
     let pos = set.at(DIGGER);
     let frame = Frame::plan(&world, pos, Dir::South, &GANTRY);
-    for cell in frame.cells() {
-        world.set_block_typed(cell, BlockState::of(&COMPOSITE_FRAME));
+    build_frame(set, &frame, &GANTRY_FRAME);
+    let wall_lo_y = pos.y - PIT_DEPTH - 16;
+    let wall_hi_y = pos.y - 1;
+    let stone = BlockState::of(&STONE).id();
+    for (lo, hi) in [
+        (
+            Pos::new(frame.lo.x - 1, wall_lo_y, frame.lo.z - 1),
+            Pos::new(frame.hi.x + 2, wall_hi_y, frame.lo.z + 1),
+        ),
+        (
+            Pos::new(frame.lo.x - 1, wall_lo_y, frame.hi.z),
+            Pos::new(frame.hi.x + 2, wall_hi_y, frame.hi.z + 2),
+        ),
+        (
+            Pos::new(frame.lo.x - 1, wall_lo_y, frame.lo.z),
+            Pos::new(frame.lo.x + 1, wall_hi_y, frame.hi.z + 1),
+        ),
+        (
+            Pos::new(frame.hi.x, wall_lo_y, frame.lo.z),
+            Pos::new(frame.hi.x + 2, wall_hi_y, frame.hi.z + 1),
+        ),
+    ] {
+        world.fill(Shape::cuboid(lo, hi), stone);
     }
+    world
+        .fill(
+            Shape::cuboid(
+                frame.lo.add_x(1).add_z(1).with_y(wall_lo_y),
+                frame.hi.with_y(pos.y - PIT_DEPTH),
+            ),
+            stone,
+        )
+        .only("core:air");
     let lowest = frame.lo.add_x(1).add_z(1).with_y(pos.y - PIT_DEPTH);
-    // The far corner of the box: blocks whose middles lie inside it are cleared.
     let far_corner = frame.hi.with_y(pos.y);
     world.fill(Shape::cuboid(lowest, far_corner), BlockState::AIR.id());
 }
@@ -87,10 +160,19 @@ fn output_line(set: &Set) {
     }
 }
 
-/// Sets the sorting tube's samples, and puts the digger to mining inside the frame it stands
-/// in; it waits for the shaft to turn.
+/// Sets the sorting tube's samples, fits diamond bits in DIGGER and its Bit Magazine, stocks
+/// composite panels in BUILDER, and puts DIGGER to mining inside its legacy frame.
 pub fn start(set: &Set) {
-    mine(set);
+    fit_bit(set, DIGGER, "cogwork:diamond_bit", 0);
+    stock_group(set, MAGAZINE_AT, "bits", &[("cogwork:diamond_bit", 1); 4]);
+    stock_group(
+        set,
+        BUILDER,
+        "materials",
+        &[("cogwork:composite_panel", 32)],
+    );
+    start_quarry(set, DIGGER, Dir::South, &GANTRY, DRILL.y);
+
     let samples = [(Dir::North, "base:cobblestone"), (Dir::South, "base:dirt")];
     let world = set.world();
     let sorter = world.block_entity(set.at(SORTER));
@@ -101,25 +183,145 @@ pub fn start(set: &Set) {
     }
 }
 
-/// Has the digger take the frame around it for its own, built, and start mining from its top.
-fn mine(set: &Set) {
-    let world = set.world();
-    let pos = set.at(DIGGER);
-    let frame = Frame::plan(&world, pos, Dir::South, &GANTRY);
-    let Some(dig) = world.component_mut(world.block_entity(pos), &DIG) else {
-        return;
-    };
-    dig.frame = frame;
-    dig.step = frame.cells().len() as u32;
-    dig.set_stage(Stage::Mine);
-    dig.set_status(Status::NoPower);
-    dig.cursor = frame.first().with_y(set.at(DRILL).y);
-    dig.set_head(dig.cursor.floor_middle());
+/// Wears DIGGER's fitted diamond bit down to two uses left so the Bit Magazine swaps in a fresh
+/// bit live as the camera glides past.
+pub fn prep_swap(set: &Set) {
+    fit_bit(set, DIGGER, "cogwork:diamond_bit", DIAMOND_BIT.lasts - 2);
 }
 
-/// Lights the builder's engines: it puts up its frame.
+/// Lights the builder's engines: it puts up its composite frame.
 pub fn raise_frame(set: &Set) {
     for side in BUILDER_ENGINES {
         fuel(set, BUILDER.toward(side));
     }
+}
+
+/// Section 9 (Tier 5b): north from Pad P to the sorting tube, east past the lubricated Gantry
+/// Excavator and its Bit Magazine swap, then down the deep pit past y = -64 and fade out.
+pub fn sorting_and_digging_shots(film: Film) -> Film {
+    let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
+    let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
+    // Cross north well east of the hall's brick gable (x = 22) and 4+ blocks above every grass
+    // terrace, looking north-east over the open quarry yard and lake, then descend cleanly onto
+    // the sorting tube from the south-east.
+    let mid_north = lowered([28.5, 17.5, 8.5]);
+    let over_yard = lowered([29.2, 14.5, 5.2]);
+    let east_sky = lowered([34.5, 14.5, 8.5]);
+    let far_lake = lowered([32.0, 6.5, -2.5]);
+    let by_magazine = [
+        leave_sorter,
+        lowered([31.5, 4.3, 6.6]),
+        lowered([35.0, 4.5, 6.4]),
+    ];
+    let over_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[0], PIT_ARC[0]);
+    let west_of_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[1], PIT_ARC[1]);
+    let into_center = [west_of_pit, OVER_PIT_CENTER, INTO_PIT];
+    let at_drill = [
+        INTO_PIT[0] - 0.2,
+        DRILL_LOOK[1] + OVER_DRILL,
+        INTO_PIT[2] + 0.4,
+    ];
+    let end_drill = [
+        INTO_PIT[0],
+        DRILL_LOOK[1] + OVER_DRILL + 1.0,
+        INTO_PIT[2] + 0.2,
+    ];
+
+    let round = |from: f64, to: f64, ease: Ease, secs: f32| {
+        orbit(SORTER_LOOK, SORTER_OUT)
+            .arc(from, to)
+            .height(SORTER_UP, SORTER_UP)
+            .ease(ease)
+            .secs(secs)
+    };
+
+    film.cue("noon_3")
+        .shot(
+            dolly(plastics_bay::END_EYE, mid_north)
+                .look(Look::Pan(plastics_bay::END_LOOK, east_sky))
+                .ease(speeds(0.8, 1.0))
+                .secs(4.8),
+        )
+        .shot(
+            dolly(mid_north, over_yard)
+                .look(Look::Pan(east_sky, far_lake))
+                .ease(speeds(1.0, 1.0))
+                .secs(3.0),
+        )
+        .shot(
+            dolly(over_yard, at_sorter)
+                .look(Look::Pan(far_lake, SORTER_LOOK))
+                .ease(speeds(1.0, 0.5))
+                .secs(3.5),
+        )
+        .title("cogwork.film.sorting", 3.0)
+        .shot(round(SORTER_ARC[0], 80.0, speeds(0.5, 0.15), 3.2))
+        .menu("cogwork:sorting_tube", lowered_block(SORTER), 3.5)
+        .shot(round(80.0, 70.0, speeds(0.15, 0.15), 3.8))
+        .shot(round(70.0, SORTER_ARC[1], speeds(0.15, 0.9), 2.4))
+        .cue("prep_swap")
+        .title("cogwork.film.t5_magazine", 3.8)
+        .shot(
+            flyby(&by_magazine)
+                .look(Look::Pan(SORTER_LOOK, MAGAZINE_LOOK))
+                .ease(speeds(0.9, 0.7))
+                .secs(4.2),
+        )
+        .menu("cogwork:bit_magazine", lowered_block(MAGAZINE_AT), 3.8)
+        .shot(
+            dolly(by_magazine[2], over_pit)
+                .look(Look::Pan(MAGAZINE_LOOK, PIT_LOOK))
+                .ease(speeds(0.7, 1.5))
+                .secs(5.5),
+        )
+        .title("cogwork.film.dig", 5.0)
+        .shot(
+            orbit(PIT_LOOK, PIT_OUT)
+                .arc(PIT_ARC[0], PIT_ARC[1])
+                .height(PIT_UP[0], PIT_UP[1])
+                .ease(speeds(1.5, 1.4))
+                .secs(6.5),
+        )
+        .shot(
+            flyby(&into_center)
+                .look(Look::Pan(PIT_LOOK, DOWN_PIT))
+                .ease(speeds(1.4, 6.0))
+                .secs(3.5),
+        )
+        .title("cogwork.film.deep", 4.2)
+        .shot(
+            dolly(INTO_PIT, at_drill)
+                .look_at(DRILL_LOOK)
+                .ease(speeds(6.0, 0.4))
+                .secs(4.6),
+        )
+        .menu("cogwork:excavator", lowered_block(DIGGER), 4.0)
+        .shot(
+            dolly(at_drill, end_drill)
+                .look_at(DRILL_LOOK)
+                .ease(speeds(0.4, 0.2))
+                .secs(4.2),
+        )
+        .fade_out(0.5)
+}
+
+/// Section 10c: east from the seismic thumper into the builder's orbit as it puts up its
+/// composite frame.
+pub fn framing_shots(film: Film) -> Film {
+    let at_frame = on_orbit(FRAME_LOOK, FRAME_OUT, FRAME_UP[0], FRAME_ARC[0]);
+    film.cue("frame")
+        .shot(
+            dolly(leveling::END_EYE, at_frame)
+                .look(Look::Pan(leveling::THUMPER_LOOK, FRAME_LOOK))
+                .ease(speeds(1.0, 1.6))
+                .secs(4.5),
+        )
+        .title("cogwork.film.frame", 5.0)
+        .shot(
+            orbit(FRAME_LOOK, FRAME_OUT)
+                .arc(FRAME_ARC[0], FRAME_ARC[1])
+                .height(FRAME_UP[0], FRAME_UP[1])
+                .ease(speeds(1.6, 2.0))
+                .secs(12.0),
+        )
 }

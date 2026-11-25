@@ -11,7 +11,7 @@
 
 mod column;
 pub mod heat;
-mod parts;
+pub(crate) mod parts;
 pub mod products;
 mod work;
 
@@ -154,7 +154,13 @@ pub fn register(r: &mut Registry) {
             state.texture("refinery_casing").front(front)
         })
         .on_break(|world, change| work::broken(world, change.pos.into(), change.state.into()))
-        .entity(|entity| entity.attach(&REFINING).attach(&HELD).inventory(OUTPUT))
+        .entity(|entity| {
+            entity
+                .attach(&REFINING)
+                .attach(&HELD)
+                .attach(&crate::machine::METER)
+                .inventory(OUTPUT)
+        })
         .opens(&REFINERY_MENU);
     r.menu(&REFINERY_MENU)
         .group("output", Slots::row(OUTPUT).output().holder())
@@ -178,6 +184,7 @@ pub fn register(r: &mut Registry) {
 /// | [######|###|...]  352 °C (distils at 320 to 380 °C)             |  the band marked on the bar
 /// | Distilling 10 mB of crude a tick                                |  status
 /// | Heated by steam                                                 |  or by its burner, or not
+/// | Using 300 energy a tick                                         |  its burners', and short
 /// | Cooled by water                                                 |  or not
 /// | [####......]  3000 / 4000 mB of Oil                             |  its crude
 /// | Sulfur [ ]                                                      |
@@ -207,6 +214,7 @@ fn screen(ui: &mut Ui) {
             let heating: &str = refinery_of(view).heating().into();
             out.set(&format!("cogwork.refinery.{heating}"), &[]);
         });
+        crate::machine::meter_line(ui);
         ui.text_bind(|view, out| {
             let cooled = refinery_of(view).cooled != 0;
             let key = if cooled { "cooled" } else { "uncooled" };

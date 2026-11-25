@@ -1,4 +1,4 @@
-# Rubble, ore grades, sifting, washing, flotation and grinding
+# Rubble, ore grades, sifting, washing, flotation, leaching and grinding
 
 A [quarry](excavator.md) doesn't bring stone and ore up clean: stone comes up as Rubble,
 and ore as Ore Rubble. The quarry sets how much comes up; working it by hand or by machine
@@ -7,8 +7,9 @@ millstone grinds Ore Rubble into raw ore. Their driven counterparts, the
 [shaker screen](#shaker-screen) and the [grinding mill](#grinding-mill), do the same work with
 engine energy and tubes, by the same table and the same yields. Neither replaces the other: the
 hand machines need no power, and the millstone never takes a tube. The [washer](#washer) and the
-[flotation cell](#flotation-cell) raise Ore Rubble a grade each before it is ground, and the
-[clarifier](#clarifier) gives the flotation cell's water back.
+[flotation cell](#flotation-cell) raise Ore Rubble a grade each before it is ground, the
+[clarifier](#clarifier) gives the flotation cell's water back, and the
+[leaching vat](acid.md#leaching-vat) raises it the last grade with sulfuric acid.
 
 ## Rubble
 
@@ -71,8 +72,10 @@ Grinding gives the same in the millstone and the grinding mill:
 |---|---|---|
 | Washing | [Washer](#washer) | Poor → Common |
 | Flotation | [Flotation cell](#flotation-cell) | Common → Rich |
+| Leaching | [Leaching vat](acid.md#leaching-vat) | Rich → Pure |
 
-A later step raises Rich to Pure.
+Each machine raises only its own grade and passes every other on as it is, so a line may hold
+them in any order without losing a grade; in the order above, each raises one step.
 
 ## Millstone
 
@@ -101,8 +104,8 @@ Use it with:
 Each use says above the hotbar what it did or what it lacks: "Turn 3 of 6", "Needs water". The
 ring round the runner shows what it holds: water, sand, both, or neither.
 
-Nothing reaches it by tube: it has no slots. Broken, by hand or by the leveler or the
-excavator, it keeps what it holds in its item, and placed again it has it all back.
+Nothing reaches it by tube: it has no slots. Broken, by hand or by the leveler or a
+quarry, it keeps what it holds in its item, and placed again it has it all back.
 
 ## Sieve
 
@@ -303,9 +306,14 @@ and creosote from the coke oven's drain by a second tube line touching it on ano
 clarifier, or a tube to one, at its back, and run the clarifier's front back into the cell's
 water line: about half of each float's water comes back, and the rest has to be topped up.
 
+A [leaching vat](acid.md#leaching-vat) goes after the flotation cell: the cell's front into the
+vat, the vat's front on to the mill. Pure Ore Rubble grinds into two and a half times what Poor
+does. An [acid tank](acid.md#acid-tank) beside it makes its acid, of sulfur and water.
+
 ## Their sounds
 
 The runner grinds stone on stone with each turn, and the tray rattles its gravel with each
 shake. The shaker screen rattles and thumps while it sifts, and the grinding mill rumbles while
 it grinds; both carry far. The washer's paddle sloshes and churns its water while it washes, and
-the flotation cell's froth bubbles and gurgles while it floats. The clarifier is silent.
+the flotation cell's froth bubbles and gurgles while it floats. The clarifier is silent; the
+leaching vat and the acid tank fizz.
