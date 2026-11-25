@@ -83,7 +83,7 @@ fn is_ground(state: BlockState) -> bool {
 
 fn is_tree(state: BlockState) -> bool {
     let name = state.block_name();
-    name.ends_with("_log") || name.ends_with("_leaves")
+    name.contains("_log") || name.ends_with("_wood") || name.ends_with("_leaves")
 }
 
 /// Makes the pads: each cut down or filled up to its height, the trees on and near it gone;
@@ -239,7 +239,12 @@ fn retain(set: &Set, pad: &Pad, pads: &[Pad]) {
             }
             let beside = ground_top(set, beside_x, beside_z);
             if beside < pad.top {
-                wall(set, x, z, beside + 1, pad.top);
+                let wall_top = if pad.surface.name() == GRASS.name() {
+                    pad.top - 1
+                } else {
+                    pad.top
+                };
+                wall(set, x, z, beside + 1, wall_top);
             } else {
                 // Its top block stays: grass over a stone face.
                 wall(set, beside_x, beside_z, pad.top + 1, beside - 1);

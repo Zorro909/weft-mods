@@ -49,7 +49,7 @@ const CLARIFIERS: [Pos; 2] = [Pos::new(63, FLOOR, 32), Pos::new(65, FLOOR, 32)];
 const CLAY_CHESTS: [Pos; 2] = [Pos::new(63, FLOOR, 31), Pos::new(65, FLOOR, 31)];
 const WATER_TANK: Area = Area {
     lo: Pos::new(67, FLOOR, 30),
-    hi: Pos::new(68, FLOOR + 1, 30),
+    hi: Pos::new(69, FLOOR + 1, 30),
 };
 
 pub fn build(set: &Set) {
@@ -189,21 +189,14 @@ pub fn start(set: &Set) {
         "cogwork:creosote",
         [1, 1],
     );
-    prefill(
-        set,
-        WATER_TANK
-            .blocks()
-            .chain(clear_water_line())
-            .chain([FLOTATION_AT]),
-        "base:water",
-        [1, 1],
-    );
-    prefill(
-        set,
-        muddy_line().into_iter().chain(CLARIFIERS),
-        "cogwork:muddy_water",
-        [1, 1],
-    );
+    // Leave generous headroom in the clear-water side (32,000 / 96,000 mB = 67% of the bottom
+    // tank layer, clear_water_line unfilled) so both clarifiers' south fronts pour freely into
+    // clear_water_line without saturating, while lasting ~208 s of continuous flotation.
+    prefill(set, WATER_TANK.blocks(), "base:water", [1, 3]);
+    prefill(set, [FLOTATION_AT].into_iter(), "base:water", [1, 1]);
+    // Prefill only muddy_line (8,000 mB), leaving both clarifiers empty so muddy water drains
+    // cleanly into them and the flotation cell never backs up.
+    prefill(set, muddy_line().into_iter(), "cogwork:muddy_water", [1, 1]);
 }
 
 /// Glides across the open gravel past the core drill, Steel Excavator, flotation cell and
