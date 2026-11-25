@@ -13,7 +13,7 @@
 
 mod oil;
 mod screen;
-mod survey;
+pub(crate) mod survey;
 mod weight;
 mod work;
 
@@ -66,7 +66,7 @@ value! {
         pub worked_at: u64,
     }
 }
-static SURVEY: Component<Survey> = Component::named("cogwork:survey");
+pub(crate) static SURVEY: Component<Survey> = Component::named("cogwork:survey");
 
 impl Default for Survey {
     fn default() -> Survey {

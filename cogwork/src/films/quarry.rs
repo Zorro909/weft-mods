@@ -6,6 +6,7 @@
 //! composite frame on camera.
 
 use showcase_api::{Ease, Film, Look, Set, dolly, flyby, hold, orbit};
+use weft_sdk::Block;
 use weft_sdk::{Dir, Item, Shape};
 
 use super::camera::{on_orbit, speeds};
@@ -21,6 +22,8 @@ use crate::excavator::kind::rows::GANTRY;
 use crate::excavator::{EXCAVATOR, Frame, GANTRY_FRAME};
 use crate::lib::{BlockState, Pos};
 use crate::tube::{GILDED_TUBE, SORTING_TUBE, set_sample, sorting::ROW};
+
+static STONE: Block = Block::named("base:stone");
 
 /// The one digging, the height in the world of the layer it mines when the film starts, and
 /// so how deep its pit is then.
@@ -58,16 +61,17 @@ const SORTER_OUT: f64 = 3.0;
 const SORTER_UP: f64 = 3.0;
 const SORTER_ARC: [f64; 2] = [125.0, 85.0];
 
-const PIT_OUT: f64 = 8.0;
-const PIT_UP: [f64; 2] = [9.0, 2.5];
-const PIT_ARC: [f64; 2] = [108.0, 180.0];
+const PIT_OUT: f64 = 9.0;
+const PIT_UP: [f64; 2] = [9.5, 6.2];
+const PIT_ARC: [f64; 2] = [108.0, 170.0];
 
-const INTO_PIT: [f64; 3] = lowered([30.0, 2.0, -4.0]);
-const DOWN_PIT: [f64; 3] = lowered([30.25, -8.0, -4.0]);
-const OVER_DRILL: f64 = 4.0;
+const OVER_PIT_CENTER: [f64; 3] = lowered([33.2, 6.4, -3.6]);
+const INTO_PIT: [f64; 3] = lowered([32.6, 2.5, -3.5]);
+const DOWN_PIT: [f64; 3] = lowered([32.6, -12.0, -3.5]);
+const OVER_DRILL: f64 = 2.6;
 
-const FRAME_OUT: f64 = 10.0;
-const FRAME_UP: [f64; 2] = [8.0, 7.0];
+const FRAME_OUT: f64 = 13.5;
+const FRAME_UP: [f64; 2] = [8.5, 7.5];
 const FRAME_ARC: [f64; 2] = [225.0, 95.0];
 
 pub fn frame_end_eye() -> [f64; 3] {
@@ -98,12 +102,36 @@ pub fn build(set: &Set) {
     set.place(BUILDER.toward(Dir::South), BlockState::of(&CHEST));
 }
 
-/// The digger's legacy `gantry_frame` and deep pit, showing legacy frame compatibility.
+/// The digger's legacy `gantry_frame` and deep pit, lining all four vertical pit walls with stone
+/// down to `MINING_Y` so natural caves never open dark voids into the shaft.
 fn frame_and_pit(set: &Set) {
     let world = set.world();
     let pos = set.at(DIGGER);
     let frame = Frame::plan(&world, pos, Dir::South, &GANTRY);
     build_frame(set, &frame, &GANTRY_FRAME);
+    let wall_lo_y = pos.y - PIT_DEPTH - 2;
+    let wall_hi_y = pos.y - 1;
+    let stone = BlockState::of(&STONE).id();
+    for (lo, hi) in [
+        (
+            Pos::new(frame.lo.x, wall_lo_y, frame.lo.z),
+            Pos::new(frame.hi.x, wall_hi_y, frame.lo.z),
+        ),
+        (
+            Pos::new(frame.lo.x, wall_lo_y, frame.hi.z),
+            Pos::new(frame.hi.x, wall_hi_y, frame.hi.z),
+        ),
+        (
+            Pos::new(frame.lo.x, wall_lo_y, frame.lo.z),
+            Pos::new(frame.lo.x, wall_hi_y, frame.hi.z),
+        ),
+        (
+            Pos::new(frame.hi.x, wall_lo_y, frame.lo.z),
+            Pos::new(frame.hi.x, wall_hi_y, frame.hi.z),
+        ),
+    ] {
+        world.fill(Shape::cuboid(lo, hi), stone);
+    }
     let lowest = frame.lo.add_x(1).add_z(1).with_y(pos.y - PIT_DEPTH);
     let far_corner = frame.hi.with_y(pos.y);
     world.fill(Shape::cuboid(lowest, far_corner), BlockState::AIR.id());
@@ -166,17 +194,18 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
     // Cross north high above the grass bank (6-8 blocks clear of the y = 8 hillside and above the
     // hall's roof ridge), looking north-east over the open quarry yard and lake so the slope stays
     // in the lower third, then descend cleanly onto the sorting tube.
-    let mid_north = lowered([24.4, 16.0, 8.2]);
-    let over_yard = lowered([25.2, 15.0, 4.2]);
-    let east_sky = lowered([30.5, 13.5, 6.0]);
+    let mid_north = lowered([25.6, 16.0, 8.2]);
+    let over_yard = lowered([25.6, 15.0, 4.2]);
+    let east_sky = lowered([31.5, 13.5, 6.0]);
     let far_lake = lowered([31.5, 6.5, -2.5]);
     let by_magazine = [
         leave_sorter,
-        lowered([31.2, 2.8, 5.4]),
-        lowered([35.0, 3.0, 5.2]),
+        lowered([31.2, 4.3, 6.6]),
+        lowered([35.0, 4.5, 6.4]),
     ];
     let over_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[0], PIT_ARC[0]);
     let west_of_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[1], PIT_ARC[1]);
+    let into_center = [west_of_pit, OVER_PIT_CENTER, INTO_PIT];
     let at_drill = [INTO_PIT[0], DRILL_LOOK[1] + OVER_DRILL, INTO_PIT[2]];
 
     let round = |from: f64, to: f64, ease: Ease, secs: f32| {
@@ -206,20 +235,20 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
                 .ease(speeds(1.0, 0.5))
                 .secs(3.5),
         )
-        .title("cogwork.film.sorting", 4.5)
-        .shot(round(SORTER_ARC[0], 110.0, speeds(0.5, 0.15), 2.5))
-        .menu("cogwork:sorting_tube", lowered_block(SORTER), 4.0)
-        .shot(round(110.0, 100.0, speeds(0.15, 0.15), 4.0))
-        .shot(round(100.0, SORTER_ARC[1], speeds(0.15, 0.9), 2.5))
+        .title("cogwork.film.sorting", 2.5)
+        .shot(round(SORTER_ARC[0], 110.0, speeds(0.5, 0.15), 2.8))
+        .menu("cogwork:sorting_tube", lowered_block(SORTER), 3.5)
+        .shot(round(110.0, 100.0, speeds(0.15, 0.15), 3.8))
+        .shot(round(100.0, SORTER_ARC[1], speeds(0.15, 0.9), 2.4))
         .cue("prep_swap")
-        .title("cogwork.film.t5_magazine", 5.5)
+        .title("cogwork.film.t5_magazine", 3.8)
         .shot(
             flyby(&by_magazine)
                 .look(Look::Pan(SORTER_LOOK, MAGAZINE_LOOK))
                 .ease(speeds(0.9, 0.7))
-                .secs(4.5),
+                .secs(4.2),
         )
-        .menu("cogwork:bit_magazine", lowered_block(MAGAZINE_AT), 4.0)
+        .menu("cogwork:bit_magazine", lowered_block(MAGAZINE_AT), 3.8)
         .shot(
             dolly(by_magazine[2], over_pit)
                 .look(Look::Pan(MAGAZINE_LOOK, PIT_LOOK))
@@ -231,24 +260,24 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
             orbit(PIT_LOOK, PIT_OUT)
                 .arc(PIT_ARC[0], PIT_ARC[1])
                 .height(PIT_UP[0], PIT_UP[1])
-                .ease(speeds(1.5, 1.5))
-                .secs(7.0),
+                .ease(speeds(1.5, 1.4))
+                .secs(6.5),
         )
         .shot(
-            dolly(west_of_pit, INTO_PIT)
+            flyby(&into_center)
                 .look(Look::Pan(PIT_LOOK, DOWN_PIT))
-                .ease(speeds(1.5, 4.0))
-                .secs(3.0),
+                .ease(speeds(1.4, 4.0))
+                .secs(3.5),
         )
-        .title("cogwork.film.deep", 6.0)
+        .title("cogwork.film.deep", 5.0)
         .shot(
             dolly(INTO_PIT, at_drill)
                 .look_at(DRILL_LOOK)
                 .ease(speeds(4.0, 0.3))
-                .secs(13.0),
+                .secs(6.5),
         )
-        .menu("cogwork:excavator", lowered_block(DIGGER), 5.0)
-        .shot(hold(at_drill).look_at(DRILL_LOOK).secs(5.0))
+        .menu("cogwork:excavator", lowered_block(DIGGER), 4.0)
+        .shot(hold(at_drill).look_at(DRILL_LOOK).secs(4.5))
         .fade_out(1.5)
 }
 

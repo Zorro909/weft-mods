@@ -9,35 +9,32 @@ use showcase_api::{Film, Look, Set, dolly, flyby};
 use weft_sdk::ItemStack;
 
 use super::camera::speeds;
-use super::parts::{STONE_BRICKS, area};
 use super::quarry::{self, FRAME_LOOK, PIT_LOOK};
 use super::site::{above, lowered, lowered_block};
 use crate::lib::{BlockState, Pos};
 use crate::loading::{CUBOID_LENS, ULTRA_CUBOID_LOADER};
 
-/// The loader, on top of its mast. It keeps the 7 by 7 cubes of the layer it stands in: this
-/// is the highest block of the layer the machines stand in, and from this cube the 7 by 7
-/// reach across the campus.
-pub const LOADER: Pos = Pos::new(27, 3, -11);
-/// The lowest block of the mast, on the pad.
-const MAST_FOOT: i32 = 0;
+/// The ultra cuboid loader standing directly on Pad 1's north-west gravel (no plinth, 2 blocks
+/// west and 3 blocks north of the digger frame at x 28..38, z -9..1). Still sits in the same
+/// y = 64..79 cube so its 7 by 7 reach covers the whole campus.
+pub const LOADER: Pos = Pos::new(26, 0, -12);
 
-/// Camera waypoints for the finale: loader close-up, cuboid lens panorama, and closing rest.
-const OVER_KNOLL: [f64; 3] = [50.0, 5.0, 7.0];
-const PAST_DIGGER: [f64; 3] = lowered([41.0, 9.0, -11.0]);
+/// Camera waypoints for the finale: high over the knoll and north of the digger frame to a
+/// north-west view of the loader (with the frame behind it), cuboid lens panorama, and a closer
+/// final look across the hall and campus.
+const OVER_KNOLL: [f64; 3] = [50.0, 9.5, 7.5];
+const PAST_DIGGER: [f64; 3] = lowered([42.0, 12.0, -16.0]);
 const BY_LOADER: [[f64; 3]; 3] = [
-    lowered([31.6, 5.2, -12.2]),
-    lowered([31.7, 5.4, -12.7]),
-    lowered([31.9, 5.8, -13.6]),
+    lowered([22.5, 3.2, -16.2]),
+    lowered([22.0, 3.5, -16.7]),
+    lowered([21.6, 3.9, -17.3]),
 ];
-const LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 0.0));
-const OVER_LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 1.3));
-const WORKS_LOOK: [f64; 3] = lowered([22.0, 0.0, -8.0]);
-const SHORE_LOOK: [f64; 3] = lowered([18.0, -2.0, -15.0]);
+const LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 0.2));
+const OVER_LOADER_LOOK: [f64; 3] = lowered(above(LOADER, 1.8));
+const WORKS_LOOK: [f64; 3] = lowered([20.0, 1.5, -4.0]);
+const SHORE_LOOK: [f64; 3] = lowered([14.0, 2.5, -2.0]);
 
 pub fn build(set: &Set) {
-    let mast = area(LOADER.with_y(MAST_FOOT), LOADER.add_y(-1));
-    set.fill(mast, BlockState::of(&STONE_BRICKS));
     set.place(LOADER, BlockState::of(&ULTRA_CUBOID_LOADER));
 }
 
@@ -95,40 +92,40 @@ pub fn lens_away(set: &Set) {
 pub fn shots(film: Film) -> Film {
     let from_frame = quarry::frame_end_eye();
     let down = [OVER_KNOLL, PAST_DIGGER, BY_LOADER[0]];
-    let over_lake = lowered([37.0, 13.0, -28.0]);
-    let north_east = lowered([68.0, 27.0, -34.0]);
-    let with_lens = [over_lake, lowered([50.0, 25.0, -42.0]), north_east];
+    let over_lake = lowered([35.0, 14.0, -28.0]);
+    let north_east = lowered([62.0, 24.0, -32.0]);
+    let with_lens = [over_lake, lowered([48.0, 22.0, -38.0]), north_east];
     let to_shore = [
         north_east,
-        lowered([66.0, 15.0, -27.0]),
-        lowered([54.0, 8.5, -22.0]),
+        lowered([54.0, 14.0, -24.0]),
+        lowered([42.0, 7.5, -18.0]),
     ];
 
     film.shot(
         dolly(from_frame, OVER_KNOLL)
             .look(Look::Pan(FRAME_LOOK, PIT_LOOK))
             .ease(speeds(2.0, 5.0))
-            .secs(3.0),
+            .secs(3.2),
     )
     .shot(
         flyby(&down)
             .look(Look::Pan(PIT_LOOK, OVER_LOADER_LOOK))
-            .ease(speeds(5.0, 0.2))
-            .secs(5.5),
+            .ease(speeds(5.0, 0.25))
+            .secs(6.0),
     )
-    .title("cogwork.film.loader", 5.0)
+    .title("cogwork.film.loader", 3.0)
     .shot(
         dolly(BY_LOADER[0], BY_LOADER[1])
             .look_at(OVER_LOADER_LOOK)
-            .ease(speeds(0.2, 0.2))
-            .secs(1.5),
+            .ease(speeds(0.25, 0.2))
+            .secs(3.2),
     )
-    .menu("cogwork:ultra_cuboid_loader", lowered_block(LOADER), 4.5)
+    .menu("cogwork:ultra_cuboid_loader", lowered_block(LOADER), 4.0)
     .shot(
         dolly(BY_LOADER[1], BY_LOADER[2])
             .look_at(OVER_LOADER_LOOK)
             .ease(speeds(0.2, 0.3))
-            .secs(4.5),
+            .secs(4.2),
     )
     .shot(
         dolly(BY_LOADER[2], over_lake)

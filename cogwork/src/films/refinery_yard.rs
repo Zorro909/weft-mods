@@ -357,7 +357,10 @@ pub fn start(set: &Set) {
     );
     prefill(
         set,
-        lubricant_line().into_iter().chain(LUBE_TANK.blocks()),
+        lubricant_line()
+            .into_iter()
+            .chain(LUBE_TANK.blocks())
+            .chain([super::quarry::DIGGER]),
         "cogwork:lubricant",
         [2, 3],
     );
