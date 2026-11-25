@@ -266,15 +266,6 @@ fn wall(set: &Set, x: i32, z: i32, from: i32, to: i32) {
     }
 }
 
-/// Lays `surface` as the top block of the ground in each of `columns`, as it lies.
-pub fn pave(set: &Set, columns: impl Iterator<Item = (i32, i32)>, surface: &Block) {
-    for (x, z) in columns {
-        let ground = ground_top(set, x, z);
-        set.place(Pos::new(x, ground, z), BlockState::of(surface));
-        clear(set, x, z, ground + 1, ground + 1);
-    }
-}
-
 /// The columns of a line through `corners`: from each along x to the next one's x, then along
 /// z to it.
 pub fn route(corners: &[(i32, i32)]) -> Vec<(i32, i32)> {

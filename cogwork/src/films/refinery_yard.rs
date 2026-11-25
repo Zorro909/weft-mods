@@ -10,8 +10,7 @@ use showcase_api::{Film, Look, Set, flyby, orbit};
 use super::camera::{on_orbit, speeds};
 use super::ground::clear_trees_near;
 use super::parts::{
-    CHEST, STONE_BRICKS, area, fuel_item, liquid_tubes, prefill, pressure_tubes, sealed_tubes,
-    tubes,
+    CHEST, area, fuel_item, liquid_tubes, prefill, pressure_tubes, sealed_tubes, tubes,
 };
 use super::seep;
 use super::site::{PAD_P_TOP, above, lowered, lowered_block};
@@ -37,11 +36,11 @@ const LUBE_TAP: Pos = Pos::new(-10, 2, -6);
 const DIESEL_TAP: Pos = Pos::new(-10, 3, -5);
 const GAS_TAP: Pos = Pos::new(-10, 4, -4);
 
-/// Crude oil buffer tank where the seep line arrives, and the sulfur chest covering the buried
-/// crude tube cell at (-13, -1, -4) so no gravel trench shows.
+/// Crude oil buffer tank aligned on z = -4 so the crude feed runs straight east into the
+/// controller with no zigzag, and the sulfur chest covering (-13, -1, -4).
 pub const CRUDE_TANK: Area = Area {
-    lo: Pos::new(-16, 0, -5),
-    hi: Pos::new(-16, 1, -5),
+    lo: Pos::new(-16, 0, -4),
+    hi: Pos::new(-16, 1, -4),
 };
 const SULFUR_CHEST: Pos = Pos::new(-13, 0, -4);
 
@@ -81,8 +80,8 @@ const LUBE_TANK: Area = Area {
     hi: Pos::new(-8, 2, -7),
 };
 const GAS_TANK: Area = Area {
-    lo: Pos::new(-7, 4, -4),
-    hi: Pos::new(-7, 5, -4),
+    lo: Pos::new(-6, 0, -2),
+    hi: Pos::new(-6, 1, -2),
 };
 
 /// Refinery orbit geometry and handoff point heading east into the hall.
@@ -151,7 +150,6 @@ fn crude_and_sulfur(set: &Set) {
 
 fn crude_line() -> Vec<Pos> {
     vec![
-        Pos::new(-15, 0, -5),
         Pos::new(-15, 0, -4),
         Pos::new(-14, 0, -4),
         Pos::new(-14, -1, -4),
@@ -236,11 +234,6 @@ fn product_lines(set: &Set) {
     liquid_tubes(set, &diesel_line());
 
     set.fill(GAS_TANK, BlockState::of(&LIQUID_TANK));
-    // Solid stone-brick support column under the elevated gas tank so it never floats.
-    set.fill(
-        area(Pos::new(-7, 0, -4), Pos::new(-7, 3, -4)),
-        BlockState::of(&STONE_BRICKS),
-    );
     liquid_tubes(set, &gas_line());
 }
 
@@ -291,15 +284,22 @@ fn diesel_line() -> Vec<Pos> {
 }
 
 fn gas_line() -> Vec<Pos> {
-    // Runs overhead at y = 6 so the camera entering the hall at y = 3..4 passes well underneath,
-    // arriving directly atop Pad P's gas tank at (13, PAD_P_TOP + 3, 14).
+    // Leaves GAS_TAP east to x = -6, drops straight into the ground-level GAS_TANK at (-6, 0..1,
+    // -2), and climbs overhead at y = 6 so the camera entering the hall at y = 3..4 passes well
+    // underneath before gas arrives atop Pad P's gas tank at (13, PAD_P_TOP + 3, 14).
     let mut blocks = vec![
         Pos::new(-9, 4, -4),
         Pos::new(-8, 4, -4),
-        Pos::new(-7, 6, -4),
-        Pos::new(-6, 6, -4),
+        Pos::new(-7, 4, -4),
+        Pos::new(-6, 4, -4),
+        Pos::new(-6, 4, -3),
+        Pos::new(-6, 4, -2),
+        Pos::new(-6, 3, -2),
+        Pos::new(-6, 2, -2),
+        Pos::new(-6, 5, -2),
+        Pos::new(-6, 6, -2),
     ];
-    blocks.extend((-3..=8).map(|z| Pos::new(-6, 6, z)));
+    blocks.extend((-1..=8).map(|z| Pos::new(-6, 6, z)));
     blocks.extend((-5..=13).map(|x| Pos::new(x, 6, 8)));
     blocks.extend((9..=14).map(|z| Pos::new(13, 6, z)));
     let pad_top_tank = PAD_P_TOP + 2;
