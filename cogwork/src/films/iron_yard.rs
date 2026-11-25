@@ -4,7 +4,7 @@
 //! by stone tubes into a washer, a grinding mill, and a furnace blown by a driven bellows.
 
 use showcase_api::{Film, Look, Set, dolly, flyby};
-use weft_sdk::{Dir, Shape};
+use weft_sdk::{Dir, Shape, StackData};
 
 use super::camera::speeds;
 use super::parts::{
@@ -41,13 +41,17 @@ const QUARRY_CHEST: Pos = Pos::new(0, FLOOR, 33);
 const PIT_DEPTH: i32 = 3;
 
 /// Connected driven ore processing line along z = 32, with separate tube networks for each stage
-/// so washed ore never reaches the void tube and raw ore overflows cleanly into a buffer chest.
-const SHAKER_IN: Pos = Pos::new(1, FLOOR, 32);
-const SHAKER_PULL: Pos = Pos::new(2, FLOOR, 32);
-const SHAKER_PULL_ENGINE: Pos = Pos::new(2, FLOOR, 31);
+/// so washed ore never reaches the void tube and every timber pull tube hands into a stone tube
+/// (timber tubes only push into tubes, never directly into machines).
+const SHAKER_IN: Pos = Pos::new(1, FLOOR, 31);
+const SHAKER_PULL: Pos = Pos::new(1, FLOOR, 32);
+const SHAKER_PULL_ENGINE: Pos = Pos::new(1, FLOOR + 1, 32);
 const SHAKER_AT: Pos = Pos::new(3, FLOOR, 32);
 const VOID_AT: Pos = Pos::new(3, FLOOR, 30);
 
+const WASHER_IN: Pos = Pos::new(6, FLOOR, 29);
+const WASHER_PULL: Pos = Pos::new(6, FLOOR, 30);
+const WASHER_PULL_ENGINE: Pos = Pos::new(5, FLOOR, 30);
 const WASHER_AT: Pos = Pos::new(6, FLOOR, 32);
 const MILL_AT: Pos = Pos::new(9, FLOOR, 32);
 const FURNACE_BUFFER: Pos = Pos::new(10, FLOOR, 31);
@@ -61,13 +65,13 @@ const WATER_TANK: Area = Area {
 };
 
 /// Ember engines driving the bellows directly behind it and the shaker, washer and grinding mill
-/// via shafts buried ONLY directly under engines, tubes and machines (no open trenches).
+/// via shafts buried ONLY directly under engines, stone tubes, water tubes and machines (no open
+/// trenches, and never under a timber pull tube).
 const DIRECT_ENGINES: [(Pos, Dir); 1] = [(Pos::new(12, FLOOR, 31), Dir::South)];
-const UNDER_ENGINES: [(Pos, Pos); 3] = [
-    (Pos::new(3, FLOOR, 29), SHAKER_AT),
-    (Pos::new(6, FLOOR, 30), WASHER_AT),
-    (Pos::new(9, FLOOR, 28), MILL_AT),
-];
+const SHAKER_ENGINE: Pos = Pos::new(3, FLOOR, 29);
+const WASHER_ENGINE: Pos = Pos::new(7, FLOOR, 31);
+const MILL_ENGINE: Pos = Pos::new(9, FLOOR, 28);
+const UNDER_ENGINES: [Pos; 3] = [SHAKER_ENGINE, WASHER_ENGINE, MILL_ENGINE];
 /// Assisting spring engine beside the grinding mill's ember engine (40 + 10 = 50 E/t against the
 /// mill's 40 E/t draw, keeping its store full without overheating during the section).
 const MILL_ASSIST: Pos = Pos::new(8, FLOOR, 28);
@@ -126,17 +130,21 @@ fn shed(set: &Set) {
 fn processing_line(set: &Set) {
     set.place(SHAKER_IN, BlockState::of(&CHEST));
     set.place(SHAKER_PULL, BlockState::of(&TIMBER_TUBE));
-    spring_engine(set, SHAKER_PULL_ENGINE, Dir::South);
+    spring_engine(set, SHAKER_PULL_ENGINE, Dir::Down);
+    tubes(set, Pos::new(2, FLOOR, 32), Pos::new(2, FLOOR, 32));
     set.place(SHAKER_AT, SHAKER_SCREEN.with(&[("facing", "north")]).into());
     set.place(VOID_AT, BlockState::of(&VOID_TUBE));
     // Shaker output network (stops at x = 4 on z = 31 so (5, 31) stays air and never touches
-    // the washer's output network at (6..8, 31)).
+    // the washer's feed tube at (6, 31) or output tubes at (7..8, 32)).
     tubes(set, Pos::new(3, FLOOR, 31), Pos::new(4, FLOOR, 31));
     tubes(set, Pos::new(4, FLOOR, 32), Pos::new(5, FLOOR, 32));
 
-    set.place(WASHER_AT, WASHER.with(&[("facing", "north")]).into());
-    tubes(set, Pos::new(6, FLOOR, 31), Pos::new(8, FLOOR, 31));
-    tubes(set, Pos::new(8, FLOOR, 32), Pos::new(8, FLOOR, 32));
+    set.place(WASHER_IN, BlockState::of(&CHEST));
+    set.place(WASHER_PULL, BlockState::of(&TIMBER_TUBE));
+    spring_engine(set, WASHER_PULL_ENGINE, Dir::East);
+    tubes(set, Pos::new(6, FLOOR, 31), Pos::new(6, FLOOR, 31));
+    set.place(WASHER_AT, WASHER.with(&[("facing", "east")]).into());
+    tubes(set, Pos::new(7, FLOOR, 32), Pos::new(8, FLOOR, 32));
 
     set.place(MILL_AT, GRINDING_MILL.with(&[("facing", "east")]).into());
     tubes(set, Pos::new(10, FLOOR, 32), Pos::new(10, FLOOR, 32));
@@ -154,14 +162,31 @@ fn processing_line(set: &Set) {
     for (at, toward) in DIRECT_ENGINES {
         engine(set, at, toward);
     }
-    for (at, target) in UNDER_ENGINES {
+    for at in UNDER_ENGINES {
         engine(set, at, Dir::Down);
-        shafts(
-            set,
-            Pos::new(at.x, FLOOR - 1, at.z),
-            Pos::new(at.x, FLOOR - 1, target.z),
-        );
     }
+    // Buried shafts covered strictly by engines, void/item/water tubes and machines:
+    // shaker (3, 29..32), washer (7, 31..32) + (6, 32), mill (8..9, 28) + (9, 28..32).
+    shafts(
+        set,
+        Pos::new(SHAKER_ENGINE.x, FLOOR - 1, SHAKER_ENGINE.z),
+        Pos::new(SHAKER_AT.x, FLOOR - 1, SHAKER_AT.z),
+    );
+    shafts(
+        set,
+        Pos::new(WASHER_ENGINE.x, FLOOR - 1, WASHER_ENGINE.z),
+        Pos::new(WASHER_ENGINE.x, FLOOR - 1, WASHER_AT.z),
+    );
+    shafts(
+        set,
+        Pos::new(WASHER_AT.x, FLOOR - 1, WASHER_AT.z),
+        Pos::new(WASHER_ENGINE.x, FLOOR - 1, WASHER_AT.z),
+    );
+    shafts(
+        set,
+        Pos::new(MILL_ENGINE.x, FLOOR - 1, MILL_ENGINE.z),
+        Pos::new(MILL_AT.x, FLOOR - 1, MILL_AT.z),
+    );
     spring_engine(set, MILL_ASSIST, Dir::Down);
     shafts(
         set,
@@ -170,14 +195,14 @@ fn processing_line(set: &Set) {
     );
 }
 
-/// Water from the rear tank bridges over the washer's rear item tube into its east side, and runs
-/// straight into the grinding mill's north side.
+/// Water from the rear tank bridges over the washer's engine and output tube into the washer's
+/// top, and runs straight along z into the grinding mill's north side.
 fn water_line() -> Vec<Pos> {
     vec![
         Pos::new(7, FLOOR + 1, 30),
         Pos::new(7, FLOOR + 1, 31),
         Pos::new(7, FLOOR + 1, 32),
-        Pos::new(7, FLOOR, 32),
+        Pos::new(6, FLOOR + 1, 32),
         Pos::new(9, FLOOR, 29),
         Pos::new(9, FLOOR, 30),
         Pos::new(9, FLOOR, 31),
@@ -191,21 +216,29 @@ pub fn start(set: &Set) {
         .into_iter()
         .map(|(at, _)| at)
         .chain(DIRECT_ENGINES.into_iter().map(|(at, _)| at))
-        .chain(UNDER_ENGINES.into_iter().map(|(at, _)| at))
+        .chain(UNDER_ENGINES)
     {
         fuel(set, at);
     }
     wind_spring(set, SHAKER_PULL_ENGINE, 50_000);
+    wind_spring(set, WASHER_PULL_ENGINE, 50_000);
     wind_spring(set, MILL_ASSIST, 50_000);
     fit_bit(set, QUARRY_AT, "cogwork:iron_bit", 0);
     start_quarry(set, QUARRY_AT, Dir::South, &IRON, FLOOR - PIT_DEPTH - 1);
 
-    // Light input stocking so feed tubes never overflow and drop items on the gravel.
-    stock(set, SHAKER_IN, &["cogwork:rubble"], 1);
-    stock_group(set, SHAKER_AT, "input", &[("cogwork:rubble", 16)]);
+    // Chest-fed chains at spring-engine pace (1 item / 18 ticks) so both shaker and washer stay
+    // actively working when the camera arrives without ever overflowing or dropping items.
+    stock(set, SHAKER_IN, &["cogwork:rubble"], 3);
+    stock_group(set, SHAKER_AT, "input", &[("cogwork:rubble", 4)]);
+    stock_rubble(set, WASHER_IN, "chest", "iron", Grade::Poor, 2);
     stock_rubble(set, WASHER_AT, "input", "iron", Grade::Poor, 1);
+    let world = set.world();
+    let washer_in = world.inventory(set.at(WASHER_AT)).group("input");
+    washer_in.set(0, washer_in.get(0).shrink(36));
     stock_rubble(set, MILL_AT, "input", "iron", Grade::Common, 1);
-    stock_group(set, MILL_AT, "sand", &[("base:sand", 64)]);
+    let mill_in = world.inventory(set.at(MILL_AT)).group("input");
+    mill_in.set(0, mill_in.get(0).shrink(48));
+    stock_group(set, MILL_AT, "sand", &[("base:sand", 64); 2]);
     fuel(set, FURNACE_AT);
     stock_group(set, FURNACE_AT, "input", &[("base:raw_iron", 16)]);
 
@@ -226,9 +259,9 @@ pub fn shots(film: Film) -> Film {
     let mill_look = lowered(above(MILL_AT, 0.3));
     let bellows_look = lowered([11.8, f + 0.5, 32.5]);
 
-    let leave_camp = lowered([-12.5, f + 8.6, 38.0]);
+    let leave_camp = lowered([-11.5, f + 9.8, 38.8]);
     let at_engines = lowered([-9.2, f + 5.4, 38.2]);
-    let over_slope = [leave_camp, lowered([-10.6, f + 7.2, 38.2]), at_engines];
+    let over_slope = [leave_camp, lowered([-10.2, f + 7.6, 38.5]), at_engines];
     let at_quarry = lowered([-3.5, f + 5.2, 38.2]);
     let past_quarry = lowered([0.8, f + 2.8, 37.2]);
     let to_shaker = lowered([2.4, f + 2.4, 37.0]);

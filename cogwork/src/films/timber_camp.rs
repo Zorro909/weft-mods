@@ -55,7 +55,7 @@ const PIT_DEPTH: i32 = 2;
 
 /// Where S1 hands the camera off to S2, already climbing high above the lashed frame and grass
 /// slope between pads.
-pub const END_EYE: [f64; 3] = lowered([-13.2, FLOOR as f64 + 5.8, 38.6]);
+pub const END_EYE: [f64; 3] = lowered([-13.0, FLOOR as f64 + 7.2, 39.2]);
 pub const END_LOOK: [f64; 3] = lowered([-17.0, FLOOR as f64 + 1.2, 32.5]);
 
 pub fn build(set: &Set) {
@@ -66,14 +66,9 @@ pub fn build(set: &Set) {
     quarry(set);
 }
 
-/// Rubble pile, sieve, millstone, furnace and hand bellows set close together.
+/// Low rubble pile, sieve, millstone, furnace and hand bellows set close together.
 fn hand_camp(set: &Set) {
-    let rubble = [
-        Pos::new(-34, FLOOR, 34),
-        Pos::new(-34, FLOOR, 33),
-        Pos::new(-34, FLOOR + 1, 33),
-    ];
-    for at in rubble {
+    for at in [Pos::new(-34, FLOOR, 34), Pos::new(-34, FLOOR, 33)] {
         set.place(at, BlockState::of(&RUBBLE));
     }
     set.place(SIEVE_AT, BlockState::of(&SIEVE));
