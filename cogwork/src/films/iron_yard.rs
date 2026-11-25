@@ -279,7 +279,7 @@ pub fn start(set: &Set) {
     washer_in.set(0, washer_in.get(0).shrink(36));
     stock_rubble(set, MILL_AT, "input", "iron", Grade::Common, 1);
     let mill_in = world.inventory(set.at(MILL_AT)).group("input");
-    mill_in.set(0, mill_in.get(0).shrink(48));
+    mill_in.set(0, mill_in.get(0).shrink(20));
     stock_group(set, MILL_AT, "sand", &[("base:sand", 64); 2]);
     fuel(set, FURNACE_AT);
     stock_group(set, FURNACE_AT, "input", &[("base:raw_iron", 16)]);

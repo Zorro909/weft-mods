@@ -54,7 +54,7 @@ const THUMPER_MARKERS: [Pos; 3] = [Pos::new(59, 1, 6), Pos::new(64, 1, 6), Pos::
 const LEVELER_CENTER: [f64; 3] = above(LEVELER_AT, 0.0);
 const LEVELER_ARC: [f64; 2] = [-42.0, -12.0];
 const LEVELER_OUT: f64 = 8.4;
-const LEVELER_UP: [f64; 2] = [5.2, 4.8];
+const LEVELER_UP: [f64; 2] = [5.4, 6.6];
 pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
 pub const END_EYE: [f64; 3] = lowered([56.4, 3.2, 4.4]);
 
@@ -225,9 +225,9 @@ fn on_leveler(angle: f64) -> [f64; 3] {
 /// opening its screen right while it cuts and fills, then gliding straight to the seismic thumper
 /// from the west (clear of its engines and without staring at an empty pad).
 pub fn shots(film: Film) -> Film {
-    let entry = [51.0, 10.5, 4.0];
-    let over_square = [53.0, 9.5, 5.0];
-    let square_pan = [55.5, 8.2, 5.8];
+    let entry = [46.5, 7.6, 10.6];
+    let over_square = [45.8, 6.8, 11.2];
+    let square_pan = [46.2, 7.4, 10.8];
     let round = |from: f64, to: f64, secs: f32| {
         let up = [from, to].map(|angle| between(LEVELER_UP, leveler_part(angle)));
         orbit(LEVELER_CENTER, LEVELER_OUT)
@@ -237,7 +237,7 @@ pub fn shots(film: Film) -> Film {
             .secs(secs)
     };
     let leveler_look = [47.2, HEIGHT as f64 + 0.2, 12.2];
-    let high_pad = lowered([57.0, 12.2, 1.8]);
+    let high_pad = lowered([57.5, 14.5, 1.8]);
     let to_thumper = lowered([56.2, 3.0, 5.5]);
     let at_thumper = lowered([56.8, 2.5, 5.5]);
 

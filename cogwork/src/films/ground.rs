@@ -79,12 +79,24 @@ pub fn ground_top(set: &Set, x: i32, z: i32) -> i32 {
 }
 
 fn is_ground(state: BlockState) -> bool {
-    !state.can_build_into() && !is_tree(state)
+    !state.can_build_into() && !is_tree(state) && !is_groundcover(state)
 }
 
 fn is_tree(state: BlockState) -> bool {
     let name = state.block_name();
-    name.contains("_log") || name.ends_with("_wood") || name.ends_with("_leaves")
+    name.contains("_log")
+        || name.ends_with("_wood")
+        || name.ends_with("_leaves")
+        || name == "base:bush_stem"
+}
+
+fn is_groundcover(state: BlockState) -> bool {
+    let name = state.block_name();
+    matches!(
+        name,
+        "base:clover" | "base:moss" | "base:dandelion" | "base:rose" | "base:fern" | "base:sapling"
+    ) || name.starts_with("base:tulip_")
+        || name.ends_with("_mushroom")
 }
 
 /// Makes the pads: each cut down or filled up to its height, the trees on and near it gone;
@@ -166,14 +178,14 @@ pub fn fell_near(set: &Set, x: i32, z: i32, within: i32) {
     }
 }
 
-/// Clears all tree blocks (standing trunks, fallen logs, and leaf bushes) within `within` blocks
-/// of `(x, z)` above the ground.
+/// Clears all tree blocks (standing trunks, fallen logs, bush stems and leaf bushes) within
+/// `within` blocks of `(x, z)` above the ground and re-grasses any exposed dirt/coarse dirt.
 pub fn clear_trees_near(set: &Set, x: i32, z: i32, within: i32) {
     let world = set.world();
     for near_z in z - within..=z + within {
         for near_x in x - within..=x + within {
             let ground = ground_top(set, near_x, near_z);
-            for y in ground + 1..=ground + TREE_HEIGHT {
+            for y in ground..=ground + TREE_HEIGHT {
                 let pos = Pos::new(near_x, y, near_z);
                 if is_tree(world.block_typed(set.at(pos))) {
                     set.place(pos, BlockState::AIR);
@@ -198,7 +210,8 @@ fn fell_if_trunk(set: &Set, x: i32, z: i32) {
     }
     fell(set, x, z, ground);
     let foot = Pos::new(x, ground, z);
-    if world.block_typed(set.at(foot)).is(&DIRT) {
+    let foot_block = world.block_typed(set.at(foot));
+    if foot_block.is(&DIRT) || foot_block.is(&COARSE_DIRT) {
         set.place(foot, BlockState::of(&GRASS));
     }
 }

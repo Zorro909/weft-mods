@@ -36,7 +36,7 @@ const SHAFT_ENGINES: [(Pos, Dir); 3] = [
     (Pos::new(PUMP_AT.x + 1, PUMP_AT.y, PUMP_AT.z - 1), Dir::West),
 ];
 /// Blocks around the pump within which all trees, stumps, hollow logs and bushes are cleared.
-const CLEARING: i32 = 18;
+const CLEARING: i32 = 24;
 const MOWN: i32 = 6;
 
 /// Camera orbit on the pump's open south face (120° SSW to 42° SE) heading east toward Pad R,
