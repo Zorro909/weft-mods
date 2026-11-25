@@ -5,7 +5,7 @@
 //! the knoll, the powered seismic thumper stands ready beside its own marked area, and its screen
 //! opens before the camera continues to the composite-frame Gantry Excavator.
 
-use showcase_api::{Film, Look, Set, dolly, orbit};
+use showcase_api::{Film, Look, Set, dolly, flyby, orbit};
 use weft_sdk::Block;
 use weft_sdk::{Dir, Item, ItemStack, Output};
 
@@ -35,14 +35,15 @@ const ENGINES: [(Pos, Dir); 2] = [
 /// The middle of the square, at the height it is made flat at (site coordinates).
 pub const MIDDLE: [f64; 3] = [45.5, HEIGHT as f64, 13.5];
 
-/// Seismic thumper on Pad 2's south-west apron (works coordinates), moved 2+ blocks clear of the
-/// composite frame corner at (59, 1, 2), with its ember engines and three survey markers.
-pub const THUMPER_AT: Pos = Pos::new(57, 1, 5);
+/// Seismic thumper on Pad 2's south-west apron (works coordinates), 2+ blocks clear of the
+/// composite frame corner at (59, 1, 2) and well east of Pad 2's west edge (x = 55) so the western
+/// camera approach stays entirely over flat grass.
+pub const THUMPER_AT: Pos = Pos::new(59, 1, 5);
 const THUMPER_ENGINES: [(Pos, Dir); 2] = [
-    (Pos::new(58, 1, 5), Dir::West),
-    (Pos::new(57, 1, 4), Dir::South),
+    (Pos::new(60, 1, 5), Dir::West),
+    (Pos::new(59, 1, 4), Dir::South),
 ];
-const THUMPER_MARKERS: [Pos; 3] = [Pos::new(57, 1, 6), Pos::new(62, 1, 6), Pos::new(57, 1, 8)];
+const THUMPER_MARKERS: [Pos; 3] = [Pos::new(59, 1, 6), Pos::new(64, 1, 6), Pos::new(59, 1, 8)];
 
 /// Elevated arc around the leveler so the entire marked square shows clearly behind it, plus an
 /// eye-level western approach to the seismic thumper well clear of its north and east engines.
@@ -51,7 +52,7 @@ const LEVELER_ARC: [f64; 2] = [-42.0, -12.0];
 const LEVELER_OUT: f64 = 6.5;
 const LEVELER_UP: [f64; 2] = [3.2, 2.8];
 pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
-pub const END_EYE: [f64; 3] = lowered([53.2, 3.0, 5.2]);
+pub const END_EYE: [f64; 3] = lowered([56.4, 3.2, 4.4]);
 
 pub fn build(set: &Set) {
     for marker in MARKERS {
@@ -178,8 +179,13 @@ pub fn shots(film: Film) -> Film {
             .secs(secs)
     };
     let leveler_look = [48.2, HEIGHT as f64 + 0.4, 11.8];
-    let to_thumper = lowered([52.5, 4.2, 8.2]);
-    let at_thumper = lowered([53.2, 2.8, 5.8]);
+    let to_thumper = lowered([56.2, 3.0, 5.5]);
+    let over_apron = [
+        on_leveler(LEVELER_ARC[1]),
+        lowered([57.2, 9.2, 4.8]),
+        to_thumper,
+    ];
+    let at_thumper = lowered([56.8, 2.5, 5.5]);
 
     film.fade_in(1.5)
         .shot(
@@ -196,15 +202,15 @@ pub fn shots(film: Film) -> Film {
         .title("cogwork.film.wrench", 3.2)
         .shot(round(-34.0, -30.0, 3.5).look_at(leveler_look))
         .cue("wrench")
-        .title("cogwork.film.level", 2.8)
-        .shot(round(-30.0, -24.0, 3.0).look_at(leveler_look))
+        .title("cogwork.film.level", 3.0)
+        .shot(round(-30.0, -24.0, 3.2).look_at(leveler_look))
         .menu("cogwork:leveler", LEVELER_AT, 3.5)
         .shot(round(-24.0, LEVELER_ARC[1], 4.5).look_at(leveler_look))
         .shot(
-            dolly(on_leveler(LEVELER_ARC[1]), to_thumper)
+            flyby(&over_apron)
                 .look(Look::Pan(leveler_look, THUMPER_LOOK))
                 .ease(speeds(0.35, 0.8))
-                .secs(4.5),
+                .secs(7.5),
         )
         .title("cogwork.film.t5_thumper", 3.0)
         .shot(

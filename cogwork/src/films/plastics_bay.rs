@@ -237,12 +237,12 @@ pub fn shots(film: Film) -> Film {
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
 
-    let east_door = lowered([23.8, 3.5, 1.2]);
+    let east_door = lowered([26.2, 3.2, 1.2]);
     let at_poly_start = lowered([15.6, f + 2.2, 11.2]);
     let over_wall = [
         east_door,
-        lowered([25.6, 7.6, 6.2]),
-        lowered([20.5, 8.0, 9.8]),
+        lowered([27.4, 8.8, 6.5]),
+        lowered([21.5, 8.6, 10.2]),
         at_poly_start,
     ];
     let to_poly = lowered([16.4, f + 2.0, 11.2]);
@@ -257,20 +257,20 @@ pub fn shots(film: Film) -> Film {
             dolly(crafting::end_eye(), east_door)
                 .look(Look::Pan(crafting::BENCH_LOOK, east_look))
                 .ease(speeds(0.25, 1.3))
-                .secs(3.8),
+                .secs(4.2),
         )
         .shot(
             flyby(&over_wall)
                 .look(Look::Pan(east_look, poly_look))
                 .ease(speeds(1.3, 0.8))
-                .secs(5.4),
+                .secs(5.6),
         )
-        .title("cogwork.film.t5_plastics", 2.8)
+        .title("cogwork.film.t5_plastics", 3.0)
         .shot(
             dolly(at_poly_start, to_poly)
                 .look_at(poly_look)
                 .ease(speeds(0.8, 0.6))
-                .secs(3.0),
+                .secs(3.2),
         )
         .menu("cogwork:polymerizer", lowered_block(POLYMERIZER_AT), 3.8)
         .shot(
@@ -286,12 +286,12 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.6, 0.6))
                 .secs(4.2),
         )
-        .title("cogwork.film.t5_acid", 2.8)
+        .title("cogwork.film.t5_acid", 3.0)
         .shot(
             dolly(to_acid, at_acid)
                 .look_at(acid_look)
                 .ease(speeds(0.6, 0.6))
-                .secs(3.0),
+                .secs(3.2),
         )
         .menu("cogwork:acid_tank", lowered_block(ACID_TANK_AT), 3.8)
         .shot(
@@ -300,12 +300,12 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.6, 0.6))
                 .secs(4.2),
         )
-        .title("cogwork.film.t5_leach", 2.8)
+        .title("cogwork.film.t5_leach", 3.0)
         .shot(
             dolly(to_leach, at_leach)
                 .look_at(END_LOOK)
                 .ease(speeds(0.6, 0.6))
-                .secs(3.0),
+                .secs(3.2),
         )
         .menu("cogwork:leaching_vat", lowered_block(LEACH_VAT_AT), 3.8)
         .shot(

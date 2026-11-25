@@ -237,12 +237,12 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.7, 0.7))
                 .secs(4.0),
         )
-        .title("cogwork.film.t2_blast", 2.8)
+        .title("cogwork.film.t2_blast", 3.0)
         .shot(
             dolly(to_blast, at_blast)
                 .look_at(blast_look)
                 .ease(speeds(0.7, 0.7))
-                .secs(3.0),
+                .secs(3.2),
         )
         .menu("cogwork:blast_furnace", lowered_block(BLAST_DOOR), 3.5)
         .shot(
@@ -258,12 +258,12 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.7, 0.7))
                 .secs(4.0),
         )
-        .title("cogwork.film.t2_steam", 2.8)
+        .title("cogwork.film.t2_steam", 3.0)
         .shot(
             dolly(to_firebox, at_firebox)
                 .look_at(boiler_look)
                 .ease(speeds(0.7, 0.7))
-                .secs(3.0),
+                .secs(3.2),
         )
         .menu("cogwork:firebox", lowered_block(FIREBOX_AT), 3.5)
         .shot(
@@ -279,12 +279,12 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(0.7, 0.8))
                 .secs(4.0),
         )
-        .title("cogwork.film.t2_hammer", 2.8)
+        .title("cogwork.film.t2_hammer", 3.0)
         .shot(
             dolly(to_engine, at_engine)
                 .look(Look::Pan(engine_look, hammer_look))
                 .ease(speeds(0.8, 0.8))
-                .secs(3.0),
+                .secs(3.2),
         )
         .menu("cogwork:steam_engine", lowered_block(STEAM_ENGINE_AT), 3.5)
         .shot(

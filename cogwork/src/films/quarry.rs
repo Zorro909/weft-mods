@@ -65,10 +65,10 @@ const PIT_OUT: f64 = 9.0;
 const PIT_UP: [f64; 2] = [9.5, 6.2];
 const PIT_ARC: [f64; 2] = [108.0, 170.0];
 
-const OVER_PIT_CENTER: [f64; 3] = lowered([33.2, 6.4, -3.6]);
-const INTO_PIT: [f64; 3] = lowered([32.6, 2.5, -3.5]);
-const DOWN_PIT: [f64; 3] = lowered([32.6, -12.0, -3.5]);
-const OVER_DRILL: f64 = 2.6;
+const OVER_PIT_CENTER: [f64; 3] = lowered([30.8, 6.8, -2.6]);
+const INTO_PIT: [f64; 3] = lowered([32.0, 2.2, -3.2]);
+const DOWN_PIT: [f64; 3] = lowered([33.5, -14.0, -3.5]);
+const OVER_DRILL: f64 = 3.2;
 
 const FRAME_OUT: f64 = 13.5;
 const FRAME_UP: [f64; 2] = [8.5, 7.5];
@@ -235,8 +235,8 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
                 .ease(speeds(1.0, 0.5))
                 .secs(3.5),
         )
-        .title("cogwork.film.sorting", 2.5)
-        .shot(round(SORTER_ARC[0], 110.0, speeds(0.5, 0.15), 2.8))
+        .title("cogwork.film.sorting", 3.0)
+        .shot(round(SORTER_ARC[0], 110.0, speeds(0.5, 0.15), 3.2))
         .menu("cogwork:sorting_tube", lowered_block(SORTER), 3.5)
         .shot(round(110.0, 100.0, speeds(0.15, 0.15), 3.8))
         .shot(round(100.0, SORTER_ARC[1], speeds(0.15, 0.9), 2.4))

@@ -110,12 +110,12 @@ pub fn shots(film: Film) -> Film {
                 .ease(speeds(5.0, 3.0))
                 .secs(5.5),
         )
-        .title("cogwork.film.t4_small_loader", 2.8)
+        .title("cogwork.film.t4_small_loader", 3.0)
         .shot(
             flyby(&to_loader)
                 .look(Look::Pan(JETTY_PUMP_LOOK, SMALL_LOADER_LOOK))
                 .ease(speeds(3.0, 3.0))
-                .secs(3.0),
+                .secs(3.2),
         )
         .menu("cogwork:cuboid_loader", SMALL_LOADER, 3.2)
         .shot(

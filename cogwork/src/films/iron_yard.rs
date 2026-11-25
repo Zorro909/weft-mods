@@ -243,7 +243,7 @@ pub fn shots(film: Film) -> Film {
         dolly(timber_camp::END_EYE, leave_camp)
             .look(Look::Pan(timber_camp::END_LOOK, quarry_look))
             .ease(speeds(1.2, 1.3))
-            .secs(2.4),
+            .secs(3.4),
     )
     .title("cogwork.film.t1_iron", 3.2)
     .shot(
@@ -266,12 +266,12 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.9, 0.8))
             .secs(4.5),
     )
-    .title("cogwork.film.t1_sift", 2.8)
+    .title("cogwork.film.t1_sift", 3.0)
     .shot(
         dolly(past_quarry, to_shaker)
             .look_at(shaker_look)
             .ease(speeds(0.8, 0.7))
-            .secs(3.0),
+            .secs(3.2),
     )
     .menu("cogwork:shaker_screen", lowered_block(SHAKER_AT), 3.5)
     .shot(
@@ -280,12 +280,12 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.7, 0.7))
             .secs(4.0),
     )
-    .title("cogwork.film.t1_wash", 2.8)
+    .title("cogwork.film.t1_wash", 3.0)
     .shot(
         dolly(at_shaker, to_washer)
             .look_at(washer_look)
             .ease(speeds(0.7, 0.7))
-            .secs(3.0),
+            .secs(3.2),
     )
     .menu("cogwork:washer", lowered_block(WASHER_AT), 3.5)
     .shot(
@@ -301,12 +301,12 @@ pub fn shots(film: Film) -> Film {
             .ease(speeds(0.7, 0.7))
             .secs(4.2),
     )
-    .title("cogwork.film.t1_bellows", 2.8)
+    .title("cogwork.film.t1_bellows", 3.0)
     .shot(
         dolly(at_mill, to_bellows)
             .look_at(bellows_look)
             .ease(speeds(0.7, 0.6))
-            .secs(3.0),
+            .secs(3.2),
     )
     .menu("cogwork:driven_bellows", lowered_block(BELLOWS_AT), 3.5)
     .shot(
