@@ -227,29 +227,30 @@ pub fn start(set: &Set) {
     stock_rubble(set, LEACH_VAT_AT, "input", "iron", Grade::Rich, 3);
 }
 
-/// Exits the hall cleanly through its wide-open east gable end (clear of every post, beam, and
-/// chest), climbs well above Pad P's retaining wall, then sweeps west-to-east past all five
-/// unobstructed machines with every title clear of its screen.
+/// Exits the hall cleanly the way the camera entered (straight back through the open west end,
+/// well under the overhead gas line and well west of the roof overhang), rises high into open sky
+/// above the hall roof, then sweeps smoothly east onto Pad P looking at all five unobstructed
+/// machines with every title clear of its screen.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let east_look = lowered([31.5, 9.5, 12.5]);
+    let hall_mid = lowered([14.0, 2.8, 5.5]);
+    let pad_p_look = lowered([19.0, f + 1.0, 14.5]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
 
-    // Climb inside the hall under the y = 6 east beam and exit through the south-middle of the
-    // east opening (4+ blocks from both the yellow gantry frame at x = 28, z = 1 and the SE post
-    // at x = 22, z = 7), then climb straight up well above the roof eave and grass bank onto Pad P.
-    let east_door = lowered([24.8, 4.6, 3.6]);
-    let at_poly_start = lowered([15.6, f + 2.2, 11.2]);
-    let over_wall = [
-        east_door,
-        lowered([25.4, 12.0, 5.4]),
-        lowered([21.8, 12.0, 11.4]),
-        at_poly_start,
-    ];
-    let to_poly = lowered([16.4, f + 2.0, 11.2]);
-    let at_poly = lowered([18.0, f + 2.0, 11.2]);
+    // Pull straight back through the open center of the hall and west end (3+ blocks below the
+    // y = 6 beams, 5.5+ blocks from both post rows, 4 blocks under the x = -6 overhead gas pipe)
+    // onto open air above Pad R's flat asphalt (z = 1.5, 4 blocks west of the gas pipe and 7 west
+    // of the roof overhang), climb straight up to y = 15 above the hall ridge, then sweep high
+    // across the open sky onto Pad P's polymerizer.
+    let west_clear = lowered([-10.0, 3.2, 1.5]);
+    let west_high = lowered([-9.5, 15.0, 3.0]);
+    let exit_hall = [crafting::end_eye(), lowered([2.0, 2.7, 0.8]), west_clear];
+    let at_poly_start = lowered([15.6, f + 2.4, 12.0]);
+    let over_roof = [west_high, lowered([4.5, 15.0, 10.0]), at_poly_start];
+    let to_poly = lowered([16.4, f + 2.0, 11.4]);
+    let at_poly = lowered([18.0, f + 2.0, 11.4]);
     let to_acid = lowered([20.4, f + 2.4, 11.5]);
     let at_acid = lowered([22.0, f + 2.5, 11.5]);
     let to_leach = lowered([24.2, f + 2.6, 11.6]);
@@ -257,16 +258,22 @@ pub fn shots(film: Film) -> Film {
 
     film.cue("start_plastics")
         .shot(
-            dolly(crafting::end_eye(), east_door)
-                .look(Look::Pan(crafting::BENCH_LOOK, east_look))
-                .ease(speeds(0.25, 1.3))
-                .secs(4.8),
+            flyby(&exit_hall)
+                .look(Look::Pan(crafting::BENCH_LOOK, hall_mid))
+                .ease(speeds(0.3, 2.0))
+                .secs(5.5),
         )
         .shot(
-            flyby(&over_wall)
-                .look(Look::Pan(east_look, poly_look))
-                .ease(speeds(1.3, 0.8))
-                .secs(7.0),
+            dolly(west_clear, west_high)
+                .look(Look::Pan(hall_mid, pad_p_look))
+                .ease(speeds(2.0, 2.2))
+                .secs(4.2),
+        )
+        .shot(
+            flyby(&over_roof)
+                .look(Look::Pan(pad_p_look, poly_look))
+                .ease(speeds(2.2, 0.8))
+                .secs(5.8),
         )
         .title("cogwork.film.t5_plastics", 3.0)
         .shot(
