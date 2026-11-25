@@ -232,20 +232,20 @@ pub fn start(set: &Set) {
 /// unobstructed machines with every title clear of its screen.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let east_look = lowered([34.0, 4.5, 7.5]);
+    let east_look = lowered([31.5, 9.5, 12.5]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
 
-    // Climb inside the hall under the y = 6 east beam and exit straight east through the open
-    // gable well north of the SE post (z = 7) and cut bank (z = 9), then climb high over Pad 1
-    // gravel before crossing south above the roof eave and grass bank onto Pad P.
-    let east_door = lowered([24.8, 4.6, 2.4]);
+    // Climb inside the hall under the y = 6 east beam and exit through the south-middle of the
+    // east opening (4+ blocks from both the yellow gantry frame at x = 28, z = 1 and the SE post
+    // at x = 22, z = 7), then climb straight up well above the roof eave and grass bank onto Pad P.
+    let east_door = lowered([24.8, 4.6, 3.6]);
     let at_poly_start = lowered([15.6, f + 2.2, 11.2]);
     let over_wall = [
         east_door,
-        lowered([27.2, 11.8, 5.2]),
-        lowered([22.2, 12.0, 11.4]),
+        lowered([25.4, 12.0, 5.4]),
+        lowered([21.8, 12.0, 11.4]),
         at_poly_start,
     ];
     let to_poly = lowered([16.4, f + 2.0, 11.2]);

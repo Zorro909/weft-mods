@@ -64,7 +64,7 @@ const SHAFT_BACK: i32 = -7;
 
 /// Camera landmarks inside the hall, and where the haze shot hands off to the benches (clear of
 /// the hall posts, the oil engine casing and the overhead x = 10 shaft).
-const IN_HALL: [f64; 3] = lowered([1.0, 2.6, 1.6]);
+const IN_HALL: [f64; 3] = lowered([1.0, 2.6, 2.4]);
 const BY_TANK: [f64; 3] = lowered([4.6, 2.1, 0.2]);
 const ENGINE_OUT: f64 = 5.5;
 const ENGINE_FROM: f64 = 130.0;
@@ -137,7 +137,7 @@ pub fn lift(set: &Set) {
 /// Enters the hall from Pad R, glimpses the combustion chamber, seals the controller as diesel
 /// rises, orbits the running oil engine, and rises into its warm exhaust haze.
 pub fn shots(film: Film) -> Film {
-    let enter = [refinery_yard::end_eye(), lowered([-2.5, 3.2, 2.2]), IN_HALL];
+    let enter = [refinery_yard::end_eye(), lowered([-2.5, 3.2, 4.0]), IN_HALL];
     let at_engine = on_orbit(OIL_ENGINE_LOOK, ENGINE_OUT, 0.8, ENGINE_FROM);
     let from_engine = on_orbit(OIL_ENGINE_LOOK, ENGINE_OUT, 2.4, 40.0);
     let round = |from: f64, to: f64, up: [f64; 2], secs: f32| {

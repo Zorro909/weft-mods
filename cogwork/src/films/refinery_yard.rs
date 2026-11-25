@@ -80,15 +80,15 @@ const LUBE_TANK: Area = Area {
     hi: Pos::new(-8, 2, -7),
 };
 const GAS_TANK: Area = Area {
-    lo: Pos::new(-6, 0, -2),
-    hi: Pos::new(-6, 1, -2),
+    lo: Pos::new(-6, 0, -3),
+    hi: Pos::new(-6, 1, -3),
 };
 
 /// Refinery orbit geometry and handoff point heading east into the hall (wide and south enough
-/// to stay clear of the gas riser at (-6, -2) and the hall's west posts at x = -2, z = ±7).
+/// to stay clear of the gas riser at (-6, -3) and the hall's west posts at x = -2, z = ±7).
 pub const ORBIT_CENTER: [f64; 3] = lowered([-11.0, 2.5, -5.0]);
 const ORBIT_OUT: f64 = 8.0;
-const ORBIT_ARC: [f64; 2] = [135.0, 58.0];
+const ORBIT_ARC: [f64; 2] = [135.0, 66.0];
 const ORBIT_UP: [f64; 2] = [2.4, 1.6];
 
 pub fn end_eye() -> [f64; 3] {
@@ -286,7 +286,7 @@ fn diesel_line() -> Vec<Pos> {
 
 fn gas_line() -> Vec<Pos> {
     // Leaves GAS_TAP east to x = -6, drops straight into the ground-level GAS_TANK at (-6, 0..1,
-    // -2), and climbs overhead at y = 7 across the hall entry so the camera entering the hall at
+    // -3), and climbs overhead at y = 7 across the hall entry so the camera entering the hall at
     // y = 3..4 passes well underneath before gas arrives atop Pad P's gas tank at (13, PAD_P_TOP +
     // 3, 14).
     let mut blocks = vec![
@@ -295,14 +295,13 @@ fn gas_line() -> Vec<Pos> {
         Pos::new(-7, 4, -4),
         Pos::new(-6, 4, -4),
         Pos::new(-6, 4, -3),
-        Pos::new(-6, 4, -2),
-        Pos::new(-6, 3, -2),
-        Pos::new(-6, 2, -2),
-        Pos::new(-6, 5, -2),
-        Pos::new(-6, 6, -2),
-        Pos::new(-6, 7, -2),
+        Pos::new(-6, 3, -3),
+        Pos::new(-6, 2, -3),
+        Pos::new(-6, 5, -3),
+        Pos::new(-6, 6, -3),
+        Pos::new(-6, 7, -3),
     ];
-    blocks.extend((-1..=8).map(|z| Pos::new(-6, 7, z)));
+    blocks.extend((-2..=8).map(|z| Pos::new(-6, 7, z)));
     blocks.push(Pos::new(-6, 6, 8));
     blocks.extend((-5..=13).map(|x| Pos::new(x, 6, 8)));
     blocks.extend((9..=14).map(|z| Pos::new(13, 6, z)));
