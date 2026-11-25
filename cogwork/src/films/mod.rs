@@ -45,8 +45,8 @@ use self::site::{PAD_P_TOP, S1_TOP, VALLEY_TOP, at_site, at_works, from_site, on
 const PADS: [Pad; 9] = [
     Pad {
         west: -35,
-        north: 27,
-        east: -16,
+        north: 25,
+        east: -13,
         south: 38,
         top: S1_TOP,
         surface: &GRASS,

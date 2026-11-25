@@ -9,7 +9,8 @@ use weft_sdk::{Dir, Shape};
 use super::camera::speeds;
 use super::parts::{
     CHEST, FURNACE, OAK_LOG, OAK_SLAB, area, build_frame, engine, fit_bit, fuel, liquid_tubes,
-    prefill, shafts, start_quarry, stock, stock_group, stock_rubble, tubes,
+    prefill, shafts, spring_engine, start_quarry, stock, stock_group, stock_rubble, tubes,
+    wind_spring,
 };
 use super::site::{VALLEY_TOP, above, lowered, lowered_block};
 use super::timber_camp;
@@ -35,11 +36,12 @@ const QUARRY_ENGINES: [(Pos, Dir); 3] = [
     (Pos::new(-7, FLOOR + 1, 35), Dir::Down),
 ];
 const EMBER_MENU_AT: Pos = Pos::new(-8, FLOOR + 1, 35);
-const QUARRY_CHEST: Pos = Pos::new(-1, FLOOR, 31);
+/// Output chest outside the Iron Quarry's frame (x -11..-1, z 24..34), on x = 0.
+const QUARRY_CHEST: Pos = Pos::new(0, FLOOR, 33);
 const PIT_DEPTH: i32 = 3;
 
-/// Connected driven ore processing line along z = 32, with all item tubes running behind the
-/// machines along z = 31 so the entire south apron stays open to the camera.
+/// Connected driven ore processing line along z = 32, with separate tube networks for each stage
+/// so washed ore never reaches the void tube and raw ore overflows cleanly into a buffer chest.
 const SHAKER_IN: Pos = Pos::new(1, FLOOR, 32);
 const SHAKER_PULL: Pos = Pos::new(2, FLOOR, 32);
 const SHAKER_PULL_ENGINE: Pos = Pos::new(2, FLOOR, 31);
@@ -48,6 +50,7 @@ const VOID_AT: Pos = Pos::new(3, FLOOR, 30);
 
 const WASHER_AT: Pos = Pos::new(6, FLOOR, 32);
 const MILL_AT: Pos = Pos::new(9, FLOOR, 32);
+const FURNACE_BUFFER: Pos = Pos::new(10, FLOOR, 31);
 const FURNACE_AT: Pos = Pos::new(11, FLOOR, 32);
 const BELLOWS_AT: Pos = Pos::new(12, FLOOR, 32);
 
@@ -57,18 +60,21 @@ const WATER_TANK: Area = Area {
     hi: Pos::new(8, FLOOR + 1, 29),
 };
 
-/// Ember engine driving the bellows directly behind it, plus three driving the shaker, washer and
-/// grinding mill via buried shafts so the rear stays open for item and water tubes.
+/// Ember engines driving the bellows directly behind it and the shaker, washer and grinding mill
+/// via shafts buried ONLY directly under engines, tubes and machines (no open trenches).
 const DIRECT_ENGINES: [(Pos, Dir); 1] = [(Pos::new(12, FLOOR, 31), Dir::South)];
 const UNDER_ENGINES: [(Pos, Pos); 3] = [
-    (Pos::new(4, FLOOR, 29), SHAKER_AT),
-    (Pos::new(6, FLOOR, 29), WASHER_AT),
-    (Pos::new(10, FLOOR, 29), MILL_AT),
+    (Pos::new(3, FLOOR, 29), SHAKER_AT),
+    (Pos::new(6, FLOOR, 30), WASHER_AT),
+    (Pos::new(9, FLOOR, 28), MILL_AT),
 ];
+/// Assisting spring engine beside the grinding mill's ember engine (40 + 10 = 50 E/t against the
+/// mill's 40 E/t draw, keeping its store full without overheating during the section).
+const MILL_ASSIST: Pos = Pos::new(8, FLOOR, 28);
 
 /// Where S2 hands the camera off to S3, heading east.
-pub const END_EYE: [f64; 3] = lowered([14.2, FLOOR as f64 + 2.3, 37.2]);
-pub const END_LOOK: [f64; 3] = lowered([11.8, FLOOR as f64 + 0.6, 32.5]);
+pub const END_EYE: [f64; 3] = lowered([14.2, FLOOR as f64 + 2.0, 36.2]);
+pub const END_LOOK: [f64; 3] = lowered([11.8, FLOOR as f64 + 0.5, 32.5]);
 
 pub fn build(set: &Set) {
     iron_quarry(set);
@@ -85,13 +91,10 @@ fn iron_quarry(set: &Set) {
     }
     tubes(set, Pos::new(-5, FLOOR, 35), Pos::new(-5, FLOOR, 35));
     set.fill(
-        area(Pos::new(-4, FLOOR, 35), Pos::new(-1, FLOOR, 35)),
+        area(Pos::new(-4, FLOOR, 35), Pos::new(0, FLOOR, 35)),
         BlockState::of(&GILDED_TUBE),
     );
-    set.fill(
-        area(Pos::new(-1, FLOOR, 32), Pos::new(-1, FLOOR, 34)),
-        BlockState::of(&GILDED_TUBE),
-    );
+    set.place(Pos::new(0, FLOOR, 34), BlockState::of(&GILDED_TUBE));
     set.place(QUARRY_CHEST, BlockState::of(&CHEST));
     let world = set.world();
     let pos = set.at(QUARRY_AT);
@@ -123,11 +126,13 @@ fn shed(set: &Set) {
 fn processing_line(set: &Set) {
     set.place(SHAKER_IN, BlockState::of(&CHEST));
     set.place(SHAKER_PULL, BlockState::of(&TIMBER_TUBE));
-    engine(set, SHAKER_PULL_ENGINE, Dir::South);
+    spring_engine(set, SHAKER_PULL_ENGINE, Dir::South);
     set.place(SHAKER_AT, SHAKER_SCREEN.with(&[("facing", "north")]).into());
     set.place(VOID_AT, BlockState::of(&VOID_TUBE));
-    tubes(set, Pos::new(3, FLOOR, 31), Pos::new(5, FLOOR, 31));
-    tubes(set, Pos::new(5, FLOOR, 32), Pos::new(5, FLOOR, 32));
+    // Shaker output network (stops at x = 4 on z = 31 so (5, 31) stays air and never touches
+    // the washer's output network at (6..8, 31)).
+    tubes(set, Pos::new(3, FLOOR, 31), Pos::new(4, FLOOR, 31));
+    tubes(set, Pos::new(4, FLOOR, 32), Pos::new(5, FLOOR, 32));
 
     set.place(WASHER_AT, WASHER.with(&[("facing", "north")]).into());
     tubes(set, Pos::new(6, FLOOR, 31), Pos::new(8, FLOOR, 31));
@@ -135,6 +140,7 @@ fn processing_line(set: &Set) {
 
     set.place(MILL_AT, GRINDING_MILL.with(&[("facing", "east")]).into());
     tubes(set, Pos::new(10, FLOOR, 32), Pos::new(10, FLOOR, 32));
+    set.place(FURNACE_BUFFER, BlockState::of(&CHEST));
 
     set.place(FURNACE_AT, FURNACE.with(&[("facing", "south")]).into());
     set.place(
@@ -155,15 +161,13 @@ fn processing_line(set: &Set) {
             Pos::new(at.x, FLOOR - 1, at.z),
             Pos::new(at.x, FLOOR - 1, target.z),
         );
-        if at.x != target.x {
-            let (lo, hi) = (at.x.min(target.x), at.x.max(target.x));
-            shafts(
-                set,
-                Pos::new(lo, FLOOR - 1, target.z),
-                Pos::new(hi, FLOOR - 1, target.z),
-            );
-        }
     }
+    spring_engine(set, MILL_ASSIST, Dir::Down);
+    shafts(
+        set,
+        Pos::new(MILL_ASSIST.x, FLOOR - 1, MILL_ASSIST.z),
+        Pos::new(MILL_AT.x, FLOOR - 1, MILL_ASSIST.z),
+    );
 }
 
 /// Water from the rear tank bridges over the washer's rear item tube into its east side, and runs
@@ -188,20 +192,22 @@ pub fn start(set: &Set) {
         .map(|(at, _)| at)
         .chain(DIRECT_ENGINES.into_iter().map(|(at, _)| at))
         .chain(UNDER_ENGINES.into_iter().map(|(at, _)| at))
-        .chain([SHAKER_PULL_ENGINE])
     {
         fuel(set, at);
     }
+    wind_spring(set, SHAKER_PULL_ENGINE, 50_000);
+    wind_spring(set, MILL_ASSIST, 50_000);
     fit_bit(set, QUARRY_AT, "cogwork:iron_bit", 0);
     start_quarry(set, QUARRY_AT, Dir::South, &IRON, FLOOR - PIT_DEPTH - 1);
 
-    stock(set, SHAKER_IN, &["cogwork:rubble"], 8);
-    stock_group(set, SHAKER_AT, "input", &[("cogwork:rubble", 64); 3]);
-    stock_rubble(set, WASHER_AT, "input", "iron", Grade::Poor, 3);
-    stock_rubble(set, MILL_AT, "input", "iron", Grade::Common, 3);
+    // Light input stocking so feed tubes never overflow and drop items on the gravel.
+    stock(set, SHAKER_IN, &["cogwork:rubble"], 1);
+    stock_group(set, SHAKER_AT, "input", &[("cogwork:rubble", 16)]);
+    stock_rubble(set, WASHER_AT, "input", "iron", Grade::Poor, 1);
+    stock_rubble(set, MILL_AT, "input", "iron", Grade::Common, 1);
     stock_group(set, MILL_AT, "sand", &[("base:sand", 64)]);
     fuel(set, FURNACE_AT);
-    stock_group(set, FURNACE_AT, "input", &[("base:raw_iron", 64)]);
+    stock_group(set, FURNACE_AT, "input", &[("base:raw_iron", 16)]);
 
     let water_blocks = WATER_TANK
         .blocks()
@@ -210,80 +216,109 @@ pub fn start(set: &Set) {
     prefill(set, water_blocks, "base:water", [1, 1]);
 }
 
-/// Eye-height glide east past the Iron Quarry and 4.5 blocks in front of the driven ore line,
-/// opening each machine's screen over it.
+/// Glide east above the Iron Quarry's top beam and past the driven ore line, timing every title
+/// cleanly before its machine screen opens.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let quarry_look = lowered([-6.0, f + 1.6, 33.0]);
+    let quarry_look = lowered([-6.0, f + 1.5, 32.5]);
     let shaker_look = lowered(above(SHAKER_AT, 0.3));
     let washer_look = lowered(above(WASHER_AT, 0.3));
     let mill_look = lowered(above(MILL_AT, 0.3));
+    let bellows_look = lowered([11.8, f + 0.5, 32.5]);
 
-    let at_engines = lowered([-9.2, f + 3.9, 38.0]);
-    let leave_camp = lowered([-13.5, f + 8.5, 37.2]);
-    let over_slope = [leave_camp, lowered([-10.5, f + 7.2, 37.4]), at_engines];
-    let at_quarry = lowered([-3.5, f + 3.8, 38.2]);
-    let past_quarry = lowered([0.8, f + 2.9, 37.6]);
-    let at_shaker = lowered([3.5, f + 2.3, 37.2]);
-    let at_washer = lowered([6.5, f + 2.3, 37.2]);
-    let at_mill = lowered([9.5, f + 2.3, 37.2]);
+    let leave_camp = lowered([-12.5, f + 8.6, 38.0]);
+    let at_engines = lowered([-9.2, f + 5.4, 38.2]);
+    let over_slope = [leave_camp, lowered([-10.6, f + 7.2, 38.2]), at_engines];
+    let at_quarry = lowered([-3.5, f + 5.2, 38.2]);
+    let past_quarry = lowered([0.8, f + 2.8, 37.2]);
+    let to_shaker = lowered([2.4, f + 2.4, 37.0]);
+    let at_shaker = lowered([4.0, f + 2.3, 37.0]);
+    let to_washer = lowered([5.5, f + 2.3, 37.0]);
+    let at_washer = lowered([7.2, f + 2.3, 37.0]);
+    let at_mill = lowered([9.6, f + 2.2, 36.6]);
+    let to_bellows = lowered([11.4, f + 1.9, 35.8]);
+    let at_bellows = lowered([12.8, f + 1.8, 35.6]);
 
-    film.title("cogwork.film.t1_iron", 5.5)
-        .shot(
-            dolly(timber_camp::END_EYE, leave_camp)
-                .look(Look::Pan(timber_camp::END_LOOK, quarry_look))
-                .ease(speeds(1.2, 1.3))
-                .secs(2.2),
-        )
-        .shot(
-            flyby(&over_slope)
-                .look_at(quarry_look)
-                .ease(speeds(1.3, 0.9))
-                .secs(3.3),
-        )
-        .menu("cogwork:ember_engine", lowered_block(EMBER_MENU_AT), 3.5)
-        .shot(
-            dolly(at_engines, at_quarry)
-                .look_at(quarry_look)
-                .ease(speeds(0.9, 0.9))
-                .secs(4.5),
-        )
-        .menu("cogwork:iron_quarry", lowered_block(QUARRY_AT), 4.0)
-        .shot(
-            dolly(at_quarry, past_quarry)
-                .look(Look::Pan(quarry_look, shaker_look))
-                .ease(speeds(0.9, 0.8))
-                .secs(5.0),
-        )
-        .title("cogwork.film.t1_sift", 4.5)
-        .menu("cogwork:shaker_screen", lowered_block(SHAKER_AT), 3.5)
-        .shot(
-            dolly(past_quarry, at_shaker)
-                .look_at(shaker_look)
-                .ease(speeds(0.8, 0.7))
-                .secs(5.0),
-        )
-        .title("cogwork.film.t1_wash", 5.5)
-        .menu("cogwork:washer", lowered_block(WASHER_AT), 3.5)
-        .shot(
-            dolly(at_shaker, at_washer)
-                .look(Look::Pan(shaker_look, washer_look))
-                .ease(speeds(0.7, 0.7))
-                .secs(4.8),
-        )
-        .menu("cogwork:grinding_mill", lowered_block(MILL_AT), 3.5)
-        .shot(
-            dolly(at_washer, at_mill)
-                .look(Look::Pan(washer_look, mill_look))
-                .ease(speeds(0.7, 0.8))
-                .secs(4.8),
-        )
-        .title("cogwork.film.t1_bellows", 4.5)
-        .menu("cogwork:driven_bellows", lowered_block(BELLOWS_AT), 3.5)
-        .shot(
-            dolly(at_mill, END_EYE)
-                .look(Look::Pan(mill_look, END_LOOK))
-                .ease(speeds(0.8, 1.0))
-                .secs(5.0),
-        )
+    film.shot(
+        dolly(timber_camp::END_EYE, leave_camp)
+            .look(Look::Pan(timber_camp::END_LOOK, quarry_look))
+            .ease(speeds(1.2, 1.3))
+            .secs(2.4),
+    )
+    .title("cogwork.film.t1_iron", 3.2)
+    .shot(
+        flyby(&over_slope)
+            .look_at(quarry_look)
+            .ease(speeds(1.3, 0.9))
+            .secs(3.5),
+    )
+    .menu("cogwork:ember_engine", lowered_block(EMBER_MENU_AT), 3.5)
+    .shot(
+        dolly(at_engines, at_quarry)
+            .look_at(quarry_look)
+            .ease(speeds(0.9, 0.9))
+            .secs(4.5),
+    )
+    .menu("cogwork:iron_quarry", lowered_block(QUARRY_AT), 3.5)
+    .shot(
+        dolly(at_quarry, past_quarry)
+            .look(Look::Pan(quarry_look, shaker_look))
+            .ease(speeds(0.9, 0.8))
+            .secs(4.5),
+    )
+    .title("cogwork.film.t1_sift", 2.8)
+    .shot(
+        dolly(past_quarry, to_shaker)
+            .look_at(shaker_look)
+            .ease(speeds(0.8, 0.7))
+            .secs(3.0),
+    )
+    .menu("cogwork:shaker_screen", lowered_block(SHAKER_AT), 3.5)
+    .shot(
+        dolly(to_shaker, at_shaker)
+            .look(Look::Pan(shaker_look, washer_look))
+            .ease(speeds(0.7, 0.7))
+            .secs(4.0),
+    )
+    .title("cogwork.film.t1_wash", 2.8)
+    .shot(
+        dolly(at_shaker, to_washer)
+            .look_at(washer_look)
+            .ease(speeds(0.7, 0.7))
+            .secs(3.0),
+    )
+    .menu("cogwork:washer", lowered_block(WASHER_AT), 3.5)
+    .shot(
+        dolly(to_washer, at_washer)
+            .look(Look::Pan(washer_look, mill_look))
+            .ease(speeds(0.7, 0.7))
+            .secs(4.0),
+    )
+    .menu("cogwork:grinding_mill", lowered_block(MILL_AT), 3.5)
+    .shot(
+        dolly(at_washer, at_mill)
+            .look(Look::Pan(mill_look, bellows_look))
+            .ease(speeds(0.7, 0.7))
+            .secs(4.2),
+    )
+    .title("cogwork.film.t1_bellows", 2.8)
+    .shot(
+        dolly(at_mill, to_bellows)
+            .look_at(bellows_look)
+            .ease(speeds(0.7, 0.6))
+            .secs(3.0),
+    )
+    .menu("cogwork:driven_bellows", lowered_block(BELLOWS_AT), 3.5)
+    .shot(
+        dolly(to_bellows, at_bellows)
+            .look_at(bellows_look)
+            .ease(speeds(0.6, 0.7))
+            .secs(3.8),
+    )
+    .shot(
+        dolly(at_bellows, END_EYE)
+            .look(Look::Pan(bellows_look, END_LOOK))
+            .ease(speeds(0.7, 1.0))
+            .secs(2.0),
+    )
 }
