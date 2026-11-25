@@ -46,7 +46,7 @@ const UP_BANK: [f64; 3] = [-17.0, -2.0, -12.0];
 const HALL_WEST: [f64; 3] = lowered([super::hall::WEST as f64, 3.0, 0.0]);
 const SEEP_ARC: [f64; 2] = [120.0, 42.0];
 const SEEP_OUT: f64 = 6.8;
-const SEEP_UP: [f64; 2] = [2.8, 3.2];
+const SEEP_UP: [f64; 2] = [3.6, 3.6];
 
 pub fn end_eye() -> [f64; 3] {
     on_orbit(SEEP_LOOK, SEEP_OUT, SEEP_UP[1], SEEP_ARC[1])
@@ -156,7 +156,7 @@ pub fn shots(film: Film) -> Film {
         between(SEEP_UP, part)
     };
     let start_orbit = on_orbit(SEEP_LOOK, SEEP_OUT, SEEP_UP[0], SEEP_ARC[0]);
-    let to_seep = [UP_BANK, [-26.0, -0.4, -5.6], start_orbit];
+    let to_seep = [UP_BANK, [-26.0, 2.0, -5.6], start_orbit];
     let round = |from: f64, to: f64, secs: f32| {
         orbit(SEEP_LOOK, SEEP_OUT)
             .arc(from, to)

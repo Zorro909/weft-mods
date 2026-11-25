@@ -10,6 +10,7 @@ use super::parts::{COBBLESTONE, GRASS};
 use crate::lib::{BlockState, Pos, TypedWorld};
 
 static DIRT: Block = Block::named("base:dirt");
+static COARSE_DIRT: Block = Block::named("base:coarse_dirt");
 static TALL_GRASS: Block = Block::named("base:tall_grass");
 static MOSSY_COBBLESTONE: Block = Block::named("base:mossy_cobblestone");
 
@@ -179,7 +180,8 @@ pub fn clear_trees_near(set: &Set, x: i32, z: i32, within: i32) {
                 }
             }
             let foot = Pos::new(near_x, ground, near_z);
-            if world.block_typed(set.at(foot)).is(&DIRT) {
+            let foot_block = world.block_typed(set.at(foot));
+            if foot_block.is(&DIRT) || foot_block.is(&COARSE_DIRT) {
                 set.place(foot, BlockState::of(&GRASS));
             }
         }
