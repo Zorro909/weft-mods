@@ -232,17 +232,17 @@ pub fn start(set: &Set) {
 /// unobstructed machines with every title clear of its screen.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
-    let east_look = lowered([34.0, 4.0, 2.0]);
+    let east_look = lowered([27.5, 5.0, 12.0]);
     let poly_look = lowered(above(POLYMERIZER_AT, 0.2));
     let press_look = lowered(above(PANEL_PRESS_AT, 0.2));
     let acid_look = lowered(above(ACID_TANK_AT, 0.2));
 
-    let east_door = lowered([28.0, 3.0, 0.5]);
+    let east_door = lowered([25.2, 3.4, 3.6]);
     let at_poly_start = lowered([15.6, f + 2.2, 11.2]);
     let over_wall = [
         east_door,
-        lowered([31.0, 10.2, 6.5]),
-        lowered([24.0, 10.8, 11.2]),
+        lowered([27.5, 10.2, 7.2]),
+        lowered([22.5, 10.6, 11.2]),
         at_poly_start,
     ];
     let to_poly = lowered([16.4, f + 2.0, 11.2]);

@@ -65,9 +65,9 @@ const PIT_OUT: f64 = 9.0;
 const PIT_UP: [f64; 2] = [10.0, 9.2];
 const PIT_ARC: [f64; 2] = [108.0, 170.0];
 
-const OVER_PIT_CENTER: [f64; 3] = lowered([33.2, 9.6, -3.5]);
-const INTO_PIT: [f64; 3] = lowered([33.2, 2.2, -3.5]);
-const DOWN_PIT: [f64; 3] = lowered([33.5, -18.0, -3.5]);
+const OVER_PIT_CENTER: [f64; 3] = lowered([32.0, 9.6, -2.5]);
+const INTO_PIT: [f64; 3] = lowered([32.0, 2.2, -2.5]);
+const DOWN_PIT: [f64; 3] = lowered([33.5, -14.0, -3.5]);
 const OVER_DRILL: f64 = 7.5;
 
 const FRAME_OUT: f64 = 13.5;
@@ -206,7 +206,7 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
     // tube from the south-east.
     let mid_north = lowered([28.8, 16.5, 8.5]);
     let over_yard = lowered([29.2, 14.0, 5.2]);
-    let east_sky = lowered([33.5, 13.5, 6.0]);
+    let east_sky = lowered([34.0, 13.5, 8.5]);
     let far_lake = lowered([32.0, 6.5, -2.5]);
     let by_magazine = [
         leave_sorter,
@@ -217,14 +217,14 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
     let west_of_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[1], PIT_ARC[1]);
     let into_center = [west_of_pit, OVER_PIT_CENTER, INTO_PIT];
     let at_drill = [
-        INTO_PIT[0] - 1.4,
+        INTO_PIT[0] - 0.2,
         DRILL_LOOK[1] + OVER_DRILL,
-        INTO_PIT[2] + 1.4,
+        INTO_PIT[2] + 0.4,
     ];
     let end_drill = [
-        INTO_PIT[0] - 1.0,
-        DRILL_LOOK[1] + OVER_DRILL + 1.2,
-        INTO_PIT[2] + 1.0,
+        INTO_PIT[0],
+        DRILL_LOOK[1] + OVER_DRILL + 1.0,
+        INTO_PIT[2] + 0.2,
     ];
 
     let round = |from: f64, to: f64, ease: Ease, secs: f32| {
@@ -240,7 +240,7 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
             dolly(plastics_bay::END_EYE, mid_north)
                 .look(Look::Pan(plastics_bay::END_LOOK, east_sky))
                 .ease(speeds(0.8, 1.0))
-                .secs(4.2),
+                .secs(4.8),
         )
         .shot(
             dolly(mid_north, over_yard)

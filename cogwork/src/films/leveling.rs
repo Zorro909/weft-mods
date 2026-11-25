@@ -15,11 +15,12 @@ use super::parts::{GRASS, engine, fuel};
 use super::seep;
 use super::site::{above, lowered, lowered_block};
 use crate::leveler::LEVELER;
-use crate::lib::{BlockState, Pos};
+use crate::lib::{BlockState, Pos, TypedWorld};
 use crate::markers::SURVEY_MARKER;
 use crate::seismic_thumper::{SEISMIC_THUMPER, SURVEY, Status, oil, survey};
 
 static DIRT: Block = Block::named("base:dirt");
+static COARSE_DIRT: Block = Block::named("base:coarse_dirt");
 
 /// The height the markers and the leveler stand at (site coordinates): matches the average ground
 /// across the knoll square so cut and fill balance with no plinths or dirt cliffs.
@@ -56,12 +57,22 @@ pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
 pub const END_EYE: [f64; 3] = lowered([56.4, 3.2, 4.4]);
 
 pub fn build(set: &Set) {
-    // Pre-grass the sub-layer under the high side of the marked square so the leveler's Clear
-    // stage uncovers green grass matching the filled side instead of bare brown dirt.
-    for x in 41..=50 {
-        for z in 9..=18 {
-            if ground_top(set, x, z) >= HEIGHT {
-                set.place(Pos::new(x, HEIGHT - 1, z), BlockState::of(&GRASS));
+    // Grass over any bare dirt/coarse_dirt patches on the knoll around the leveler so no brown
+    // patch lingers beside or inside the cut, and pre-grass every soil layer down to HEIGHT - 1
+    // inside the marked square so every step the leveler clears stays green grass.
+    let world = set.world();
+    for x in 35..=54 {
+        for z in 0..=20 {
+            let top = ground_top(set, x, z);
+            if (41..=50).contains(&x) && (9..=18).contains(&z) {
+                for y in (HEIGHT - 1)..=top {
+                    set.place(Pos::new(x, y, z), BlockState::of(&GRASS));
+                }
+            } else {
+                let block = world.block_typed(set.at(Pos::new(x, top, z)));
+                if block.is(&DIRT) || block.is(&COARSE_DIRT) {
+                    set.place(Pos::new(x, top, z), BlockState::of(&GRASS));
+                }
             }
         }
     }
@@ -202,7 +213,7 @@ pub fn shots(film: Film) -> Film {
             .secs(secs)
     };
     let leveler_look = [48.2, HEIGHT as f64 + 0.4, 11.8];
-    let high_pad = lowered([56.5, 10.8, 4.0]);
+    let high_pad = lowered([55.2, 11.2, 3.8]);
     let to_thumper = lowered([56.2, 3.0, 5.5]);
     let at_thumper = lowered([56.8, 2.5, 5.5]);
 
@@ -229,7 +240,7 @@ pub fn shots(film: Film) -> Film {
             dolly(on_leveler(LEVELER_ARC[1]), high_pad)
                 .look(Look::Pan(leveler_look, THUMPER_LOOK))
                 .ease(speeds(0.35, 0.9))
-                .secs(3.8),
+                .secs(6.2),
         )
         .shot(
             dolly(high_pad, to_thumper)
