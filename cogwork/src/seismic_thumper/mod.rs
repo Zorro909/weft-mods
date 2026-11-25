@@ -11,7 +11,7 @@
 //! over a strike plate with a gearbox of plastic gears; the weight that drops is
 //! `assets/models/seismic_thumper_weight.geo.json` (`weight`).
 
-mod oil;
+pub(crate) mod oil;
 mod screen;
 pub(crate) mod survey;
 mod weight;

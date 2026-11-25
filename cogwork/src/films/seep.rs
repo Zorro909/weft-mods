@@ -23,8 +23,8 @@ pub const PUMP_AT: Pos = Pos::new(-32, 3, -13);
 /// The seep's soaked ground: oily dirt on the meadow side and oil sand on the north lake side.
 const SOAKED_DIRT: [(i32, i32); 4] = [(-1, 1), (0, 1), (0, 2), (1, 1)];
 const SOAKED_SAND: [(i32, i32); 4] = [(-1, 0), (0, -1), (1, -1), (1, 0)];
-const FIELD_DEPTH: i32 = 70;
-const FIELD_RADIUS: i32 = 6;
+pub const FIELD_DEPTH: i32 = 70;
+pub const FIELD_RADIUS: i32 = 6;
 /// Five ember engines (5 × 40 = 200 E/t = the pump's full `DRAW_RATE`) behind and above the pump,
 /// leaving the south face unobstructed for the camera: two directly on the pump (west and up) and
 /// three feeding a 1-block torque shaft on its north side.

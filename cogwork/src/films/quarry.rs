@@ -5,7 +5,7 @@
 //! tube. The farther one (`BUILDER`), beyond the knoll, holds composite panels and builds its
 //! composite frame on camera.
 
-use showcase_api::{Ease, Film, Look, Set, dolly, flyby, hold, orbit};
+use showcase_api::{Ease, Film, Look, Set, dolly, flyby, orbit};
 use weft_sdk::Block;
 use weft_sdk::{Dir, Item, Shape};
 
@@ -29,7 +29,7 @@ static STONE: Block = Block::named("base:stone");
 /// so how deep its pit is then.
 pub const DIGGER: Pos = Pos::new(33, 0, 2);
 pub const MAGAZINE_AT: Pos = Pos::new(33, 0, 3);
-const MINING_Y: i32 = -70;
+const MINING_Y: i32 = -66;
 const PIT_DEPTH: i32 = DIGGER.y + SITE.y - WORKS_DOWN - MINING_Y - 1;
 /// The one that builds its composite frame while the camera watches, and its engines' sides.
 const BUILDER: Pos = Pos::new(64, 1, 3);
@@ -59,16 +59,16 @@ const MAGAZINE_LOOK: [f64; 3] = lowered(above(MAGAZINE_AT, 0.3));
 
 const SORTER_OUT: f64 = 3.0;
 const SORTER_UP: f64 = 3.0;
-const SORTER_ARC: [f64; 2] = [125.0, 85.0];
+const SORTER_ARC: [f64; 2] = [92.0, 60.0];
 
 const PIT_OUT: f64 = 9.0;
-const PIT_UP: [f64; 2] = [9.5, 6.2];
+const PIT_UP: [f64; 2] = [10.0, 9.2];
 const PIT_ARC: [f64; 2] = [108.0, 170.0];
 
-const OVER_PIT_CENTER: [f64; 3] = lowered([30.8, 6.8, -2.6]);
-const INTO_PIT: [f64; 3] = lowered([32.0, 2.2, -3.2]);
-const DOWN_PIT: [f64; 3] = lowered([33.5, -14.0, -3.5]);
-const OVER_DRILL: f64 = 3.2;
+const OVER_PIT_CENTER: [f64; 3] = lowered([33.2, 9.6, -3.5]);
+const INTO_PIT: [f64; 3] = lowered([33.2, 2.2, -3.5]);
+const DOWN_PIT: [f64; 3] = lowered([33.5, -18.0, -3.5]);
+const OVER_DRILL: f64 = 7.5;
 
 const FRAME_OUT: f64 = 13.5;
 const FRAME_UP: [f64; 2] = [8.5, 7.5];
@@ -102,36 +102,46 @@ pub fn build(set: &Set) {
     set.place(BUILDER.toward(Dir::South), BlockState::of(&CHEST));
 }
 
-/// The digger's legacy `gantry_frame` and deep pit, lining all four vertical pit walls with stone
-/// down to `MINING_Y` so natural caves never open dark voids into the shaft.
+/// The digger's legacy `gantry_frame` and deep pit, lining all four vertical pit walls with two
+/// blocks of solid stone down past `MINING_Y` (remembering `Shape::cuboid` is half-open `[lo, hi)`)
+/// and sealing any cave air pockets beneath the pit floor while keeping real stone and ores intact.
 fn frame_and_pit(set: &Set) {
     let world = set.world();
     let pos = set.at(DIGGER);
     let frame = Frame::plan(&world, pos, Dir::South, &GANTRY);
     build_frame(set, &frame, &GANTRY_FRAME);
-    let wall_lo_y = pos.y - PIT_DEPTH - 2;
+    let wall_lo_y = pos.y - PIT_DEPTH - 16;
     let wall_hi_y = pos.y - 1;
     let stone = BlockState::of(&STONE).id();
     for (lo, hi) in [
         (
-            Pos::new(frame.lo.x, wall_lo_y, frame.lo.z),
-            Pos::new(frame.hi.x, wall_hi_y, frame.lo.z),
+            Pos::new(frame.lo.x - 1, wall_lo_y, frame.lo.z - 1),
+            Pos::new(frame.hi.x + 2, wall_hi_y, frame.lo.z + 1),
         ),
         (
-            Pos::new(frame.lo.x, wall_lo_y, frame.hi.z),
-            Pos::new(frame.hi.x, wall_hi_y, frame.hi.z),
+            Pos::new(frame.lo.x - 1, wall_lo_y, frame.hi.z),
+            Pos::new(frame.hi.x + 2, wall_hi_y, frame.hi.z + 2),
         ),
         (
-            Pos::new(frame.lo.x, wall_lo_y, frame.lo.z),
-            Pos::new(frame.lo.x, wall_hi_y, frame.hi.z),
+            Pos::new(frame.lo.x - 1, wall_lo_y, frame.lo.z),
+            Pos::new(frame.lo.x + 1, wall_hi_y, frame.hi.z + 1),
         ),
         (
             Pos::new(frame.hi.x, wall_lo_y, frame.lo.z),
-            Pos::new(frame.hi.x, wall_hi_y, frame.hi.z),
+            Pos::new(frame.hi.x + 2, wall_hi_y, frame.hi.z + 1),
         ),
     ] {
         world.fill(Shape::cuboid(lo, hi), stone);
     }
+    world
+        .fill(
+            Shape::cuboid(
+                frame.lo.add_x(1).add_z(1).with_y(wall_lo_y),
+                frame.hi.with_y(pos.y - PIT_DEPTH),
+            ),
+            stone,
+        )
+        .only("core:air");
     let lowest = frame.lo.add_x(1).add_z(1).with_y(pos.y - PIT_DEPTH);
     let far_corner = frame.hi.with_y(pos.y);
     world.fill(Shape::cuboid(lowest, far_corner), BlockState::AIR.id());
@@ -191,22 +201,31 @@ pub fn raise_frame(set: &Set) {
 pub fn sorting_and_digging_shots(film: Film) -> Film {
     let at_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[0]);
     let leave_sorter = on_orbit(SORTER_LOOK, SORTER_OUT, SORTER_UP, SORTER_ARC[1]);
-    // Cross north high above the grass bank (6-8 blocks clear of the y = 8 hillside and above the
-    // hall's roof ridge), looking north-east over the open quarry yard and lake so the slope stays
-    // in the lower third, then descend cleanly onto the sorting tube.
-    let mid_north = lowered([25.6, 16.0, 8.2]);
-    let over_yard = lowered([25.6, 15.0, 4.2]);
-    let east_sky = lowered([31.5, 13.5, 6.0]);
-    let far_lake = lowered([31.5, 6.5, -2.5]);
+    // Cross north well east of the hall's brick gable (x = 22) and high above the grass bank,
+    // looking north-east over the open quarry yard and lake, then descend cleanly onto the sorting
+    // tube from the south-east.
+    let mid_north = lowered([28.8, 16.5, 8.5]);
+    let over_yard = lowered([29.2, 14.0, 5.2]);
+    let east_sky = lowered([33.5, 13.5, 6.0]);
+    let far_lake = lowered([32.0, 6.5, -2.5]);
     let by_magazine = [
         leave_sorter,
-        lowered([31.2, 4.3, 6.6]),
+        lowered([31.5, 4.3, 6.6]),
         lowered([35.0, 4.5, 6.4]),
     ];
     let over_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[0], PIT_ARC[0]);
     let west_of_pit = on_orbit(PIT_LOOK, PIT_OUT, PIT_UP[1], PIT_ARC[1]);
     let into_center = [west_of_pit, OVER_PIT_CENTER, INTO_PIT];
-    let at_drill = [INTO_PIT[0], DRILL_LOOK[1] + OVER_DRILL, INTO_PIT[2]];
+    let at_drill = [
+        INTO_PIT[0] - 1.4,
+        DRILL_LOOK[1] + OVER_DRILL,
+        INTO_PIT[2] + 1.4,
+    ];
+    let end_drill = [
+        INTO_PIT[0] - 1.0,
+        DRILL_LOOK[1] + OVER_DRILL + 1.2,
+        INTO_PIT[2] + 1.0,
+    ];
 
     let round = |from: f64, to: f64, ease: Ease, secs: f32| {
         orbit(SORTER_LOOK, SORTER_OUT)
@@ -236,10 +255,10 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
                 .secs(3.5),
         )
         .title("cogwork.film.sorting", 3.0)
-        .shot(round(SORTER_ARC[0], 110.0, speeds(0.5, 0.15), 3.2))
+        .shot(round(SORTER_ARC[0], 80.0, speeds(0.5, 0.15), 3.2))
         .menu("cogwork:sorting_tube", lowered_block(SORTER), 3.5)
-        .shot(round(110.0, 100.0, speeds(0.15, 0.15), 3.8))
-        .shot(round(100.0, SORTER_ARC[1], speeds(0.15, 0.9), 2.4))
+        .shot(round(80.0, 70.0, speeds(0.15, 0.15), 3.8))
+        .shot(round(70.0, SORTER_ARC[1], speeds(0.15, 0.9), 2.4))
         .cue("prep_swap")
         .title("cogwork.film.t5_magazine", 3.8)
         .shot(
@@ -277,8 +296,13 @@ pub fn sorting_and_digging_shots(film: Film) -> Film {
                 .secs(6.5),
         )
         .menu("cogwork:excavator", lowered_block(DIGGER), 4.0)
-        .shot(hold(at_drill).look_at(DRILL_LOOK).secs(4.5))
-        .fade_out(1.5)
+        .shot(
+            dolly(at_drill, end_drill)
+                .look_at(DRILL_LOOK)
+                .ease(speeds(0.3, 0.2))
+                .secs(4.2),
+        )
+        .fade_out(0.5)
 }
 
 /// Section 10c: east from the seismic thumper into the builder's orbit as it puts up its

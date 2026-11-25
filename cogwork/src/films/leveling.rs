@@ -5,18 +5,19 @@
 //! the knoll, the powered seismic thumper stands ready beside its own marked area, and its screen
 //! opens before the camera continues to the composite-frame Gantry Excavator.
 
-use showcase_api::{Film, Look, Set, dolly, flyby, orbit};
+use showcase_api::{Film, Look, Set, dolly, orbit};
 use weft_sdk::Block;
 use weft_sdk::{Dir, Item, ItemStack, Output};
 
 use super::camera::{between, on_orbit, speeds};
 use super::ground::ground_top;
 use super::parts::{GRASS, engine, fuel};
+use super::seep;
 use super::site::{above, lowered, lowered_block};
 use crate::leveler::LEVELER;
 use crate::lib::{BlockState, Pos};
 use crate::markers::SURVEY_MARKER;
-use crate::seismic_thumper::{SEISMIC_THUMPER, SURVEY, Status, survey};
+use crate::seismic_thumper::{SEISMIC_THUMPER, SURVEY, Status, oil, survey};
 
 static DIRT: Block = Block::named("base:dirt");
 
@@ -55,6 +56,15 @@ pub const THUMPER_LOOK: [f64; 3] = lowered(above(THUMPER_AT, 0.5));
 pub const END_EYE: [f64; 3] = lowered([56.4, 3.2, 4.4]);
 
 pub fn build(set: &Set) {
+    // Pre-grass the sub-layer under the high side of the marked square so the leveler's Clear
+    // stage uncovers green grass matching the filled side instead of bare brown dirt.
+    for x in 41..=50 {
+        for z in 9..=18 {
+            if ground_top(set, x, z) >= HEIGHT {
+                set.place(Pos::new(x, HEIGHT - 1, z), BlockState::of(&GRASS));
+            }
+        }
+    }
     for marker in MARKERS {
         earth_bed(set, marker);
         set.place(marker, BlockState::of(&SURVEY_MARKER));
@@ -83,7 +93,8 @@ pub fn build_thumper(set: &Set) {
 }
 
 /// Fuels the seismic thumper's engines and starts its real survey of the marked area from t = 0 so
-/// its ore bands and oil fields are populated when its screen opens.
+/// its ore bands and oil fields (including the showcase oil seep) are populated when its screen
+/// opens.
 pub fn start_thumper(set: &Set) {
     for (at, _) in THUMPER_ENGINES {
         fuel(set, at);
@@ -96,6 +107,17 @@ pub fn start_thumper(set: &Set) {
     let area = survey::columns(marked, pos);
     if let Some(s) = world.component_mut(id, &SURVEY) {
         s.set_area(area, survey::layers(pos.y));
+        let seep_mid_y = set.at(seep::PUMP_AT).y - 1 - seep::FIELD_DEPTH;
+        s.note_field(oil::Field {
+            offset: (
+                seep::PUMP_AT.x - THUMPER_AT.x,
+                seep::PUMP_AT.z - THUMPER_AT.z,
+            ),
+            depth: Some((
+                seep_mid_y + seep::FIELD_RADIUS,
+                seep_mid_y - seep::FIELD_RADIUS,
+            )),
+        });
         s.set_status(Status::Thumping);
     }
 }
@@ -124,6 +146,7 @@ fn earth_bed(set: &Set, at: Pos) {
     for y in at.y..=ground + 1 {
         set.place(at.with_y(y), BlockState::AIR);
     }
+    set.place(at.add_y(-1), BlockState::of(&GRASS));
 }
 
 /// The camera uses the corner marker, so the square shows, and the engines are lit.
@@ -179,15 +202,11 @@ pub fn shots(film: Film) -> Film {
             .secs(secs)
     };
     let leveler_look = [48.2, HEIGHT as f64 + 0.4, 11.8];
+    let high_pad = lowered([56.5, 10.8, 4.0]);
     let to_thumper = lowered([56.2, 3.0, 5.5]);
-    let over_apron = [
-        on_leveler(LEVELER_ARC[1]),
-        lowered([57.2, 9.2, 4.8]),
-        to_thumper,
-    ];
     let at_thumper = lowered([56.8, 2.5, 5.5]);
 
-    film.fade_in(1.5)
+    film.fade_in(0.5)
         .shot(
             dolly(entry, on_leveler(LEVELER_ARC[0]))
                 .look(Look::Pan(MIDDLE, leveler_look))
@@ -207,10 +226,16 @@ pub fn shots(film: Film) -> Film {
         .menu("cogwork:leveler", LEVELER_AT, 3.5)
         .shot(round(-24.0, LEVELER_ARC[1], 4.5).look_at(leveler_look))
         .shot(
-            flyby(&over_apron)
+            dolly(on_leveler(LEVELER_ARC[1]), high_pad)
                 .look(Look::Pan(leveler_look, THUMPER_LOOK))
-                .ease(speeds(0.35, 0.8))
-                .secs(7.5),
+                .ease(speeds(0.35, 0.9))
+                .secs(3.8),
+        )
+        .shot(
+            dolly(high_pad, to_thumper)
+                .look_at(THUMPER_LOOK)
+                .ease(speeds(0.9, 0.8))
+                .secs(3.4),
         )
         .title("cogwork.film.t5_thumper", 3.0)
         .shot(
