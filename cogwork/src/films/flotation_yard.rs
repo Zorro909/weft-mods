@@ -48,7 +48,7 @@ const FLOTATION_ENGINES: [(Pos, Dir); 2] = [
 const CLARIFIERS: [Pos; 2] = [Pos::new(63, FLOOR, 32), Pos::new(65, FLOOR, 32)];
 const CLAY_CHESTS: [Pos; 2] = [Pos::new(63, FLOOR, 31), Pos::new(65, FLOOR, 31)];
 const WATER_TANK: Area = Area {
-    lo: Pos::new(67, FLOOR, 30),
+    lo: Pos::new(67, FLOOR, 29),
     hi: Pos::new(69, FLOOR + 1, 30),
 };
 
@@ -102,16 +102,36 @@ fn flotation_loop(set: &Set) {
     tubes(set, Pos::new(59, FLOOR, 31), Pos::new(59, FLOOR, 32));
     set.place(FLOTATION_CHEST, BlockState::of(&CHEST));
 
-    // Power buried strictly under the two engines, creosote tank, creosote tubes and flotation
-    // cell (zero exposed gravel slots).
+    // Power runs horizontally at FLOOR - 2 under solid gravel and rises to FLOOR - 1 only under
+    // the two engines and the flotation cell (zero exposed gravel slots under creosote tubes).
     shafts(
         set,
+        Pos::new(59, FLOOR - 2, 28),
         Pos::new(59, FLOOR - 1, 28),
+    );
+    shafts(
+        set,
+        Pos::new(59, FLOOR - 2, 29),
         Pos::new(59, FLOOR - 1, 29),
     );
     shafts(
         set,
-        Pos::new(60, FLOOR - 1, 29),
+        Pos::new(59, FLOOR - 2, 28),
+        Pos::new(59, FLOOR - 2, 29),
+    );
+    shafts(
+        set,
+        Pos::new(59, FLOOR - 2, 29),
+        Pos::new(60, FLOOR - 2, 29),
+    );
+    shafts(
+        set,
+        Pos::new(60, FLOOR - 2, 29),
+        Pos::new(60, FLOOR - 2, 32),
+    );
+    shafts(
+        set,
+        Pos::new(60, FLOOR - 2, 32),
         Pos::new(60, FLOOR - 1, 32),
     );
     for (at, toward) in FLOTATION_ENGINES {
@@ -143,13 +163,14 @@ fn creosote_line() -> Vec<Pos> {
     blocks
 }
 
-/// Muddy water exits the flotation cell's east (back) face into the first clarifier's west face,
-/// and loops behind the first clay chest into the second clarifier's west face.
+/// Muddy water exits the flotation cell's east (back) face, loops behind the first clay chest,
+/// and enters the shared junction at (64, FLOOR, 32) directly between both clarifiers so both
+/// receive muddy water equally at the same distance.
 fn muddy_line() -> Vec<Pos> {
     vec![
         Pos::new(61, FLOOR, 32),
-        Pos::new(62, FLOOR, 32),
-        Pos::new(62, FLOOR, 31),
+        Pos::new(61, FLOOR, 31),
+        Pos::new(61, FLOOR, 30),
         Pos::new(62, FLOOR, 30),
         Pos::new(63, FLOOR, 30),
         Pos::new(64, FLOOR, 30),
@@ -189,14 +210,20 @@ pub fn start(set: &Set) {
         "cogwork:creosote",
         [1, 1],
     );
-    // Leave generous headroom in the clear-water side (32,000 / 96,000 mB = 67% of the bottom
-    // tank layer, clear_water_line unfilled) so both clarifiers' south fronts pour freely into
-    // clear_water_line without saturating, while lasting ~208 s of continuous flotation.
-    prefill(set, WATER_TANK.blocks(), "base:water", [1, 3]);
+    // WATER_TANK is 3×2×2 (192,000 mB total; 96,000 mB on y = FLOOR). Prefilling [3, 8] puts
+    // 72,000 mB into the bottom layer (75% full, 0% in FLOOR + 1), leaving 24,000 mB of free
+    // headroom on y = FLOOR so both clarifiers pour freely while supplying ~390 s of net flotation
+    // water (183 mB/s net loss) so FLOTATION_AT never runs low on camera.
+    prefill(set, WATER_TANK.blocks(), "base:water", [3, 8]);
     prefill(set, [FLOTATION_AT].into_iter(), "base:water", [1, 1]);
-    // Prefill only muddy_line (8,000 mB), leaving both clarifiers empty so muddy water drains
-    // cleanly into them and the flotation cell never backs up.
-    prefill(set, muddy_line().into_iter(), "cogwork:muddy_water", [1, 1]);
+    // Prefill muddy_line and both clarifiers (4,000 mB each; clarifiers settle 10 mB/t combined
+    // against 8.33 mB/t produced, so both drain immediately and stay evenly settling past 2:20).
+    prefill(
+        set,
+        muddy_line().into_iter().chain(CLARIFIERS),
+        "cogwork:muddy_water",
+        [1, 1],
+    );
 }
 
 /// Glides across the open gravel past the core drill, Steel Excavator, flotation cell and

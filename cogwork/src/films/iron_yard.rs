@@ -165,33 +165,75 @@ fn processing_line(set: &Set) {
     for at in UNDER_ENGINES {
         engine(set, at, Dir::Down);
     }
-    // Buried shafts covered strictly by engines, void/item/water tubes and machines:
-    // shaker (3, 29..32), washer (7, 31..32) + (6, 32), mill (8..9, 28) + (9, 28..32).
+    // Buried shafts run horizontally at FLOOR - 2 (under solid gravel) and rise to FLOOR - 1 ONLY
+    // directly beneath full machines/engines (never under thin tubes or open gravel):
+    // - shaker: (3, FLOOR-1, 29) under SHAKER_ENGINE -> (3, FLOOR-2, 29..=32) -> (3, FLOOR-1, 32)
+    // - washer: (7, FLOOR-1, 31) under WASHER_ENGINE -> (7, FLOOR-2, 31..=32) + (6, FLOOR-2, 32)
+    //           -> (6, FLOOR-1, 32) under WASHER_AT
+    // - mill:   (8..=9, FLOOR-1, 28) under MILL_ASSIST/MILL_ENGINE -> (8..=9, FLOOR-2, 28) +
+    //           (9, FLOOR-2, 28..=32) -> (9, FLOOR-1, 32) under MILL_AT
     shafts(
         set,
+        Pos::new(SHAKER_ENGINE.x, FLOOR - 2, SHAKER_ENGINE.z),
         Pos::new(SHAKER_ENGINE.x, FLOOR - 1, SHAKER_ENGINE.z),
+    );
+    shafts(
+        set,
+        Pos::new(SHAKER_ENGINE.x, FLOOR - 2, SHAKER_ENGINE.z),
+        Pos::new(SHAKER_AT.x, FLOOR - 2, SHAKER_AT.z),
+    );
+    shafts(
+        set,
+        Pos::new(SHAKER_AT.x, FLOOR - 2, SHAKER_AT.z),
         Pos::new(SHAKER_AT.x, FLOOR - 1, SHAKER_AT.z),
     );
+
     shafts(
         set,
+        Pos::new(WASHER_ENGINE.x, FLOOR - 2, WASHER_ENGINE.z),
         Pos::new(WASHER_ENGINE.x, FLOOR - 1, WASHER_ENGINE.z),
-        Pos::new(WASHER_ENGINE.x, FLOOR - 1, WASHER_AT.z),
     );
     shafts(
         set,
+        Pos::new(WASHER_ENGINE.x, FLOOR - 2, WASHER_ENGINE.z),
+        Pos::new(WASHER_ENGINE.x, FLOOR - 2, WASHER_AT.z),
+    );
+    shafts(
+        set,
+        Pos::new(WASHER_AT.x, FLOOR - 2, WASHER_AT.z),
+        Pos::new(WASHER_ENGINE.x, FLOOR - 2, WASHER_AT.z),
+    );
+    shafts(
+        set,
+        Pos::new(WASHER_AT.x, FLOOR - 2, WASHER_AT.z),
         Pos::new(WASHER_AT.x, FLOOR - 1, WASHER_AT.z),
-        Pos::new(WASHER_ENGINE.x, FLOOR - 1, WASHER_AT.z),
     );
-    shafts(
-        set,
-        Pos::new(MILL_ENGINE.x, FLOOR - 1, MILL_ENGINE.z),
-        Pos::new(MILL_AT.x, FLOOR - 1, MILL_AT.z),
-    );
+
     spring_engine(set, MILL_ASSIST, Dir::Down);
     shafts(
         set,
+        Pos::new(MILL_ASSIST.x, FLOOR - 2, MILL_ASSIST.z),
         Pos::new(MILL_ASSIST.x, FLOOR - 1, MILL_ASSIST.z),
-        Pos::new(MILL_AT.x, FLOOR - 1, MILL_ASSIST.z),
+    );
+    shafts(
+        set,
+        Pos::new(MILL_ASSIST.x, FLOOR - 2, MILL_ASSIST.z),
+        Pos::new(MILL_ENGINE.x, FLOOR - 2, MILL_ENGINE.z),
+    );
+    shafts(
+        set,
+        Pos::new(MILL_ENGINE.x, FLOOR - 2, MILL_ENGINE.z),
+        Pos::new(MILL_ENGINE.x, FLOOR - 1, MILL_ENGINE.z),
+    );
+    shafts(
+        set,
+        Pos::new(MILL_ENGINE.x, FLOOR - 2, MILL_ENGINE.z),
+        Pos::new(MILL_AT.x, FLOOR - 2, MILL_AT.z),
+    );
+    shafts(
+        set,
+        Pos::new(MILL_AT.x, FLOOR - 2, MILL_AT.z),
+        Pos::new(MILL_AT.x, FLOOR - 1, MILL_AT.z),
     );
 }
 
