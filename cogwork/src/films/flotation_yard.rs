@@ -26,15 +26,15 @@ use crate::tank::LIQUID_TANK;
 /// Floor height above Pad S4's gravel, in blocks from the works.
 const FLOOR: i32 = VALLEY_TOP + 1;
 
-/// Core drill and Steel Excavator, with the excavator's output chest tucked beside its west frame
-/// edge away from the camera path.
+/// Core drill and Steel Excavator (frame x 47..57, z 24..34), with the excavator's output chest
+/// tucked east of the frame away from the surface power shaft.
 const CORE_DRILL_AT: Pos = Pos::new(44, FLOOR, 33);
 pub const EXCAVATOR_AT: Pos = Pos::new(52, FLOOR, 35);
-const EXCAVATOR_CHEST: Pos = Pos::new(46, FLOOR, 33);
+const EXCAVATOR_CHEST: Pos = Pos::new(58, FLOOR, 34);
 const PIT_DEPTH: i32 = 3;
 
-/// Flotation cell and two clarifiers along z = 32, with every chest and tank tucked behind them
-/// so nothing stands in the foreground or in the camera's path.
+/// Flotation cell and two clarifiers along z = 32, with every chest and buffer tank tucked behind
+/// them so nothing stands in the foreground or in the camera's path.
 const CREOSOTE_TANK: Area = Area {
     lo: Pos::new(60, FLOOR, 29),
     hi: Pos::new(60, FLOOR + 1, 29),
@@ -42,14 +42,14 @@ const CREOSOTE_TANK: Area = Area {
 const FLOTATION_AT: Pos = Pos::new(60, FLOOR, 32);
 const FLOTATION_CHEST: Pos = Pos::new(59, FLOOR, 30);
 const FLOTATION_ENGINES: [(Pos, Dir); 2] = [
-    (Pos::new(59, FLOOR, 27), Dir::Down),
-    (Pos::new(60, FLOOR, 27), Dir::Down),
+    (Pos::new(59, FLOOR, 28), Dir::Down),
+    (Pos::new(59, FLOOR, 29), Dir::Down),
 ];
 const CLARIFIERS: [Pos; 2] = [Pos::new(63, FLOOR, 32), Pos::new(65, FLOOR, 32)];
 const CLAY_CHESTS: [Pos; 2] = [Pos::new(63, FLOOR, 31), Pos::new(65, FLOOR, 31)];
 const WATER_TANK: Area = Area {
     lo: Pos::new(67, FLOOR, 30),
-    hi: Pos::new(67, FLOOR + 1, 30),
+    hi: Pos::new(68, FLOOR + 1, 30),
 };
 
 pub fn build(set: &Set) {
@@ -61,8 +61,8 @@ pub fn build(set: &Set) {
     flotation_loop(set);
 }
 
-/// Steel Excavator powered via torque shaft from S3's steam engine (buried under the west apron
-/// into its bottom) with its output chest tucked beside the west edge of the steel frame.
+/// Steel Excavator powered via surface torque shaft from S3's steam engine (no open trenches)
+/// with its output chest tucked east of the steel frame.
 fn steel_excavator(set: &Set) {
     set.place(
         EXCAVATOR_AT,
@@ -76,20 +76,10 @@ fn steel_excavator(set: &Set) {
     shafts(
         set,
         Pos::new(45, FLOOR, SHAFT_Z + 1),
-        Pos::new(45, FLOOR, 34),
+        Pos::new(45, FLOOR, 35),
     );
-    shafts(
-        set,
-        Pos::new(45, FLOOR - 1, 34),
-        Pos::new(45, FLOOR - 1, 35),
-    );
-    shafts(
-        set,
-        Pos::new(46, FLOOR - 1, 35),
-        Pos::new(52, FLOOR - 1, 35),
-    );
-    tubes(set, Pos::new(46, FLOOR, 35), Pos::new(51, FLOOR, 35));
-    tubes(set, Pos::new(46, FLOOR, 34), Pos::new(46, FLOOR, 34));
+    shafts(set, Pos::new(46, FLOOR, 35), Pos::new(51, FLOOR, 35));
+    tubes(set, Pos::new(53, FLOOR, 35), Pos::new(58, FLOOR, 35));
     set.place(EXCAVATOR_CHEST, BlockState::of(&CHEST));
 
     let world = set.world();
@@ -112,15 +102,16 @@ fn flotation_loop(set: &Set) {
     tubes(set, Pos::new(59, FLOOR, 31), Pos::new(59, FLOOR, 32));
     set.place(FLOTATION_CHEST, BlockState::of(&CHEST));
 
-    // Power comes under the gravel from two ember engines tucked behind the creosote line.
+    // Power buried strictly under the two engines, creosote tank, creosote tubes and flotation
+    // cell (zero exposed gravel slots).
     shafts(
         set,
-        Pos::new(59, FLOOR - 1, 27),
-        Pos::new(60, FLOOR - 1, 27),
+        Pos::new(59, FLOOR - 1, 28),
+        Pos::new(59, FLOOR - 1, 29),
     );
     shafts(
         set,
-        Pos::new(60, FLOOR - 1, 28),
+        Pos::new(60, FLOOR - 1, 29),
         Pos::new(60, FLOOR - 1, 32),
     );
     for (at, toward) in FLOTATION_ENGINES {
@@ -141,8 +132,13 @@ fn flotation_loop(set: &Set) {
     liquid_tubes(set, &clear_water_line());
 }
 
+/// Creosote leaves S3 at (43, FLOOR, 28), skirts cleanly around the north side of the Steel
+/// Excavator's frame (x 47..57, z 24..34) along z = 23, and enters CREOSOTE_TANK at (60, 29).
 fn creosote_line() -> Vec<Pos> {
-    let mut blocks: Vec<Pos> = (43..=60).map(|x| Pos::new(x, FLOOR, CREOSOTE_Z)).collect();
+    let mut blocks: Vec<Pos> = (43..=45).map(|x| Pos::new(x, FLOOR, CREOSOTE_Z)).collect();
+    blocks.extend((23..CREOSOTE_Z).rev().map(|z| Pos::new(45, FLOOR, z)));
+    blocks.extend((46..=60).map(|x| Pos::new(x, FLOOR, 23)));
+    blocks.extend((24..=28).map(|z| Pos::new(60, FLOOR, z)));
     blocks.extend([Pos::new(60, FLOOR, 30), Pos::new(60, FLOOR, 31)]);
     blocks
 }
@@ -219,49 +215,56 @@ pub fn shots(film: Film) -> Film {
     let float_look = lowered(above(FLOTATION_AT, 0.2));
     let clarifier_look = lowered([64.0, f + 0.5, 32.5]);
 
-    let at_core = lowered([43.8, f + 2.3, 36.6]);
+    let at_core = lowered([44.0, f + 2.3, 37.2]);
     let at_steel = lowered([53.5, f + 5.2, 38.4]);
     let past_sw_corner = [at_core, lowered([48.2, f + 4.4, 38.2]), at_steel];
+    let to_float = lowered([59.6, f + 3.2, 37.8]);
+    let past_se_corner = [at_steel, lowered([58.2, f + 5.2, 38.4]), to_float];
     let at_float = lowered([61.5, f + 2.4, 37.4]);
-    let past_se_corner = [at_steel, lowered([58.5, f + 4.2, 38.4]), at_float];
     let at_clarifier = lowered([63.8, f + 2.3, 37.2]);
     let end_eye = lowered([65.0, f + 2.4, 37.2]);
 
-    film.title("cogwork.film.t3_core", 4.0)
+    film.title("cogwork.film.t3_core", 3.8)
         .shot(
             dolly(foundry::END_EYE, at_core)
                 .look(Look::Pan(foundry::END_LOOK, core_look))
                 .ease(speeds(1.0, 0.9))
-                .secs(4.5),
+                .secs(4.2),
         )
         .title("cogwork.film.t3_steel", 5.5)
         .shot(
             flyby(&past_sw_corner)
                 .look(Look::Pan(core_look, steel_look))
                 .ease(speeds(0.9, 0.9))
-                .secs(6.5),
+                .secs(6.2),
         )
-        .menu("cogwork:steel_excavator", lowered_block(EXCAVATOR_AT), 4.0)
+        .menu("cogwork:steel_excavator", lowered_block(EXCAVATOR_AT), 3.8)
         .shot(
             flyby(&past_se_corner)
                 .look(Look::Pan(steel_look, float_look))
                 .ease(speeds(0.9, 0.7))
-                .secs(7.0),
+                .secs(5.0),
         )
-        .title("cogwork.film.t3_float", 6.0)
-        .menu("cogwork:flotation_cell", lowered_block(FLOTATION_AT), 4.0)
+        .title("cogwork.film.t3_float", 3.2)
+        .shot(
+            dolly(to_float, at_float)
+                .look_at(float_look)
+                .ease(speeds(0.7, 0.7))
+                .secs(3.5),
+        )
+        .menu("cogwork:flotation_cell", lowered_block(FLOTATION_AT), 3.8)
         .shot(
             dolly(at_float, at_clarifier)
                 .look(Look::Pan(float_look, clarifier_look))
                 .ease(speeds(0.7, 0.6))
-                .secs(6.5),
+                .secs(5.5),
         )
         .menu("cogwork:clarifier", lowered_block(CLARIFIERS[0]), 3.5)
         .shot(
             dolly(at_clarifier, end_eye)
                 .look_at(clarifier_look)
                 .ease(speeds(0.6, 0.3))
-                .secs(4.5),
+                .secs(4.2),
         )
         .fade_out(1.5)
 }

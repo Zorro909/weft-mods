@@ -69,7 +69,7 @@ const PADS: [Pad; 9] = [
     },
     Pad {
         west: 43,
-        north: 25,
+        north: 22,
         east: 69,
         south: 38,
         top: VALLEY_TOP,

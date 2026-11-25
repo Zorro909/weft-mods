@@ -47,14 +47,15 @@ const BLAST_ENGINES: [(Pos, Dir); 4] = [
 /// Forge anvil loaded with a hot bloom right beside the blast furnace.
 const ANVIL_AT: Pos = Pos::new(26, FLOOR, 34);
 
-/// Compact steam plant: water tank behind, two firebox+boiler pairs, steam engine and trip hammer
-/// along z = 33, with the trip hammer's output chest tucked behind it at z = 31.
+/// Compact steam plant: tall gravity-fed water tank (96,000 mB above the boiler feed at
+/// FLOOR + 1), one firebox+boiler pair (20 mB/tick steam against ~20.75 mB/tick draw so the
+/// boiler never hits Full and the firebox stays Burning), steam engine, and trip hammer.
 const STEAM_WATER: Area = Area {
     lo: Pos::new(29, FLOOR, 31),
-    hi: Pos::new(30, FLOOR + 1, 31),
+    hi: Pos::new(30, FLOOR + 3, 31),
 };
-const FIREBOXES: [Pos; 2] = [Pos::new(29, FLOOR, 33), Pos::new(30, FLOOR, 33)];
-const BOILERS: [Pos; 2] = [Pos::new(29, FLOOR + 1, 33), Pos::new(30, FLOOR + 1, 33)];
+const FIREBOX_AT: Pos = Pos::new(30, FLOOR, 33);
+const BOILER_AT: Pos = Pos::new(30, FLOOR + 1, 33);
 const STEAM_ENGINE_AT: Pos = Pos::new(33, FLOOR, 33);
 const HAMMER_AT: Pos = Pos::new(36, FLOOR, 33);
 const HAMMER_CHEST: Pos = Pos::new(37, FLOOR, 31);
@@ -63,9 +64,9 @@ const HAMMER_CHEST: Pos = Pos::new(37, FLOOR, 31);
 pub const CREOSOTE_Z: i32 = 28;
 pub const SHAFT_Z: i32 = 30;
 
-/// Where S3 hands the camera off to S4, out in the open gravel away from the south retaining wall.
-pub const END_EYE: [f64; 3] = lowered([42.5, FLOOR as f64 + 2.4, 36.2]);
-pub const END_LOOK: [f64; 3] = lowered([41.5, FLOOR as f64 + 0.8, 33.5]);
+/// Where S3 hands the camera off to S4, already aimed at Pad S4's core drill.
+pub const END_EYE: [f64; 3] = lowered([42.0, FLOOR as f64 + 2.3, 37.2]);
+pub const END_LOOK: [f64; 3] = lowered(above(Pos::new(44, FLOOR, 33), 0.3));
 
 pub fn build(set: &Set) {
     coke_oven(set);
@@ -123,22 +124,21 @@ fn blast_furnace(set: &Set) {
     }
 }
 
-/// Two firebox+boiler pairs feeding a low rear steam header into the steam engine and trip hammer.
+/// One firebox+boiler pair feeding a low rear steam header into the steam engine and trip hammer.
 fn steam_plant(set: &Set) {
     set.fill(STEAM_WATER, BlockState::of(&LIQUID_TANK));
-    for (&firebox, &boiler) in FIREBOXES.iter().zip(&BOILERS) {
-        set.place(firebox, FIREBOX.with(&[("facing", "south")]).into());
-        set.place(boiler, BOILER.with(&[("facing", "south")]).into());
-    }
+    set.place(FIREBOX_AT, FIREBOX.with(&[("facing", "south")]).into());
+    set.place(BOILER_AT, BOILER.with(&[("facing", "south")]).into());
     liquid_tubes(set, &boiler_water_line());
     liquid_tubes(set, &steam_line());
     set.place(
         STEAM_ENGINE_AT,
         STEAM_ENGINE.with(&[("facing", "south")]).into(),
     );
-    // Steel block base flush beneath the trip hammer; output chest tucked behind at z = 31.
+    // Steel block base flush beneath the trip hammer; hammer faces east so ingots eject directly
+    // into its east output tube and chest at z = 31.
     set.place(HAMMER_AT.add_y(-1), BlockState::of(&STEEL_BLOCK));
-    set.place(HAMMER_AT, TRIP_HAMMER.with(&[("facing", "south")]).into());
+    set.place(HAMMER_AT, TRIP_HAMMER.with(&[("facing", "east")]).into());
     tubes(set, Pos::new(37, FLOOR, 33), Pos::new(37, FLOOR, 32));
     set.place(HAMMER_CHEST, BlockState::of(&CHEST));
     // Torque shaft out the steam engine's east flywheel axle and behind the trip hammer to S4.
@@ -151,14 +151,13 @@ fn steam_plant(set: &Set) {
 }
 
 fn boiler_water_line() -> Vec<Pos> {
-    vec![Pos::new(29, FLOOR + 1, 32), Pos::new(30, FLOOR + 1, 32)]
+    vec![Pos::new(30, FLOOR + 1, 32)]
 }
 
-/// Steam leaves both boilers' tops, steps north behind the line at `FLOOR + 1`, and drops into the
+/// Steam leaves the boiler's top, steps north behind the line at `FLOOR + 1`, and drops into the
 /// backs of the steam engine and trip hammer.
 fn steam_line() -> Vec<Pos> {
     let mut blocks = vec![
-        Pos::new(29, FLOOR + 2, 33),
         Pos::new(30, FLOOR + 2, 33),
         Pos::new(31, FLOOR + 2, 33),
         Pos::new(32, FLOOR + 2, 33),
@@ -169,7 +168,7 @@ fn steam_line() -> Vec<Pos> {
     blocks
 }
 
-/// Stocks the coke oven, blast furnace, forge anvil, boilers and trip hammer from t = 0 so every
+/// Stocks the coke oven, blast furnace, forge anvil, boiler and trip hammer from t = 0 so every
 /// multiblock is glowing, smoking and forging by the time the camera reaches S3.
 pub fn start(set: &Set) {
     stock_group(set, COKE_DOOR, "input", &[("base:coal", 64)]);
@@ -187,44 +186,44 @@ pub fn start(set: &Set) {
         forging.strikes = 2;
     }
 
-    for firebox in FIREBOXES {
-        fuel_item(set, firebox, "cogwork:coke");
-    }
+    fuel_item(set, FIREBOX_AT, "cogwork:coke");
     let water = STEAM_WATER
         .blocks()
         .chain(boiler_water_line())
-        .chain(BOILERS);
+        .chain([BOILER_AT]);
     prefill(set, water, "base:water", [1, 1]);
     prefill(
         set,
-        [STEAM_ENGINE_AT, HAMMER_AT].into_iter(),
+        steam_line().into_iter().chain([STEAM_ENGINE_AT, HAMMER_AT]),
         "cogwork:steam",
         [1, 1],
     );
     stock_group(set, HAMMER_AT, "input", &[("cogwork:steel_bloom", 64); 3]);
 }
 
-/// Close dolly east along the foundry: coke oven door & drain, glowing blast furnace tap hole,
-/// forge anvil, fireboxes & boilers, steam engine and trip hammer.
+/// Close dolly east along the foundry, timing every title before its screen opens.
 pub fn shots(film: Film) -> Film {
     let f = FLOOR as f64;
     let coke_look = lowered(above(COKE_DOOR, -0.2));
     let blast_look = lowered(above(BLAST_DOOR, 0.8));
-    let anvil_look = lowered(above(ANVIL_AT, 0.2));
+    let anvil_look = lowered(above(ANVIL_AT, 0.0));
     let boiler_look = lowered([30.5, f + 1.0, 33.0]);
     let engine_look = lowered(above(STEAM_ENGINE_AT, 0.2));
     let hammer_look = lowered(above(HAMMER_AT, 0.3));
 
     let at_coke = lowered([18.8, f + 2.0, 37.2]);
-    let at_blast = lowered([23.5, f + 2.2, 37.2]);
-    let at_anvil = lowered([26.8, f + 1.8, 37.2]);
-    let at_firebox = lowered([30.2, f + 1.9, 37.2]);
+    let to_blast = lowered([22.0, f + 2.2, 37.2]);
+    let at_blast = lowered([24.0, f + 2.2, 37.2]);
+    let at_anvil = lowered([26.2, f + 2.0, 37.6]);
+    let to_firebox = lowered([29.2, f + 1.9, 37.2]);
+    let at_firebox = lowered([30.6, f + 1.9, 37.2]);
     let at_boiler = lowered([32.4, f + 2.0, 37.2]);
-    let at_engine = lowered([34.5, f + 2.2, 37.2]);
+    let to_engine = lowered([33.8, f + 2.1, 37.2]);
+    let at_engine = lowered([35.6, f + 2.2, 37.2]);
     let at_hammer = lowered([38.2, f + 2.3, 37.0]);
 
     film.cue("noon_1")
-        .title("cogwork.film.t2_coke", 5.5)
+        .title("cogwork.film.t2_coke", 4.0)
         .shot(
             dolly(iron_yard::END_EYE, at_coke)
                 .look(Look::Pan(iron_yard::END_LOOK, coke_look))
@@ -233,48 +232,66 @@ pub fn shots(film: Film) -> Film {
         )
         .menu("cogwork:coke_oven", lowered_block(COKE_DOOR), 3.5)
         .shot(
-            dolly(at_coke, at_blast)
+            dolly(at_coke, to_blast)
                 .look(Look::Pan(coke_look, blast_look))
                 .ease(speeds(0.7, 0.7))
-                .secs(5.0),
+                .secs(4.0),
         )
-        .title("cogwork.film.t2_blast", 4.0)
+        .title("cogwork.film.t2_blast", 2.8)
+        .shot(
+            dolly(to_blast, at_blast)
+                .look_at(blast_look)
+                .ease(speeds(0.7, 0.7))
+                .secs(3.0),
+        )
         .menu("cogwork:blast_furnace", lowered_block(BLAST_DOOR), 3.5)
         .shot(
             dolly(at_blast, at_anvil)
                 .look(Look::Pan(blast_look, anvil_look))
                 .ease(speeds(0.7, 0.7))
-                .secs(4.5),
+                .secs(4.0),
         )
-        .title("cogwork.film.t2_anvil", 4.0)
+        .title("cogwork.film.t2_anvil", 3.5)
         .shot(
-            dolly(at_anvil, at_firebox)
+            dolly(at_anvil, to_firebox)
                 .look(Look::Pan(anvil_look, boiler_look))
                 .ease(speeds(0.7, 0.7))
-                .secs(4.5),
+                .secs(4.0),
         )
-        .title("cogwork.film.t2_steam", 5.0)
-        .menu("cogwork:firebox", lowered_block(FIREBOXES[0]), 3.5)
+        .title("cogwork.film.t2_steam", 2.8)
+        .shot(
+            dolly(to_firebox, at_firebox)
+                .look_at(boiler_look)
+                .ease(speeds(0.7, 0.7))
+                .secs(3.0),
+        )
+        .menu("cogwork:firebox", lowered_block(FIREBOX_AT), 3.5)
         .shot(
             dolly(at_firebox, at_boiler)
                 .look_at(boiler_look)
                 .ease(speeds(0.7, 0.7))
-                .secs(4.5),
+                .secs(4.0),
         )
-        .menu("cogwork:boiler", lowered_block(BOILERS[0]), 3.5)
+        .menu("cogwork:boiler", lowered_block(BOILER_AT), 3.5)
         .shot(
-            dolly(at_boiler, at_engine)
+            dolly(at_boiler, to_engine)
                 .look(Look::Pan(boiler_look, engine_look))
                 .ease(speeds(0.7, 0.8))
-                .secs(4.5),
+                .secs(4.0),
         )
-        .title("cogwork.film.t2_hammer", 5.0)
+        .title("cogwork.film.t2_hammer", 2.8)
+        .shot(
+            dolly(to_engine, at_engine)
+                .look(Look::Pan(engine_look, hammer_look))
+                .ease(speeds(0.8, 0.8))
+                .secs(3.0),
+        )
         .menu("cogwork:steam_engine", lowered_block(STEAM_ENGINE_AT), 3.5)
         .shot(
             dolly(at_engine, at_hammer)
-                .look(Look::Pan(engine_look, hammer_look))
+                .look_at(hammer_look)
                 .ease(speeds(0.8, 0.9))
-                .secs(4.5),
+                .secs(4.0),
         )
         .menu("cogwork:trip_hammer", lowered_block(HAMMER_AT), 3.5)
         .shot(
