@@ -56,19 +56,21 @@ const WATER_IN: Pos = Pos::new(10, 0, ROW_Z);
 const DRIVE: Pos = Pos::new(9, 1, -6);
 /// Between the engine's water intake and the water tank.
 const WATER_FEED: Pos = Pos::new(11, 0, ROW_Z);
-/// The shaft: up behind the drive, and across the hall to the row the benches' shaft runs in.
+/// The shaft: up behind the drive, across the hall directly under the x = 10 beam, and down the
+/// inner face of the x = 10 south post into the benches' shaft.
 const SHAFT_HEIGHT: i32 = 5;
-pub const SHAFT_X: i32 = 9;
+pub const SHAFT_X: i32 = 10;
 const SHAFT_BACK: i32 = -7;
 
-/// Camera landmarks inside the hall, and where the haze shot hands off to the benches.
+/// Camera landmarks inside the hall, and where the haze shot hands off to the benches (clear of
+/// both the oil engine casing and the overhead x = 10 shaft).
 const IN_HALL: [f64; 3] = lowered([1.0, 2.6, -0.5]);
 const BY_TANK: [f64; 3] = lowered([3.8, 2.0, -1.2]);
 const ENGINE_OUT: f64 = 5.5;
 const ENGINE_FROM: f64 = 130.0;
-const IN_HAZE: [[f64; 3]; 2] = [lowered([11.2, 4.7, -2.6]), lowered([10.9, 4.8, -2.4])];
+const IN_HAZE: [[f64; 3]; 2] = [lowered([12.6, 4.1, -1.5]), lowered([12.8, 4.1, -1.2])];
 pub const END_EYE: [f64; 3] = IN_HAZE[1];
-pub const END_LOOK: [f64; 3] = lowered([5.5, 3.0, -12.0]);
+pub const END_LOOK: [f64; 3] = lowered([6.5, 2.8, -8.5]);
 
 const OIL_TANK_LOOK: [f64; 3] = lowered(above(OIL_TANK.lo, 0.7));
 const OIL_RISE_LOOK: [f64; 3] = lowered(above(OIL_RISE[1], 0.5));
@@ -83,16 +85,28 @@ pub fn build(set: &Set) {
     liquid_tubes(set, &OIL_RISE);
     liquid_tubes(set, &[WATER_FEED]);
     oil_engine(set);
-    let back = |y: i32| Pos::new(SHAFT_X, y, SHAFT_BACK);
-    shafts(set, back(1), back(SHAFT_HEIGHT));
-    let across = |z: i32| Pos::new(SHAFT_X, SHAFT_HEIGHT, z);
+    // Up behind DRIVE at x = 9, then step onto x = 10 directly beneath the oak cross-beam and drop
+    // down the north face of the x = 10 south post (z = 6) into the bench shaft (z = 5).
     shafts(
         set,
-        across(SHAFT_BACK + 1),
-        across(super::crafting::SHAFT_Z),
+        Pos::new(DRIVE.x, 1, SHAFT_BACK),
+        Pos::new(DRIVE.x, SHAFT_HEIGHT, SHAFT_BACK),
     );
-    let down = |y: i32| Pos::new(SHAFT_X, y, super::crafting::SHAFT_Z);
-    shafts(set, down(1), down(SHAFT_HEIGHT - 1));
+    shafts(
+        set,
+        Pos::new(DRIVE.x, SHAFT_HEIGHT, SHAFT_BACK + 1),
+        Pos::new(SHAFT_X, SHAFT_HEIGHT, SHAFT_BACK + 1),
+    );
+    shafts(
+        set,
+        Pos::new(SHAFT_X, SHAFT_HEIGHT, SHAFT_BACK + 2),
+        Pos::new(SHAFT_X, SHAFT_HEIGHT, 6),
+    );
+    shafts(
+        set,
+        Pos::new(SHAFT_X, 0, 6),
+        Pos::new(SHAFT_X, SHAFT_HEIGHT - 1, 6),
+    );
 }
 
 /// The oil engine cube, leaving its controller slot open until cue `"lift"` so the combustion

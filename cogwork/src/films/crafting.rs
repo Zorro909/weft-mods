@@ -38,22 +38,22 @@ const OUT_PULL: Pos = Pos::new(16, 0, ROW_Z - 1);
 const OUT_ENGINE: Pos = Pos::new(17, 0, ROW_Z - 1);
 const OUT_TUBE: Pos = Pos::new(16, 0, ROW_Z - 2);
 const OUTPUT: Pos = Pos::new(16, 0, ROW_Z - 3);
-/// The shaft behind the row, from where it comes down from the oil engine to the hall's east
+/// The shaft behind the row, from PULLS[0] (x = 9) through the drop at x = 10 to the hall's east
 /// end.
-const SHAFT_X: [i32; 2] = [ENGINE_SHAFT_X, super::hall::EAST];
+const SHAFT_X: [i32; 2] = [9, super::hall::EAST];
 
 /// The cells of the patterns: a wooden cog is four sticks round a gap, a stone cog four
 /// cobblestones round a wooden cog.
 const ROUND: [u32; 4] = [1, 3, 5, 7];
 const MIDDLE: u32 = 4;
 
-/// Camera look targets and handoff point leaving the second bench toward Pad P.
+/// Camera look targets and handoff point leaving the second bench toward the hall's open east end.
 pub const BENCH_LOOK: [f64; 3] = lowered(above(STONE_COGS, 0.1));
-const SHAFT_LOOK: [f64; 3] = lowered([ENGINE_SHAFT_X as f64 - 0.5, 2.2, 1.0]);
+const SHAFT_LOOK: [f64; 3] = lowered([ENGINE_SHAFT_X as f64 + 0.5, 4.2, 1.5]);
 const SHAFT_FOOT_LOOK: [f64; 3] = lowered(above(Pos::new(ENGINE_SHAFT_X + 2, 1, ROW_Z), 0.2));
-const BENCH_OUT: f64 = 3.8;
-const BENCH_FROM: f64 = -140.0;
-const BENCH_UP: [f64; 2] = [2.6, 1.9];
+const BENCH_OUT: f64 = 4.4;
+const BENCH_FROM: f64 = -112.0;
+const BENCH_UP: [f64; 2] = [2.8, 2.2];
 
 pub fn end_eye() -> [f64; 3] {
     on_orbit(BENCH_LOOK, BENCH_OUT, BENCH_UP[1], BENCH_FROM)
@@ -98,31 +98,40 @@ pub fn start(set: &Set) {
     set_ghost(&world, stone_cogs, MIDDLE, item("cogwork:wooden_cog"));
 }
 
-/// Follows the shaft across the hall to the assembly benches and opens the second bench's screen.
+/// Follows the shaft across the hall to the assembly benches and opens the second bench's screen,
+/// panning to the shaft clear of the oil engine before the shaft title begins and keeping every
+/// title clear of the bench screen.
 pub fn shots(film: Film) -> Film {
     let from_engine = engine_bay::END_EYE;
     let [over_bench, at_bench] = BENCH_UP.map(|up| on_orbit(BENCH_LOOK, BENCH_OUT, up, BENCH_FROM));
-    let under_shaft = halfway(from_engine, over_bench);
-    film.title("cogwork.film.shaft", 5.0)
-        .shot(
-            dolly(from_engine, under_shaft)
-                .look(Look::Pan(engine_bay::END_LOOK, SHAFT_LOOK))
-                .ease(speeds(0.15, 0.5))
-                .secs(4.8),
-        )
-        .shot(
-            dolly(under_shaft, over_bench)
-                .look(Look::Pan(SHAFT_LOOK, SHAFT_FOOT_LOOK))
-                .ease(speeds(0.5, 0.3))
-                .secs(3.0),
-        )
-        .title("cogwork.film.bench", 5.0)
-        .shot(
-            dolly(over_bench, at_bench)
-                .look(Look::Pan(SHAFT_FOOT_LOOK, BENCH_LOOK))
-                .ease(speeds(0.3, 0.25))
-                .secs(4.0),
-        )
-        .menu("cogwork:assembly_bench", lowered_block(STONE_COGS), 5.0)
-        .wait(5.0)
+    let clear_of_engine = lowered([13.4, 3.8, -0.2]);
+    let under_shaft = halfway(clear_of_engine, over_bench);
+    film.shot(
+        dolly(from_engine, clear_of_engine)
+            .look(Look::Pan(engine_bay::END_LOOK, SHAFT_LOOK))
+            .ease(speeds(0.15, 0.45))
+            .secs(2.6),
+    )
+    .title("cogwork.film.shaft", 4.5)
+    .shot(
+        dolly(clear_of_engine, under_shaft)
+            .look(Look::Pan(SHAFT_LOOK, SHAFT_FOOT_LOOK))
+            .ease(speeds(0.45, 0.5))
+            .secs(3.2),
+    )
+    .shot(
+        dolly(under_shaft, over_bench)
+            .look_at(SHAFT_FOOT_LOOK)
+            .ease(speeds(0.5, 0.3))
+            .secs(2.5),
+    )
+    .title("cogwork.film.bench", 3.5)
+    .shot(
+        dolly(over_bench, at_bench)
+            .look(Look::Pan(SHAFT_FOOT_LOOK, BENCH_LOOK))
+            .ease(speeds(0.3, 0.25))
+            .secs(4.0),
+    )
+    .menu("cogwork:assembly_bench", lowered_block(STONE_COGS), 4.0)
+    .wait(4.2)
 }

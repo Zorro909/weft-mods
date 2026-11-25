@@ -94,8 +94,8 @@ const PADS: [Pad; 9] = [
     Pad {
         west: 13,
         north: 11,
-        east: 25,
-        south: 17,
+        east: 27,
+        south: 18,
         top: PAD_P_TOP,
         surface: &GRAVEL,
     },
