@@ -39,7 +39,7 @@ struct Cell {
 
 impl Tank {
     /// The tank the block at `pos` is part of: it and every block its sides join, where the
-    /// other side joins back. None while a block of it has no block entity yet.
+    /// other side joins back. None while a block of it has no block instance yet.
     pub fn at(world: &World, pos: Pos) -> Option<Tank> {
         let tank = Tank::of(world, &joined_cells(world, pos));
         tank.cells.iter().all(|cell| cell.id != 0).then_some(tank)
@@ -48,7 +48,7 @@ impl Tank {
     /// The tank of the blocks at `cells`.
     pub(super) fn of(world: &World, cells: &[Pos]) -> Tank {
         let cell = |&pos: &Pos| Cell {
-            id: world.block_entity(pos),
+            id: world.block_instance(pos),
             pos,
             joined: joined_sides(world.block_typed(pos)),
         };
@@ -91,7 +91,7 @@ impl Tank {
         CELL_CAPACITY * self.layers.first().map_or(0, |&bottom| bottom as u32)
     }
 
-    /// Its blocks, and their block entities in the same order.
+    /// Its blocks and their instance IDs in the same order.
     pub fn blocks(&self) -> impl Iterator<Item = Pos> + '_ {
         self.cells.iter().map(|cell| cell.pos)
     }

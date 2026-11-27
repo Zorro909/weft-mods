@@ -3,7 +3,7 @@
 //! pumping, it lowers its hose after the liquid as the pool sinks, but bores no more: a pool
 //! pumped dry leaves it dry.
 
-use weft_sdk::{Dir, Output, SystemBatch, World};
+use weft_sdk::{Dir, Holder, Output, SystemBatch, World};
 
 use super::drain::survey;
 use super::{CAPACITY, PUMP, PUMP_HOSE, Pump, Stage, Status};
@@ -30,11 +30,11 @@ const SOUND_EVERY: u64 = 8;
 
 pub fn tick(batch: &mut SystemBatch<Pump>) {
     let world = batch.world();
-    for (id, pump, _) in batch.iter_mut() {
-        let Some(entity) = world.entity(id) else {
+    for (owner, pump, _) in batch.iter_mut() {
+        let id = owner.entity;
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         if !world.block_typed(pos).is(&PUMP) {
             continue;
         }
@@ -141,7 +141,9 @@ fn pump_next(world: &World, id: u64, pos: Pos, pump: &mut Pump) {
     if pump.wait > 0 {
         return;
     }
-    let held = world.component(id, &HELD).unwrap_or_default();
+    let held = world
+        .component(Holder::block_id(id), &HELD)
+        .unwrap_or_default();
     if !held.takes(liquid, CAPACITY) || held.amount + BUCKET > CAPACITY {
         pump.set_status(Status::Full);
         return;

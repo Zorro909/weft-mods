@@ -17,7 +17,10 @@ use shape::Arms;
 pub use shape::{connects_to_tube, turn_directing};
 pub use sorting::set_sample;
 use strum::FromRepr;
-use weft_sdk::*;
+use weft_sdk::{
+    Block, BlockBuilder, Component, ENERGY, Holder, ItemStack, Registry, Tag, World,
+    component_flags, value,
+};
 
 use crate::lib::{Pos, TypedWorld};
 
@@ -89,24 +92,23 @@ pub fn register(r: &mut Registry) {
     r.entity_component(&TUBE, Tube::default(), component_flags::SAVE);
     r.system(&TUBE, travel::tick_tubes);
     for (block, kind, texture) in PLAIN {
-        shape::tube(r.block(block), texture, Arms::Same)
-            .tab(&crate::TAB)
-            .entity(move |entity| tube_entity(entity, kind));
+        let builder = shape::tube(r.block(block), texture, Arms::Same).tab(&crate::TAB);
+        tube_storage(builder, kind);
     }
-    shape::tube(
+    let builder = shape::tube(
         r.block(&DIRECTING_TUBE),
         "tube_directing",
         Arms::Output("tube_directing_out"),
     )
     .on_use(shape::turn_output)
-    .tab(&crate::TAB)
-    .entity(|entity| tube_entity(entity, Kind::Directing));
+    .tab(&crate::TAB);
+    tube_storage(builder, Kind::Directing);
     sorting::register(r);
     visual::register(r);
 }
 
-/// A tube's block entity: its `Tube` state and slots for the items it carries.
-fn tube_entity(builder: EntityBuilder<'_>, kind: Kind) -> EntityBuilder<'_> {
+/// A tube's state, its item slots, and an energy store for timber tubes.
+fn tube_storage(builder: BlockBuilder<'_>, kind: Kind) -> BlockBuilder<'_> {
     let builder = builder
         .attach_with(&TUBE, Tube::of(kind))
         .inventory(SLOTS as u32);
@@ -123,7 +125,7 @@ pub fn is_tube(world: &World, pos: Pos) -> bool {
     world.block_typed(pos).has(&TUBES)
 }
 
-/// A slot of the tube `at` (its entity, or its block) that neither holds a stack nor has an
+/// A slot of the tube `at` that neither holds a stack nor has an
 /// item on its way.
 fn free_slot(world: &World, at: impl Into<Holder>, tube: &Tube) -> Option<usize> {
     let inventory = world.inventory(at);
@@ -132,7 +134,9 @@ fn free_slot(world: &World, at: impl Into<Holder>, tube: &Tube) -> Option<usize>
 
 /// Empties `slot` of the tube `id`: its stack, the item's picture, and where it was on its way.
 fn clear_slot(world: &World, id: u64, tube: &mut Tube, slot: usize) {
-    world.inventory(id).set(slot as u32, ItemStack::EMPTY);
+    world
+        .inventory(Holder::block_id(id))
+        .set(slot as u32, ItemStack::EMPTY);
     visual::remove(world, tube.moving[slot].visual);
     tube.moving[slot] = Motion::default();
 }

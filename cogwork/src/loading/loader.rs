@@ -108,24 +108,22 @@ fn loader(
         .light(7)
         .on_break(super::let_go)
         .tab(&crate::TAB)
-        .entity(move |entity| {
-            entity.attach_with(
-                &LOADER,
-                Loader {
-                    range,
-                    ..Loader::default()
-                },
-            )
-        })
+        .attach_with(
+            &LOADER,
+            Loader {
+                range,
+                ..Loader::default()
+            },
+        )
         .opens(menu);
     r.menu(menu).screen(screen);
 }
 
 fn tick(batch: &mut SystemBatch<Loader>) {
     let world = batch.world();
-    for (id, loader, _) in batch.iter_mut() {
-        if let Some(entity) = world.entity(id) {
-            keep_loaded(&world, Pos::from(entity.block_pos()), loader);
+    for (owner, loader, _) in batch.iter_mut() {
+        if let Some(pos) = world.block_location(owner.entity) {
+            keep_loaded(&world, pos.into(), loader);
         }
     }
 }
@@ -143,11 +141,7 @@ fn keep_loaded(world: &World, pos: Pos, loader: &mut Loader) {
 /// Server side: switches the loader to the mode asked for, when the player is at it.
 fn set_mode(packet: &Packet, mode: SetMode) {
     let world = packet.world();
-    let (Some(block), Some(player)) = (world.entity(mode.owner), world.entity(packet.player()))
-    else {
-        return;
-    };
-    if !crate::ghost::within_reach(block.pos, player.pos) {
+    if !crate::ghost::player_in_reach(&world, mode.owner, packet.player()) {
         return;
     }
     if let (Some(loader), Some(picked)) = (

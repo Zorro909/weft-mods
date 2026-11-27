@@ -10,7 +10,7 @@ use base_api::recipes::CRAFTING;
 pub use fill::insert;
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::{
-    Block, Component, ENERGY, Holds, Menu, Registry, S, Slots, Ui, World, component_flags, value,
+    Block, Component, ENERGY, Menu, Registry, S, Slots, Ui, World, component_flags, value,
 };
 
 use crate::ghost::{self, ItemKey, SLOT};
@@ -74,13 +74,10 @@ pub fn register(r: &mut Registry) {
     r.tag(NOTHING, &["gantry_frame"]);
     crate::machine::block(r.block(&ASSEMBLY_BENCH), "assembly_bench")
         .hardness(3.5)
-        .entity(|entity| {
-            entity
-                .attach(&BENCH)
-                .attach_with(&ENERGY, crate::machine::energy(4_000, 200))
-                // The grid, then the output.
-                .inventory(9 + 3)
-        })
+        .attach(&BENCH)
+        .attach_with(&ENERGY, crate::machine::energy(4_000, 200))
+        // The grid, then the output.
+        .inventory(9 + 3)
         .opens(&BENCH_MENU);
     r.menu(&BENCH_MENU)
         // Filled by tubes only, through `insert`; taken from only by crafting.

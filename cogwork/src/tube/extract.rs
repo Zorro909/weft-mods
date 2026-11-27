@@ -1,7 +1,7 @@
 //! Items coming into tubes: the timber tube pulling them out of machines with engine power, and
 //! machines of this mod pushing their results into a tube next to them.
 
-use weft_sdk::*;
+use weft_sdk::{Dir, ENERGY, Holder, ItemStack, Output, World};
 
 use super::{Motion, TUBE, Tube, free_slot};
 use crate::lib::Pos;
@@ -35,7 +35,7 @@ pub fn pull(world: &World, id: u64, pos: Pos, tube: &mut Tube) {
     let paid_for = items_for(energy);
     let mut left = paid_for;
     for dir in Dir::ALL {
-        let Some(slot) = free_slot(world, id, tube).filter(|_| left > 0) else {
+        let Some(slot) = free_slot(world, Holder::block_id(id), tube).filter(|_| left > 0) else {
             break;
         };
         let Some(from) = source(world, pos, dir) else {
@@ -46,7 +46,9 @@ pub fn pull(world: &World, id: u64, pos: Pos, tube: &mut Tube) {
             continue;
         }
         left -= stack.count;
-        world.inventory(id).set(slot as u32, stack);
+        world
+            .inventory(Holder::block_id(id))
+            .set(slot as u32, stack);
         tube.moving[slot] = Motion::entering(stack.item, dir);
     }
     if left < paid_for {

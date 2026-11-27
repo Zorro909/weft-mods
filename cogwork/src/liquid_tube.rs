@@ -25,7 +25,7 @@ pub fn register(r: &mut Registry) {
         .mined_by("pickaxe", tool_tier::HAND)
         .sound_group("base:block.glass")
         .tab(&crate::TAB)
-        .entity(|entity| entity.attach(&HELD));
+        .attach(&HELD);
 }
 
 /// Whether `block` is a liquid tube of either kind.
@@ -34,7 +34,7 @@ pub fn is_liquid_tube(block: BlockState) -> bool {
 }
 
 /// A liquid tube drawn as `model`, with an arm toward every holder of liquid it joins, showing the
-/// liquid its block entity holds: the caller gives that entity `HELD`.
+/// liquid it holds. The caller attaches `HELD` to the block.
 pub fn tube<'a>(
     mut builder: BlockBuilder<'a>,
     model: &'static LazyLock<HubAndArms>,
@@ -68,7 +68,7 @@ fn refresh(world: &World, pos: Pos) {
     if next != tube {
         world.set_block_typed(pos, next);
     }
-    if let Some(held) = world.component_mut(world.block_entity(pos), &HELD) {
+    if let Some(held) = world.component_mut(world.block_instance(pos), &HELD) {
         held.asleep = 0;
     }
 }

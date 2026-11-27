@@ -12,7 +12,8 @@ mod pull;
 mod wheel;
 
 use weft_sdk::{
-    Block, Component, ENERGY, Registry, SystemBatch, World, component_flags, tool_tier, value,
+    Block, Component, ENERGY, Holder, Registry, SystemBatch, World, component_flags, tool_tier,
+    value,
 };
 
 use crate::lib::{Pos, TypedWorld};
@@ -51,20 +52,17 @@ pub fn register(r: &mut Registry) {
     .mined_by("axe", tool_tier::HAND)
     .sound_group("base:block.wood")
     .tab(&crate::TAB)
-    .entity(|entity| {
-        entity
-            .attach(&HELD)
-            .attach(&DRIVE)
-            .attach_with(&ENERGY, crate::machine::energy(ENERGY_STORED, ENERGY_IN))
-    });
+    .attach(&HELD)
+    .attach(&DRIVE)
+    .attach_with(&ENERGY, crate::machine::energy(ENERGY_STORED, ENERGY_IN));
     wheel::register(r);
 }
 
-/// Whether the timber liquid tube whose block entity is `id` is driven: it pushes, and takes no
+/// Whether the timber liquid tube with instance ID `id` is driven: it pushes, and takes no
 /// liquid but what it pulls.
 pub fn is_driven(world: &World, id: u64) -> bool {
     world
-        .component(id, &DRIVE)
+        .component(Holder::block_id(id), &DRIVE)
         .is_some_and(|drive| drive.driven != 0)
 }
 
@@ -73,15 +71,17 @@ pub fn is_driven(world: &World, id: u64) -> bool {
 fn tick(batch: &mut SystemBatch<Drive>) {
     let world = batch.world();
     let time = world.game_time();
-    for (id, drive, _) in batch.iter_mut() {
-        let Some(entity) = world.entity(id) else {
+    for (owner, drive, _) in batch.iter_mut() {
+        let id = owner.entity;
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         if !world.block_typed(pos).is(&TIMBER_LIQUID_TUBE) {
             continue;
         }
-        let energy = world.component(id, &ENERGY).map_or(0, |store| store.stored);
+        let energy = world
+            .component(Holder::block_id(id), &ENERGY)
+            .map_or(0, |store| store.stored);
         let driven = u32::from(energy > 0);
         if driven != drive.driven {
             drive.driven = driven;
@@ -104,7 +104,7 @@ fn pull(world: &World, id: u64, pos: Pos, energy: i64, drive: &mut Drive) {
         return;
     }
     drive.pulled += pulled;
-    if let Some(held) = world.component(id, &HELD) {
+    if let Some(held) = world.component(Holder::block_id(id), &HELD) {
         drive.liquid = held.liquid;
     }
 }

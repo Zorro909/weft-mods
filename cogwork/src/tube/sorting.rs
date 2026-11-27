@@ -3,10 +3,12 @@
 //! is empty. Each direction has a color, on its arm and beside its row, so players match them up
 //! without a compass.
 
-use weft_sdk::*;
+use weft_sdk::{
+    Component, Dir, Holder, ItemStack, Menu, Registry, S, Slots, Ui, World, component_flags, value,
+};
 
 use super::shape::Arms;
-use super::{Kind, SLOTS, SORTING_TUBE, tube_entity};
+use super::{Kind, SLOTS, SORTING_TUBE, tube_storage};
 use crate::ghost::{self, ItemKey, SLOT};
 
 static SORTING_MENU: Menu = Menu::named("sorting_tube");
@@ -44,14 +46,15 @@ pub fn register(r: &mut Registry) {
         Samples::default(),
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
-    super::shape::tube(
+    let builder = super::shape::tube(
         r.block(&SORTING_TUBE),
         "tube_sorting",
         Arms::PerSide(arm_texture),
     )
-    .tab(&crate::TAB)
-    .entity(|entity| tube_entity(entity.attach(&SAMPLES), Kind::Sorting))
-    .opens(&SORTING_MENU);
+    .tab(&crate::TAB);
+    tube_storage(builder, Kind::Sorting)
+        .attach(&SAMPLES)
+        .opens(&SORTING_MENU);
     r.menu(&SORTING_MENU)
         // So the carried items are slots 0..8 as in every tube; out only, so nothing gets
         // shift-clicked in.
@@ -96,7 +99,7 @@ pub fn set_sample(world: &World, owner: u64, cell: u32, item: u32) {
 
 /// Whether the row of side `dir` names the item.
 pub fn passes(world: &World, id: u64, dir: Dir, stack: ItemStack) -> bool {
-    let Some(samples) = world.component(id, &SAMPLES) else {
+    let Some(samples) = world.component(Holder::block_id(id), &SAMPLES) else {
         return false;
     };
     samples.rows[dir.face() as usize].contains(&ghost::key_of(stack.item))
@@ -105,7 +108,7 @@ pub fn passes(world: &World, id: u64, dir: Dir, stack: ItemStack) -> bool {
 /// The sides whose rows are empty, or name only items no loaded mod has: they take whatever no
 /// row names.
 pub fn unfiltered(world: &World, id: u64) -> Vec<Dir> {
-    let Some(samples) = world.component(id, &SAMPLES) else {
+    let Some(samples) = world.component(Holder::block_id(id), &SAMPLES) else {
         return Dir::ALL.to_vec();
     };
     Dir::ALL

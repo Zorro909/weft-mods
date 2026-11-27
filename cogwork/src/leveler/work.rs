@@ -1,7 +1,7 @@
 //! A leveler's tick: plan the area, then clear it from the top layer down to its height, then
 //! fill it from the deepest layer up to just below.
 
-use weft_sdk::*;
+use weft_sdk::{Holder, ItemStack, Output, SlotGroup, Sound, StackData, SystemBatch, World};
 
 use super::{LEVELER, Level, Stage, Status};
 use crate::harvest::{Harvest, cost, harvest};
@@ -28,11 +28,11 @@ const SOUND_EVERY: u64 = 4;
 
 pub fn tick(batch: &mut SystemBatch<Level>) {
     let world = batch.world();
-    for (id, level, _) in batch.iter_mut() {
-        let Some(entity) = world.entity(id) else {
+    for (owner, level, _) in batch.iter_mut() {
+        let id = owner.entity;
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         if !world.block_typed(pos).is(&LEVELER) {
             continue;
         }
@@ -113,7 +113,7 @@ fn fill_next(world: &World, id: u64, level: &mut Level) {
     let Some((cell, _)) = find(world, level, BlockState::can_build_into) else {
         return;
     };
-    let stock = world.inventory(id).group("input");
+    let stock = world.inventory(Holder::block_id(id)).group("input");
     let Some((slot, filler)) = first_filler(&stock) else {
         level.set_status(Status::NoBlocks);
         return;

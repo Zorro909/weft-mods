@@ -30,22 +30,20 @@ pub fn register(r: &mut Registry) {
     part(r.block(&COMBUSTION_CHAMBER)).texture("combustion_chamber");
     formable(r.block(&OIL_INTAKE), "oil_intake", Some("oil_intake_port"))
         .on_use(use_intake)
-        .entity(|entity| entity.attach(&HELD));
+        .attach(&HELD);
     formable(
         r.block(&OIL_ENGINE_DRIVE),
         "oil_engine_drive",
         Some("oil_engine_drive_port"),
     )
-    .entity(|entity| {
-        entity.attach_with(
-            &ENERGY,
-            Energy {
-                capacity: DRIVE_HOLDS,
-                max_out: DRIVE_HOLDS,
-                ..Energy::default()
-            },
-        )
-    });
+    .attach_with(
+        &ENERGY,
+        Energy {
+            capacity: DRIVE_HOLDS,
+            max_out: DRIVE_HOLDS,
+            ..Energy::default()
+        },
+    );
 }
 
 /// What every part shares: as hard as iron, mined with a pickaxe.

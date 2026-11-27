@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use weft_sdk::{Dir, World};
+use weft_sdk::{Dir, Holder, World};
 
 use super::flow::{LIFT, UNIT};
 use super::{DRIBBLE, Held, LiquidKey, flow, is_full};
@@ -53,7 +53,10 @@ impl<'a> Holders<'a> {
     pub fn get(&self, id: u64) -> Held {
         match self.index.get(&id) {
             Some(&i) => self.values[i],
-            None => self.world.component(id, &super::HELD).unwrap_or_default(),
+            None => self
+                .world
+                .component(Holder::block_id(id), &super::HELD)
+                .unwrap_or_default(),
         }
     }
 
@@ -72,7 +75,7 @@ impl<'a> Holders<'a> {
 
 /// A holder of liquid: one block, or a tank of several.
 pub enum Vessel {
-    /// A liquid tube, a pump or an intake: its block entity, where it is, how much it holds,
+    /// A liquid tube, a pump or an intake: its block instance ID, where it is, how much it holds,
     /// and how it passes liquid on.
     One {
         id: u64,
@@ -108,7 +111,7 @@ impl Vessel {
     /// The holder whose block is at `pos`, if one is.
     pub fn at(world: &World, pos: Pos) -> Option<Vessel> {
         let block = world.block_typed(pos);
-        let id = world.block_entity(pos);
+        let id = world.block_instance(pos);
         let (capacity, kind) = if block.is(&TIMBER_LIQUID_TUBE) {
             let driven = timber_liquid_tube::is_driven(world, id);
             let kind = if driven { Kind::Driven } else { Kind::Tube };
@@ -235,7 +238,7 @@ impl Vessel {
         }
     }
 
-    /// Its blocks, each with its block entity.
+    /// Its block instance IDs and positions.
     pub(super) fn blocks(&self) -> Vec<(u64, Pos)> {
         match self {
             Vessel::One { id, pos, .. } => vec![(*id, *pos)],

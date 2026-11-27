@@ -7,7 +7,7 @@
 //! when it stops being built, and on the first tick of a new controller, in case the one before
 //! went without being broken (an explosion, a command) and left its casing formed.
 
-use weft_sdk::{ENERGY, SystemBatch, World};
+use weft_sdk::{ENERGY, Holder, SystemBatch, World};
 
 use super::fuel::{Lack, oil, water};
 use super::parts::{DRIVE_HOLDS, part_at, show_controller, show_formed};
@@ -19,11 +19,11 @@ use crate::liquid::HELD;
 pub fn tick(batch: &mut SystemBatch<OilEngine>) {
     let world = batch.world();
     let time = world.game_time();
-    for (id, engine, ticks) in batch.iter_mut() {
-        let Some(entity) = world.entity(id) else {
+    for (owner, engine, ticks) in batch.iter_mut() {
+        let id = owner.entity;
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         if !world.block_typed(pos).is(&OIL_ENGINE_CONTROLLER) {
             continue;
         }
@@ -69,7 +69,7 @@ fn run(engine: &mut OilEngine, ticks: u32) -> bool {
 fn take_in(world: &World, engine: &mut OilEngine, layout: &Layout) {
     let (oil, water) = (oil(), water());
     for &intake in &layout.intakes {
-        let Some(held) = world.component_mut(world.block_entity(intake), &HELD) else {
+        let Some(held) = world.component_mut(world.block_instance(intake), &HELD) else {
             continue;
         };
         let (oil_room, water_room) = engine.room();
@@ -90,7 +90,7 @@ fn take_in(world: &World, engine: &mut OilEngine, layout: &Layout) {
 /// faces outside the engine.
 fn give_out(world: &World, engine: &mut OilEngine, cube: Cube, layout: &Layout) {
     for &drive in &layout.drives {
-        let id = world.block_entity(drive);
+        let id = world.block_instance(drive);
         let Some(store) = world.component_mut(id, &ENERGY) else {
             continue;
         };
@@ -98,7 +98,9 @@ fn give_out(world: &World, engine: &mut OilEngine, cube: Cube, layout: &Layout) 
         store.stored += given;
         engine.energy -= given;
         for out in cube.outward(drive) {
-            let stored = world.component(id, &ENERGY).map_or(0, |store| store.stored);
+            let stored = world
+                .component(Holder::block_id(id), &ENERGY)
+                .map_or(0, |store| store.stored);
             if stored == 0 {
                 break;
             }

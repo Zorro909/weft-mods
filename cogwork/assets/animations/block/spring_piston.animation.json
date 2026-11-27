@@ -1,0 +1,18 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.piston.stroke": {
+			"animation_length": 0.75,
+			"bones": {
+				"plate": {
+					"position": {
+						"0.0": [0, 0, 0],
+						"0.3": [0, 8, 0],
+						"0.45": [0, 8, 0],
+						"0.75": [0, 0, 0]
+					}
+				}
+			}
+		}
+	}
+}

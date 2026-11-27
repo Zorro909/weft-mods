@@ -2,7 +2,7 @@
 //! the piston's strokes while running.
 
 use base_api::components::FUEL;
-use weft_sdk::{ENERGY, ItemStack, Output, SystemBatch, World, consume_one};
+use weft_sdk::{ENERGY, Holder, ItemStack, Output, SystemBatch, World, consume_one};
 
 use super::{Engine, Kind, model, piston};
 use crate::lib::Pos;
@@ -22,11 +22,11 @@ const COOLED: u32 = 300;
 
 pub fn tick_engines(batch: &mut SystemBatch<Engine>) {
     let world = batch.world();
-    for (id, engine, ticks) in batch.iter_mut() {
-        let Some(entity) = world.entity(id) else {
+    for (owner, engine, ticks) in batch.iter_mut() {
+        let id = owner.entity;
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         let running = match engine.kind() {
             Kind::Spring => world.signal(pos) > 0,
             Kind::Ember => burn(&world, id, pos, engine, ticks),
@@ -40,7 +40,7 @@ pub fn tick_engines(batch: &mut SystemBatch<Engine>) {
         engine.stroke = piston::stroking(engine.is_stroking(), running, time) as u32;
         sound(&world, pos, engine, time, was_overheated);
         show_heat(&world, pos, engine);
-        piston::show(&world, id, pos, engine, time);
+        piston::show(&world, owner, engine.is_stroking(), time);
     }
 }
 
@@ -59,7 +59,7 @@ fn burn(world: &World, id: u64, pos: Pos, engine: &mut Engine, ticks: u32) -> bo
         return false;
     }
     if engine.burn == 0 {
-        let slot = world.inventory(id).group("fuel");
+        let slot = world.inventory(Holder::block_id(id)).group("fuel");
         let fuel = slot.get(0);
         let Some(burn_ticks) = fuel_ticks(fuel) else {
             return false;
@@ -87,13 +87,13 @@ fn store(world: &World, id: u64, made: i64) -> bool {
     energy.stored == energy.capacity
 }
 
-/// Pushes stored energy into whatever block entity the trunk points at.
+/// Pushes stored energy into whatever block the trunk points at.
 fn push(world: &World, id: u64, pos: Pos) {
     let Some(out) = model::output(world, pos) else {
         return;
     };
     let stored = world
-        .component(id, &ENERGY)
+        .component(Holder::block_id(id), &ENERGY)
         .map_or(0, |energy| energy.stored);
     if stored == 0 {
         return;

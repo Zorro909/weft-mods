@@ -6,7 +6,7 @@
 //! server starts, with a boom at each of its two beats, so every engine keeps time with the
 //! world's ticks.
 
-use weft_sdk::{Dir, EntityKind, Output, Particle, Registry, Vec3, World};
+use weft_sdk::{Dir, EntityKind, Holder, Output, Particle, Registry, Vec3, World};
 
 use super::pattern::Cube;
 use super::{OIL_ENGINE, OilEngine};
@@ -56,7 +56,7 @@ pub fn register(r: &mut Registry) {
 
 fn claims(world: &World, owner: u64, id: u64) -> bool {
     world
-        .component(owner, &OIL_ENGINE)
+        .component(Holder::block_id(owner), &OIL_ENGINE)
         .is_some_and(|engine| engine.rig == id)
 }
 

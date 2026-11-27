@@ -37,7 +37,7 @@ Using a loader opens its screen:
 | **Machines only** / **Everything** | Switches what runs there. |
 | Cogwork keeps 49 of at most 4096 cubes loaded | Every cube Cogwork's loaders and machines keep, against the world's limit. Yellow from nine tenths of it on. |
 
-- **Machines only** (the default) runs block entities, machines, scheduled ticks and redstone;
+- **Machines only** (the default) runs block systems, scheduled ticks and redstone;
   mobs stand still and nothing grows, like vanilla's lazily loaded chunks.
 - **Everything** runs the cubes as if a player stood there: mobs, plants and all.
 

@@ -38,7 +38,7 @@ fn model<'s>(props: &Props, state: State<'s>) -> State<'s> {
     crate::boxes::draw(state.texture(model.texture("particle")), &pieces)
 }
 
-/// Reaches toward every conductor and every block entity that holds energy. `CONDUCTOR` is the
+/// Reaches toward every conductor and every block that holds energy. `CONDUCTOR` is the
 /// engine's own tag.
 fn refresh(world: &World, pos: Pos) {
     let shaft = world.block_typed(pos);

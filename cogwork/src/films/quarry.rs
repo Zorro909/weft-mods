@@ -92,7 +92,7 @@ pub fn start(set: &Set) {
     mine(set);
     let samples = [(Dir::North, "base:cobblestone"), (Dir::South, "base:dirt")];
     let world = set.world();
-    let sorter = world.block_entity(set.at(SORTER));
+    let sorter = world.block_instance(set.at(SORTER));
     for (side, item) in samples {
         if let Some(item) = Item::lookup(item) {
             set_sample(&world, sorter, side.face() * ROW as u32, item);
@@ -105,7 +105,7 @@ fn mine(set: &Set) {
     let world = set.world();
     let pos = set.at(DIGGER);
     let frame = Frame::plan(&world, pos, Dir::South);
-    let Some(dig) = world.component_mut(world.block_entity(pos), &DIG) else {
+    let Some(dig) = world.component_mut(world.block_instance(pos), &DIG) else {
         return;
     };
     dig.frame = frame;

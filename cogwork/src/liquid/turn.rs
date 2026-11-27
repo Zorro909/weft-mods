@@ -20,7 +20,7 @@ use super::{Held, Level, MOST_A_TURN, NO_LIQUID, flow};
 use crate::lib::{Pos, TypedWorld};
 use crate::liquid_tube::LIQUID_TUBE;
 
-/// A holder as met at one of its blocks: `id`, that block's entity, keeps the head it told
+/// A holder as met at one of its blocks: `id`, that block's instance ID, keeps the head it told
 /// there. A tank tells all its blocks the same head, but blocks it joined since may keep another.
 #[derive(Clone)]
 struct Met {
@@ -29,7 +29,7 @@ struct Met {
 }
 
 /// A side of a holder that touches another: its block there, and the holder beside it, none
-/// while that has no block entity yet.
+/// while that has no block instance yet.
 struct Side {
     block: Pos,
     beside: Option<Met>,
@@ -82,17 +82,16 @@ pub fn tick(batch: &mut SystemBatch<Held>) {
     if batch.values().iter().all(|held| held.asleep != 0) {
         return;
     }
-    let ids = batch.ids().to_vec();
+    let ids: Vec<_> = batch.owners().iter().map(|owner| owner.entity).collect();
     let mut holders = Holders::of_batch(world, &ids, batch.values());
     let mut found = Found::default();
     for &id in &ids {
         if holders.get(id).asleep != 0 {
             continue;
         }
-        let Some(entity) = world.entity(id) else {
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         turn(&mut holders, &mut found, id, pos);
         // A timber liquid tube shows its own, after its pump (`timber_liquid_tube`).
         if world.block_typed(pos).is(&LIQUID_TUBE) {

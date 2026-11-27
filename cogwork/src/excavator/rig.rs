@@ -4,7 +4,9 @@
 //! gone. Their shapes are Blockbench models, `assets/models/<kind>.geo.json`, and the bit turns
 //! by `assets/animations/drill_bit.animation.json`.
 
-use weft_sdk::*;
+use weft_sdk::{
+    Component, EntityBuilder, EntityKind, Holder, Registry, Vec3, World, component_flags, value,
+};
 
 use super::{Dig, Frame, Stage};
 
@@ -58,7 +60,7 @@ fn piece<'a>(r: &'a mut Registry, kind: &'static EntityKind) -> EntityBuilder<'a
 
 fn claims(world: &World, owner: u64, id: u64) -> bool {
     world
-        .component(owner, &RIG)
+        .component(Holder::block_id(owner), &RIG)
         .is_some_and(|rig| rig.holds(id))
 }
 
@@ -131,7 +133,7 @@ fn spans(a: f64, b: f64) -> Vec<(&'static EntityKind, f64)> {
 
 /// Puts the rig where the drill is, while the excavator mines; takes it away otherwise.
 pub fn update(world: &World, owner: u64, dig: &Dig) {
-    let Some(mut rig) = world.component(owner, &RIG) else {
+    let Some(mut rig) = world.component(Holder::block_id(owner), &RIG) else {
         return;
     };
     let wanted = if dig.stage() == Stage::Mine {
@@ -151,7 +153,7 @@ pub fn update(world: &World, owner: u64, dig: &Dig) {
             *id = 0;
         }
     }
-    world.set_component(owner, &RIG, rig);
+    world.set_component(Holder::block_id(owner), &RIG, rig);
 }
 
 #[cfg(test)]

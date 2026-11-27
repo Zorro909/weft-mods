@@ -5,7 +5,9 @@
 mod work;
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, Block, Component, ENERGY, Menu, Registry, S, Slots, Ui, World, component_flags, value,
+};
 
 use crate::lib::{Area, Pos};
 use crate::loading::Cubes;
@@ -115,13 +117,10 @@ pub fn register(r: &mut Registry) {
     crate::machine::block(r.block(&LEVELER), "leveler")
         .hardness(4.0)
         .on_break(crate::loading::let_go)
-        .entity(|entity| {
-            entity
-                .attach(&LEVEL)
-                .attach_with(&ENERGY, crate::machine::energy(10_000, 1_000))
-                // The input, then the output.
-                .inventory(18 + 9)
-        })
+        .attach(&LEVEL)
+        .attach_with(&ENERGY, crate::machine::energy(10_000, 1_000))
+        // The input, then the output.
+        .inventory(18 + 9)
         .opens(&LEVELER_MENU);
     r.menu(&LEVELER_MENU)
         .group("input", Slots::grid(9, 2).holder())

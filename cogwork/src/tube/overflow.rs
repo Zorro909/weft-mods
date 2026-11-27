@@ -1,7 +1,7 @@
 //! A full tube that passes nothing on drops what is stuck in it, so tubes never jam for good:
 //! two full tubes each waiting for the other, or items with nowhere to go.
 
-use weft_sdk::*;
+use weft_sdk::{Holder, Output, World};
 
 use super::{Motion, SLOTS, Tube, clear_slot, free_slot};
 use crate::lib::Pos;
@@ -14,7 +14,7 @@ const AGAIN: u32 = 10;
 /// Counts how long the tube `id` at `pos` has been full without passing anything on, and drops
 /// a stuck item once that is too long.
 pub fn check(world: &World, id: u64, pos: Pos, tube: &mut Tube, passed_on: bool) {
-    let full = free_slot(world, id, tube).is_none();
+    let full = free_slot(world, Holder::block_id(id), tube).is_none();
     if !full || passed_on {
         tube.stuck = 0;
         return;
@@ -26,7 +26,10 @@ pub fn check(world: &World, id: u64, pos: Pos, tube: &mut Tube, passed_on: bool)
     let Some(slot) = (0..SLOTS).find(|&slot| waiting(&tube.moving[slot])) else {
         return;
     };
-    world.spawn_item(pos.center(), world.inventory(id).get(slot as u32));
+    world.spawn_item(
+        pos.center(),
+        world.inventory(Holder::block_id(id)).get(slot as u32),
+    );
     world.play_sound(&crate::sounds::TUBE_JAM, pos.center(), 1.0);
     clear_slot(world, id, tube, slot);
     tube.stuck = PATIENCE - AGAIN;

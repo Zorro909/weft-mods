@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Builds against Weft v26.11.8.
+
+### Fixed
+
+- The demo flies clear of the oak canopy on the way to the lake.
+
 ## 0.3.4 - 2026-11-22
 
 ### Changed

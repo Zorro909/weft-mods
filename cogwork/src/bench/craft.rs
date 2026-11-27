@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, PoisonError};
 
 use base_api::recipes::CRAFTING;
-use weft_sdk::{ItemStack, Output, REMAINDER, StackData, SystemBatch, World, recipe_grid_output};
+use weft_sdk::{
+    Holder, ItemStack, Output, REMAINDER, StackData, SystemBatch, World, recipe_grid_output,
+};
 
 use super::{Bench, CRAFT_COST, Status, cells, pattern};
 use crate::lib::Pos;
@@ -21,11 +23,11 @@ static MADE_BY: LazyLock<Mutex<HashMap<[u32; 9], ItemStack>>> = LazyLock::new(De
 
 pub fn tick(batch: &mut SystemBatch<Bench>) {
     let world = batch.world();
-    for (id, bench, _) in batch.iter_mut() {
-        let Some(entity) = world.entity(id) else {
+    for (owner, bench, _) in batch.iter_mut() {
+        let id = owner.entity;
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         let pattern = pattern(bench);
         let status = if evict_misplaced(&world, id, &pattern) {
             work(&world, id, pos, bench, &pattern)
@@ -39,7 +41,7 @@ pub fn tick(batch: &mut SystemBatch<Bench>) {
 }
 
 fn grid(world: &World, id: u64) -> Vec<ItemStack> {
-    stacks(&world.inventory(id).group("grid"))
+    stacks(&world.inventory(Holder::block_id(id)).group("grid"))
 }
 
 /// Which cells hold items, a bit each.
@@ -52,10 +54,10 @@ fn filled(cells: &[ItemStack]) -> u32 {
 /// Moves what the pattern no longer asks for out of its cells, into the output; false while
 /// some of it has no room there and stays in its cell.
 fn evict_misplaced(world: &World, id: u64, pattern: &[u32; 9]) -> bool {
-    let slots = world.inventory(id).group("grid");
+    let slots = world.inventory(Holder::block_id(id)).group("grid");
     let mut all_out = true;
     for i in cells::misplaced(pattern, &grid(world, id)) {
-        let output = world.inventory(id).group("output");
+        let output = world.inventory(Holder::block_id(id)).group("output");
         let left = insert_into(output, slots.get(i as u32), false);
         slots.set(i as u32, left);
         all_out &= left.is_empty();
@@ -83,7 +85,7 @@ fn work(world: &World, id: u64, pos: Pos, bench: &mut Bench, pattern: &[u32; 9])
     }
     let mut made = vec![result];
     made.extend(cells.iter().filter_map(|&used| left_behind(used)));
-    if !insert_all(world.inventory(id).group("output"), &made) {
+    if !insert_all(world.inventory(Holder::block_id(id)).group("output"), &made) {
         return Status::Full;
     }
     use_up(world, id, &cells);
@@ -112,7 +114,7 @@ fn left_behind(used: ItemStack) -> Option<ItemStack> {
 
 /// Takes one item out of every cell.
 fn use_up(world: &World, id: u64, cells: &[ItemStack]) {
-    let slots = world.inventory(id).group("grid");
+    let slots = world.inventory(Holder::block_id(id)).group("grid");
     for (i, used) in (0..).zip(cells) {
         if !used.is_empty() {
             slots.set(i, used.shrink(1));

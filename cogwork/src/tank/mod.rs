@@ -56,13 +56,13 @@ pub fn register(r: &mut Registry) {
             }
             crate::boxes::draw(state, &shape::pieces(joined))
         })
-        // Its block entity, which holds its share, is there from the next tick.
+        // Regroup after placement and neighbour updates.
         .on_place(|world, change| world.schedule_tick(change.pos, 1))
         .on_neighbor(neighbor_changed)
         .on_scheduled(|event| regroup(&event.world(), event.pos().into()))
         .on_break(|world, change| broken(world, change.pos.into()))
         .on_use(use_tank)
-        .entity(|entity| entity.attach(&HELD));
+        .attach(&HELD);
 }
 
 /// The blocks of the tank the block at `pos` is part of: it and every block its sides join,
@@ -160,7 +160,7 @@ fn join(world: &World, holders: &mut Holders, cells: &[Pos]) {
 fn one_liquid(world: &World, holders: &Holders, cells: &[Pos]) -> bool {
     let mut liquids = cells
         .iter()
-        .map(|&cell| holders.get(world.block_entity(cell)))
+        .map(|&cell| holders.get(world.block_instance(cell)))
         .filter(|share| !share.is_empty_in(CELL_CAPACITY))
         .map(|share| share.liquid);
     let first = liquids.next();
@@ -209,7 +209,7 @@ fn before_break(world: &World, pos: Pos) {
         let liquid = Held { amount, ..held };
         Tank::of(world, cells).settle(&mut holders, liquid);
     }
-    holders.set(world.block_entity(pos), Held::default());
+    holders.set(world.block_instance(pos), Held::default());
 }
 
 /// `total` shared among tanks of `sizes` blocks by their size, none given more than it holds.
