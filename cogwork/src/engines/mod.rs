@@ -9,7 +9,10 @@ mod run;
 
 pub use model::turn;
 use strum::FromRepr;
-use weft_sdk::*;
+use weft_sdk::{
+    Arg, Block, Component, ENERGY, Energy, Menu, Registry, S, Slots, Ui, abi, component_flags,
+    ratio, tool_tier, value,
+};
 
 pub static SPRING_ENGINE: Block = Block::named("spring_engine");
 pub static EMBER_ENGINE: Block = Block::named("ember_engine");
@@ -18,7 +21,7 @@ static EMBER_MENU: Menu = Menu::named("ember_engine");
 value! {
     /// An engine's state: its kind (`Kind`), `heat` 0..1000, `overheated` (1 while it cools
     /// down), the ticks of fuel left burning out of `burn_max`, `stroke` (anything but 0 while
-    /// the piston makes a stroke), and the piston entity.
+    /// the piston makes a stroke).
     #[derive(Default)]
     pub struct Engine {
         pub kind: u32,
@@ -27,6 +30,7 @@ value! {
         pub burn: u32,
         pub burn_max: u32,
         pub stroke: u32,
+        /// Former piston entity ID, kept for the saved layout.
         pub piston: u64
     }
 }
@@ -75,37 +79,32 @@ pub fn register(r: &mut Registry) {
         component_flags::SAVE | component_flags::SYNC_MENU,
     );
     r.system(&ENGINE, run::tick_engines);
-    piston::register(r);
     spring_engine(r);
     ember_engine(r);
 }
 
-/// A block entity without slots or a screen: there is nothing to put in it.
+/// The spring engine runs on a redstone signal.
 fn spring_engine(r: &mut Registry) {
     model::engine(r.block(&SPRING_ENGINE), "spring")
+        .animated_part(piston::SPRING_MODEL, piston::CLIP)
         .hardness(1.5)
         .mined_by("axe", tool_tier::HAND)
         .tab(&crate::TAB)
-        .entity(|entity| {
-            entity
-                .attach_with(&ENGINE, Engine::of(Kind::Spring))
-                .attach_with(&ENERGY, gives(1_000, 50))
-        });
+        .attach_with(&ENGINE, Engine::of(Kind::Spring))
+        .attach_with(&ENERGY, gives(1_000, 50));
 }
 
 /// Keeps its screen even for the wrench, which turns it while sneaking: tubes find its `fuel`
 /// slot through the menu it opens.
 fn ember_engine(r: &mut Registry) {
     model::engine(r.block(&EMBER_ENGINE), "ember")
+        .animated_part(piston::EMBER_MODEL, piston::CLIP)
         .hardness(3.0)
         .mined_by("axe", tool_tier::HAND)
         .tab(&crate::TAB)
-        .entity(|entity| {
-            entity
-                .attach_with(&ENGINE, Engine::of(Kind::Ember))
-                .attach_with(&ENERGY, gives(10_000, 200))
-                .inventory(1)
-        })
+        .attach_with(&ENGINE, Engine::of(Kind::Ember))
+        .attach_with(&ENERGY, gives(10_000, 200))
+        .inventory(1)
         .opens(&EMBER_MENU);
     r.menu(&EMBER_MENU)
         .group("fuel", Slots::single().accepts("#fuel").holder())

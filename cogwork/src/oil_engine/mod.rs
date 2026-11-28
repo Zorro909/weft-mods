@@ -135,7 +135,7 @@ pub fn register(r: &mut Registry) {
         .sound_group("base:block.stone")
         .tab(&crate::TAB)
         .on_break(|world, change| run::broken(world, change.pos.into(), change.state.into()))
-        .entity(|entity| entity.attach(&OIL_ENGINE))
+        .attach(&OIL_ENGINE)
         .opens(&OIL_ENGINE_MENU);
     r.menu(&OIL_ENGINE_MENU).screen(screen);
 }

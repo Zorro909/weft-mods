@@ -8,8 +8,8 @@ mod work;
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::{
-    Arg, Block, Component, Dir, ENERGY, Holds, Menu, Registry, S, Slots, Ui, World,
-    component_flags, tool_tier, value,
+    Arg, Block, Component, Dir, ENERGY, Menu, Registry, S, Slots, Ui, World, component_flags,
+    tool_tier, value,
 };
 
 use crate::lib::{Pos, TypedWorld};
@@ -114,13 +114,10 @@ pub fn register(r: &mut Registry) {
         .sound_group("base:block.stone")
         .tab(&crate::TAB)
         .on_break(|world, change| pull_hose(world, change.pos.into()))
-        .entity(|entity| {
-            entity
-                .attach(&PUMP_STATE)
-                .attach(&HELD)
-                .attach_with(&ENERGY, crate::machine::energy(10_000, 500))
-                .inventory(9)
-        })
+        .attach(&PUMP_STATE)
+        .attach(&HELD)
+        .attach_with(&ENERGY, crate::machine::energy(10_000, 500))
+        .inventory(9)
         .opens(&PUMP_MENU);
     // Unbreakable, so no gap keeps breaking the pump from taking all of it up.
     r.block(&PUMP_HOSE)

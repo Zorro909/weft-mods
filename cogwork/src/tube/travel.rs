@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use weft_sdk::*;
+use weft_sdk::{Dir, Holder, ItemStack, Output, SystemBatch, World};
 
 use super::motion::{BASE_SPEED, GILDED_SPEED};
 use super::route::{Route, route};
@@ -19,15 +19,14 @@ struct Handoff {
 
 pub fn tick_tubes(batch: &mut SystemBatch<Tube>) {
     let world = batch.world();
-    let ids = batch.ids().to_vec();
+    let ids: Vec<_> = batch.owners().iter().map(|owner| owner.entity).collect();
     let tubes = batch.values();
     let index: HashMap<u64, usize> = ids.iter().copied().zip(0..).collect();
     let mut handoffs = Vec::new();
     for (i, tube) in tubes.iter_mut().enumerate() {
-        let Some(entity) = world.entity(ids[i]) else {
+        let Some(pos) = world.block_location(ids[i]).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         if tube.kind() == Kind::Timber {
             super::extract::pull(&world, ids[i], pos, tube);
         }
@@ -43,21 +42,15 @@ pub fn tick_tubes(batch: &mut SystemBatch<Tube>) {
         passed_on[tube] |= hand_on(&world, &ids, &index, tubes, handoff);
     }
     for (i, tube) in tubes.iter_mut().enumerate() {
-        if let Some(entity) = world.entity(ids[i]) {
-            super::overflow::check(
-                &world,
-                ids[i],
-                entity.block_pos().into(),
-                tube,
-                passed_on[i],
-            );
+        if let Some(pos) = world.block_location(ids[i]) {
+            super::overflow::check(&world, ids[i], pos.into(), tube, passed_on[i]);
         }
     }
 }
 
 /// Moves one item a tick along and shows it; true when it waits at the far face.
 fn advance(world: &World, id: u64, pos: Pos, tube: &mut Tube, slot: usize) -> bool {
-    let stack = world.inventory(id).get(slot as u32);
+    let stack = world.inventory(Holder::block_id(id)).get(slot as u32);
     let kind = tube.kind();
     let motion = &mut tube.moving[slot];
     if stack.is_empty() {
@@ -121,22 +114,24 @@ fn hand_on(
 ) -> bool {
     let Handoff { tube: from, slot } = handoff;
     let id = ids[from];
-    let Some(pos) = world.entity(id).map(|entity| Pos::from(entity.block_pos())) else {
+    let Some(pos) = world.block_location(id).map(Pos::from) else {
         return false;
     };
     let motion = tubes[from].moving[slot];
     let Some(out) = motion.leaves_by() else {
         return false;
     };
-    let stack = world.inventory(id).get(slot as u32);
+    let stack = world.inventory(Holder::block_id(id)).get(slot as u32);
     let next = pos.toward(out);
-    let other = world.block_entity(next);
+    let other = world.block_instance(next);
     if let Some(&neighbor) = index.get(&other) {
         if !into_tube(world, next, other, &mut tubes[neighbor], motion, stack) {
             return false;
         }
         // Its picture went along: only the slot is emptied.
-        world.inventory(id).set(slot as u32, ItemStack::EMPTY);
+        world
+            .inventory(Holder::block_id(id))
+            .set(slot as u32, ItemStack::EMPTY);
         tubes[from].moving[slot] = Motion::default();
         return true;
     }
@@ -163,11 +158,11 @@ fn into_machine(
     machine: u64,
     stack: ItemStack,
 ) -> bool {
-    let left = crate::store::insert(world, machine, stack, false);
+    let left = crate::store::insert(world, Holder::block_id(machine), stack, false);
     if left.is_empty() {
         return true;
     }
-    world.inventory(id).set(slot as u32, left);
+    world.inventory(Holder::block_id(id)).set(slot as u32, left);
     tube.moving[slot].turn_back();
     false
 }
@@ -188,10 +183,12 @@ fn into_tube(
     if !super::connects_to_tube(world, pos, side) {
         return false;
     }
-    let Some(free) = free_slot(world, id, tube) else {
+    let Some(free) = free_slot(world, Holder::block_id(id), tube) else {
         return false;
     };
-    world.inventory(id).set(free as u32, stack);
+    world
+        .inventory(Holder::block_id(id))
+        .set(free as u32, stack);
     tube.moving[free] = motion.handed_on(side);
     true
 }

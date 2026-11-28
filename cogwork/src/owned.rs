@@ -1,17 +1,18 @@
-//! Entities that only show what a block entity is doing (an excavator's gantry, an engine's
-//! piston). Each belongs to an owner, moves where its owner puts it, and leaves when the owner
-//! is gone or no longer counts it as its own.
+//! Entities that show a block's work, such as the excavator's gantry. Each moves where
+//! its owner puts it and leaves when the block no longer claims it.
 
-use weft_sdk::*;
+use weft_sdk::{
+    Component, EntityBuilder, EntityKind, EntityTick, Registry, Spawn, Vec3, World, component_flags,
+};
 
-/// The block entity an owned entity belongs to.
+/// The instance ID of the block an owned entity belongs to.
 static OWNER: Component<u64> = Component::named("cogwork:owner");
 
 pub fn register(r: &mut Registry) {
     r.entity_component(&OWNER, 0u64, component_flags::SAVE);
 }
 
-/// Whether the block entity `owner` still counts the entity `id` as its own.
+/// Whether the block instance `owner` still counts the entity `id` as its own.
 pub type Claims = fn(world: &World, owner: u64, id: u64) -> bool;
 
 /// Makes `builder` an owned entity: moved only by its owner, never hurt or pushed, with no egg.
@@ -33,7 +34,7 @@ fn leave_unclaimed(tick: &EntityTick, claims: Claims) {
     let world = tick.world();
     for &id in tick.ids() {
         let owner = world.component(id, &OWNER).unwrap_or(0);
-        if owner == 0 || world.entity(owner).is_none() || !claims(&world, owner, id) {
+        if owner == 0 || !claims(&world, owner, id) {
             world.despawn(id);
         }
     }

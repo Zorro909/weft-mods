@@ -2,7 +2,7 @@
 //! "Files"): what `/structure save` writes, what the engine makes a template of, what
 //! `examples/buildings` draws the buildings into and what this mod reads them back from.
 //!
-//! Only blocks and slot defaults are read here. A file's entities, block entities, loot and
+//! Only blocks and slot defaults are read here. A file's entities, saved block data, loot and
 //! joints stay the engine's: it places them with the template as saved, but not with the
 //! turned copies this mod makes (`buildings.rs`).
 

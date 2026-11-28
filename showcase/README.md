@@ -67,7 +67,7 @@ steps:
 | `wait(secs)` | The camera stays. |
 | `wait_for(name, max)` | The camera stays until your mod calls `signal(world, player, name)` (or `set.signal(name)`), at most `max` seconds. |
 | `title(key, secs)` | A line from your lang files on screen while the film goes on. |
-| `cue(name)` | Runs your `on_cue(name, ..)` on the server: start the machines, fill a chest. Block entities only exist after the tick their block was placed in, so fill them here. |
+| `cue(name)` | Runs your `on_cue(name, ..)` on the server: start the machines, fill a chest. Use the cue to fill inventories after placing the blocks. |
 | `menu(name, at, secs)` | Opens the menu `name` (`mymod:press`) on the block `at` in the set, as if the camera had used it, and closes it after `secs`, while the film goes on. Shots after it go on behind the menu. |
 | `weather(w)` | Fog, sky, sunlight, clouds and how sound carries from here on, while the film goes on: a `Weather`, fading in over its `fade` (2 seconds of film unless told), eased as screen effects are, so it starts and ends at the same moments in a rehearsal and a take. A later `weather` takes over, crossfading over its own `fade`: what both set goes straight from one to the other. `clear_weather()` fades back to the world's own over the weather's `fade`; the film's end lifts it at once, as it does screen effects. |
 | `screen(shader, strength, secs)` | The screen effect `shader` (a post shader by its full name) going to `strength`, 0 off to 1 in full, over `secs` while the film goes on, and staying there until a later `screen` of the same shader or the film's end. `showcase_api::screen` has `BLACK` and `WHITE` for fades and `WARM` and `COOL` for grading; a post shader of your own mod (`shaders/post/<name>.wgsl`) works too. |

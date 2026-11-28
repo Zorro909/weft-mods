@@ -40,7 +40,7 @@ so tubes couldn't tell a liquid tank from an item slot.
 
 ## Energy
 
-Engines push into any block entity that takes `core:energy` (up to 200 a tick), and the
+Engines push into any block that takes `core:energy` (up to 200 a tick), and the
 excavator, leveler, assembly bench and timber tube take energy from any mod's engines,
 generators or cables in the same way.
 

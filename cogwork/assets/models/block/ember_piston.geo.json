@@ -1,0 +1,24 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.ember_piston",
+				"texture_width": 64,
+				"texture_height": 20,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 1.5,
+				"visible_bounds_offset": [0, 0.5, 0]
+			},
+			"bones": [
+				{
+					"name": "plate",
+					"pivot": [0, 6, 0],
+					"cubes": [
+						{"origin": [-8, 4, -8], "size": [16, 4, 16], "uv": [0, 0]}
+					]
+				}
+			]
+		}
+	]
+}

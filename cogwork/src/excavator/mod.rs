@@ -12,8 +12,8 @@ mod rig;
 
 use strum::{FromRepr, IntoStaticStr, VariantArray};
 use weft_sdk::{
-    Arg, Block, Component, ENERGY, Holds, Menu, Registry, S, Slots, Ui, Vec3, World,
-    component_flags, tool_tier, value,
+    Arg, Block, Component, ENERGY, Menu, Registry, S, Slots, Ui, Vec3, World, component_flags,
+    tool_tier, value,
 };
 
 pub static EXCAVATOR: Block = Block::named("excavator");
@@ -140,13 +140,10 @@ pub fn register(r: &mut Registry) {
     crate::machine::block(r.block(&EXCAVATOR), "excavator")
         .hardness(4.0)
         .on_break(crate::loading::let_go)
-        .entity(|entity| {
-            entity
-                .attach(&DIG)
-                .attach(&rig::RIG)
-                .attach_with(&ENERGY, power::smallest_store())
-                .inventory(9)
-        })
+        .attach(&DIG)
+        .attach(&rig::RIG)
+        .attach_with(&ENERGY, power::smallest_store())
+        .inventory(9)
         .opens(&EXCAVATOR_MENU);
     r.menu(&EXCAVATOR_MENU)
         .group("output", Slots::grid(3, 3).output().holder())

@@ -26,10 +26,10 @@ What is planned for the buildings and settlements is in the [roadmap](../ROADMAP
   a kind never meet. Another mod's structure has priority 1 unless it says otherwise, as a
   hamlet has, so the two can still stand in each other.
 - **What a turned copy leaves behind.** The turned and paved copies (`src/buildings.rs`) take a
-  file's blocks and slots only: not its entities, block entities, loot or joints. A building
+  file's blocks and slots only: not its entities, saved block data, loot or joints. A building
   saved with chests full or mobs inside keeps them only unturned and unpaved. The SDK's template
   builder has `.entity`, `.loot` and `.joint`, so the copies could carry those three, but it has
-  nothing for block entity data.
+  nothing for saved block data.
 - **Files added after building.** `build.rs` compiles the files of `assets/structures/` in, and
   only those get turned copies and a place in the settlements. A file dropped into the
   installed mod's folder is a template of the engine's, but nothing more.

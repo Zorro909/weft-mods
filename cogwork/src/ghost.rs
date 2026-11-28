@@ -11,8 +11,8 @@ use std::sync::OnceLock;
 
 use twox_hash::XxHash3_64;
 use weft_sdk::{
-    Arg, Channel, ClientView, Output, Packet, Registry, S, Ui, Vec3, abi, entry_count, error,
-    item_name, value,
+    Arg, Channel, ClientView, EntityFilter, Output, Packet, Registry, S, Shape, Ui, Vec3, World,
+    abi, entry_count, error, item_name, value,
 };
 
 use crate::lib::point;
@@ -124,22 +124,45 @@ fn click(view: &ClientView, cell: u32) {
 /// Server side: sets the ghost when the player is at the machine, whichever kind it is.
 fn set(packet: &Packet, asked: SetGhost) {
     let world = packet.world();
-    let (Some(machine), Some(player)) = (world.entity(asked.owner), world.entity(packet.player()))
-    else {
-        return;
-    };
-    let near = within_reach(machine.pos, player.pos);
     let known = asked.item == 0 || !item_name(asked.item).is_empty();
-    if near && known {
+    if known && player_in_reach(&world, asked.owner, packet.player()) {
         crate::bench::set_ghost(&world, asked.owner, asked.cell, asked.item);
         crate::tube::set_sample(&world, asked.owner, asked.cell, asked.item);
     }
 }
 
-/// Whether a player at `player` may set the ghosts of the machine at `machine`, or any other
-/// setting of it.
-pub fn within_reach(machine: Vec3, player: Vec3) -> bool {
-    point::distance(machine, player) <= REACH
+/// Whether the player is close enough to change the block's settings.
+pub fn player_in_reach(world: &World, block: u64, player: u64) -> bool {
+    let Some(player) = world.entity(player) else {
+        return false;
+    };
+    let Some(center) = block_center(world, block) else {
+        return false;
+    };
+    within_reach(center, player.pos)
+}
+
+/// Block positions are local to their space. Menu packets arrive in the region's root frame.
+fn block_center(world: &World, block: u64) -> Option<Vec3> {
+    if let Some(pos) = world.block_location(block) {
+        return Some(pos.center());
+    }
+    world.block_instance_state(block)?;
+    // A large body's origin can be far from the block the player is using.
+    let region = Shape::cuboid([f64::from(i32::MIN); 3], [f64::from(i32::MAX) + 1.0; 3]);
+    world
+        .entities_in(&region, EntityFilter::any())
+        .into_iter()
+        .find_map(|body| {
+            let space = world.in_space(body)?;
+            let pos = space.block_location(block)?;
+            space.point_in(0, pos.center())
+        })
+}
+
+/// Whether a block and a player are close enough for a menu action.
+fn within_reach(block: Vec3, player: Vec3) -> bool {
+    point::distance(block, player) <= REACH
 }
 
 #[cfg(test)]

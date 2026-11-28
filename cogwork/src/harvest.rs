@@ -1,7 +1,7 @@
 //! Breaking a block by machine: what it drops, as if mined with a diamond pickaxe, goes into the
 //! machine's output. Shared by the excavator and the leveler.
 
-use weft_sdk::*;
+use weft_sdk::{Holder, Item, ItemStack, LootCtx, LootSource, World};
 
 use crate::lib::{BlockState, Pos};
 
@@ -33,7 +33,7 @@ pub fn cost(block_state: BlockState, base: f32, per_hardness: f32) -> i64 {
 /// Breaks `block_state` at `cell` into the `output` group of the machine `id`, only when
 /// everything it drops fits there.
 pub fn harvest(world: &World, id: u64, cell: Pos, block_state: BlockState) -> Harvest {
-    let output = || world.inventory(id).group("output");
+    let output = || world.inventory(Holder::block_id(id)).group("output");
     let tool = ItemStack::new(TOOL.id(), 1);
     // The loot table is the block's, whatever its properties.
     let name = block_state.block_name();

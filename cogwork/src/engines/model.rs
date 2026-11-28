@@ -1,6 +1,6 @@
 //! An engine's block: a base plate on the side it was placed against and a trunk pointing the
 //! other way that glows with its heat. Both are the Blockbench model `models/block/engine.json`,
-//! lying on the floor with the trunk up. The piston riding the trunk is an entity (`piston`).
+//! lying on the floor with the trunk up. The piston is a separate animated part of the block.
 //!
 //! The engines' items stand that way too, cool, through `models/item/<kind>_engine.json`, which
 //! name `engine.json` as their parent and set only its textures. Without them an item would show

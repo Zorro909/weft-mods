@@ -24,7 +24,7 @@ const LOOK_AHEAD: f64 = 40.0;
 /// Where the flight from the walk's end goes down the meadow to the lake, from the origin,
 /// ending over the water (its top is 33 blocks below the origin).
 const FLIGHT: [[f64; 3]; 4] = [
-    [2.0, -2.0, -45.0],
+    [2.0, 14.0, -45.0],
     [10.0, -13.0, -75.0],
     [25.0, -27.0, -105.0],
     [35.8, -31.5, -126.2],
@@ -118,6 +118,7 @@ fn clearing(film: Film, from: [f64; 3]) -> Film {
         .title("showcase.film.clearing", 5.0)
         .shot(
             flyby(&points)
+                .look(Look::At(DIVE[1]))
                 .blend(1.0)
                 .ease(Ease::Speeds {
                     from: WALKING as f32,

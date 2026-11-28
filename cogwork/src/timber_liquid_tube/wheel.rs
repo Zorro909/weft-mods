@@ -6,7 +6,7 @@
 //!
 //! Its axle runs across the tube, so the windows facing the axle show the wheel's face.
 
-use weft_sdk::{Dir, EntityKind, Output, Registry, World};
+use weft_sdk::{Dir, EntityKind, Holder, Output, Registry, World};
 
 use super::{DRIVE, Drive};
 use crate::lib::Pos;
@@ -35,7 +35,7 @@ pub fn register(r: &mut Registry) {
 
 fn claims(world: &World, owner: u64, id: u64) -> bool {
     world
-        .component(owner, &DRIVE)
+        .component(Holder::block_id(owner), &DRIVE)
         .is_some_and(|drive| drive.wheel == id)
 }
 

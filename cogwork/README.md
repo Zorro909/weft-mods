@@ -133,7 +133,7 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 | `machine.rs` | What the machines share: their block, paying energy into a job, the energy bar |
 | `store/` | Putting items into and taking them out of any mod's machines, by slot group |
 | `harvest.rs` | Breaking a block by machine into its output |
-| `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block entity moves |
+| `markers.rs`, `ghost.rs`, `owned.rs` | Survey markers, ghost cells on screens, entities a block moves |
 | `loading/` | Keeping cubes of the world loaded: the cuboid loaders and their screen, what excavators and levelers keep while they work, the tickets behind both, the cuboid lens |
 | `cogs.rs`, `shaft.rs` | Cogs and the wrench, the torque shaft |
 | `sounds.rs` | The sound events, whose files are under `assets/sounds/` |
@@ -145,11 +145,11 @@ Each area of the mod is a module of `src/` with a `register` that `lib.rs` calls
 Unit tests sit at the end of the files whose logic they check; `tools/check-mods.sh cogwork`,
 run from the repository root, runs them.
 
-Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. Entities (the
-excavator's rig, the engines' pistons, the timber liquid tube's wheel, the oil engine's rig) are
-"Bedrock Entity" models, `<name>.geo.json`, and move by the clips in `assets/animations/`. Blocks
-are "Java Block/Item" models in `block/`: the survey marker, the engine, the pump and its hose,
-the oil engine's controller. A formed oil engine's casing joins into one panel a face by
+Shapes are [Blockbench](https://www.blockbench.net) models under `assets/models/`. The
+excavator's rig, the timber liquid tube's wheel and the oil engine's rig use Bedrock entity
+models (`<name>.geo.json`). Spring and ember pistons use models of the same format as animated
+block parts, with their models, textures and clips under `block/`. Static block models use
+the Java Block/Item format. A formed oil engine's casing joins into one panel a face by
 connected textures, `textures/block/oil_engine_panel/`: one rule for its sides, with a grimy
 skirt at the bottom, and one for its top and bottom. Its intakes and drives show that panel with
 their port drawn on top as a layer, so the face stays one.

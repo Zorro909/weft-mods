@@ -1,6 +1,6 @@
 [package]
 name = "structgen"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2024"
 # As the engine's `Cargo.toml` declares; cargo then picks dependency versions that build with it.
 rust-version = "1.95"
@@ -11,8 +11,8 @@ crate-type = ["cdylib"]
 [dependencies]
 # The Weft release it builds against, from the game's repository as the mod index wants it;
 # `init.sh` checks out the newest one any mod names into `Weft/`.
-weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.7" }
-base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.7" }
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.8" }
+base_api = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.8" }
 # Block positions and states, the types the other mods here use.
 weftkit = { path = "../weftkit" }
 # The engine's structure files, read when the mod loads and written by `examples/buildings`.

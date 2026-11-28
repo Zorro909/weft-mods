@@ -73,8 +73,8 @@ pub fn start(set: &Set) {
     let world = set.world();
     let item = |name: &str| Item::lookup(name).unwrap_or(0);
     let (cogs, stone_cogs) = (
-        world.block_entity(set.at(COGS)),
-        world.block_entity(set.at(STONE_COGS)),
+        world.block_instance(set.at(COGS)),
+        world.block_instance(set.at(STONE_COGS)),
     );
     for cell in ROUND {
         set_ghost(&world, cogs, cell, item("base:stick"));

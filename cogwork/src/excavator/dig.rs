@@ -18,11 +18,11 @@ const FLOOR_WAIT: u32 = 200;
 
 pub fn tick(batch: &mut SystemBatch<Dig>) {
     let world = batch.world();
-    for (id, dig, _ticks) in batch.iter_mut() {
-        let Some(entity) = world.entity(id) else {
+    for (owner, dig, _ticks) in batch.iter_mut() {
+        let id = owner.entity;
+        let Some(pos) = world.block_location(id).map(Pos::from) else {
             continue;
         };
-        let pos = Pos::from(entity.block_pos());
         if !world.block_typed(pos).is(&EXCAVATOR) {
             continue;
         }

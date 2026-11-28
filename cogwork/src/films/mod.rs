@@ -87,8 +87,7 @@ const WORKS: [f64; 3] = lowered([22.0, 0.0, -8.0]);
 const SHORE: [f64; 3] = lowered([18.0, -2.0, -15.0]);
 
 pub fn register(r: &mut Registry) {
-    // Block entities only exist once the tick they were placed in is over: everything is
-    // stocked and started on cues.
+    // Cues stock and start machines after the set is placed.
     let build = |set: &Set| from_site(set.origin(), showcase(&on_site(set)));
     film(r, "showcase", build)
         .on_cue("start", at_site(start))
